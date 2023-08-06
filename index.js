@@ -1,8 +1,21 @@
 $(function () {
+    'use strict';
+
+    window.addEventListener('online', event => {
+        document.getElementById('ofline_modal').classList.add('hidden');
+        document.getElementById('mask3').classList.add('hidden');
+    })
+
+    window.addEventListener('offline', event => {
+        document.getElementById('ofline_modal').classList.remove('hidden');
+        document.getElementById('mask3').classList.remove('hidden');
+    })
+
     const address = localStorage.getItem('address');
     const token = localStorage.getItem('token');
     const user_name_id = localStorage.getItem('user_name_id');
     const user_icon_link = localStorage.getItem('user_icon_link');
+    const user_icon_none = localStorage.getItem('user_icon_none');
 
     if (address == null) {
         document.getElementById('mask1').classList.remove('hidden');
@@ -38,7 +51,9 @@ $(function () {
         });
     }
 
-    $('.user_icon').attr('src', user_icon_link);
+    if (user_icon_none == 0 || user_icon_none == null) {
+        $('.user_icon').attr('src', user_icon_link);
+    }
     document.getElementById('user_name').innerHTML = user_name_id;
 
     $("#add").click(function () {
@@ -103,6 +118,8 @@ $(function () {
         document.getElementById('mask2').classList.add('hidden');
         document.getElementById('user_menu').classList.add('hidden');
         document.getElementById('logout_confirm').classList.add('hidden');
+        document.getElementById('about_me_modal').classList.add('hidden');
+        document.getElementById('config_modal').classList.add('hidden');
     });
 
     $("#logout").click(function () {
@@ -111,9 +128,26 @@ $(function () {
     $("#logout_yes").click(function () {
         localStorage.removeItem("address");
         localStorage.removeItem("token");
+        localStorage.removeItem("user_name_id");
+        localStorage.removeItem("user_icon_link");
         location.reload()
     })
     $("#logout_no").click(function () {
         document.getElementById('logout_confirm').classList.add('hidden');
+    })
+    $("#about_me").click(function () {
+        document.getElementById('about_me_modal').classList.remove('hidden');
+    })
+    $("#config").click(function () {
+        document.getElementById('config_modal').classList.remove('hidden');
+    })
+    $("#user_icon_none").click(function () {
+        if (user_icon_none == 0 || user_icon_none == null) {
+            localStorage.setItem("user_icon_none", 1);
+            location.reload()
+        }else if(user_icon_none == 1){
+            localStorage.setItem("user_icon_none", 0);
+            location.reload()
+        }
     })
 });

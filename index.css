@@ -25,11 +25,14 @@ body {
     padding-top: 10px;
     padding-left: 10px;
     padding-right: 10px;
+    width: fit-content;
+    height: fit-content;
 }
 
 .user_icon {
     margin-left: 0;
     border-radius: 100px;
+    max-width: 150px;
 }
 
 .footer_user_name {
@@ -58,17 +61,9 @@ body {
     display: none;
 }
 
-#mask {
-    background: rgba(0, 0, 0, 0.7);
-    position: fixed;
-    top: 0;
-    bottom: 0;
-    right: 0;
-    left: 0;
-    z-index: 1;
-}
-
-#mask1 {
+#mask,
+#mask1,
+#mask3 {
     background: rgba(0, 0, 0, 0.7);
     position: fixed;
     top: 0;
@@ -116,7 +111,11 @@ body {
     z-index: 2;
 }
 
-#user_menu {
+#user_menu,
+#about_me_modal,
+#logout_confirm,
+#ofline_modal,
+#config_modal {
     background: #fff;
     width: 50%;
     padding: 24px;
@@ -129,12 +128,7 @@ body {
     z-index: 2;
 }
 
-#user_menu .title {
-    color: rgb(0, 191, 255);
-    text-align: center;
-}
-
-#input_address_token .title {
+.title {
     color: rgb(0, 191, 255);
     text-align: center;
 }
@@ -176,7 +170,10 @@ body {
 
 #logout,
 #logout_yes,
-#logout_no {
+#logout_no,
+#about_me,
+#config,
+#user_icon_none {
     width: 90%;
     margin: 1% 0 1% 0;
     font-weight: bolder;
@@ -196,17 +193,4 @@ body {
     margin-left: auto;
     margin-right: auto;
     margin-top: 5%;
-}
-
-#logout_confirm {
-    background: #fff;
-    width: 50%;
-    padding: 24px;
-    border-radius: 4px;
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    margin: 0 auto;
-    z-index: 2;
 }
