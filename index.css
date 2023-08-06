@@ -173,7 +173,8 @@ body {
 #logout_no,
 #about_me,
 #config,
-#user_icon_none {
+#user_icon_none,
+#user_icon_name_reload {
     width: 90%;
     margin: 1% 0 1% 0;
     font-weight: bolder;

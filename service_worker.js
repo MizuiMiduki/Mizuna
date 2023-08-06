@@ -1,5 +1,5 @@
 // Cache name
-const CACHE_NAME = 'mizuna-chash';
+const CACHE_NAME = 'mizuna-chash-R1.1.2';
 // Cache targets
 const urlsToCache = [
   './',

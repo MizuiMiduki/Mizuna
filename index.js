@@ -150,4 +150,26 @@ $(function () {
             location.reload()
         }
     })
+    $("#user_icon_name_reload").click(function () {
+        let user_data_type = "post"
+        let user_data_url = "https://" + address + "/api/i"
+        let user_data = {
+            "i": token
+        }
+        user_data = JSON.stringify(user_data);
+        $.ajax({
+            type: user_data_type,
+            url: user_data_url,
+            data: user_data,
+            contentType: 'application/json',
+            dataType: 'json',
+            scriptCharset: 'utf-8',
+            success: function (data) {
+                localStorage.setItem("user_icon_link", data.avatarUrl);
+                localStorage.setItem("user_name_id", data.name + "(@" + data.username + "@" + address + ")");
+                location.reload()
+            }
+        });
+    })
+
 });
