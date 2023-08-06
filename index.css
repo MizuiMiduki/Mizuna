@@ -33,6 +33,7 @@ body {
     margin-left: 0;
     border-radius: 100px;
     max-width: 150px;
+    user-select: none;
 }
 
 .footer_user_name {

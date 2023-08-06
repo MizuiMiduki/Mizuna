@@ -145,7 +145,7 @@ $(function () {
         if (user_icon_none == 0 || user_icon_none == null) {
             localStorage.setItem("user_icon_none", 1);
             location.reload()
-        }else if(user_icon_none == 1){
+        } else if (user_icon_none == 1) {
             localStorage.setItem("user_icon_none", 0);
             location.reload()
         }

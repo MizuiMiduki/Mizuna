@@ -1,11 +1,12 @@
 // Cache name
-const CACHE_NAME = 'mizuna-chash';
+const CACHE_NAME = 'mizuna-chash-R1.1.2.3';
 // Cache targets
 const urlsToCache = [
   './',
   './index.html',
   './index.css',
   './index.js',
+  './version.js',
 ];
 
 self.addEventListener('install', (event) => {
