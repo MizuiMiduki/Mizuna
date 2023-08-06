@@ -1,0 +1,16 @@
+{
+  "name": "Mizuna -ノート専用Misskeyクライアント",
+  "short_name": "Mizuna",
+  "theme_color": "#add8e6",
+  "background_color": "#add8e6",
+  "display": "standalone",
+  "start_url": "./index.html",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
