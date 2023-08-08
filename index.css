@@ -116,7 +116,9 @@ body {
 #about_me_modal,
 #logout_confirm,
 #ofline_modal,
-#config_modal {
+#config_modal,
+#update_0,
+#update_1 {
     background: #fff;
     width: 50%;
     padding: 24px;
@@ -175,7 +177,8 @@ body {
 #about_me,
 #config,
 #user_icon_none,
-#user_icon_name_reload {
+#user_icon_name_reload,
+#update_check {
     width: 90%;
     margin: 1% 0 1% 0;
     font-weight: bolder;

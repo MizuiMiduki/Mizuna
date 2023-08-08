@@ -29,7 +29,7 @@ $(function () {
         localStorage.setItem("token", token);
     })
 
-    if (user_name_id == null) {
+    if (address != null && user_name_id == null) {
         let user_data_type = "post"
         let user_data_url = "https://" + address + "/api/i"
         let user_data = {
@@ -48,7 +48,7 @@ $(function () {
                 localStorage.setItem("user_name_id", data.name + "(@" + data.username + "@" + address + ")");
                 location.reload()
             },
-            error:function (){
+            error: function () {
                 document.getElementById('mask1').classList.remove('hidden');
                 document.getElementById('input_address_token').classList.remove('hidden');
                 document.getElementById('login_settings_title').innerHTML = "ログインに失敗しました<br>もう一度入力してください";
@@ -130,6 +130,7 @@ $(function () {
         document.getElementById('logout_confirm').classList.add('hidden');
         document.getElementById('about_me_modal').classList.add('hidden');
         document.getElementById('config_modal').classList.add('hidden');
+        document.getElementById('update_0').classList.add('hidden');
     });
 
     $("#logout").click(function () {
@@ -181,5 +182,38 @@ $(function () {
             }
         });
     })
-
+    $("#update_check").click(function () {
+        document.getElementById('user_menu').classList.add('hidden');
+        if (!('serviceWorker' in navigator))
+            return;
+        navigator.serviceWorker.getRegistration()
+            .then(registration => {
+                if (registration.waiting != null) {
+                    document.getElementById('mask1').classList.remove('hidden');
+                    document.getElementById('update_1').classList.remove('hidden');
+                    document.getElementById('update_0').classList.add('hidden');
+                    document.getElementById('mask2').classList.add('hidden');
+                    disableUpdateButton();
+                }
+                else {
+                    registration.update()
+                        .then(registration => {
+                            const installingWorker = registration.installing;
+                            if (installingWorker != null) {
+                                installingWorker.onstatechange = e => {
+                                    if (e.target.state == 'installed') {
+                                        document.getElementById('mask1').classList.remove('hidden');
+                                        document.getElementById('update_1').classList.remove('hidden');
+                                        document.getElementById('update_0').classList.add('hidden');
+                                        document.getElementById('mask2').classList.add('hidden');
+                                        disableUpdateButton();
+                                    }
+                                }
+                            }
+                            document.getElementById('mask2').classList.remove('hidden');
+                            document.getElementById('update_0').classList.remove('hidden');
+                        });
+                }
+            });
+    })
 });
