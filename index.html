@@ -43,12 +43,12 @@
 
     <div id="mask1" class="hidden"></div>
     <section id="input_address_token" class="hidden">
-        <p class="title">初期設定</p>
+        <p class="title" id="login_settings_title">初期設定</p>
         <form>
             <p>サーバーアドレス</p>
             <input type="text" id="address_input" size="10" class="input_area" placeholder="例: misskey.io" required>
             <br>
-            <p>ト－クン<br>(ノート作成権限のみ必要)</p>
+            <p>ト－クン<br>(ノート作成権限のみ必要)<br>トークンの取得方法は<a href="https://misskey-hub.net/docs/api/#%E8%87%AA%E5%88%86%E8%87%AA%E8%BA%AB%E3%81%AE%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%82%92%E6%89%8B%E5%8B%95%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B" target="_blank" rel="noopener">こちら</a></p>
             <input type="text" id="token_input" size="10" class="input_area" placeholder="例: xxxxxxxxxxxxxxx" required>
             <input type="submit" id="input_submit" required value="完了">
         </form>
@@ -73,10 +73,9 @@
     <section id="config_modal" class="hidden">
         <p class="title">設定</p>
         <form>
-            <button id="user_icon_none" type="button">ユーザーアイコンを表示しない<br>
-                (アイコンの読み込みを無くして通信量を削減します)</button>
-            <button id="user_icon_name_reload" type="button">ユーザー情報を再取得<br>
-                (ユーザー名やアイコンを変更した際に新しいデータを取得します)</button>
+            <button id="user_icon_none" type="button">ユーザーアイコンを非表示<br>
+                (読み込みを無くし通信量を削減)</button>
+            <button id="user_icon_name_reload" type="button">ユーザー情報を同期</button>
         </form>
     </section>
     <div id="mask3" class="hidden"></div>

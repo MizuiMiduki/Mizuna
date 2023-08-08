@@ -47,19 +47,29 @@ $(function () {
                 localStorage.setItem("user_icon_link", data.avatarUrl);
                 localStorage.setItem("user_name_id", data.name + "(@" + data.username + "@" + address + ")");
                 location.reload()
+            },
+            error:function (){
+                document.getElementById('mask1').classList.remove('hidden');
+                document.getElementById('input_address_token').classList.remove('hidden');
+                document.getElementById('login_settings_title').innerHTML = "ログインに失敗しました<br>もう一度入力してください";
             }
         });
     }
-
-    if (user_icon_none == 0 || user_icon_none == null) {
-        $('.user_icon').attr('src', user_icon_link);
+    if (user_icon_link !== null) {
+        if (user_icon_none == 0 || user_icon_none == null) {
+            $('.user_icon').attr('src', user_icon_link);
+        }
     }
-    document.getElementById('user_name').innerHTML = user_name_id;
+
+    if (user_name_id !== null) {
+        document.getElementById('user_name').innerHTML = user_name_id;
+    }
 
     $("#add").click(function () {
         let clone = document.importNode(document.querySelector('#input-template').content, true);
         document.querySelector('#input-param').appendChild(clone);
     });
+
     $("#submit").click(function () {
         let url = "https://" + address + "/api/notes/create"
         let type = "post"
