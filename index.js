@@ -217,3 +217,10 @@ $(function () {
             });
     })
 });
+
+// エンターキーで投稿
+document.addEventListener('keydown', event => {
+    if (event.ctrlKey && event.key === 'Enter') {
+		$("#submit").click();
+    }
+});

@@ -1,30 +1,22 @@
-// Cache name
-const CACHE_NAME = 'mizuna-chash-R1.1.2.6';
-// Cache targets
-const urlsToCache = [
-  './',
-  './index.html',
-  './index.css',
-  './index.js',
-  './version.js',
-];
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', function(event) {
+});
+
+self.addEventListener('activate', function(event) {
   event.waitUntil(
-    caches
-      .open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(urlsToCache);
-      })
+    caches.keys().then(function(cacheNames) {
+      return Promise.all(
+        cacheNames.map(function(cacheName) {
+          return caches.delete(cacheName);
+        })
+      );
+    })
   );
 });
 
-self.addEventListener('fetch', (event) => {
+
+self.addEventListener('fetch', function(event) {
   event.respondWith(
-    caches
-      .match(event.request)
-      .then((response) => {
-        return response ? response : fetch(event.request);
-      })
+    fetch(event.request, { cache: "no-store" })
   );
 });
