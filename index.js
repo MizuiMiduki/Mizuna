@@ -177,6 +177,7 @@ $(function () {
     // ログアウト -No
     $("#logout_no").click(function () {
         document.getElementById('logout_confirm').classList.add('hidden');
+        document.getElementById('mask2').classList.add('hidden');
     })
     // about me
     $("#about_me").click(function () {
