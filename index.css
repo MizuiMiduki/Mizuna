@@ -78,18 +78,6 @@ body {
     align-items: center;
 }
 
-/* mobile */
-@media screen and (max-width: 520px) {
-    .visibility{
-        display: block!important;
-        align-items: center;
-    }
-
-    .note_end_mizuna{
-        display: block!important;
-        align-items: center;
-    }
-}
 .note-menu-style{
     padding-left: 1%;
     padding-right: 1%;
@@ -109,6 +97,22 @@ body {
     align-items: center;
 }
 
+/* mobile */
+@media screen and (max-width: 520px) {
+    .visibility{
+        display: block!important;
+        align-items: center;
+    }
+
+    .note_end_mizuna{
+        display: block!important;
+        align-items: center;
+    }
+
+    #submit {
+        padding: 2% 10% 2% 10%;
+    }
+}
 .hidden {
     display: none;
 }
@@ -187,7 +191,7 @@ body {
 
 .input_area {
     width: 100%;
-    min-height: 100px;
+    min-height: 200px;
     resize: none;
     overflow-x: hidden;
     line-break: anywhere;
