@@ -24,8 +24,22 @@
             <textarea class="note_content input_area" id="note_content input_area" size="30"
                 maxlength="3000"></textarea>
         </p>
-        <button id="submit" type="button">ノートする</button>
+            <form class="note_menu">
+                <div class="visibility note-menu-style">
+                    <p>投稿範囲：</p>
+                    <select name="visibility_select" id="visibility_select">
+                        <option value="public">パブリック</option>
+                        <option value="home">ホーム</option>
+                        <option value="followers">フォロワー</option>
+                    </select>
+                </div>
 
+                <div class="note_end_mizuna note-menu-style">
+                    <p>末尾に"Mizunaから送信"を付ける</p>
+                    <input type="checkbox" id="note_end_mizuna_checkbox"/>
+                </div>
+            </form>
+            <button id="submit" type="button">ノートする</button>
     </div>
     <div class="footer">
         <div class="user_icon_back">
@@ -48,7 +62,9 @@
             <p>サーバーアドレス</p>
             <input type="text" id="address_input" size="10" class="input_area" placeholder="例: misskey.io" required>
             <br>
-            <p>ト－クン<br>(ノート作成権限のみ必要)<br>トークンの取得方法は<a href="https://misskey-hub.net/docs/api/#%E8%87%AA%E5%88%86%E8%87%AA%E8%BA%AB%E3%81%AE%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%82%92%E6%89%8B%E5%8B%95%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B" target="_blank" rel="noopener">こちら</a></p>
+            <p>ト－クン<br>(ノート作成権限のみ必要)<br>トークンの取得方法は<a
+                    href="https://misskey-hub.net/docs/api/#%E8%87%AA%E5%88%86%E8%87%AA%E8%BA%AB%E3%81%AE%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%82%92%E6%89%8B%E5%8B%95%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B"
+                    target="_blank" rel="noopener">こちら</a></p>
             <input type="text" id="token_input" size="10" class="input_area" placeholder="例: xxxxxxxxxxxxxxx" required>
             <input type="submit" id="input_submit" required value="完了">
         </form>
@@ -59,7 +75,6 @@
         <p class="title">メニュー</p>
         <form>
             <button id="config" type="button">設定</button>
-            <button id="update_check" type="button">更新を確認</button>
             <button id="logout" type="button">ログアウト</button>
             <button id="about_me" type="button">Mizunaについて</button>
         </form>
@@ -82,12 +97,6 @@
     <div id="mask3" class="hidden"></div>
     <section id="ofline_modal" class="hidden">
         <p class="title">オフラインになりました</p>
-    </section>
-    <section id="update_1" class="hidden">
-        <p class="title">更新があります<br>アプリを再起動してください</p>
-    </section>
-    <section id="update_0" class="hidden">
-        <p class="title">更新はありませんでした</p>
     </section>
     <section id="about_me_modal" class="hidden">
         <p class="title">Mizunaについて</p>

@@ -16,6 +16,12 @@ $(function () {
     const user_name_id = localStorage.getItem('user_name_id');
     const user_icon_link = localStorage.getItem('user_icon_link');
     const user_icon_none = localStorage.getItem('user_icon_none');
+    const note_end_mizuna_status = localStorage.getItem('note_end_mizuna_status');
+
+    //note_end_mizuna_statusが1だったらチェックボックスを有効化する
+    if (note_end_mizuna_status == 1) {
+        document.getElementById('note_end_mizuna_checkbox').checked = true;
+    }
 
     if (address == null) {
         document.getElementById('mask1').classList.remove('hidden');
@@ -70,35 +76,57 @@ $(function () {
         document.querySelector('#input-param').appendChild(clone);
     });
 
+    //投稿ボタン
     $("#submit").click(function () {
-        let url = "https://" + address + "/api/notes/create"
-        let type = "post"
+        var note_content_input = $(".note_content").val();
+        if (note_content_input === "" || !note_content_input.match(/\S/g)) {
+            document.getElementById('mask').classList.remove('hidden');
+            document.getElementById('modal').classList.remove('hidden');
+        } else {
+            let url = "https://" + address + "/api/notes/create"
+            let type = "post"
+            var visibility_select = document.getElementById('visibility_select');
+            var visibility = visibility_select.value
+            var note_end_mizuna = document.getElementById('note_end_mizuna_checkbox').checked;
 
-        let param = {
-            "i": token,
-            "text": $(".note_content").val()
-        };
-
-
-        param = JSON.stringify(param);
-
-
-        $.ajax({
-            type: type,
-            url: url,
-            data: param,
-            contentType: 'application/json',
-            dataType: 'json',
-            scriptCharset: 'utf-8',
-            success: function () {
-                var note_content = document.getElementById("note_content input_area");
-                note_content.value = '';
-            },
-            error: function () {
-                document.getElementById('mask').classList.remove('hidden');
-                document.getElementById('modal').classList.remove('hidden');
+            if (note_end_mizuna == false) {
+                var note_text = note_content_input
+                if (note_end_mizuna_status == 1) {
+                    localStorage.setItem('note_end_mizuna_status', 0);
+                }
             }
-        });
+            else if (note_end_mizuna == true) {
+                var note_text = note_content_input + "\n>Mizunaからノート"
+                if (note_end_mizuna_status == 0 || note_end_mizuna_status == null) {
+                    localStorage.setItem('note_end_mizuna_status', 1)
+                }
+            }
+            let param = {
+                "i": token,
+                "text": note_text,
+                "visibility": visibility
+            };
+
+            param = JSON.stringify(param);
+
+            $.ajax({
+                type: type,
+                url: url,
+                data: param,
+                contentType: 'application/json',
+                dataType: 'json',
+                scriptCharset: 'utf-8',
+                success: function () {
+                    var note_content = document.getElementById("note_content input_area");
+                    note_content.value = '';
+                },
+                error: function () {
+                    document.getElementById('mask').classList.remove('hidden');
+                    document.getElementById('modal').classList.remove('hidden');
+                }
+            });
+        }
+
     });
     document.getElementById('mask').addEventListener('click', () => {
         document.getElementById('mask').classList.add('hidden');
@@ -130,12 +158,15 @@ $(function () {
         document.getElementById('logout_confirm').classList.add('hidden');
         document.getElementById('about_me_modal').classList.add('hidden');
         document.getElementById('config_modal').classList.add('hidden');
-        document.getElementById('update_0').classList.add('hidden');
     });
 
+    // 設定
+    //ログアウト
     $("#logout").click(function () {
         document.getElementById('logout_confirm').classList.remove('hidden');
+        document.getElementById('user_menu').classList.add('hidden');
     })
+    // ログアウト -Yes
     $("#logout_yes").click(function () {
         localStorage.removeItem("address");
         localStorage.removeItem("token");
@@ -143,15 +174,20 @@ $(function () {
         localStorage.removeItem("user_icon_link");
         location.reload()
     })
+    // ログアウト -No
     $("#logout_no").click(function () {
         document.getElementById('logout_confirm').classList.add('hidden');
     })
+    // about me
     $("#about_me").click(function () {
         document.getElementById('about_me_modal').classList.remove('hidden');
     })
+    // 設定
     $("#config").click(function () {
         document.getElementById('config_modal').classList.remove('hidden');
     })
+
+    //ユーザーアイコン表示切り替え
     $("#user_icon_none").click(function () {
         if (user_icon_none == 0 || user_icon_none == null) {
             localStorage.setItem("user_icon_none", 1);
@@ -161,6 +197,8 @@ $(function () {
             location.reload()
         }
     })
+
+    //ユーザーデータ再取得
     $("#user_icon_name_reload").click(function () {
         let user_data_type = "post"
         let user_data_url = "https://" + address + "/api/i"
@@ -182,45 +220,11 @@ $(function () {
             }
         });
     })
-    $("#update_check").click(function () {
-        document.getElementById('user_menu').classList.add('hidden');
-        if (!('serviceWorker' in navigator))
-            return;
-        navigator.serviceWorker.getRegistration()
-            .then(registration => {
-                if (registration.waiting != null) {
-                    document.getElementById('mask1').classList.remove('hidden');
-                    document.getElementById('update_1').classList.remove('hidden');
-                    document.getElementById('update_0').classList.add('hidden');
-                    document.getElementById('mask2').classList.add('hidden');
-                    disableUpdateButton();
-                }
-                else {
-                    registration.update()
-                        .then(registration => {
-                            const installingWorker = registration.installing;
-                            if (installingWorker != null) {
-                                installingWorker.onstatechange = e => {
-                                    if (e.target.state == 'installed') {
-                                        document.getElementById('mask1').classList.remove('hidden');
-                                        document.getElementById('update_1').classList.remove('hidden');
-                                        document.getElementById('update_0').classList.add('hidden');
-                                        document.getElementById('mask2').classList.add('hidden');
-                                        disableUpdateButton();
-                                    }
-                                }
-                            }
-                            document.getElementById('mask2').classList.remove('hidden');
-                            document.getElementById('update_0').classList.remove('hidden');
-                        });
-                }
-            });
-    })
-});
+})
 
 // エンターキーで投稿
 document.addEventListener('keydown', event => {
     if (event.ctrlKey && event.key === 'Enter') {
-		$("#submit").click();
+        $("#submit").click();
     }
 });

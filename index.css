@@ -58,6 +58,57 @@ body {
     margin-left: 1%;
 }
 
+.note_menu{
+    border: rgb(223, 222, 222) 2px solid;
+    border-radius: 10px;
+    display: flex;
+}
+.visibility{
+    display: flex;
+    align-items: center;
+}
+
+.note_end_mizuna{
+    display: flex;
+    align-items: center;
+}
+
+.visibility{
+    display: flex;
+    align-items: center;
+}
+
+/* mobile */
+@media screen and (max-width: 520px) {
+    .visibility{
+        display: block!important;
+        align-items: center;
+    }
+
+    .note_end_mizuna{
+        display: block!important;
+        align-items: center;
+    }
+}
+.note-menu-style{
+    padding-left: 1%;
+    padding-right: 1%;
+    border-right: rgb(223, 222, 222) 2px solid;
+}
+
+#submit {
+    width: fit-content;
+    padding: 1% 5% 1% 5%;
+    font-weight: bolder;
+    background-color: lightblue;
+    border-radius: 20px;
+    display: flex;
+    margin-left: auto;
+    margin-right: 0;
+    margin-top: 3%;
+    align-items: center;
+}
+
 .hidden {
     display: none;
 }
@@ -116,9 +167,7 @@ body {
 #about_me_modal,
 #logout_confirm,
 #ofline_modal,
-#config_modal,
-#update_0,
-#update_1 {
+#config_modal {
     background: #fff;
     width: 50%;
     padding: 24px;
@@ -159,26 +208,13 @@ body {
     margin-right: auto;
 }
 
-#submit {
-    width: fit-content;
-    padding: 1% 5% 1% 5%;
-    font-weight: bolder;
-    background-color: lightblue;
-    border-radius: 20px;
-    display: block;
-    margin-left: auto;
-    margin-right: 0;
-    margin-top: 3%;
-}
-
 #logout,
 #logout_yes,
 #logout_no,
 #about_me,
 #config,
 #user_icon_none,
-#user_icon_name_reload,
-#update_check {
+#user_icon_name_reload {
     width: 90%;
     margin: 1% 0 1% 0;
     font-weight: bolder;
