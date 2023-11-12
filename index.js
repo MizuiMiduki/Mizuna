@@ -96,7 +96,7 @@ $(function () {
                 }
             }
             else if (note_end_mizuna == true) {
-                var note_text = note_content_input + "\n>Mizunaからノート"
+                var note_text = note_content_input + "\n(from Mizuna)"
                 if (note_end_mizuna_status == 0 || note_end_mizuna_status == null) {
                     localStorage.setItem('note_end_mizuna_status', 1)
                 }
