@@ -21,25 +21,32 @@
     </div>
     <div class="main_column">
         <p>
-            <textarea class="note_content input_area" id="note_content input_area" size="30"
+            <textarea class="cw_content input_area hidden" size="30"
+                maxlength="30" placeholder="注釈"></textarea>
+            <textarea class="note_content input_area" size="30"
                 maxlength="3000"></textarea>
         </p>
-            <form class="note_menu">
-                <div class="visibility note-menu-style">
-                    <p>投稿範囲：</p>
-                    <select name="visibility_select" id="visibility_select">
-                        <option value="public">パブリック</option>
-                        <option value="home">ホーム</option>
-                        <option value="followers">フォロワー</option>
-                    </select>
-                </div>
+        <form class="note_menu">
+            <div class="visibility note-menu-style">
+                <p>投稿範囲：</p>
+                <select name="visibility_select" id="visibility_select">
+                    <option value="public">パブリック</option>
+                    <option value="home">ホーム</option>
+                    <option value="followers">フォロワー</option>
+                </select>
+            </div>
 
-                <div class="note_end_mizuna note-menu-style">
-                    <p>末尾に"from Mizuna"を付ける</p>
-                    <input type="checkbox" id="note_end_mizuna_checkbox"/>
-                </div>
-            </form>
-            <button id="submit" type="button">ノートする</button>
+            <div class="cw note-menu-style">
+                <p>内容を隠す：</p>
+                <input type="checkbox" id="cw" />
+            </div>
+
+            <div class="note_end_mizuna note-menu-style">
+                <p>末尾に"from Mizuna"を付ける：</p>
+                <input type="checkbox" id="note_end_mizuna_checkbox" />
+            </div>
+        </form>
+        <button id="submit" type="button">ノートする</button>
     </div>
     <div class="footer">
         <div class="user_icon_back">
@@ -109,9 +116,9 @@
         </p>
     </section>
 
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="/index.js"></script>
+    <script src="/version.js"></script>
 </body>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
-<script src="/index.js"></script>
-<script src="/version.js"></script>
 
 </html>

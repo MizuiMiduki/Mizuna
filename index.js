@@ -76,6 +76,12 @@ $(function () {
         document.querySelector('#input-param').appendChild(clone);
     });
 
+    // CWボタン
+    $("#cw").click(function () {
+        $(".cw_content").toggleClass("hidden");
+    });
+
+
     //投稿ボタン
     $("#submit").click(function () {
         var note_content_input = $(".note_content").val();
@@ -101,8 +107,14 @@ $(function () {
                     localStorage.setItem('note_end_mizuna_status', 1)
                 }
             }
+
+            if (note_content_input != "") {
+                var cw_text = $(".cw_content").val();
+            }
+
             let param = {
                 "i": token,
+                "cw": cw_text,
                 "text": note_text,
                 "visibility": visibility
             };
@@ -117,8 +129,7 @@ $(function () {
                 dataType: 'json',
                 scriptCharset: 'utf-8',
                 success: function () {
-                    var note_content = document.getElementById("note_content input_area");
-                    note_content.value = '';
+                    $('textarea').val("");
                 },
                 error: function () {
                     document.getElementById('mask').classList.remove('hidden');
