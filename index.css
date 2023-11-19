@@ -58,27 +58,28 @@ body {
     margin-left: 1%;
 }
 
-.note_menu{
+.note_menu {
     border: rgb(223, 222, 222) 2px solid;
     border-radius: 10px;
     display: flex;
 }
-.visibility{
+
+.visibility {
     display: flex;
     align-items: center;
 }
 
-.note_end_mizuna{
+.note_end_mizuna {
     display: flex;
     align-items: center;
 }
 
-.visibility{
+.cw {
     display: flex;
     align-items: center;
 }
 
-.note-menu-style{
+.note-menu-style {
     padding-left: 1%;
     padding-right: 1%;
     border-right: rgb(223, 222, 222) 2px solid;
@@ -99,20 +100,25 @@ body {
 
 /* mobile */
 @media screen and (max-width: 520px) {
-    .visibility{
-        display: block!important;
+    .visibility {
         align-items: center;
+        border-bottom: 2px solid rgb(223, 222, 222);
     }
 
-    .note_end_mizuna{
-        display: block!important;
+    .cw {
         align-items: center;
+        border-bottom: 2px solid rgb(223, 222, 222);
+    }
+
+    .note_menu {
+        display: block;
     }
 
     #submit {
         padding: 2% 10% 2% 10%;
     }
 }
+
 .hidden {
     display: none;
 }
@@ -191,15 +197,21 @@ body {
 
 .input_area {
     width: 100%;
-    min-height: 200px;
     resize: none;
     overflow-x: hidden;
     line-break: anywhere;
-    padding: 10px 15px;
     font-size: 16px;
     border-radius: 3px;
     border: 2px solid #ddd;
     box-sizing: border-box;
+}
+
+.note_content{
+    min-height: 200px;
+}
+
+.cw_content{
+    min-height: 16px;
 }
 
 #input_address_token input {
