@@ -108,7 +108,7 @@ $(function () {
                 }
             }
 
-            if (note_content_input != "") {
+            if ($('.cw_content').hasClass('hidden') == false) {
                 var cw_text = $(".cw_content").val();
             }
 
