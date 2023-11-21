@@ -177,9 +177,10 @@ body {
 #about_me_modal,
 #logout_confirm,
 #ofline_modal,
-#config_modal {
+#config_modal,
+#account_modal {
     background: #fff;
-    width: 50%;
+    width: 70%;
     padding: 24px;
     border-radius: 4px;
     position: fixed;
@@ -206,11 +207,11 @@ body {
     box-sizing: border-box;
 }
 
-.note_content{
+.note_content {
     min-height: 200px;
 }
 
-.cw_content{
+.cw_content {
     min-height: 16px;
 }
 
@@ -230,7 +231,8 @@ body {
 #about_me,
 #config,
 #user_icon_none,
-#user_icon_name_reload {
+#user_icon_name_reload,
+#account {
     width: 90%;
     margin: 1% 0 1% 0;
     font-weight: bolder;

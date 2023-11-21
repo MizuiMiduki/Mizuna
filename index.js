@@ -1,38 +1,88 @@
 $(function () {
     'use strict';
 
+    // 指定中のアカウントの要素番号を取得
+    var select_account = localStorage.getItem("select_account");
+
+    // 指定中のアカウントの要素番号が空だったときの処理
+    if (select_account == null) {
+        localStorage.setItem("select_account", 0);
+    }
+    // オンライン・オフライン検知
+    // オンラインになったときの処理
     window.addEventListener('online', event => {
         document.getElementById('ofline_modal').classList.add('hidden');
         document.getElementById('mask3').classList.add('hidden');
     })
-
+    // オフラインになったときの処理
     window.addEventListener('offline', event => {
         document.getElementById('ofline_modal').classList.remove('hidden');
         document.getElementById('mask3').classList.remove('hidden');
     })
 
-    const address = localStorage.getItem('address');
-    const token = localStorage.getItem('token');
-    const user_name_id = localStorage.getItem('user_name_id');
-    const user_icon_link = localStorage.getItem('user_icon_link');
-    const user_icon_none = localStorage.getItem('user_icon_none');
-    const note_end_mizuna_status = localStorage.getItem('note_end_mizuna_status');
+    // サーバーアドレスのリストを取得
+    var address_list = localStorage.getItem('address');
+    if (address_list == null) {
+        var address = null
+    } else {
+        address_list = JSON.parse(address_list)
+        var address = address_list[select_account]
+    }
+
+    // トークンのリストを取得
+    var token_list = localStorage.getItem('token');
+    if (token_list == null) {
+        var token = null
+    } else {
+        token_list = JSON.parse(token_list)
+        var token = token_list[select_account]
+    }
+
+    // ユーザーネームのリストを取得
+    var user_name_id_list = localStorage.getItem('user_name_id');
+    if (user_name_id_list == null) {
+        var user_name_id = null
+    } else {
+        user_name_id_list = JSON.parse(user_name_id_list)
+        var user_name_id = user_name_id_list[select_account]
+    }
+
+    // ユーザーアイコンのリストを取得
+    var user_icon_link_list = localStorage.getItem('user_icon_link');
+    if (user_icon_link_list == null) {
+        var user_icon_link = null
+    } else {
+        user_icon_link_list = JSON.parse(user_icon_link_list)
+        var user_icon_link = user_icon_link_list[select_account]
+    }
+
+    // "ユーザーアイコン表示切り替え"の設定値を取得
+    var user_icon_none = localStorage.getItem('user_icon_none');
+
+    // "末尾に文言を付ける"の設定値を取得
+    var note_end_mizuna_status = localStorage.getItem('note_end_mizuna_status');
 
     //note_end_mizuna_statusが1だったらチェックボックスを有効化する
     if (note_end_mizuna_status == 1) {
         document.getElementById('note_end_mizuna_checkbox').checked = true;
     }
 
+    // アドレスが未登録(非ログイン)のときの処理
     if (address == null) {
         document.getElementById('mask1').classList.remove('hidden');
         document.getElementById('input_address_token').classList.remove('hidden');
     }
 
+
+    // 新規ログイン
     $("#input_submit").click(function () {
-        const address = document.getElementById('address_input').value
-        const token = document.getElementById('token_input').value
-        localStorage.setItem("address", address);
-        localStorage.setItem("token", token);
+        var address = document.getElementById('address_input').value
+        var token = document.getElementById('token_input').value
+        address_list = [address]
+        token_list = [token]
+        localStorage.setItem("address", JSON.stringify(address_list));
+        localStorage.setItem("token", JSON.stringify(token_list));
+        location.reload()
     })
 
     if (address != null && user_name_id == null) {
@@ -50,8 +100,12 @@ $(function () {
             dataType: 'json',
             scriptCharset: 'utf-8',
             success: function (data) {
-                localStorage.setItem("user_icon_link", data.avatarUrl);
-                localStorage.setItem("user_name_id", data.name + "(@" + data.username + "@" + address + ")");
+                user_icon_link_list = []
+                user_icon_link_list.push(data.avatarUrl)
+                user_name_id_list = []
+                user_name_id_list.push(data.name + "(@" + data.username + "@" + address + ")")
+                localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
+                localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
                 location.reload()
             },
             error: function () {
@@ -145,7 +199,7 @@ $(function () {
     });
 
     window.addEventListener("DOMContentLoaded", () => {
-        const textareaEls = document.querySelectorAll("textarea");
+        var textareaEls = document.querySelectorAll("textarea");
 
         textareaEls.forEach((textareaEl) => {
             textareaEl.setAttribute("style", `height: ${textareaEl.scrollHeight}px;`);
@@ -169,6 +223,7 @@ $(function () {
         document.getElementById('logout_confirm').classList.add('hidden');
         document.getElementById('about_me_modal').classList.add('hidden');
         document.getElementById('config_modal').classList.add('hidden');
+        document.getElementById('account_modal').classList.add('hidden');
     });
 
     // 設定
@@ -179,10 +234,18 @@ $(function () {
     })
     // ログアウト -Yes
     $("#logout_yes").click(function () {
-        localStorage.removeItem("address");
-        localStorage.removeItem("token");
-        localStorage.removeItem("user_name_id");
-        localStorage.removeItem("user_icon_link");
+        address_list[select_account] = null;
+        token_list[select_account] = null;
+        user_icon_link_list[select_account] = null;
+        user_name_id_list[select_account] = null;
+        console.log(address_list)
+        console.log(token_list)
+        console.log(user_icon_link_list)
+        console.log(user_name_id_list)
+        localStorage.setItem("address", JSON.stringify(address_list));
+        localStorage.setItem("token", JSON.stringify(token_list));
+        localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
+        localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
         location.reload()
     })
     // ログアウト -No
@@ -193,10 +256,18 @@ $(function () {
     // about me
     $("#about_me").click(function () {
         document.getElementById('about_me_modal').classList.remove('hidden');
+        document.getElementById('user_menu').classList.add('hidden');
     })
     // 設定
     $("#config").click(function () {
         document.getElementById('config_modal').classList.remove('hidden');
+        document.getElementById('user_menu').classList.add('hidden');
+    })
+
+    // アカウント
+    $("#account").click(function () {
+        document.getElementById('account_modal').classList.remove('hidden');
+        document.getElementById('user_menu').classList.add('hidden');
     })
 
     //ユーザーアイコン表示切り替え
@@ -226,8 +297,12 @@ $(function () {
             dataType: 'json',
             scriptCharset: 'utf-8',
             success: function (data) {
-                localStorage.setItem("user_icon_link", data.avatarUrl);
-                localStorage.setItem("user_name_id", data.name + "(@" + data.username + "@" + address + ")");
+                user_icon_link_list[select_account] = data.avatarUrl;
+                user_name_id_list[select_account] = data.name + "(@" + data.username + "@" + address + ")";
+                console.log(user_icon_link_list)
+                console.log(user_name_id_list)
+                localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
+                localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
                 location.reload()
             }
         });

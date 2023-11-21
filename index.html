@@ -21,10 +21,8 @@
     </div>
     <div class="main_column">
         <p>
-            <textarea class="cw_content input_area hidden" size="30"
-                maxlength="30" placeholder="注釈"></textarea>
-            <textarea class="note_content input_area" size="30"
-                maxlength="3000"></textarea>
+            <textarea class="cw_content input_area hidden" size="30" maxlength="30" placeholder="注釈"></textarea>
+            <textarea class="note_content input_area" size="30" maxlength="3000"></textarea>
         </p>
         <form class="note_menu">
             <div class="visibility note-menu-style">
@@ -81,13 +79,14 @@
     <section id="user_menu" class="hidden">
         <p class="title">メニュー</p>
         <form>
+            <button id="account" type="button">アカウント切り替え</button>
             <button id="config" type="button">設定</button>
             <button id="logout" type="button">ログアウト</button>
             <button id="about_me" type="button">Mizunaについて</button>
         </form>
     </section>
     <section id="logout_confirm" class="hidden">
-        <p class="title">ログアウトしますか？</p>
+        <p class="title">このアカウントからログアウトしますか？</p>
         <form>
             <button id="logout_yes" type="button">はい</button>
             <button id="logout_no" type="button">いいえ</button>
@@ -96,9 +95,14 @@
     <section id="config_modal" class="hidden">
         <p class="title">設定</p>
         <form>
-            <button id="user_icon_none" type="button">ユーザーアイコンを非表示<br>
-                (読み込みを無くし通信量を削減)</button>
-            <button id="user_icon_name_reload" type="button">ユーザー情報を同期</button>
+            <button id="user_icon_none" type="button">全てのユーザーアイコンを非表示</button>
+            <button id="user_icon_name_reload" type="button">使用中のユーザー情報を同期</button>
+        </form>
+    </section>
+    <section id="account_modal" class="hidden">
+        <p class="title">アカウント</p>
+        <form>
+            <!-- account設定 -->
         </form>
     </section>
     <div id="mask3" class="hidden"></div>
