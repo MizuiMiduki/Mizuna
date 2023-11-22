@@ -4,6 +4,8 @@ $(function () {
     // 指定中のアカウントの要素番号を取得
     var select_account = localStorage.getItem("select_account");
 
+    // アカウント一覧の生成状態
+    var generate_account_view = 0
     // 指定中のアカウントの要素番号が空だったときの処理
     if (select_account == null) {
         localStorage.setItem("select_account", 0);
@@ -264,6 +266,21 @@ $(function () {
     $("#account").click(function () {
         document.getElementById('account_modal').classList.remove('hidden');
         document.getElementById('user_menu').classList.add('hidden');
+
+        if (generate_account_view == 0) {
+            // ユーザー一覧表示
+            for (let i = 0; i < token_list.length; i++) {
+                $('#account_display_area').append('<div id="account_card" data-account-num="' + i + '"><table><tr><td> <img class="user_card_icon' + i + '"></td><td>&nbsp;</td><td><p id="user_card_name' + i + '"></p></td></tr ></table >');
+                $('.user_card_icon' + i).attr('src', user_icon_link_list[i]);
+                document.getElementById('user_card_name' + i).innerHTML = user_name_id_list[i];
+            }
+            generate_account_view = 1
+        }
+    })
+
+    // アカウント切り替え
+    $('body').on('click', '#account_card', function () {
+        alert($(this).data("account-num"))
     })
 
     //ユーザーアイコン表示切り替え
@@ -305,7 +322,7 @@ $(function () {
     })
 })
 
-// エンターキーで投稿
+// コントロール+エンターキーで投稿
 document.addEventListener('keydown', event => {
     if (event.ctrlKey && event.key === 'Enter') {
         $("#submit").click();

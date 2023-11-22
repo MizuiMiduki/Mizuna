@@ -36,6 +36,27 @@ body {
     user-select: none;
 }
 
+[id^="account_card"] {
+    border: solid 1px gray;
+    border-radius: 25px;
+    padding: 5px;
+    text-overflow: ellipsis;
+}
+
+[class^="user_card_icon"] {
+    border-radius: 100px;
+    width: 30px;
+    height: auto;
+    user-select: none;
+}
+
+[id^="user_card_name"] {
+    margin-top: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    user-select: none;
+}
+
 .footer_user_name {
     bottom: 0;
     background-color: lightblue;
