@@ -199,7 +199,9 @@ body {
 #logout_confirm,
 #ofline_modal,
 #config_modal,
-#account_modal {
+#account_modal,
+#add_account_modal,
+#add_account_error_modal {
     background: #fff;
     width: 70%;
     padding: 24px;
@@ -222,7 +224,7 @@ body {
     resize: none;
     overflow-x: hidden;
     line-break: anywhere;
-    font-size: 16px;
+    font-size: 20px;
     border-radius: 3px;
     border: 2px solid #ddd;
     box-sizing: border-box;
@@ -265,7 +267,8 @@ body {
     margin-top: 3%;
 }
 
-#input_submit {
+#input_submit,
+#add_account_input_submit {
     width: 40%;
     background-color: lightblue;
     border-radius: 20px;
@@ -273,4 +276,23 @@ body {
     margin-left: auto;
     margin-right: auto;
     margin-top: 5%;
+}
+
+.material-symbols-outlined {
+    font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+}
+
+.add_account_icon {
+    color: black;
+    position: fixed;
+    top: 10%;
+    right: 5%;
+    background: lightblue;
+    padding: 5px;
+    border-radius: 100px;
+    user-select: none;
 }

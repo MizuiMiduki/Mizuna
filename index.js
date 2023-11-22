@@ -6,10 +6,7 @@ $(function () {
 
     // アカウント一覧の生成状態
     var generate_account_view = 0
-    // 指定中のアカウントの要素番号が空だったときの処理
-    if (select_account == null) {
-        localStorage.setItem("select_account", 0);
-    }
+
     // オンライン・オフライン検知
     // オンラインになったときの処理
     window.addEventListener('online', event => {
@@ -30,6 +27,10 @@ $(function () {
         address_list = JSON.parse(address_list)
         var address = address_list[select_account]
     }
+    if (address_list != "" || address_list != null) {
+        address_list = address_list.filter(Boolean);
+    }
+    localStorage.setItem("address", JSON.stringify(address_list));
 
     // トークンのリストを取得
     var token_list = localStorage.getItem('token');
@@ -39,6 +40,10 @@ $(function () {
         token_list = JSON.parse(token_list)
         var token = token_list[select_account]
     }
+    if (token_list != "" || token_list != null) {
+        token_list = token_list.filter(Boolean);
+    }
+    localStorage.setItem("token", JSON.stringify(token_list));
 
     // ユーザーネームのリストを取得
     var user_name_id_list = localStorage.getItem('user_name_id');
@@ -48,6 +53,10 @@ $(function () {
         user_name_id_list = JSON.parse(user_name_id_list)
         var user_name_id = user_name_id_list[select_account]
     }
+    if (user_name_id_list != "" || user_name_id_list != null) {
+        user_name_id_list = user_name_id_list.filter(Boolean);
+    }
+    localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
 
     // ユーザーアイコンのリストを取得
     var user_icon_link_list = localStorage.getItem('user_icon_link');
@@ -56,6 +65,17 @@ $(function () {
     } else {
         user_icon_link_list = JSON.parse(user_icon_link_list)
         var user_icon_link = user_icon_link_list[select_account]
+    }
+
+    if (user_icon_link_list != "" || user_icon_link_list != null) {
+        user_icon_link_list = user_icon_link_list.filter(Boolean);
+    }
+    localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
+
+    // 指定中のアカウントの要素番号が空だったときの処理
+    if (token_list[select_account] == null && select_account != 0) {
+        localStorage.setItem("select_account", 0);
+        location.reload()
     }
 
     // "ユーザーアイコン表示切り替え"の設定値を取得
@@ -70,7 +90,7 @@ $(function () {
     }
 
     // アドレスが未登録(非ログイン)のときの処理
-    if (address == null) {
+    if (address_list == "") {
         document.getElementById('mask1').classList.remove('hidden');
         document.getElementById('input_address_token').classList.remove('hidden');
     }
@@ -226,6 +246,7 @@ $(function () {
         document.getElementById('about_me_modal').classList.add('hidden');
         document.getElementById('config_modal').classList.add('hidden');
         document.getElementById('account_modal').classList.add('hidden');
+        document.getElementById('add_account_modal').classList.add('hidden');
     });
 
     // 設定
@@ -280,7 +301,51 @@ $(function () {
 
     // アカウント切り替え
     $('body').on('click', '#account_card', function () {
-        alert($(this).data("account-num"))
+        localStorage.setItem("select_account", $(this).data("account-num"));
+        location.reload()
+    })
+
+    // アカウント追加
+    // 追加画面表示
+    $("#add_account_input").click(function () {
+        document.getElementById('account_modal').classList.add('hidden');
+        document.getElementById('add_account_modal').classList.remove('hidden');
+    })
+
+    $("#add_account_input_submit").click(function () {
+        var add_account_address = document.getElementById('add_account_address_input').value
+        var add_account_token = document.getElementById('add_account_token_input').value
+        address_list.push(add_account_address)
+        token_list.push(add_account_token)
+        localStorage.setItem("address", JSON.stringify(address_list));
+        localStorage.setItem("token", JSON.stringify(token_list));
+
+        let user_data_type = "post"
+        let user_data_url = "https://" + add_account_address + "/api/i"
+        let user_data = {
+            "i": add_account_token
+        }
+
+        user_data = JSON.stringify(user_data);
+        $.ajax({
+            type: user_data_type,
+            url: user_data_url,
+            data: user_data,
+            contentType: 'application/json',
+            dataType: 'json',
+            scriptCharset: 'utf-8',
+            success: function (data) {
+                user_icon_link_list.push(data.avatarUrl)
+                user_name_id_list.push(data.name + "(@" + data.username + "@" + address + ")")
+                localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
+                localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
+                location.reload()
+            },
+            error: function () {
+                document.getElementById('mask').classList.remove('hidden');
+                document.getElementById('modal').classList.remove('hidden');
+            }
+        });
     })
 
     //ユーザーアイコン表示切り替え
@@ -312,8 +377,6 @@ $(function () {
             success: function (data) {
                 user_icon_link_list[select_account] = data.avatarUrl;
                 user_name_id_list[select_account] = data.name + "(@" + data.username + "@" + address + ")";
-                console.log(user_icon_link_list)
-                console.log(user_name_id_list)
                 localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
                 localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
                 location.reload()
