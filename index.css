@@ -1,3 +1,25 @@
+.material-symbols-outlined {
+    font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+}
+
+.add_account_icon {
+    color: black;
+    position: fixed;
+    top: 10%;
+    right: 5%;
+    background: yellow;
+    padding: 5px;
+    border-radius: 100px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -10,7 +32,7 @@ body {
 }
 
 .header {
-    background-color: lightblue;
+    background-color: yellow;
     display: flex;
 }
 
@@ -20,7 +42,7 @@ body {
 }
 
 .user_icon_back {
-    background-color: lightblue;
+    background-color: yellow;
     border-radius: 100px 100px 0 0;
     padding-top: 10px;
     padding-left: 10px;
@@ -31,35 +53,47 @@ body {
 
 .user_icon {
     margin-left: 0;
-    border-radius: 100px;
-    max-width: 150px;
+    width: 150px;
+    height: 150px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
     user-select: none;
+    border-radius: 50%;
 }
 
 [id^="account_card"] {
     border: solid 1px gray;
     border-radius: 25px;
     padding: 5px;
-    text-overflow: ellipsis;
+    margin-bottom: 5px;
+    width: 100%;
+    overflow: hidden;
 }
 
 [class^="user_card_icon"] {
-    border-radius: 100px;
     width: 30px;
-    height: auto;
+    height: 30px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
     user-select: none;
+    border-radius: 50%;
 }
 
 [id^="user_card_name"] {
     margin-top: 0;
     margin-bottom: 0;
     overflow: hidden;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
     user-select: none;
 }
 
 .footer_user_name {
     bottom: 0;
-    background-color: lightblue;
+    background-color: yellow;
     width: 100vw;
     position: absolute;
     bottom: 0;
@@ -110,7 +144,7 @@ body {
     width: fit-content;
     padding: 1% 5% 1% 5%;
     font-weight: bolder;
-    background-color: lightblue;
+    background-color: yellow;
     border-radius: 20px;
     display: flex;
     margin-left: auto;
@@ -215,6 +249,17 @@ body {
     z-index: 2;
 }
 
+.account_icon_preload {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    max-width: 100%;
+}
+
 .title {
     color: rgb(0, 191, 255);
     text-align: center;
@@ -260,7 +305,7 @@ body {
     width: 90%;
     margin: 1% 0 1% 0;
     font-weight: bolder;
-    background-color: lightblue;
+    background-color: yellow;
     border-radius: 20px;
     display: block;
     margin-left: auto;
@@ -271,7 +316,7 @@ body {
 #input_submit,
 #add_account_input_submit {
     width: 40%;
-    background-color: lightblue;
+    background-color: yellow;
     border-radius: 20px;
     display: block;
     margin-left: auto;
@@ -292,8 +337,11 @@ body {
     position: fixed;
     top: 10%;
     right: 5%;
-    background: lightblue;
+    background: yellow;
     padding: 5px;
     border-radius: 100px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
     user-select: none;
 }

@@ -302,9 +302,8 @@ $(function () {
         if (generate_account_view == 0) {
             // ユーザー一覧表示
             for (let i = 0; i < token_list.length; i++) {
-                $('#account_display_area').append('<div id="account_card" data-account-num="' + i + '"><table><tr><td> <img class="user_card_icon' + i + '"></td><td>&nbsp;</td><td><p id="user_card_name' + i + '"></p></td></tr ></table >');
+                $('#account_display_area').append('<div id="account_card" data-account-num="' + i + '"><table><tr><td> <img class="user_card_icon' + i + '"></td><td>&nbsp;</td><td>'+user_name_id_list[i]+'</td></tr ></table >');
                 $('.user_card_icon' + i).attr('src', user_icon_link_list[i]);
-                document.getElementById('user_card_name' + i).innerHTML = user_name_id_list[i];
             }
             generate_account_view = 1
         }
@@ -348,6 +347,8 @@ $(function () {
                 user_name_id_list.push(data.name + "(@" + data.username + "@" + add_account_address + ")")
                 localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
                 localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
+                localStorage.setItem("address", JSON.stringify(address_list));
+                localStorage.setItem("token", JSON.stringify(token_list));
                 location.reload()
             },
             error: function () {
