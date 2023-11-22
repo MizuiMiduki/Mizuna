@@ -1,5 +1,8 @@
 $(function () {
     'use strict';
+    if (localStorage.getItem("R1.2toR2.0") == null) {
+        localStorage.setItem("R1.2toR2.0",1)
+    }
 
     window.addEventListener('online', event => {
         document.getElementById('ofline_modal').classList.add('hidden');
