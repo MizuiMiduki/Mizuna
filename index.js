@@ -234,14 +234,10 @@ $(function () {
     })
     // ログアウト -Yes
     $("#logout_yes").click(function () {
-        address_list[select_account] = null;
-        token_list[select_account] = null;
-        user_icon_link_list[select_account] = null;
-        user_name_id_list[select_account] = null;
-        console.log(address_list)
-        console.log(token_list)
-        console.log(user_icon_link_list)
-        console.log(user_name_id_list)
+        delete address_list[select_account]
+        delete token_list[select_account]
+        delete user_icon_link_list[select_account]
+        delete user_name_id_list[select_account]
         localStorage.setItem("address", JSON.stringify(address_list));
         localStorage.setItem("token", JSON.stringify(token_list));
         localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
