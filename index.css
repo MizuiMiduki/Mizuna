@@ -166,7 +166,8 @@ body {
     z-index: 1;
 }
 
-#modal {
+#modal,
+#add_account_error_modal {
     background: #fff;
     width: 50%;
     padding: 24px;

@@ -1,5 +1,14 @@
 $(function () {
     'use strict';
+    // 指定中のアカウントの要素番号が空だったときの処理
+    if (localStorage.length == 0) {
+        localStorage.setItem("select_account", 0);
+        localStorage.setItem('address', JSON.stringify([]));
+        localStorage.setItem('token', JSON.stringify([]));
+        localStorage.setItem('user_name_id', JSON.stringify([]));
+        localStorage.setItem('user_icon_link', JSON.stringify([]));
+        location.reload()
+    }
 
     // 指定中のアカウントの要素番号を取得
     var select_account = localStorage.getItem("select_account");
@@ -27,10 +36,10 @@ $(function () {
         address_list = JSON.parse(address_list)
         var address = address_list[select_account]
     }
-    if (address_list != "" || address_list != null) {
+    if (address_list != "") {
         address_list = address_list.filter(Boolean);
+        localStorage.setItem("address", JSON.stringify(address_list));
     }
-    localStorage.setItem("address", JSON.stringify(address_list));
 
     // トークンのリストを取得
     var token_list = localStorage.getItem('token');
@@ -40,10 +49,11 @@ $(function () {
         token_list = JSON.parse(token_list)
         var token = token_list[select_account]
     }
-    if (token_list != "" || token_list != null) {
+
+    if (token_list != "") {
         token_list = token_list.filter(Boolean);
+        localStorage.setItem("token", JSON.stringify(token_list));
     }
-    localStorage.setItem("token", JSON.stringify(token_list));
 
     // ユーザーネームのリストを取得
     var user_name_id_list = localStorage.getItem('user_name_id');
@@ -53,10 +63,10 @@ $(function () {
         user_name_id_list = JSON.parse(user_name_id_list)
         var user_name_id = user_name_id_list[select_account]
     }
-    if (user_name_id_list != "" || user_name_id_list != null) {
+    if (user_name_id_list != "") {
         user_name_id_list = user_name_id_list.filter(Boolean);
+        localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
     }
-    localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
 
     // ユーザーアイコンのリストを取得
     var user_icon_link_list = localStorage.getItem('user_icon_link');
@@ -67,16 +77,17 @@ $(function () {
         var user_icon_link = user_icon_link_list[select_account]
     }
 
-    if (user_icon_link_list != "" || user_icon_link_list != null) {
+    if (user_icon_link_list != "") {
         user_icon_link_list = user_icon_link_list.filter(Boolean);
+        localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
     }
-    localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
 
     // 指定中のアカウントの要素番号が空だったときの処理
     if (token_list[select_account] == null && select_account != 0) {
         localStorage.setItem("select_account", 0);
         location.reload()
     }
+
 
     // "ユーザーアイコン表示切り替え"の設定値を取得
     var user_icon_none = localStorage.getItem('user_icon_none');
@@ -122,9 +133,7 @@ $(function () {
             dataType: 'json',
             scriptCharset: 'utf-8',
             success: function (data) {
-                user_icon_link_list = []
                 user_icon_link_list.push(data.avatarUrl)
-                user_name_id_list = []
                 user_name_id_list.push(data.name + "(@" + data.username + "@" + address + ")")
                 localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
                 localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
@@ -247,6 +256,7 @@ $(function () {
         document.getElementById('config_modal').classList.add('hidden');
         document.getElementById('account_modal').classList.add('hidden');
         document.getElementById('add_account_modal').classList.add('hidden');
+        document.getElementById('add_account_error_modal').classList.add('hidden');
     });
 
     // 設定
@@ -257,14 +267,15 @@ $(function () {
     })
     // ログアウト -Yes
     $("#logout_yes").click(function () {
-        delete address_list[select_account]
-        delete token_list[select_account]
-        delete user_icon_link_list[select_account]
-        delete user_name_id_list[select_account]
+        address_list[select_account] = null
+        token_list[select_account] = null
+        user_icon_link_list[select_account] = null
+        user_name_id_list[select_account] = null
         localStorage.setItem("address", JSON.stringify(address_list));
         localStorage.setItem("token", JSON.stringify(token_list));
         localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
         localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
+        localStorage.setItem("select_account", 0);
         location.reload()
     })
     // ログアウト -No
@@ -312,40 +323,44 @@ $(function () {
         document.getElementById('add_account_modal').classList.remove('hidden');
     })
 
-    $("#add_account_input_submit").click(function () {
+    $("#add_account_input_submit").click(function (e) {
         var add_account_address = document.getElementById('add_account_address_input').value
         var add_account_token = document.getElementById('add_account_token_input').value
         address_list.push(add_account_address)
         token_list.push(add_account_token)
-        localStorage.setItem("address", JSON.stringify(address_list));
-        localStorage.setItem("token", JSON.stringify(token_list));
-
         let user_data_type = "post"
         let user_data_url = "https://" + add_account_address + "/api/i"
         let user_data = {
             "i": add_account_token
         }
-
         user_data = JSON.stringify(user_data);
+        e.preventDefault();
         $.ajax({
             type: user_data_type,
             url: user_data_url,
+            cache: false,
             data: user_data,
             contentType: 'application/json',
             dataType: 'json',
             scriptCharset: 'utf-8',
             success: function (data) {
                 user_icon_link_list.push(data.avatarUrl)
-                user_name_id_list.push(data.name + "(@" + data.username + "@" + address + ")")
+                user_name_id_list.push(data.name + "(@" + data.username + "@" + add_account_address + ")")
                 localStorage.setItem("user_icon_link", JSON.stringify(user_icon_link_list));
                 localStorage.setItem("user_name_id", JSON.stringify(user_name_id_list));
                 location.reload()
             },
             error: function () {
-                document.getElementById('mask').classList.remove('hidden');
-                document.getElementById('modal').classList.remove('hidden');
+                address_list.pop()
+                token_list.pop()
+                localStorage.setItem("address", JSON.stringify(address_list));
+                localStorage.setItem("token", JSON.stringify(token_list));
+                $('#add_account_address_input').val("");
+                $('#add_account_token_input').val("");
+                document.getElementById('add_account_modal').classList.add('hidden');
+                document.getElementById('add_account_error_modal').classList.remove('hidden');
             }
-        });
+        })
     })
 
     //ユーザーアイコン表示切り替え
