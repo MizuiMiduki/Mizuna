@@ -1,3 +1,19 @@
+.add_account_icon {
+    color: black;
+    position: fixed;
+    top: 10%;
+    right: 5%;
+    width: 30px;
+    height: auto;
+    background: yellow;
+    padding: 5px;
+    border-radius: 100px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -10,17 +26,19 @@ body {
 }
 
 .header {
-    background-color: lightblue;
+    background-color: yellow;
     display: flex;
 }
 
 .footer {
     position: absolute;
     bottom: 30px;
+    overflow-y: auto;
+
 }
 
 .user_icon_back {
-    background-color: lightblue;
+    background-color: yellow;
     border-radius: 100px 100px 0 0;
     padding-top: 10px;
     padding-left: 10px;
@@ -31,14 +49,47 @@ body {
 
 .user_icon {
     margin-left: 0;
-    border-radius: 100px;
-    max-width: 150px;
+    width: 150px;
+    height: 150px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    border-radius: 50%;
+}
+
+[id^="account_card"] {
+    border: solid 1px gray;
+    border-radius: 25px;
+    padding: 5px;
+    margin-bottom: 5px;
+    width: 100%;
+    overflow: hidden;
+}
+
+[class^="user_card_icon"] {
+    width: 30px;
+    height: 30px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    border-radius: 50%;
+}
+
+[id^="user_card_name"] {
+    margin-top: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
     user-select: none;
 }
 
 .footer_user_name {
     bottom: 0;
-    background-color: lightblue;
+    background-color: yellow;
     width: 100vw;
     position: absolute;
     bottom: 0;
@@ -89,7 +140,7 @@ body {
     width: fit-content;
     padding: 1% 5% 1% 5%;
     font-weight: bolder;
-    background-color: lightblue;
+    background-color: yellow;
     border-radius: 20px;
     display: flex;
     margin-left: auto;
@@ -145,7 +196,8 @@ body {
     z-index: 1;
 }
 
-#modal {
+#modal,
+#add_account_error_modal {
     background: #fff;
     width: 50%;
     padding: 24px;
@@ -177,9 +229,12 @@ body {
 #about_me_modal,
 #logout_confirm,
 #ofline_modal,
-#config_modal {
+#config_modal,
+#account_modal,
+#add_account_modal,
+#add_account_error_modal {
     background: #fff;
-    width: 50%;
+    width: 70%;
     padding: 24px;
     border-radius: 4px;
     position: fixed;
@@ -188,6 +243,8 @@ body {
     transform: translate(-50%, -50%);
     margin: 0 auto;
     z-index: 2;
+    max-height: 90%;
+    overflow-y: scroll;
 }
 
 .title {
@@ -200,17 +257,17 @@ body {
     resize: none;
     overflow-x: hidden;
     line-break: anywhere;
-    font-size: 16px;
+    font-size: 20px;
     border-radius: 3px;
     border: 2px solid #ddd;
     box-sizing: border-box;
 }
 
-.note_content{
+.note_content {
     min-height: 200px;
 }
 
-.cw_content{
+.cw_content {
     min-height: 16px;
 }
 
@@ -230,11 +287,12 @@ body {
 #about_me,
 #config,
 #user_icon_none,
-#user_icon_name_reload {
+#user_icon_name_reload,
+#account {
     width: 90%;
     margin: 1% 0 1% 0;
     font-weight: bolder;
-    background-color: lightblue;
+    background-color: yellow;
     border-radius: 20px;
     display: block;
     margin-left: auto;
@@ -242,9 +300,10 @@ body {
     margin-top: 3%;
 }
 
-#input_submit {
+#input_submit,
+#add_account_input_submit {
     width: 40%;
-    background-color: lightblue;
+    background-color: yellow;
     border-radius: 20px;
     display: block;
     margin-left: auto;
