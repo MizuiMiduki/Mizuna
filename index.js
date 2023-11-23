@@ -1,9 +1,23 @@
 $(function () {
     'use strict';
     if (localStorage.getItem("R1.2toR2.0") == null) {
+<<<<<<< Updated upstream
         localStorage.setItem("R1.2toR2.0",1)
     }
 
+=======
+        localStorage.setItem("R1.2toR2.0", 1)
+    }
+
+    $("#checkR2").click(function () {
+        if (localStorage.getItem("R1.2toR2.0") == 1) {
+            alert("移行準備できています")
+        } else {
+            alert("移行準備できていません")
+        }
+    })
+
+>>>>>>> Stashed changes
     window.addEventListener('online', event => {
         document.getElementById('ofline_modal').classList.add('hidden');
         document.getElementById('mask3').classList.add('hidden');

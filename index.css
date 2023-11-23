@@ -230,7 +230,12 @@ body {
 #about_me,
 #config,
 #user_icon_none,
+<<<<<<< Updated upstream
 #user_icon_name_reload {
+=======
+#user_icon_name_reload,
+#checkR2 {
+>>>>>>> Stashed changes
     width: 90%;
     margin: 1% 0 1% 0;
     font-weight: bolder;
