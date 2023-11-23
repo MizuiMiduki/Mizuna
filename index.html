@@ -9,6 +9,8 @@
     <meta name="theme-color" content="#add8e6">
     <link rel="icon" href="/icon.png">
     <link rel="stylesheet" href="/index.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <script>
         navigator.serviceWorker.register('/service_worker.js');
     </script>
@@ -21,10 +23,8 @@
     </div>
     <div class="main_column">
         <p>
-            <textarea class="cw_content input_area hidden" size="30"
-                maxlength="30" placeholder="注釈"></textarea>
-            <textarea class="note_content input_area" size="30"
-                maxlength="3000"></textarea>
+            <textarea class="cw_content input_area hidden" size="30" maxlength="30" placeholder="注釈"></textarea>
+            <textarea class="note_content input_area" size="30" maxlength="3000"></textarea>
         </p>
         <form class="note_menu">
             <div class="visibility note-menu-style">
@@ -81,14 +81,14 @@
     <section id="user_menu" class="hidden">
         <p class="title">メニュー</p>
         <form>
+            <button id="account" type="button">アカウント切り替え</button>
             <button id="config" type="button">設定</button>
-            <button id="checkR2" type="button">R2.0移行準備確認</button>
             <button id="logout" type="button">ログアウト</button>
             <button id="about_me" type="button">Mizunaについて</button>
         </form>
     </section>
     <section id="logout_confirm" class="hidden">
-        <p class="title">ログアウトしますか？</p>
+        <p class="title">このアカウントからログアウトしますか？</p>
         <form>
             <button id="logout_yes" type="button">はい</button>
             <button id="logout_no" type="button">いいえ</button>
@@ -97,9 +97,17 @@
     <section id="config_modal" class="hidden">
         <p class="title">設定</p>
         <form>
-            <button id="user_icon_none" type="button">ユーザーアイコンを非表示<br>
-                (読み込みを無くし通信量を削減)</button>
-            <button id="user_icon_name_reload" type="button">ユーザー情報を同期</button>
+            <button id="user_icon_none" type="button">全てのユーザーアイコンを非表示</button>
+            <button id="user_icon_name_reload" type="button">使用中のユーザー情報を同期</button>
+        </form>
+    </section>
+    <section id="account_modal" class="hidden">
+        <p class="title">アカウント</p>
+        <img src ="/person_add_FILL0_wght400_GRAD0_opsz24.svg" class="add_account_icon" alt="add_account"/>
+        <form>
+            <div id="account_display_area">
+            </div>
+            </div>
         </form>
     </section>
     <div id="mask3" class="hidden"></div>
@@ -108,13 +116,32 @@
     </section>
     <section id="about_me_modal" class="hidden">
         <p class="title">Mizunaについて</p>
-        <p>Version : <span id="mizuna_version"></span><br>license : MIT<br>Developer : <a
-                href="https://mizui-tech.uk/" target="_blank" rel="noopener noreferrer">瑞井
+        <p>Version : <span id="mizuna_version"></span><br>license : MIT<br>Developer : <a href="https://mizui-tech.uk/"
+                target="_blank" rel="noopener noreferrer">瑞井
                 箕月</a><br>SourceCode : <a href="https://github.com/MizuiMiduki/Mizuna" target="_blank"
                 rel="noopener noreferrer">GitHub</a>
             <br>Donation : <a href="https://www.amazon.jp/hz/wishlist/ls/2LHL5U5HV3N5X?ref_=wl_share"
                 rel="noopener noreferrer">Amazon 欲しいものリスト</a>
         </p>
+    </section>
+    <section id="add_account_modal" class="hidden">
+        <p class="title" id="login_settings_title">アカウント追加</p>
+        <form>
+            <p>サーバーアドレス</p>
+            <input type="text" id="add_account_address_input" size="10" class="input_area" placeholder="例: misskey.io"
+                required>
+            <br>
+            <p>ト－クン<br>(ノート作成権限のみ必要)<br>トークンの取得方法は<a
+                    href="https://misskey-hub.net/docs/api/#%E8%87%AA%E5%88%86%E8%87%AA%E8%BA%AB%E3%81%AE%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%82%92%E6%89%8B%E5%8B%95%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B"
+                    target="_blank" rel="noopener">こちら</a></p>
+            <input type="text" id="add_account_token_input" size="10" class="input_area"
+                placeholder="例: xxxxxxxxxxxxxxx" required>
+            <input type="submit" id="add_account_input_submit" required value="完了">
+        </form>
+    </section>
+
+    <section id="add_account_error_modal" class="hidden">
+        <p>アカウントを追加できませんでした</p>
     </section>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
