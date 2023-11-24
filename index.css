@@ -5,7 +5,7 @@
     right: 5%;
     width: 30px;
     height: auto;
-    background: yellow;
+    background: lightblue;
     padding: 5px;
     border-radius: 100px;
     -moz-user-select: none;
@@ -26,7 +26,7 @@ body {
 }
 
 .header {
-    background-color: yellow;
+    background-color: lightblue;
     display: flex;
 }
 
@@ -38,7 +38,7 @@ body {
 }
 
 .user_icon_back {
-    background-color: yellow;
+    background-color: lightblue;
     border-radius: 100px 100px 0 0;
     padding-top: 10px;
     padding-left: 10px;
@@ -89,7 +89,7 @@ body {
 
 .footer_user_name {
     bottom: 0;
-    background-color: yellow;
+    background-color: lightblue;
     width: 100vw;
     position: absolute;
     bottom: 0;
@@ -140,7 +140,7 @@ body {
     width: fit-content;
     padding: 1% 5% 1% 5%;
     font-weight: bolder;
-    background-color: yellow;
+    background-color: lightblue;
     border-radius: 20px;
     display: flex;
     margin-left: auto;
@@ -292,7 +292,7 @@ body {
     width: 90%;
     margin: 1% 0 1% 0;
     font-weight: bolder;
-    background-color: yellow;
+    background-color: lightblue;
     border-radius: 20px;
     display: block;
     margin-left: auto;
@@ -303,7 +303,7 @@ body {
 #input_submit,
 #add_account_input_submit {
     width: 40%;
-    background-color: yellow;
+    background-color: lightblue;
     border-radius: 20px;
     display: block;
     margin-left: auto;
