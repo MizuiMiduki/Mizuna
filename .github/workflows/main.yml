@@ -19,3 +19,4 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         remote_path: ${{ secrets.FTP_SERVER_DIR }}
+        port: 21
