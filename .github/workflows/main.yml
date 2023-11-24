@@ -1,4 +1,8 @@
-on: push
+on :
+  workflow_dispatch:
+  push:
+    branches:
+      - main
 name: 🚀 Deploy website on push
 jobs:
   web-deploy:
@@ -14,4 +18,4 @@ jobs:
         server: ${{ secrets.FTP_SERVER }}
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
-        server-dir:${{ secrets.FTP_SERVER_DIR }}
+        server-dir: ${{ secrets.FTP_SERVER_DIR }}
