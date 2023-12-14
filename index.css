@@ -1,3 +1,8 @@
+/* Canaryチャンネル用 */
+.canary {
+    background: yellow !important;
+}
+
 .add_account_icon {
     color: black;
     position: fixed;
@@ -310,3 +315,91 @@ body {
     margin-right: auto;
     margin-top: 5%;
 }
+
+/* 新着通知スタイル */
+.new_version_notifiy{
+    display: flex;
+    background-color: lightblue;
+    border-top: #000000 solid 1px ;
+}
+
+.new_version_notifiy p::before{
+    content: "🎉";
+}
+.new_version_notifiy p{
+    margin: 0 auto 0 auto;
+    text-align: center;
+    word-break: auto-phrase;
+}
+
+.new_version_notifiy_close{
+    margin: auto 20px auto 20px;
+}
+
+/* ダークモード用(開発中) */
+/* @media (prefers-color-scheme: dark) {
+
+    .add_account_icon,
+    .header,
+    .user_icon_back,
+    .footer_user_name,
+    #submit,
+    #logout,
+    #logout_yes,
+    #logout_no,
+    #about_me,
+    #config,
+    #user_icon_none,
+    #user_icon_name_reload,
+    #account,
+    #input_submit,
+    #add_account_input_submit {
+        background: darkblue;
+    }
+
+    body {
+        color: white;
+        background-color: black;
+    }
+
+    textarea {
+        background-color: rgba(128, 128, 128, 0.5);
+        color: white;
+    }
+
+    textarea::placeholder {
+        color: white;
+    }
+
+    button {
+        color: white;
+    }
+
+    [id$="modal"],
+    #logout_confirm,
+    #user_menu {
+        background: black !important;
+        border: gray solid 1px;
+    }
+
+    #about_me_modal a {
+        color: white;
+    }
+
+    .add_account_icon {
+        fill: #fff
+    }
+
+    input {
+        background-color: rgba(128, 128, 128, 0.5);
+        color: white;
+    }
+
+    input::placeholder {
+        color: white;
+    }
+
+    .new_version_notifiy{
+        background-color: lightblue;
+    }
+} */

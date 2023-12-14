@@ -1,6 +1,30 @@
 $(function () {
     'use strict';
 
+    // Canaryチャンネル用
+    if (location.host == "mizuna-canary.blossomsarchive.com") {
+        document.title = 'Mizuna Canary'
+        const canary_conds = [
+            ".add_account_icon",
+            ".header",
+            ".user_icon_back",
+            ".footer_user_name", "#submit",
+            "#logout",
+            "#logout_yes",
+            "#logout_no",
+            "#about_me",
+            "#config",
+            "#user_icon_none",
+            "#user_icon_name_reload",
+            "#account",
+            "#input_submit",
+            "#add_account_input_submit"
+        ]
+        for (let i = 0; i < canary_conds.length; i++) {
+            $(canary_conds[i]).addClass('canary');
+        }
+    }
+
     // R1.2からのアップデート用
     if (localStorage.getItem("R1.2toR2.0") != null) {
 
