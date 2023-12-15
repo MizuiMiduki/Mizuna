@@ -1,0 +1,90 @@
+/* ダークモード用(開発中) */
+.add_account_icon,
+.header,
+.user_icon_back,
+.footer_user_name,
+#submit,
+#logout,
+#logout_yes,
+#logout_no,
+#about_me,
+#config,
+#user_icon_none,
+#user_icon_name_reload,
+[id^="select_theme_mode_"],
+#account,
+#input_submit,
+#add_account_input_submit,
+.new_version_notifiy {
+    background: darkblue;
+}
+
+.new_version_notifiy {
+    border-top: #ffffff solid 1px;
+}
+
+.new_version_notifiy a {
+    color: #ffffff;
+}
+
+body {
+    color: white;
+    background-color: black;
+}
+
+textarea {
+    background-color: rgba(128, 128, 128, 0.5);
+    color: white;
+}
+
+textarea::placeholder {
+    color: white;
+}
+
+button {
+    color: white;
+}
+
+[id$="modal"],
+#logout_confirm,
+#user_menu {
+    background: black !important;
+    border: gray solid 1px;
+}
+
+#about_me_modal a {
+    color: white;
+}
+
+.add_account_icon {
+    fill: #fff
+}
+
+input {
+    background-color: rgba(128, 128, 128, 0.5);
+    color: white;
+}
+
+input::placeholder {
+    color: white;
+}
+
+.note-menu-style svg {
+    background-color: gray;
+    padding: 0.6em;
+    margin: 0.2em;
+    border-radius: 100px;
+    border: darkblue 2px solid;
+    fill: darkblue;
+    opacity: .5;
+}
+
+.note_end_mizuna input[type="checkbox"]:checked+label svg,
+.followers_selecter input[type="checkbox"]:checked+label svg,
+.home_selecter input[type="checkbox"]:checked+label svg,
+.public_selecter input[type="checkbox"]:checked+label svg,
+.cw input[type="checkbox"]:checked+label svg {
+    fill: white;
+    border-color: white;
+    opacity: 1;
+}

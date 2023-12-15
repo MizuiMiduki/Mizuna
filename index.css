@@ -115,14 +115,8 @@ body {
 }
 
 .note_menu {
-    border: rgb(223, 222, 222) 2px solid;
-    border-radius: 10px;
     display: flex;
-}
-
-.visibility {
-    display: flex;
-    align-items: center;
+    flex-wrap: wrap;
 }
 
 .note_end_mizuna {
@@ -133,12 +127,6 @@ body {
 .cw {
     display: flex;
     align-items: center;
-}
-
-.note-menu-style {
-    padding-left: 1%;
-    padding-right: 1%;
-    border-right: rgb(223, 222, 222) 2px solid;
 }
 
 #submit {
@@ -156,20 +144,6 @@ body {
 
 /* mobile */
 @media screen and (max-width: 520px) {
-    .visibility {
-        align-items: center;
-        border-bottom: 2px solid rgb(223, 222, 222);
-    }
-
-    .cw {
-        align-items: center;
-        border-bottom: 2px solid rgb(223, 222, 222);
-    }
-
-    .note_menu {
-        display: block;
-    }
-
     #submit {
         padding: 2% 10% 2% 10%;
     }
@@ -293,8 +267,9 @@ body {
 #config,
 #user_icon_none,
 #user_icon_name_reload,
+[id^="select_theme_mode_"],
 #account {
-    width: 90%;
+    width: 100%;
     margin: 1% 0 1% 0;
     font-weight: bolder;
     background-color: lightblue;
@@ -303,6 +278,10 @@ body {
     margin-left: auto;
     margin-right: auto;
     margin-top: 3%;
+}
+
+#config_modal details p {
+    margin: 0;
 }
 
 #input_submit,
@@ -317,89 +296,72 @@ body {
 }
 
 /* 新着通知スタイル */
-.new_version_notifiy{
+.new_version_notifiy {
     display: flex;
     background-color: lightblue;
-    border-top: #000000 solid 1px ;
+    border-top: #000000 solid 1px;
 }
 
-.new_version_notifiy p::before{
+.new_version_notifiy p::before {
     content: "🎉";
 }
-.new_version_notifiy p{
+
+.new_version_notifiy p {
     margin: 0 auto 0 auto;
     text-align: center;
     word-break: auto-phrase;
 }
 
-.new_version_notifiy_close{
+.new_version_notifiy_close {
     margin: auto 20px auto 20px;
 }
 
-/* ダークモード用(開発中) */
-/* @media (prefers-color-scheme: dark) {
+.cw input[type="checkbox"],
+.note_end_mizuna input[type="checkbox"] {
+    opacity: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+}
 
-    .add_account_icon,
-    .header,
-    .user_icon_back,
-    .footer_user_name,
-    #submit,
-    #logout,
-    #logout_yes,
-    #logout_no,
-    #about_me,
-    #config,
-    #user_icon_none,
-    #user_icon_name_reload,
-    #account,
-    #input_submit,
-    #add_account_input_submit {
-        background: darkblue;
-    }
+.note-menu-style svg {
+    background-color: lightblue;
+    padding: 0.6em;
+    margin: 0.2em;
+    border-radius: 100px;
+    border: rgb(223, 222, 222) 2px solid;
+    opacity: .5;
+}
 
-    body {
-        color: white;
-        background-color: black;
-    }
+.note_end_mizuna input[type="checkbox"]:checked+label svg,
+.followers_selecter input[type="checkbox"]:checked+label svg,
+.home_selecter input[type="checkbox"]:checked+label svg,
+.public_selecter input[type="checkbox"]:checked+label svg,
+.cw input[type="checkbox"]:checked+label svg {
+    opacity: 1;
+    border-color: #000000;
+}
 
-    textarea {
-        background-color: rgba(128, 128, 128, 0.5);
-        color: white;
-    }
+.visibility {
+    display: flex;
+}
 
-    textarea::placeholder {
-        color: white;
-    }
+.visibility input[type="checkbox"] {
+    opacity: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+}
 
-    button {
-        color: white;
-    }
+.select_theme_mode_button_area {
+    display: flex;
+    word-break: keep-all;
+}
 
-    [id$="modal"],
-    #logout_confirm,
-    #user_menu {
-        background: black !important;
-        border: gray solid 1px;
-    }
+.select_theme_mode_button_area button {
+    opacity: .5;
+}
 
-    #about_me_modal a {
-        color: white;
-    }
-
-    .add_account_icon {
-        fill: #fff
-    }
-
-    input {
-        background-color: rgba(128, 128, 128, 0.5);
-        color: white;
-    }
-
-    input::placeholder {
-        color: white;
-    }
-
-    .new_version_notifiy{
-        background-color: lightblue;
-    }
-} */
+.now_select_theme_mode_button_color {
+    opacity: 1!important;
+}

@@ -54,6 +54,44 @@ $(function () {
         location.reload()
     }
 
+    // テーマ変更ボタン
+    $('#select_theme_mode_auto').click(function () {
+        localStorage.setItem("theme_mode", "0");
+        location.reload()
+    })
+    $('#select_theme_mode_light').click(function () {
+        localStorage.setItem("theme_mode", "1");
+        location.reload()
+    })
+
+    $('#select_theme_mode_dark').click(function () {
+        localStorage.setItem("theme_mode", "2");
+        location.reload()
+    })
+
+    // テーマ変更
+    switch (localStorage.getItem("theme_mode")) {
+        // 端末設定
+        case "0":
+            if (window.matchMedia('(prefers-color-scheme: dark)').matches == true) {
+                $('head link:last').after('<link rel="stylesheet" href="darkmode.css">');
+            }
+            $("#select_theme_mode_auto").addClass("now_select_theme_mode_button_color");
+            break;
+        // ライトモード
+        case "1":
+            $("#select_theme_mode_light").addClass("now_select_theme_mode_button_color");
+            break;
+        // ダークモード
+        case "2":
+            $('head link:last').after('<link rel="stylesheet" href="darkmode.css">');
+            $("#select_theme_mode_dark").addClass("now_select_theme_mode_button_color");
+            break;
+    }
+
+    // 公開範囲の初期値
+    document.getElementById("public").checked = true;
+
     // 指定中のアカウントの要素番号が空だったときの処理
     if (localStorage.length == 0) {
         localStorage.setItem("select_account", 0);
@@ -203,6 +241,9 @@ $(function () {
     if (user_icon_link !== null) {
         if (user_icon_none == 0 || user_icon_none == null) {
             $('.user_icon').attr('src', user_icon_link);
+            $("#user_icon_none_span").text("非表示");
+        } else if (user_icon_none == 1) {
+            $("#user_icon_none_span").text("表示");
         }
     }
 
@@ -220,7 +261,6 @@ $(function () {
         $(".cw_content").toggleClass("hidden");
     });
 
-
     //投稿ボタン
     $("#submit").click(function () {
         var note_content_input = $(".note_content").val();
@@ -230,8 +270,9 @@ $(function () {
         } else {
             let url = "https://" + address + "/api/notes/create"
             let type = "post"
-            var visibility_select = document.getElementById('visibility_select');
-            var visibility = visibility_select.value
+
+            var visibility = $(".visibility > * > input:checked").attr("id")
+
             var note_end_mizuna = document.getElementById('note_end_mizuna_checkbox').checked;
 
             if (note_end_mizuna == false) {
@@ -455,6 +496,15 @@ $(function () {
             }
         });
     })
+
+    // 投稿範囲選択
+    $('.visibility > * > input').on('change', function () {
+        var click_id = $(this).attr('id');
+        document.getElementById('public').checked = false;
+        document.getElementById('home').checked = false;
+        document.getElementById('followers').checked = false;
+        document.getElementById(click_id).checked = true;
+    });
 })
 
 // コントロール+エンターキーで投稿
