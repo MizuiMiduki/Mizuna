@@ -1,5 +1,5 @@
 // バージョン名
-const mizuna_version = 'R2.1';
+const mizuna_version = 'R2.1.1';
 // リリースノートURL
 const releasenote_url = "https://blossomsarchive.com/blog/post-2579/"
 

@@ -87,6 +87,8 @@ $(function () {
             $('head link:last').after('<link rel="stylesheet" href="darkmode.css">');
             $("#select_theme_mode_dark").addClass("now_select_theme_mode_button_color");
             break;
+        default:
+            $("#select_theme_mode_light").addClass("now_select_theme_mode_button_color");
     }
 
     // 公開範囲の初期値
