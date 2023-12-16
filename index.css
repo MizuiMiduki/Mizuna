@@ -226,6 +226,19 @@ body {
     overflow-y: scroll;
 }
 
+#about_me_modal p {
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.donation_link {
+    margin-left: 5px;
+}
+
+.donation_link a {
+    margin-bottom: 10px;
+}
+
 .title {
     color: rgb(0, 191, 255);
     text-align: center;
@@ -317,7 +330,8 @@ body {
 }
 
 .cw input[type="checkbox"],
-.note_end_mizuna input[type="checkbox"] {
+.note_end_mizuna input[type="checkbox"],
+[class$="_selecter"] input[type="checkbox"] {
     opacity: 0;
     -webkit-appearance: none;
     appearance: none;
@@ -346,11 +360,9 @@ body {
     display: flex;
 }
 
-.visibility input[type="checkbox"] {
-    opacity: 0;
-    -webkit-appearance: none;
-    appearance: none;
-    position: absolute;
+[class$="_selecter"] {
+    display: flex;
+    align-items: center;
 }
 
 .select_theme_mode_button_area {
@@ -363,5 +375,24 @@ body {
 }
 
 .now_select_theme_mode_button_color {
-    opacity: 1!important;
+    opacity: 1 !important;
+}
+
+.note-menu-style label:hover::after{
+    animation: tooltip_anime 3s forwards;
+}
+.note-menu-style label:hover::before{
+    animation: tooltip_anime 3s forwards;
+}
+
+@keyframes tooltip_anime{
+    0%{
+        opacity: 0;
+    }
+    50%{
+        opacity: 1;
+    }
+    100%{
+        opacity: 0;
+    }
 }

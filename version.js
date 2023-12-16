@@ -1,7 +1,7 @@
 // バージョン名
-const mizuna_version = 'R2.1.1';
+const mizuna_version = 'R2.1.2';
 // リリースノートURL
-const releasenote_url = "https://blossomsarchive.com/blog/post-2579/"
+const releasenote_url = "https://blossomsarchive.com/blog/post-2583/"
 
 // 実装
 document.getElementById('mizuna_version').innerHTML = mizuna_version;
