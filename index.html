@@ -22,6 +22,9 @@
         <h1>Mizuna</h1>
     </div>
     <div class="main_column">
+        <div id="get_account">認証</div>
+        <div id="get_data">取得</div>
+
         <p>
             <textarea class="cw_content input_area hidden" size="30" maxlength="30" placeholder="注釈"></textarea>
             <textarea class="note_content input_area" size="30" maxlength="3000"></textarea>
@@ -86,131 +89,12 @@
         </div>
     </div>
     <div class="footer_user_name">
-        <p id="user_name">name(@username@address)</p>
+        <p><span id="user_name">name</span>(@<span id="user_id">id</span>@<span id="address">address</span>)</p>
     </div>
 
-    <div id="mask" class="hidden"></div>
-    <section id="modal" class="hidden">
-        <p>ノートできませんでした</p>
-    </section>
-
-    <div id="mask1" class="hidden"></div>
-    <section id="input_address_token" class="hidden">
-        <p class="title" id="login_settings_title">初期設定</p>
-        <form>
-            <p>サーバーアドレス</p>
-            <input type="text" id="address_input" size="10" class="input_area" placeholder="例: misskey.io" required>
-            <br>
-            <p>ト－クン<br>(ノート作成権限のみ必要)<br>トークンの取得方法は<a
-                    href="https://misskey-hub.net/docs/api/#%E8%87%AA%E5%88%86%E8%87%AA%E8%BA%AB%E3%81%AE%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%82%92%E6%89%8B%E5%8B%95%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B"
-                    target="_blank" rel="noopener">こちら</a></p>
-            <input type="text" id="token_input" size="10" class="input_area" placeholder="例: xxxxxxxxxxxxxxx" required>
-            <input type="submit" id="input_submit" required value="完了">
-        </form>
-    </section>
-
-    <div id="mask2" class="hidden"></div>
-    <section id="user_menu" class="hidden">
-        <p class="title">メニュー</p>
-        <form>
-            <button id="account" type="button">アカウント切り替え</button>
-            <button id="config" type="button">設定</button>
-            <button id="logout" type="button">ログアウト</button>
-            <button id="about_me" type="button">Mizunaについて</button>
-        </form>
-    </section>
-    <section id="logout_confirm" class="hidden">
-        <p class="title">このアカウントからログアウトしますか？</p>
-        <form>
-            <button id="logout_yes" type="button">はい</button>
-            <button id="logout_no" type="button">いいえ</button>
-        </form>
-    </section>
-    <section id="config_modal" class="hidden">
-        <p class="title">設定</p>
-        <form>
-            <button id="user_icon_none" type="button">全てのユーザーアイコンを<span id="user_icon_none_span"></span></button>
-            <details>
-                <p>アイコンデータの読み込みをしないため、通信量を節約できます</p>
-            </details>
-            <hr>
-            <div class="select_theme_mode_button_area">
-                <button id="select_theme_mode_light" type="button">ライト<wbr>モード</button>
-                <button id="select_theme_mode_dark" type="button">ダーク<wbr>モード</button>
-                <button id="select_theme_mode_auto" type="button">端末に<wbr>合わせる</button>
-            </div>
-            <details>
-                <p>ダークモードとライトモードの切り替えができます</p>
-            </details>
-            <hr>
-            <button id="user_icon_name_reload" type="button">使用中のユーザー情報を同期</button>
-        </form>
-        <details>
-            <p>ユーザー情報の同期を行います。アイコンやユーザー名を変更した際にご利用ください</p>
-        </details>
-    </section>
-    <section id="account_modal" class="hidden">
-        <p class="title">アカウント</p>
-        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24" class="add_account_icon"
-            alt="add_account">
-            <path
-                d="M720-400v-120H600v-80h120v-120h80v120h120v80H800v120h-80Zm-360-80q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM40-160v-112q0-34 17.5-62.5T104-378q62-31 126-46.5T360-440q66 0 130 15.5T616-378q29 15 46.5 43.5T680-272v112H40Zm80-80h480v-32q0-11-5.5-20T580-306q-54-27-109-40.5T360-360q-56 0-111 13.5T140-306q-9 5-14.5 14t-5.5 20v32Zm240-320q33 0 56.5-23.5T440-640q0-33-23.5-56.5T360-720q-33 0-56.5 23.5T280-640q0 33 23.5 56.5T360-560Zm0-80Zm0 400Z" />
-        </svg>
-        <form>
-            <div id="account_display_area">
-            </div>
-            </div>
-        </form>
-    </section>
-    <div id="mask3" class="hidden"></div>
-    <section id="ofline_modal" class="hidden">
-        <p class="title">オフラインになりました</p>
-    </section>
-    <section id="about_me_modal" class="hidden">
-        <p class="title">Mizunaについて</p>
-        <p>Version : <span id="mizuna_version"></span><br>license : MIT<br>Developer : <a href="https://mizui-tech.uk/"
-                target="_blank" rel="noopener noreferrer">瑞井
-                箕月</a><br>SourceCode : <a href="https://github.com/MizuiMiduki/Mizuna" target="_blank"
-                rel="noopener noreferrer">GitHub</a>
-            <br>
-        </p>
-        <div style="display: flex;">
-            <p>Donation : </p>
-            <div>
-                <p class="donation_link">
-                    <a href="https://www.amazon.jp/hz/wishlist/ls/2LHL5U5HV3N5X?ref_=wl_share"
-                        rel="noopener noreferrer">Amazon
-                        欲しいものリスト</a><br>
-                    <a href="https://www.fanbox.cc/@mizui-miduki" rel="noopener noreferrer">Pixiv fanbox</a>
-                </p>
-            </div>
-        </div>
-        </p>
-    </section>
-    <section id="add_account_modal" class="hidden">
-        <p class="title" id="login_settings_title">アカウント追加</p>
-        <form>
-            <p>サーバーアドレス</p>
-            <input type="text" id="add_account_address_input" size="10" class="input_area" placeholder="例: misskey.io"
-                required>
-            <br>
-            <p>ト－クン<br>(ノート作成権限のみ必要)<br>トークンの取得方法は<a
-                    href="https://misskey-hub.net/docs/api/#%E8%87%AA%E5%88%86%E8%87%AA%E8%BA%AB%E3%81%AE%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%82%92%E6%89%8B%E5%8B%95%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B"
-                    target="_blank" rel="noopener">こちら</a></p>
-            <input type="text" id="add_account_token_input" size="10" class="input_area"
-                placeholder="例: xxxxxxxxxxxxxxx" required>
-            <input type="submit" id="add_account_input_submit" required value="完了">
-        </form>
-    </section>
-
-    <section id="add_account_error_modal" class="hidden">
-        <p>アカウントを追加できませんでした</p>
-    </section>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="/index.js"></script>
-    <script src="/version.js"></script>
-
-    <div id="sp_hover_cancel"></div>
+    <script src="/js/index.js"></script>
+    <script src="/js/function.js"></script>
 </body>
 
 </html>
