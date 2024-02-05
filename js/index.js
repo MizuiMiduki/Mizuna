@@ -15,7 +15,16 @@ $(function () {
         var address = "misskey.io";
         // セッションIDを取得
         session_ID = location.search.replace("?session=", "")
+        // サーバーからデータを取得
         let data = get_account_data(address, session_ID)
-        // console.log(data)
+        let get_user_data = JSON.parse(data)
+
+        if (get_user_data.ok == false) {
+            // 取得できなかったとき
+            console.warn("取得できませんでした")
+        } else {
+            console.log(get_user_data)
+            const tr = db.transaction([storeName], "readwrite");
+        }
     });
 });
