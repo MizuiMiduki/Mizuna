@@ -18,8 +18,7 @@ $(function () {
         // サーバーからデータを取得
         let data = get_account_data(address, session_ID)
         let get_user_data = JSON.parse(data)
-        console.log(get_user_data)
-        
+
         if (get_user_data.ok == false) {
             // 取得できなかったとき
             console.warn("アカウントデータを取得できませんでした")

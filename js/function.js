@@ -17,23 +17,14 @@ const get_account_data = function (address, session_ID) {
 
 // indexedDBに登録する
 const add_indexeddb = function (get_user_data, address) {
-    let dbName = ["token_db", ""]
+    let dbName = "userdata_db"
+    var storeName = '"userdata_store';
+    let data = {
+        "token": get_user_data.token,
+        "name": get_user_data.user.name,
+        "username": get_user_data.user.username,
+        "address": address,
+        "avatarurl": get_user_data.user.avatarUrl
+    };
 
-    for (let i = 0; i < dbName.length; i++) {
-        var openReq = indexedDB.open(dbName[i]);
-
-        openReq.onupgradeneeded = function (event) {
-            console.log('db upgrade');
-        }
-        openReq.onsuccess = function (event) {
-            console.log('db open success');
-            var db = event.target.result;
-            // 接続を解除する
-            db.close();
-        }
-        openReq.onerror = function (event) {
-            console.log('db open error');
-            return "db_error"
-        }
-    }
 };
