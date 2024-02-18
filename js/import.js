@@ -1,0 +1,6 @@
+$.getScript("/js/module/check_db_status.js")
+$.getScript("/js/module/get_account_data.js")
+$.getScript("/js/module/miauth.js")
+$.getScript("/js/module/add_indexeddb.js")
+$.getScript("/js/module/settings/add_account_area.js")
+$.getScript("/js/module/index.js")

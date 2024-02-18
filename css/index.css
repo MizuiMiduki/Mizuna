@@ -83,6 +83,7 @@ body {
     align-items: center;
 }
 
+
 /* mobile */
 @media screen and (max-width: 520px) {
     #submit {
