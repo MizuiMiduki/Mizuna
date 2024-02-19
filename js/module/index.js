@@ -1,7 +1,6 @@
 $(function () {
     // 初回起動時
     check_db_status(function (result) {
-        console.log(result)
         if (result == 'objectstore_empty') {
             add_account_area()
         }
@@ -32,7 +31,7 @@ $(function () {
             // miauthのリンクだがアドレスが記憶されていなかった場合
             location.href = "/";
         } else if (result == 'objectstore_not_empty') {
-            console.log("ok")
+            console.log(get_db_data())
         }
 
     });
