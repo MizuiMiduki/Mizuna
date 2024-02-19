@@ -5,7 +5,7 @@ const add_indexeddb = function (get_user_data, address) {
     const storeName = 'userdata_store';
 
     // データベースを開く（存在しない場合は新規作成されます）
-    const request = indexedDB.open(dbName, 1);
+    const request = indexedDB.open(dbName, 2);
 
     // データベースのアップグレードが必要な場合に呼び出されるイベントハンドラ
     request.onupgradeneeded = function (event) {
@@ -40,7 +40,7 @@ const add_indexeddb = function (get_user_data, address) {
         // トランザクションを完了してデータベース接続を閉じます
         transaction.oncomplete = function () {
             db.close();
-            console.log('データが保存されました。');
+            return
         };
     };
 

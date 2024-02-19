@@ -6,7 +6,7 @@ const check_db_status = function (callback) {
     const storeName = 'userdata_store';
 
     // データベースを開く（存在しない場合は新規作成されます）
-    const request = indexedDB.open(dbName, 1);
+    const request = indexedDB.open(dbName);
 
     // データベース接続が成功した場合に呼び出されるイベントハンドラ
     request.onsuccess = function (event) {
