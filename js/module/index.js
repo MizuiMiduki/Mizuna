@@ -31,8 +31,17 @@ $(function () {
             // miauthのリンクだがアドレスが記憶されていなかった場合
             location.href = "/";
         } else if (result == 'objectstore_not_empty') {
-            console.log(get_db_data())
+            // データ取得
+            get_db_data(function (error, db_user_data) {
+                if (error) {
+                    // 取得エラー
+                    console.log(error);
+                } else {
+                    // データが取得できた場合
+                    var user_data = db_user_data;
+                    set_user_text(user_data);
+                }
+            });
         }
-
     });
 });

@@ -41,6 +41,8 @@ body {
     -ms-user-select: none;
     user-select: none;
     border-radius: 50%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
 }
 
 .footer_user_name {
@@ -190,21 +192,24 @@ body {
     opacity: 1 !important;
 }
 
-.note-menu-style label:hover::after{
-    animation: tooltip_anime 3s forwards;
-}
-.note-menu-style label:hover::before{
+.note-menu-style label:hover::after {
     animation: tooltip_anime 3s forwards;
 }
 
-@keyframes tooltip_anime{
-    0%{
+.note-menu-style label:hover::before {
+    animation: tooltip_anime 3s forwards;
+}
+
+@keyframes tooltip_anime {
+    0% {
         opacity: 0;
     }
-    50%{
+
+    50% {
         opacity: 1;
     }
-    100%{
+
+    100% {
         opacity: 0;
     }
 }
