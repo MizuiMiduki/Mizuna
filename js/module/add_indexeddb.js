@@ -13,7 +13,7 @@ const add_indexeddb = function (get_user_data, address) {
 
         // ストアが存在しない場合は新しく作成します
         if (!db.objectStoreNames.contains(storeName)) {
-            db.createObjectStore(storeName, { keyPath: 'token' });
+            db.createObjectStore(storeName, { keyPath: 'id', autoIncrement:true });
         }
     };
 

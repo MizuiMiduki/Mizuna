@@ -1,4 +1,4 @@
-const get_db_data = function (callback) {
+const get_db_data = function (key, callback) {
     const dbName = 'userdata_db';
     const storeName = 'userdata_store';
 
@@ -13,17 +13,17 @@ const get_db_data = function (callback) {
         const transaction = db.transaction([storeName], 'readonly');
         const objectStore = transaction.objectStore(storeName);
 
-        // 最初のオブジェクトを取得
-        const getRequest = objectStore.openCursor();
+        // キーに基づいてデータを取得
+        const getRequest = objectStore.get(key);
 
         getRequest.onsuccess = function (event) {
-            const cursor = event.target.result;
-            if (cursor) {
-                // オブジェクトの中身をコールバック関数に渡す
-                callback(null, cursor.value);
+            const data = event.target.result;
+            if (data) {
+                // データが見つかった場合、コールバック関数に渡す
+                callback(null, data);
             } else {
-                // データが見つからない場合
-                callback('No_Data_Found', null);
+                // データが見つからない場合、エラーメッセージをコールバック関数に渡す
+                callback('Data_Not_Found', null);
             }
         };
 

@@ -31,8 +31,11 @@ $(function () {
             // miauthのリンクだがアドレスが記憶されていなかった場合
             location.href = "/";
         } else if (result == 'objectstore_not_empty') {
+            // 通常の処理
+
             // データ取得
-            get_db_data(function (error, db_user_data) {
+            var key = 1;
+            get_db_data(key, function (error, db_user_data) {
                 if (error) {
                     // 取得エラー
                     console.log(error);
@@ -40,8 +43,11 @@ $(function () {
                     // データが取得できた場合
                     var user_data = db_user_data;
                     set_user_text(user_data);
+
+                    // "ノートボタン"押下時
                 }
             });
+            // export_userdata()
         }
     });
 });
