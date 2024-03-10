@@ -13,7 +13,7 @@ const add_indexeddb_import = function (get_user_data) {
 
         // ストアが存在しない場合は新しく作成します
         if (!db.objectStoreNames.contains(storeName)) {
-            db.createObjectStore(storeName, { keyPath: 'username_address'});
+            db.createObjectStore(storeName, { keyPath: 'username_address' });
         }
     };
 
@@ -31,7 +31,7 @@ const add_indexeddb_import = function (get_user_data) {
             const data = {
                 "token": get_user_data[i].token,
                 "name": get_user_data[i].name,
-                "username_address": get_user_data[i].username+"@"+get_user_data[i].address,
+                "username_address": get_user_data[i].username_address,
                 "address": get_user_data[i].address,
                 "avatarurl": get_user_data[i].avatarurl
             };
@@ -43,8 +43,20 @@ const add_indexeddb_import = function (get_user_data) {
         // トランザクションを完了してデータベース接続を閉じます
         transaction.oncomplete = function () {
             db.close();
-            return
-        };
-    };
+            $(".modal_back").remove()
 
-};
+            // データ取得
+            var keynum = 0;
+            get_db_data(keynum, function (error, db_user_data) {
+                if (error) {
+                    // 取得エラー
+                    console.log(error);
+                } else {
+                    // データが取得できた場合
+                    var user_data = db_user_data;
+                    set_user_text(user_data);
+                };
+            })
+        }
+    };
+}

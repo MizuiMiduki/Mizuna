@@ -1,6 +1,5 @@
 // 投稿用
 const send_note = function (user_data, note_content, cw_content) {
-    console.log("!!!")
     if (note_content) {
         if (cw_content) {
             console.log("CW投稿")

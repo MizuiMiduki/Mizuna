@@ -30,7 +30,7 @@ const export_userdata = function () {
                     export_data.push(",")
                     cursor.continue();
                 } else {
-
+                    export_data.pop();
                     var json_data = JSON.stringify(export_data);
 
                     // Blobオブジェクトを作成
@@ -56,4 +56,5 @@ const export_userdata = function () {
             console.error('Data_Not_Found');
         }
     };
+    return
 };

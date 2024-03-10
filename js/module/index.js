@@ -44,6 +44,7 @@ $(function () {
                     var user_data = db_user_data;
                     set_user_text(user_data);
 
+                    // 投稿処理
                     // "ノートボタン"押下時
                     var send_standby = 1
                     $("#submit").click(function () {
@@ -54,9 +55,26 @@ $(function () {
                             send_standby = send_note(user_data, note_content, cw_content)
                         }
                     })
+                    // ショートカットキー(ctl+enter)
+                    document.addEventListener('keydown', event => {
+                        if (event.ctrlKey && event.key === 'Enter') {
+                            $("#submit").click();
+                        }
+                    });
                 }
             });
+            // エクスポート
             // export_userdata()
+
+            // ログアウト
+            // delete_accountdata(keynum,function (error))
+            $("#delete_account_button").click(function () {
+                delete_accountdata(keynum,function (error){
+                    if(error){
+                        console.log(error)
+                    }
+                })
+            })
         }
     });
 });
