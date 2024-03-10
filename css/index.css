@@ -3,10 +3,8 @@ body {
     padding: 0;
     color: rgb(31, 38, 39);
     position: relative;
-    min-height: 100vh;
-    min-width: 100vw;
-    max-height: 100vh;
-    max-width: 100vw;
+    height: 100vh;
+    width: 100vw;
     font-family: sans-serif;
 }
 
@@ -16,7 +14,7 @@ body {
 }
 
 .footer {
-    position: absolute;
+    position: fixed;
     overflow-y: auto;
     bottom: 30px;
 }
@@ -49,8 +47,7 @@ body {
     bottom: 0;
     background-color: lightblue;
     width: 100vw;
-    position: absolute;
-    bottom: 0;
+    position: fixed;
     min-height: 30px;
     height: fit-content;
     overflow: hidden;
