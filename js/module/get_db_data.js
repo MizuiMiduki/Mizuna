@@ -18,8 +18,6 @@ const get_db_data = function (keynum, callback) {
         keylist.onsuccess = function (event) {
             // キーの配列を取得
             var keys = event.target.result;
-            console.log(keys);
-
             const getRequest = objectStore.get(keys[keynum]);
 
             getRequest.onsuccess = function (event) {

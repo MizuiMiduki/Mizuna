@@ -17,9 +17,8 @@ body {
 
 .footer {
     position: absolute;
-    bottom: 30px;
     overflow-y: auto;
-
+    bottom: 30px;
 }
 
 .user_icon_back {
@@ -53,7 +52,7 @@ body {
     position: absolute;
     bottom: 0;
     min-height: 30px;
-    max-height: 30px;
+    height: fit-content;
     overflow: hidden;
 }
 
