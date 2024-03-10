@@ -1,4 +1,4 @@
-const get_db_data = function (key, callback) {
+const get_db_data = function (keynum, callback) {
     const dbName = 'userdata_db';
     const storeName = 'userdata_store';
 
@@ -14,22 +14,29 @@ const get_db_data = function (key, callback) {
         const objectStore = transaction.objectStore(storeName);
 
         // キーに基づいてデータを取得
-        const getRequest = objectStore.get(key);
+        const keylist = objectStore.getAllKeys();
+        keylist.onsuccess = function (event) {
+            // キーの配列を取得
+            var keys = event.target.result;
+            console.log(keys);
 
-        getRequest.onsuccess = function (event) {
-            const data = event.target.result;
-            if (data) {
-                // データが見つかった場合、コールバック関数に渡す
-                callback(null, data);
-            } else {
-                // データが見つからない場合、エラーメッセージをコールバック関数に渡す
-                callback('Data_Not_Found', null);
-            }
-        };
+            const getRequest = objectStore.get(keys[keynum]);
 
-        getRequest.onerror = function (event) {
-            // リクエストエラーをコールバック関数に渡す
-            callback('Request_Error', null);
+            getRequest.onsuccess = function (event) {
+                const data = event.target.result;
+                if (data) {
+                    // データが見つかった場合、コールバック関数に渡す
+                    callback(null, data);
+                } else {
+                    // データが見つからない場合、エラーメッセージをコールバック関数に渡す
+                    callback('Data_Not_Found', null);
+                }
+            };
+
+            getRequest.onerror = function (event) {
+                // リクエストエラーをコールバック関数に渡す
+                callback('Request_Error', null);
+            };
         };
     };
 

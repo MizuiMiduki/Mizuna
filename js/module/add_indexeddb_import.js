@@ -1,5 +1,5 @@
 // indexedDBに登録する
-const add_indexeddb = function (get_user_data, address) {
+const add_indexeddb_import = function (get_user_data) {
     // データベース名とストア名
     const dbName = 'userdata_db';
     const storeName = 'userdata_store';
@@ -13,7 +13,7 @@ const add_indexeddb = function (get_user_data, address) {
 
         // ストアが存在しない場合は新しく作成します
         if (!db.objectStoreNames.contains(storeName)) {
-            db.createObjectStore(storeName, { keyPath: 'id' });
+            db.createObjectStore(storeName, { keyPath: 'username_address'});
         }
     };
 
@@ -24,17 +24,21 @@ const add_indexeddb = function (get_user_data, address) {
         // トランザクションを開始してストアにアクセスします
         const transaction = db.transaction(storeName, 'readwrite');
         const store = transaction.objectStore(storeName);
-        // データを準備します
-        const data = {
-            "token": get_user_data.token,
-            "name": get_user_data.user.name,
-            "username": get_user_data.user.username,
-            "address": address,
-            "avatarurl": get_user_data.user.avatarUrl
-        };
 
-        // データをストアに追加します
-        store.put(data);
+        store.clear()
+        for (let i = 0; i < get_user_data.length; i++) {
+            // データを準備します
+            const data = {
+                "token": get_user_data[i].token,
+                "name": get_user_data[i].name,
+                "username_address": get_user_data[i].username+"@"+get_user_data[i].address,
+                "address": get_user_data[i].address,
+                "avatarurl": get_user_data[i].avatarurl
+            };
+
+            // データをストアに追加します
+            store.put(data);
+        }
 
         // トランザクションを完了してデータベース接続を閉じます
         transaction.oncomplete = function () {

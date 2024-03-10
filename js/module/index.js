@@ -34,8 +34,8 @@ $(function () {
             // 通常の処理
 
             // データ取得
-            var key = 1;
-            get_db_data(key, function (error, db_user_data) {
+            var keynum = 0;
+            get_db_data(keynum, function (error, db_user_data) {
                 if (error) {
                     // 取得エラー
                     console.log(error);

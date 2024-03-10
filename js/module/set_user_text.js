@@ -1,7 +1,6 @@
 // フッターにデータを反映
 const set_user_text = function (data) {
     $("#user_name").text(data.name);
-    $("#user_id").text(data.username);
-    $("#address").text(data.address);
+    $("#user_id").text(data.username_address);
     $('#menu_icon').attr('src', data.avatarurl);
 }

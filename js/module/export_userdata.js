@@ -27,6 +27,7 @@ const export_userdata = function () {
                     export_data.push(data)
 
                     // 次のデータに進む
+                    export_data.push(",")
                     cursor.continue();
                 } else {
 
@@ -37,9 +38,9 @@ const export_userdata = function () {
 
                     // a要素を作成し、ダウンロードリンクとして設定
                     var a = document.createElement('a');
-                    a.download = "mizuna_data_export.json";
+                    a.download = "data_export.mizuna";
                     a.href = window.URL.createObjectURL(blob);
-                    a.textContent = "mizuna_data_export.json";
+                    a.textContent = "data_export.mizuna";
 
                     // a要素をbodyに追加してクリック
                     document.body.appendChild(a);
