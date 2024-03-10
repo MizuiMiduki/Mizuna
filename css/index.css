@@ -223,3 +223,8 @@ body {
     background: transparent;
     border-radius: 5px;
 }
+
+.input_block{
+    margin-top: 1em;
+    margin-bottom: 1em;
+}

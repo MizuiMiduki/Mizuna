@@ -13,7 +13,7 @@ const add_indexeddb = function (get_user_data, address) {
 
         // ストアが存在しない場合は新しく作成します
         if (!db.objectStoreNames.contains(storeName)) {
-            db.createObjectStore(storeName, { keyPath: 'id' });
+            db.createObjectStore(storeName, { keyPath: 'username_address' });
         }
     };
 
@@ -28,7 +28,7 @@ const add_indexeddb = function (get_user_data, address) {
         const data = {
             "token": get_user_data.token,
             "name": get_user_data.user.name,
-            "username": get_user_data.user.username,
+            "username_address": get_user_data.user.username+"@"+address,
             "address": address,
             "avatarurl": get_user_data.user.avatarUrl
         };

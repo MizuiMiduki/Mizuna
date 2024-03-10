@@ -45,6 +45,15 @@ $(function () {
                     set_user_text(user_data);
 
                     // "ノートボタン"押下時
+                    var send_standby = 1
+                    $("#submit").click(function () {
+                        if (send_standby == 1) {
+                            send_standby = 0
+                            const cw_content = $(".cw_content").val();
+                            const note_content = $(".note_content").val();
+                            send_standby = send_note(user_data, note_content, cw_content)
+                        }
+                    })
                 }
             });
             // export_userdata()
