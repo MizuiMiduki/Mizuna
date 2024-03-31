@@ -1,9 +1,12 @@
 $(function () {
     'use strict';
 
-    // Canaryチャンネル用
-    if (location.host == "mizuna-canary.blossomsarchive.com") {
-        document.title = 'Mizuna Canary'
+    var now = new Date();
+    var start = new Date('2024/4/1 0:00:00');
+    var end = new Date('2024/4/1 23:59:59');
+
+    if (start < now && now < end) {
+        document.title = 'Komatsuna'
         const canary_conds = [
             ".add_account_icon",
             ".header",
@@ -21,8 +24,9 @@ $(function () {
             "#add_account_input_submit"
         ]
         for (let i = 0; i < canary_conds.length; i++) {
-            $(canary_conds[i]).addClass('canary');
+            $(canary_conds[i]).css('background', 'green');
         }
+        $(".header > h1").text("Komatsuna")
     }
 
     // R1.2からのアップデート用
@@ -53,46 +57,6 @@ $(function () {
         localStorage.removeItem("R1.2toR2.0")
         location.reload()
     }
-
-    // テーマ変更ボタン
-    $('#select_theme_mode_auto').click(function () {
-        localStorage.setItem("theme_mode", "0");
-        location.reload()
-    })
-    $('#select_theme_mode_light').click(function () {
-        localStorage.setItem("theme_mode", "1");
-        location.reload()
-    })
-
-    $('#select_theme_mode_dark').click(function () {
-        localStorage.setItem("theme_mode", "2");
-        location.reload()
-    })
-
-    // テーマ変更
-    switch (localStorage.getItem("theme_mode")) {
-        // 端末設定
-        case "0":
-            if (window.matchMedia('(prefers-color-scheme: dark)').matches == true) {
-                $('head link:last').after('<link rel="stylesheet" href="darkmode.css">');
-            }
-            $("#select_theme_mode_auto").addClass("now_select_theme_mode_button_color");
-            break;
-        // ライトモード
-        case "1":
-            $("#select_theme_mode_light").addClass("now_select_theme_mode_button_color");
-            break;
-        // ダークモード
-        case "2":
-            $('head link:last').after('<link rel="stylesheet" href="darkmode.css">');
-            $("#select_theme_mode_dark").addClass("now_select_theme_mode_button_color");
-            break;
-        default:
-            $("#select_theme_mode_light").addClass("now_select_theme_mode_button_color");
-    }
-
-    // 公開範囲の初期値
-    document.getElementById("public").checked = true;
 
     // 指定中のアカウントの要素番号が空だったときの処理
     if (localStorage.length == 0) {
@@ -243,9 +207,6 @@ $(function () {
     if (user_icon_link !== null) {
         if (user_icon_none == 0 || user_icon_none == null) {
             $('.user_icon').attr('src', user_icon_link);
-            $("#user_icon_none_span").text("非表示");
-        } else if (user_icon_none == 1) {
-            $("#user_icon_none_span").text("表示");
         }
     }
 
@@ -263,6 +224,7 @@ $(function () {
         $(".cw_content").toggleClass("hidden");
     });
 
+
     //投稿ボタン
     $("#submit").click(function () {
         var note_content_input = $(".note_content").val();
@@ -272,9 +234,8 @@ $(function () {
         } else {
             let url = "https://" + address + "/api/notes/create"
             let type = "post"
-
-            var visibility = $(".visibility > * > input:checked").attr("id")
-
+            var visibility_select = document.getElementById('visibility_select');
+            var visibility = visibility_select.value
             var note_end_mizuna = document.getElementById('note_end_mizuna_checkbox').checked;
 
             if (note_end_mizuna == false) {
@@ -498,15 +459,6 @@ $(function () {
             }
         });
     })
-
-    // 投稿範囲選択
-    $('.visibility > * > input').on('change', function () {
-        var click_id = $(this).attr('id');
-        document.getElementById('public').checked = false;
-        document.getElementById('home').checked = false;
-        document.getElementById('followers').checked = false;
-        document.getElementById(click_id).checked = true;
-    });
 })
 
 // コントロール+エンターキーで投稿
