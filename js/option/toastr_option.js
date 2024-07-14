@@ -15,3 +15,9 @@ toastr.options = {
     "showMethod": "fadeIn",
     "hideMethod": "fadeOut"
 }
+
+// use
+// toastr["success"]('Message(option)','Title');
+// toastr["info"]('Message(option)','Title');
+// toastr["warning"]('Message(option)','Title');
+// toastr["error"]('Message(option)','Title');
