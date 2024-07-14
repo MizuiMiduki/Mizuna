@@ -5,7 +5,7 @@ const send_note = function (user_data) {
     var visibility = get_visibility_select();
 
     if (note_content != "") {
-        if (cw_content != "") {
+        if ($('.cw_input_ara').css('display') == 'block') {
             var param = {
                 "i": user_data.token,
                 "cw": cw_content,
