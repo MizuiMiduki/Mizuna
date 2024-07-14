@@ -31,7 +31,7 @@ const send_note = function (user_data) {
             dataType: 'json',
             scriptCharset: 'utf-8',
             success: function () {
-                toastr["success"]("ノート完了");
+                toastr["success"]('ノート成功');
                 $('textarea').val("");
                 $(".note_submit").prop("disabled", false);
             },
