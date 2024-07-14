@@ -27,12 +27,19 @@ function note_send_submit() {
 }
 
 // 公開範囲ボタンをラジオボタンと同じ挙動にする
-$(document).on("click", ".visibility_checkbox", function(){
+$(document).on("click", ".visibility_checkbox", function () {
     $('.visibility_checkbox').prop('checked', false);
     $(this).prop('checked', true);
 });
 
-// 公開範囲ボタンをラジオボタンと同じ挙動にする
-$(document).on("click", "#cw", function(){
-    $('.cw_content').toggle();
+// CWエリアの表示切り替え
+$(document).on("click", "#cw", function () {
+    $('.cw_input_ara').slideToggle();
+});
+
+// フォームクリアボタン
+$(document).on("click", "#form_clear_button", function () {
+    toastr["success"]('フォームクリア！');
+    $('.cw_content').val('');
+    $('.note_content').val('');
 });
