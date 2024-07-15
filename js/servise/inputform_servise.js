@@ -1,6 +1,6 @@
 // 入力欄の読み込み
 $(".main_column").load("/parts/form.html");
-
+$("#loading_anime_area").remove();
 // アカウント情報読み込み
 $.getScript("/js/function/get_db_data.js", function () {
     // [1]を適宜書き換える
