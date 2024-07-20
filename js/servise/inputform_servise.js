@@ -43,3 +43,10 @@ $(document).on("click", "#form_clear_button", function () {
     $('.cw_content').val('');
     $('.note_content').val('');
 });
+
+// コントロール+エンターキーで投稿
+document.addEventListener('keydown', event => {
+    if (event.ctrlKey && event.key === 'Enter') {
+        $(".note_submit").click();
+    }
+});
