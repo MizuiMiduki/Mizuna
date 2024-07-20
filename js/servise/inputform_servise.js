@@ -16,6 +16,9 @@ $.getScript("/js/function/get_db_data.js", function () {
         })
 })
 
+// キーボードショートカットを読み込み
+$.getScript("/js/function/keybordshortcut.js")
+
 // ノート送信ボタン
 var send_standby = 1
 $.getScript("/js/function/get_visibility_select.js")
@@ -42,11 +45,4 @@ $(document).on("click", "#form_clear_button", function () {
     toastr["success"]('フォームクリア！');
     $('.cw_content').val('');
     $('.note_content').val('');
-});
-
-// コントロール+エンターキーで投稿
-document.addEventListener('keydown', event => {
-    if (event.ctrlKey && event.key === 'Enter') {
-        $(".note_submit").click();
-    }
 });
