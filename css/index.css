@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP&display=swap');
+
 body {
     margin: 0;
     padding: 0;
@@ -6,6 +8,10 @@ body {
     height: 100vh;
     width: 100vw;
     font-family: sans-serif;
+
+    font-family: "IBM Plex Sans JP", sans-serif;
+    font-weight: 400;
+    font-style: normal;
 }
 
 /* ヘッダー */
@@ -85,10 +91,10 @@ body {
     width: 50px;
     aspect-ratio: 1;
     border-radius: 50%;
-    background: 
-      radial-gradient(farthest-side,lightblue 94%,#0000) top/8px 8px no-repeat,
-      conic-gradient(#0000 30%,lightblue);
-    -webkit-mask: radial-gradient(farthest-side,#0000 calc(100% - 8px),#000 0);
+    background:
+        radial-gradient(farthest-side, lightblue 94%, #0000) top/8px 8px no-repeat,
+        conic-gradient(#0000 30%, lightblue);
+    -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
     animation: l13 1s infinite linear;
 
     position: absolute;
