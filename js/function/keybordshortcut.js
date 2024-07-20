@@ -30,6 +30,14 @@ document.addEventListener('keydown', event => {
                 // フォームクリア
                 $("#form_clear_button").click();
                 break;
+            case 'i':
+                // 投稿入力に移動
+                $(".note_content").focus();
+                break;
+            case 'o':
+                // cw入力に移動
+                $(".cw_content").focus();
+                break;
         }
     }
 });
