@@ -30,6 +30,7 @@ if (location.search != "") {
         location.href = "/";
     }
 } else {
+    // 新規登録画面を表示
     $(".main_column").load("/parts/add_account.html");
     $("#loading_anime_area").remove();
     $.getScript("/js/function/miauth.js")
