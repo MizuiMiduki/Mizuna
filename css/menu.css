@@ -1,0 +1,32 @@
+[id^="account_card"] {
+    border: solid 1px gray;
+    border-radius: 25px;
+    padding: 5px;
+    margin-bottom: 5px;
+    width: 100%;
+    overflow: hidden;
+}
+
+[class^="account_card_icon"] {
+    width: 30px;
+    height: 30px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    border-radius: 50%;
+}
+
+.user_card_name{
+    margin-top: 0;
+    margin-bottom: 0;
+    overflow: hidden;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.account_display_area {
+    margin-top: 20px;
+}
