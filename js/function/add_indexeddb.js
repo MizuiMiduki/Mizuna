@@ -1,4 +1,4 @@
-const add_indexedb = function (get_user_data, address) {
+const add_indexeddb = function (get_user_data, address) {
     db.account.bulkPut([
         {
             token: get_user_data.token,

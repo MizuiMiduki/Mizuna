@@ -17,8 +17,8 @@ if (location.search != "") {
                 location.href = "/";
             } else {
                 // indexedDBに登録
-                $.getScript("/js/function/add_indexedb.js", function () {
-                    add_indexedb(get_user_data, address);
+                $.getScript("/js/function/add_indexeddb.js", function () {
+                    add_indexeddb(get_user_data, address);
                     // ローカルストレージを全削除
                     localStorage.clear();
                     location.href = "/";
