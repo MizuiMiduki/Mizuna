@@ -46,3 +46,23 @@ $(document).on("click", "#form_clear_button", function () {
     $('.cw_content').val('');
     $('.note_content').val('');
 });
+
+// メニューボタン
+let load_generate_menu_service = false;
+$(document).on("click", "#menu_icon", function () {
+    $(".main_column").load("/parts/loading.html", function () {
+        $(".main_column").empty();
+    });
+
+    if (load_generate_menu_service === false) {
+        // 初回ロード
+        $.getScript("/js/function/generate_account_list.js", function () {
+            $.getScript("/js/servise/generate_menu_service.js", function () {
+                generate_menu_service();
+            });
+        });
+        load_generate_menu_service = true;
+    } else {
+        generate_menu_service();
+    }
+});
