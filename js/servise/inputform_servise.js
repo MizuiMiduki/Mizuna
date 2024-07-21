@@ -50,9 +50,8 @@ $(document).on("click", "#form_clear_button", function () {
 // メニューボタン
 let load_generate_menu_service = false;
 $(document).on("click", "#menu_icon", function () {
-    $(".main_column").load("/parts/loading.html", function () {
-        $(".main_column").empty();
-    });
+    $(".main_column").empty();
+    $(".main_column").load("/parts/loading.html");
 
     if (load_generate_menu_service === false) {
         // 初回ロード
