@@ -2,7 +2,6 @@ const generate_account_list = function () {
     db.account.orderBy('id').keys(function (account_list_array) {
         get_db_data(account_list_array).then(account_list => {
             for (let i = 0; i < account_list.length; i++) {
-                console.log(account_list[i]['avatarurl'])
                 $('.account_display_area').append
                     (`
                         <div id="account_card" account-id="${account_list[i]['id']}">
