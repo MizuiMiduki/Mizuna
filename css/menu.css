@@ -4,7 +4,7 @@
     padding: 5px;
     margin-bottom: 5px;
     width: 100%;
-    overflow: hidden;
+    overflow: scroll;
 }
 
 [class^="account_card_icon"] {
@@ -15,16 +15,27 @@
     -ms-user-select: none;
     user-select: none;
     border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .user_card_name{
     margin-top: 0;
     margin-bottom: 0;
-    overflow: hidden;
     -moz-user-select: none;
     -webkit-user-select: none;
     -ms-user-select: none;
     user-select: none;
+}
+
+.user_card_name p{
+    margin: 0;
+    line-height: 1;
+}
+
+.user_card_user_name{
+    font-size: 0.7em;
 }
 
 .account_display_area {
