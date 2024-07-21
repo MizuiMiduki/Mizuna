@@ -49,19 +49,26 @@ $(document).on("click", "#form_clear_button", function () {
 
 // メニューボタン
 let load_generate_menu_service = false;
+let toggle_menu_input = 0;
 $(document).on("click", "#menu_icon", function () {
     $(".main_column").empty();
-    $(".main_column").load("/parts/loading.html");
 
-    if (load_generate_menu_service === false) {
-        // 初回ロード
-        $.getScript("/js/function/generate_account_list.js", function () {
-            $.getScript("/js/servise/generate_menu_service.js", function () {
-                generate_menu_service();
+    if (toggle_menu_input === 0) {
+        $(".main_column").load("/parts/loading.html");
+        toggle_menu_input = 1;
+        if (load_generate_menu_service === false) {
+            // 初回ロード
+            $.getScript("/js/function/generate_account_list.js", function () {
+                $.getScript("/js/servise/generate_menu_service.js", function () {
+                    generate_menu_service();
+                });
             });
-        });
-        load_generate_menu_service = true;
-    } else {
-        generate_menu_service();
+            load_generate_menu_service = true;
+        } else {
+            generate_menu_service();
+        }
+    } else if (toggle_menu_input === 1) {
+        toggle_menu_input = 0;
+        $(".main_column").load("/parts/form.html");
     }
 });
