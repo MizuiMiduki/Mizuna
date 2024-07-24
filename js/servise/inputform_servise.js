@@ -72,3 +72,6 @@ $(document).on("click", "#menu_icon", function () {
         $(".main_column").load("/parts/form.html");
     }
 });
+
+// Web Share Targetを取得してフォームにセット
+$.getScript("/js/function/WebShareTarget.js")
