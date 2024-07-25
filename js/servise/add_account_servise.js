@@ -1,7 +1,6 @@
 if (location.search != "") {
     // アカウント情報を取得するMisskeyサーバーのアドレスをローカルストレージから取得
     var address = localStorage.getItem("add_server_address")
-    alert(address)
     if (address) {
         // **
         // ローカルストレージが空ではない場合
