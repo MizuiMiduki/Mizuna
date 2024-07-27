@@ -2,5 +2,9 @@
 const set_user_text = function (data) {
     $("#user_name").text(data.name);
     $("#user_id").text(`${data.username}@${data.address}`);
-    $('#menu_icon').attr('src', data.avatarurl);
+    if (user_options.is_visible_icon == true) {
+        $('#menu_icon').attr('src', data.avatarurl);
+    }else{
+        $('#menu_icon').attr('src', "/icon.png");
+    }
 }

@@ -14,9 +14,11 @@ const generate_account_list = function () {
                         </table >
                         </div>
                         `);
-                // if (user_icon_none == 0 || user_icon_none == null) {
-                $('.account_card_icon' + account_list[i]['id']).attr('src', account_list[i]['avatarurl']);
-                // }
+                if (user_options.is_visible_icon == true) {
+                    $('.account_card_icon' + account_list[i]['id']).attr('src', account_list[i]['avatarurl']);
+                }else{
+                    $('.account_card_icon' + account_list[i]['id']).attr('src', "/icon.png");
+                }
             }
         });
     });
