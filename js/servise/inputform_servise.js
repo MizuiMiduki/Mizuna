@@ -1,7 +1,12 @@
 // 入力欄の読み込み
 $(".main_column").load("/parts/form.html", function () {
     $("#loading_anime_area").remove();
+
+    // デフォルトの公開範囲ボタンにユーザー設定を適用
+    $.getScript("/js/function/apply_default_visibility_button.js");
+
 })
+
 // アカウント情報読み込み
 $.getScript("/js/function/get_user_db_data.js", function () {
     // [1]を適宜書き換える
@@ -70,7 +75,9 @@ $(document).on("click", "#menu_icon", function () {
         }
     } else if (toggle_menu_input === 1) {
         toggle_menu_input = 0;
-        $(".main_column").load("/parts/form.html");
+        $(".main_column").load("/parts/form.html", function () {
+            apply_default_visibility_button();
+        });
     }
 });
 
