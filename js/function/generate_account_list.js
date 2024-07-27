@@ -1,6 +1,6 @@
 const generate_account_list = function () {
     db.account.orderBy('id').keys(function (account_list_array) {
-        get_db_data(account_list_array).then(account_list => {
+        get_user_db_data(account_list_array).then(account_list => {
             for (let i = 0; i < account_list.length; i++) {
                 $('.account_display_area').append
                     (`
