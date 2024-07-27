@@ -7,7 +7,7 @@ var db = new Dexie("MizunaDatabase");
 
 db.version(1).stores({
     account: "++id, token, name, username, address, avatarurl, add_mizuna_versinon",
-    setting: '++id, setting ',
+    setting: '++id, select_user, default_visibility, is_note_end_mizuna, is_visible_icon',
 });
 
 // 初回判定
