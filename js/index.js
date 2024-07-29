@@ -11,7 +11,7 @@ db.version(1).stores({
 });
 
 // ユーザー設定を読み込み
-$.getScript("/js/function/get_setting_db_data.js",function(){
+$.getScript("/js/function/get_setting_db_data.js", function () {
     user_setting();
 })
 
