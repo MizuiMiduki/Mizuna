@@ -3,7 +3,6 @@
     border-radius: 25px;
     padding: 5px;
     margin-bottom: 5px;
-    overflow: scroll;
 }
 
 [class^="account_card_icon"] {
@@ -41,6 +40,10 @@
     margin-top: 20px;
     max-height: 70vh;
     overflow-y: scroll;
+    scrollbar-width: none;
+}
+.account_display_area::-webkit-scrollbar {
+    display: none;
 }
 
 .add_account_floating_button {
