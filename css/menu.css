@@ -1,5 +1,6 @@
 [id^="account_card"] {
-    border: solid 1px gray;
+    border: solid 1px black;
+    background-color: white;
     border-radius: 25px;
     padding: 5px;
     margin-bottom: 5px;

@@ -29,8 +29,8 @@
     overflow-x: hidden;
     line-break: anywhere;
     font-size: 20px;
-    border-radius: 3px;
-    border: 2px solid #ddd;
+    border-radius: 10px;
+    border: 1px solid black;
     box-sizing: border-box;
 }
 
@@ -58,7 +58,7 @@
     background-color: lightblue;
     padding: 0.5em;
     margin: 0.2em;
-    border-radius: 100px;
+    border-radius: 50%;
     border: rgb(223, 222, 222) 2px solid;
     opacity: .5;
     width: 2.3em;

@@ -7,11 +7,16 @@ body {
     position: relative;
     height: 100vh;
     width: 100vw;
-    font-family: sans-serif;
-
     font-family: "IBM Plex Sans JP", sans-serif;
     font-weight: 400;
     font-style: normal;
+    background: rgba(255, 255, 255);
+}
+
+/* Todo : 背景用(予定地) */
+.body_div {
+    height: 100%;
+    width: 100%;
 }
 
 /* ヘッダー */
