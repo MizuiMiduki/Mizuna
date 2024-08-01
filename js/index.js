@@ -21,8 +21,18 @@ check_accountdb_status().then(function (check_accountdb_result) {
         // **
         // アカウントがある場合
         // **
-        $.getScript("/js/servise/inputform_servise.js")
-        storage.clear();
+        if (location.search != "") {
+            var address = localStorage.getItem("add_server_address")
+            if (address) {
+                $.getScript("/js/servise/add_account_servise.js")
+            } else {
+                location.href = "/";
+            }
+
+        } else {
+            $.getScript("/js/servise/inputform_servise.js")
+            storage.clear();
+        }
     } else {
         // **
         // アカウントがない場合
