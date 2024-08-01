@@ -4,6 +4,8 @@
     border-radius: 25px;
     padding: 5px;
     margin-bottom: 5px;
+    user-select: none;
+    cursor: pointer;
 }
 
 [class^="account_card_icon"] {
@@ -17,6 +19,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    user-select: none;
 }
 
 .user_card_name {
