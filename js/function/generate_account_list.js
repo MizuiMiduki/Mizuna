@@ -4,7 +4,7 @@ const generate_account_list = function () {
             for (let i = 0; i < account_list.length; i++) {
                 $('.account_display_area').append
                     (`
-                        <div id="account_card" account-id="${account_list[i]['id']}">
+                        <div id="account_card" data-id="${account_list[i]['id']}">
                         <table>
                         <tr>
                         <td><img class="account_card_icon${account_list[i]['id']}" src="/icon.png"></td>

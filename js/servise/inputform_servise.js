@@ -9,8 +9,7 @@ $(".main_column").load("/parts/form.html", function () {
 
 // アカウント情報読み込み
 $.getScript("/js/function/get_user_db_data.js", function () {
-    // [1]を適宜書き換える
-    get_user_db_data([1])
+    get_user_db_data([user_options.select_user])
         .then(get_db_result => {
             // フッター表示
             user_data = get_db_result[0]
