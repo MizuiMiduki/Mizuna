@@ -58,6 +58,7 @@ let load_generate_menu_service = false;
 let toggle_menu_input = 0;
 $(document).on("click", "#menu_icon", function () {
     $(".main_column").empty();
+    $(".back_inputform_floating_button").remove();
 
     if (toggle_menu_input === 0) {
         $(".main_column").load("/parts/loading.html");
