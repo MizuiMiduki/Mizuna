@@ -6,7 +6,7 @@ const add_indexeddb = function (get_user_data, address) {
             username: get_user_data.user.username,
             address: address,
             avatarurl: get_user_data.user.avatarUrl,
-            add_mizuna_versinon: mizuna_options.mizuna_db_version
+            add_mizuna_versinon: mizuna_options.mizuna_version
         },
     ])
 }
