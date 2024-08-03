@@ -41,7 +41,7 @@
 }
 
 .account_display_area {
-    margin-top: 20px;
+    margin-top: 10px;
     max-height: 70vh;
     overflow-y: scroll;
     scrollbar-width: none;
@@ -69,9 +69,30 @@
     cursor: pointer;
 }
 
+.delete_account_mode_floating_button {
+    background-color: lightblue;
+    padding: 0.25em;
+    margin: 10px 0 0 auto;
+    border-radius: 100px;
+    border: #000000 2px solid;
+    opacity: 1;
+    width: fit-content !important;
+    user-select: none;
+    cursor: pointer;
+    display: flex;
+}
+
 .add_account_floating_button svg,
 .back_inputform_floating_button svg {
     display: flex;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.delete_account_mode_floating_button svg {
     position: relative;
     align-items: center;
     justify-content: center;
@@ -87,4 +108,12 @@
     text-align: center;
     font-size: calc(1em/2);
     font-weight: bold;
+}
+
+.delete_account_mode_floating_button p {
+    width: 100%;
+    text-align: center;
+    font-size: 0.7em;
+    font-weight: bold;
+    margin: auto 0 auto 0;
 }
