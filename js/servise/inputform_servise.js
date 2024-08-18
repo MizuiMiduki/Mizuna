@@ -11,13 +11,36 @@ $(".main_column").load("/parts/form.html", function () {
 $.getScript("/js/function/get_user_db_data.js", function () {
     get_user_db_data([user_options.select_user])
         .then(get_db_result => {
-            // フッター表示
-            user_data = get_db_result[0]
-            $.getScript("/js/function/set_user_text.js", function () {
-                set_user_text(user_data)
-            })
-            // ノート送信関数をロード
-            $.getScript("/js/function/send_note.js")
+            if (get_db_result[0]) {
+                // フッター表示
+                user_data = get_db_result[0]
+                $.getScript("/js/function/set_user_text.js", function () {
+                    set_user_text(user_data)
+                })
+                // ノート送信関数をロード
+                $.getScript("/js/function/send_note.js")
+            } else {
+                db.table('account').orderBy('id').first()
+                    .then(record => {
+                        db.setting.bulkUpdate([
+                            {
+                                key: 1,
+                                changes: {
+                                    select_user: record.id,
+                                }
+                            },
+                        ])
+                        get_user_db_data([record.id])
+                            .then(get_db_result => {
+                                // フッター表示
+                                user_data = get_db_result[0]
+                                $.getScript("/js/function/set_user_text.js", function () {
+                                    set_user_text(user_data)
+                                })
+                            })
+
+                    });
+            }
         })
 })
 
