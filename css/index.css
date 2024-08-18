@@ -113,3 +113,9 @@ body {
         transform: rotate(1turn)
     }
 }
+
+/* jquery confirmのレイアウトを微調整 */
+.jconfirm-holder {
+    width: 90%;
+    margin: 0 auto;
+}
