@@ -12,31 +12,31 @@ db.version(1).stores({
 
 // ユーザー設定を読み込み
 $.getScript("/js/function/get_setting_db_data.js", function () {
-    user_setting().then(function () {
-        // 初回判定
-        check_accountdb_status().then(function (check_accountdb_result) {
-            if (check_accountdb_result === 1) {
-                // **
-                // アカウントがある場合
-                // **
-                if (location.search != "") {
-                    var address = localStorage.getItem("add_server_address")
-                    if (address) {
-                        $.getScript("/js/servise/add_account_servise.js")
-                    } else {
-                        location.href = "/";
-                    }
+    user_setting();
+})
 
-                } else {
-                    $.getScript("/js/servise/inputform_servise.js")
-                    storage.clear();
-                }
-            } else {
-                // **
-                // アカウントがない場合
-                // **
+// 初回判定
+check_accountdb_status().then(function (check_accountdb_result) {
+    if (check_accountdb_result === 1) {
+        // **
+        // アカウントがある場合
+        // **
+        if (location.search != "") {
+            var address = localStorage.getItem("add_server_address")
+            if (address) {
                 $.getScript("/js/servise/add_account_servise.js")
+            } else {
+                location.href = "/";
             }
-        })
-    });
+
+        } else {
+            $.getScript("/js/servise/inputform_servise.js")
+            storage.clear();
+        }
+    } else {
+        // **
+        // アカウントがない場合
+        // **
+        $.getScript("/js/servise/add_account_servise.js")
+    }
 })
