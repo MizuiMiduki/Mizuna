@@ -64,8 +64,9 @@ $(document).on('click', '#account_card', function () {
         get_user_db_data([select_user_id])
             .then(get_db_result => {
                 // フッター表示
-                user_data = get_db_result[0]
-                set_user_text(user_data)
+                user_data = get_db_result[0];
+                set_user_text(user_data);
+                user_setting();
                 toastr["success"]('アカウントを切り替えました');
             })
     })
@@ -73,5 +74,32 @@ $(document).on('click', '#account_card', function () {
 
 $(document).on('click', '.delete_account_mode_floating_button', function () {
     $(".delete_select_checknox").toggle();
+    $(".delete_account_execution_floating_button").toggleClass("delete_account_execution_floating_button_flex delete_account_execution_floating_button_none");
     $(".delete_select_checknox").removeAttr('checked').prop('checked', false);
+});
+
+let load_delete_account = false;
+$(document).on('click', '.delete_account_execution_floating_button', function () {
+    $.confirm({
+        title: '選択したアカウント削除します',
+        content: '選択したアカウントをMizunaから登録解除しても良いですか？',
+        buttons: {
+            "はい": function () {
+                var checkedItems = $(".delete_select_checknox:checked").map(function () {
+                    return $(this).data('id');
+                }).get();
+                if (load_delete_account === false) {
+                    $.getScript("/js/function/delete_account.js", function () {
+                        delete_account(checkedItems);
+                    });
+                    load_delete_account = true;
+                } else {
+                    delete_account(checkedItems);
+                }
+                $.alert("削除しました");
+            },
+            "いいえ": function () {
+            }
+        }
+    });
 });
