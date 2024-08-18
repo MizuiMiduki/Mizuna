@@ -1,11 +1,16 @@
+.account_card_area {
+    display: flex;
+    margin-bottom: 5px;
+}
+
 [id^="account_card"] {
     border: solid 1px black;
     background-color: white;
     border-radius: 25px;
     padding: 5px;
-    margin-bottom: 5px;
     user-select: none;
     cursor: pointer;
+    width: 100%;
 }
 
 [class^="account_card_icon"] {
@@ -116,4 +121,12 @@
     font-size: 0.7em;
     font-weight: bold;
     margin: auto 0 auto 0;
+}
+
+.delete_select_checknox {
+    display: none;
+    width: 1.5em;
+    height: 1.5em;
+    margin-top: auto;
+    margin-bottom: auto;
 }

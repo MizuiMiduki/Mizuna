@@ -1,10 +1,8 @@
 const generate_menu_service = function () {
     $(".main_column").load("/parts/change_account.html", function () {
-        // $(".main_column").load("/parts/.html", function () {
         $("#loading_anime_area").remove();
         // アカウント一覧を表示
         generate_account_list()
-        // });
     });
 }
 
@@ -71,4 +69,9 @@ $(document).on('click', '#account_card', function () {
                 toastr["success"]('アカウントを切り替えました');
             })
     })
+});
+
+$(document).on('click', '.delete_account_mode_floating_button', function () {
+    $(".delete_select_checknox").toggle();
+    $(".delete_select_checknox").removeAttr('checked').prop('checked', false);
 });
