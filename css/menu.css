@@ -56,6 +56,7 @@
     display: none;
 }
 
+/* アカウント追加ボタン */
 .add_account_floating_button,
 .back_inputform_floating_button {
     background-color: lightblue;
@@ -74,30 +75,11 @@
     cursor: pointer;
 }
 
-.delete_account_mode_floating_button {
-    background-color: lightblue;
-    padding: 0.25em;
-    margin: 10px 0 0 auto;
-    border-radius: 100px;
-    border: #000000 2px solid;
-    opacity: 1;
-    width: fit-content !important;
-    user-select: none;
-    cursor: pointer;
-    display: flex;
-}
+
 
 .add_account_floating_button svg,
 .back_inputform_floating_button svg {
     display: flex;
-    position: relative;
-    align-items: center;
-    justify-content: center;
-    margin-right: auto;
-    margin-left: auto;
-}
-
-.delete_account_mode_floating_button svg {
     position: relative;
     align-items: center;
     justify-content: center;
@@ -115,6 +97,28 @@
     font-weight: bold;
 }
 
+/* アカウント削除ボタンを表示するボタン */
+.delete_account_mode_floating_button {
+    background-color: lightblue;
+    padding: 0.25em;
+    margin: 10px 0 0 auto;
+    border-radius: 100px;
+    border: #000000 2px solid;
+    opacity: 1;
+    width: fit-content !important;
+    user-select: none;
+    cursor: pointer;
+    display: flex;
+}
+
+.delete_account_mode_floating_button svg {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    margin-right: auto;
+    margin-left: auto;
+}
+
 .delete_account_mode_floating_button p {
     width: 100%;
     text-align: center;
@@ -123,6 +127,44 @@
     margin: auto 0 auto 0;
 }
 
+/* アカウント削除を実行するボタン */
+.delete_account_execution_floating_button {
+    background-color: lightblue;
+    padding: 0.25em;
+    margin: 10px 0 0 auto;
+    border-radius: 100px;
+    border: #000000 2px solid;
+    opacity: 1;
+    width: fit-content !important;
+    user-select: none;
+    cursor: pointer;
+}
+
+.delete_account_execution_floating_button_flex {
+    display: flex;
+}
+
+.delete_account_execution_floating_button_none {
+    display: none;
+}
+
+.delete_account_execution_floating_button svg {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.delete_account_execution_floating_button p {
+    width: 100%;
+    text-align: center;
+    font-size: 0.7em;
+    font-weight: bold;
+    margin: auto 0 auto 0;
+}
+
+/* アカウント削除のチェックボックス */
 .delete_select_checknox {
     display: none;
     width: 1.5em;
