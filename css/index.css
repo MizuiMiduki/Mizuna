@@ -71,6 +71,33 @@ body {
     cursor: pointer;
 }
 
+.settings_icon_back {
+    background-color: lightblue;
+    border-radius: 100px 100px 0 0;
+    padding-top: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    width: fit-content;
+    height: fit-content;
+    position: absolute;
+    right: -40%;
+    bottom: 0;
+}
+
+.settings_icon {
+    margin-left: 0;
+    width: 50px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    cursor: pointer;
+}
+
 .footer_user_name {
     bottom: 0;
     background-color: lightblue;
