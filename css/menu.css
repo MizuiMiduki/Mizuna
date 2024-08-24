@@ -69,7 +69,7 @@
     height: 3em;
     user-select: none;
     text-align: center;
-    position: absolute;
+    position: fixed;
     bottom: 35px;
     right: 10%;
     cursor: pointer;

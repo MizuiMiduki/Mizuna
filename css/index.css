@@ -15,7 +15,7 @@ body {
 
 /* Todo : 背景用(予定地) */
 .body_div {
-    height: 100%;
+    height: 100vh;
     width: 100%;
 }
 
