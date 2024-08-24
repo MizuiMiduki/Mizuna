@@ -31,7 +31,7 @@ const delete_account = function (db_key_list) {
                 $("#user_name").text("name");
                 $("#user_id").text("id@address");
                 $('#menu_icon').attr('src', "/icon.png");
-                $('.user_icon').removeAttr('menu_icon');
+                $('#menu_icon').removeAttr('id');
                 $.getScript("/js/servise/add_account_servise.js")
             }
         });
