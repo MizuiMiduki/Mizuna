@@ -1,9 +1,3 @@
-const title = new URL(document.location).searchParams.get("title");
-const text = new URL(document.location).searchParams.get("text");
-const url = new URL(document.location).searchParams.get("url");
-
-const wsta_text = "";
-
 if (title) {
     $('.note_content').val(title);
 }

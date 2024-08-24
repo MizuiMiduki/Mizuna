@@ -2,6 +2,19 @@
 $.getScript("/js/option/toastr_option.js");
 $.getScript("/js/option/mizuna_option.js");
 
+title = new URL(document.location).searchParams.get("title");
+text = new URL(document.location).searchParams.get("text");
+url = new URL(document.location).searchParams.get("url");
+if (title) {
+    localStorage.setItem('wst_title', title);
+}
+if (text) {
+    localStorage.setItem('wst_text', text);
+}
+if (url) {
+    localStorage.setItem('wst_url', url);
+}
+
 // indexed DB接続
 var db = new Dexie("MizunaDatabase");
 
@@ -30,8 +43,13 @@ check_accountdb_status().then(function (check_accountdb_result) {
             }
 
         } else {
-            $.getScript("/js/servise/inputform_servise.js")
-            storage.clear();
+            $.getScript("/js/servise/inputform_servise.js", function () {
+                title = localStorage.getItem("wst_title")
+                text = localStorage.getItem("wst_text")
+                url = localStorage.getItem("wst_url")
+
+                localStorage.clear();
+            })
         }
     } else {
         // **
