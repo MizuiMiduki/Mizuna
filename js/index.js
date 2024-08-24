@@ -2,6 +2,10 @@ const wst_title = new URL(document.location).searchParams.get("title");
 const wst_text = new URL(document.location).searchParams.get("text");
 const wst_url = new URL(document.location).searchParams.get("url");
 
+if(wst_title || wst_text || wst_url){
+    console.log("111111")
+    localStorage.clear();
+
 if (wst_title) {
     localStorage.setItem('wst_title', wst_title);
 }
@@ -11,17 +15,6 @@ if (wst_text) {
 if (wst_url) {
     localStorage.setItem('wst_url', wst_url);
 }
-
-if(wst_title){
-    location.reload();
-}
-
-if(wst_title){
-    location.reload();
-}
-
-if(wst_url){
-    location.reload();
 }
 
 // 設定を読み込み
@@ -56,8 +49,7 @@ check_accountdb_status().then(function (check_accountdb_result) {
             }
 
         } else {
-            $.getScript("/js/servise/inputform_servise.js", function () {
-            })
+            $.getScript("/js/servise/inputform_servise.js")
         }
     } else {
         // **

@@ -71,6 +71,7 @@ $(document).on("click", "#cw", function () {
 // フォームクリアボタン
 $(document).on("click", "#form_clear_button", function () {
     toastr["success"]('フォームクリア！');
+    localStorage.clear();
     $('.cw_content').val('');
     $('.note_content').val('');
 });
@@ -105,4 +106,6 @@ $(document).on("click", "#menu_icon", function () {
 });
 
 // Web Share Targetを取得してフォームにセット
-$.getScript("/js/function/WebShareTarget.js")
+$.getScript("/js/function/WebShareTarget.js",function(){
+    websharetarget();
+})
