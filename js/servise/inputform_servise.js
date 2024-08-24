@@ -101,6 +101,7 @@ $(document).on("click", "#menu_icon", function () {
         toggle_menu_input = 0;
         $(".main_column").load("/parts/form.html", function () {
             apply_default_visibility_button();
+            websharetarget();
         });
     }
 });
