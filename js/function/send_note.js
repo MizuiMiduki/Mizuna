@@ -34,6 +34,7 @@ const send_note = function (user_data) {
                 toastr["success"]('ノート成功');
                 $('textarea').val("");
                 $(".note_submit").prop("disabled", false);
+                localStorage.clear();
             },
             error: function () {
                 toastr["error"]("ノートできませんでした");
