@@ -96,7 +96,6 @@ $(document).on('click', '.delete_account_execution_floating_button', function ()
                 } else {
                     delete_account(checkedItems);
                 }
-                $.alert("削除しました");
             },
             "いいえ": function () {
             }
