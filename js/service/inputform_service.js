@@ -129,8 +129,8 @@ $(document).on("click", "#settings_icon", function () {
 
         if (load_settings_service === false) {
             // 初回ロード
-                $.getScript("/js/service/settings_service.js", function () {
-                    settings_service();
+            $.getScript("/js/service/settings_service.js", function () {
+                settings_service();
             });
             load_settings_service = true;
         } else {
