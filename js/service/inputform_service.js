@@ -110,10 +110,13 @@ $(document).on("click", "#menu_icon", function () {
     }
 });
 
-// Web Share Targetを取得してフォームにセット
+// Web Share Target
 $.getScript("/js/function/WebShareTarget.js", function () {
     websharetarget();
 })
+// Web Share
+$.getScript("/js/function/WebShare.js")
+
 
 // 設定メニューボタン
 let load_settings_service = false;
