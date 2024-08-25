@@ -11,7 +11,7 @@ let load_add_account_service = false;
 $(document).on('click', '.add_account_floating_button', function () {
     if (load_add_account_service === false) {
         // 初回ロード
-        $.getScript("/js/servise/add_account_servise.js", function () {
+        $.getScript("/js/service/add_account_service.js", function () {
             $('body').append(`
             <div class="back_inputform_floating_button">
                 <svg xmlns="http://www.w3.org/2000/svg" height="30" viewBox="0 -960 960 960" width="30">
@@ -25,7 +25,7 @@ $(document).on('click', '.add_account_floating_button', function () {
         })
         load_add_account_service = true;
     } else {
-        add_account_servise()
+        add_account_service()
         $('body').append(`
             <div class="back_inputform_floating_button">
                 <svg xmlns="http://www.w3.org/2000/svg" height="30" viewBox="0 -960 960 960" width="30">

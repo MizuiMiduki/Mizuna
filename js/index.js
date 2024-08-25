@@ -43,18 +43,18 @@ check_accountdb_status().then(function (check_accountdb_result) {
         if (location.search != "") {
             var address = localStorage.getItem("add_server_address")
             if (address) {
-                $.getScript("/js/servise/add_account_servise.js")
+                $.getScript("/js/service/add_account_service.js")
             } else {
                 location.href = "/";
             }
 
         } else {
-            $.getScript("/js/servise/inputform_servise.js")
+            $.getScript("/js/service/inputform_service.js")
         }
     } else {
         // **
         // アカウントがない場合
         // **
-        $.getScript("/js/servise/add_account_servise.js")
+        $.getScript("/js/service/add_account_service.js")
     }
 })

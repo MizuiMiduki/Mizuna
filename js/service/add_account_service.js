@@ -1,4 +1,4 @@
-const add_account_servise = function () {
+const add_account_service = function () {
     if (location.search != "") {
         // アカウント情報を取得するMisskeyサーバーのアドレスをローカルストレージから取得
         var address = localStorage.getItem("add_server_address")
@@ -40,7 +40,7 @@ const add_account_servise = function () {
     load_add_account_service = true;
 }
 
-add_account_servise();
+add_account_service();
 
 const add_account_submit = function () {
     // アカウント情報を取得するMisskeyサーバーのアドレス
