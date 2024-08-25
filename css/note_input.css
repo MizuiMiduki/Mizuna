@@ -13,10 +13,6 @@
     cursor: pointer;
 }
 
-.note_submit:focus {
-    padding: 1.25% 6% 1.25% 6%;
-}
-
 /* ノートメニュー */
 .note_menu {
     display: flex;
@@ -72,13 +68,6 @@
     user-select: none;
     text-align: center;
     cursor: pointer;
-}
-
-@media (hover: hover) {
-    .menu_button:hover {
-        position: relative;
-        top: -15%;
-    }
 }
 
 .menu_button svg {
