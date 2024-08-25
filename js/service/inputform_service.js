@@ -86,7 +86,8 @@ $(document).on("click", "#menu_icon", function () {
     if (toggle_menu_input === 0) {
         $(".main_column").load("/parts/loading.html");
         toggle_menu_input = 1;
-        toggle_settings_input = 1;
+        toggle_settings_input = 0;
+
         if (load_generate_menu_service === false) {
             // 初回ロード
             $.getScript("/js/function/generate_account_list.js", function () {
@@ -101,6 +102,7 @@ $(document).on("click", "#menu_icon", function () {
     } else if (toggle_menu_input === 1) {
         toggle_menu_input = 0;
         toggle_settings_input = 0;
+
         $(".main_column").load("/parts/form.html", function () {
             apply_default_visibility_button();
             websharetarget();
@@ -123,7 +125,8 @@ $(document).on("click", "#settings_icon", function () {
     if (toggle_settings_input === 0) {
         $(".main_column").load("/parts/loading.html");
         toggle_settings_input = 1;
-        toggle_menu_input = 1;
+        toggle_menu_input = 0;
+
         if (load_settings_service === false) {
             // 初回ロード
                 $.getScript("/js/service/settings_service.js", function () {
@@ -136,6 +139,7 @@ $(document).on("click", "#settings_icon", function () {
     } else if (toggle_settings_input === 1) {
         toggle_settings_input = 0;
         toggle_menu_input = 0;
+
         $(".main_column").load("/parts/form.html", function () {
             apply_default_visibility_button();
             websharetarget();
