@@ -142,3 +142,10 @@
         bottom: 10%; */
     }
 }
+
+.content_char_count {
+    margin: 0;
+    margin-bottom: 0px;
+    text-align: right;
+    margin-bottom: 0.1em;
+}
