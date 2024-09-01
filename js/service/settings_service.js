@@ -27,15 +27,30 @@ const settings_service = function () {
         // デフォルトで投稿の末尾に『(from Mizuna)』を付ける
         switch (user_options.is_note_end_mizuna) {
             case false:
-                // public
+                // true
                 $("#is_note_end_mizuna_false").addClass('active')
                 break;
             case true:
-                // home
+                // false
                 $("#is_note_end_mizuna_true").addClass('active')
                 break;
             default:
                 $("#is_note_end_mizuna_false").addClass('active')
+                break;
+        }
+
+        // アイコン画像を非表示にする
+        switch (user_options.is_visible_icon) {
+            case false:
+                // false
+                $("#is_visible_icon_true").addClass('active')
+                break;
+            case true:
+                // true
+                $("#is_visible_icon_false").addClass('active')
+                break;
+            default:
+                $("#is_visible_icon_false").addClass('active')
                 break;
         }
     });
@@ -121,6 +136,53 @@ function noteEndOption(element) {
                 },
             ])
             user_options.is_note_end_mizuna = true;
+            break;
+    }
+
+    element.classList.add('active');
+}
+
+function visibleIconOption(element) {
+    var options = document.getElementsByClassName('visible_icon-option');
+    for (var i = 0; i < options.length; i++) {
+        options[i].classList.remove('active');
+    }
+
+    // アイコンを非表示にする
+    switch (element.id) {
+        case "is_visible_icon_false":
+            // false
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_visible_icon: true,
+                    }
+                },
+            ])
+            user_options.is_visible_icon = true;
+
+            get_user_db_data([user_options.select_user])
+                .then(get_db_result => {
+                    if (get_db_result[0]) {
+                        // フッター表示
+                        user_data = get_db_result[0]
+                        set_user_text(user_data)
+                    }
+                })
+            break;
+        case "is_visible_icon_true":
+            // true
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_visible_icon: false,
+                    }
+                },
+            ])
+            user_options.is_visible_icon = false;
+            $('#menu_icon').attr('src', "/icon.png");
             break;
     }
 
