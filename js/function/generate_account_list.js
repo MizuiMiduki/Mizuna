@@ -8,7 +8,7 @@ const generate_account_list = function () {
                         <div id="account_card" data-id="${account_list[i]['id']}">
                         <table>
                         <tr>
-                        <td><img class="account_card_icon${account_list[i]['id']}" src="/icon.png"></td>
+                        <td><img class="account_card_icon${account_list[i]['id']}" src="/icon.png" onError="this.onerror=null;this.src='/icon.png';"></td>
                         <td>&nbsp;</td>
                         <td class="user_card_name"><p>${account_list[i]['name']}<br><span class="user_card_user_name">${account_list[i]['username']}@${account_list[i]['address']}</span></p></td>
                         </tr>
