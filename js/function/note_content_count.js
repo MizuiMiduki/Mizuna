@@ -3,16 +3,16 @@ $(function () {
         var textLength = $(this).val().length;
         $('#charCount').text(textLength);
 
-        if (2986 == $('#charCount').text(textLength)) {
-            if ($(this).val().length > $('#max_charCount').text()) {
+        if (2986 == $('#max_charCount').text()) {
+            if ($('#charCount').text() > $('#max_charCount').text()) {
                 $('#charCount').css("color", "red");
-            } else if ($(this).val().length == $('#max_charCount').text()) {
+            } else if ($('#charCount').text() == $('#max_charCount').text()) {
                 $('#charCount').css("color", "goldenrod");
             } else {
                 $('#charCount').css("color", "");
             }
-        }else{
-            if ($(this).val().length == $('#max_charCount').text()) {
+        } else {
+            if ($('#charCount').text() == $('#max_charCount').text()) {
                 $('#charCount').css("color", "goldenrod");
             } else {
                 $('#charCount').css("color", "");
@@ -26,6 +26,23 @@ $(function () {
             $('#max_charCount').text(2986);
         } else {
             $('#max_charCount').text(3000);
+        }
+
+        if (2986 == $('#max_charCount').text()) {
+            console.log("!!!!!!!!!!")
+            if ($('#charCount').text() > $('#max_charCount').text()) {
+                $('#charCount').css("color", "red");
+            } else if ($('#charCount').text() == $('#max_charCount').text()) {
+                $('#charCount').css("color", "goldenrod");
+            } else {
+                $('#charCount').css("color", "");
+            }
+        } else {
+            if ($('#charCount').text() == $('#max_charCount').text()) {
+                $('#charCount').css("color", "goldenrod");
+            } else {
+                $('#charCount').css("color", "");
+            }
         }
     });
 });
