@@ -19,7 +19,7 @@ const send_note = function (user_data) {
                 "visibility": visibility,
             };
         }
-        if ($('#charCount').text() <= $('#max_charCount').text()) {
+        if (Number($('#charCount').text()) <= Number($('#max_charCount').text())) {
             param = JSON.stringify(param);
             let type = "post"
             let url = "https://" + user_data.address + "/api/notes/create"
