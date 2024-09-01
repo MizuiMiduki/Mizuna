@@ -5,7 +5,6 @@ $(".main_column").load("/parts/form.html", function () {
     $.getScript("/js/function/note_content_count.js")
     // デフォルトの公開範囲ボタンにユーザー設定を適用
     $.getScript("/js/function/apply_default_visibility_button.js");
-
 })
 
 // アカウント情報読み込み

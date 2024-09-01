@@ -29,7 +29,6 @@ $(function () {
         }
 
         if (2986 == $('#max_charCount').text()) {
-            console.log("!!!!!!!!!!")
             if ($('#charCount').text() > $('#max_charCount').text()) {
                 $('#charCount').css("color", "red");
             } else if ($('#charCount').text() == $('#max_charCount').text()) {

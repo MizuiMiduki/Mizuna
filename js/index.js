@@ -3,7 +3,6 @@ const wst_text = new URL(document.location).searchParams.get("text");
 const wst_url = new URL(document.location).searchParams.get("url");
 
 if(wst_title || wst_text || wst_url){
-    console.log("111111")
     localStorage.clear();
 
 if (wst_title) {

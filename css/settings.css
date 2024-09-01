@@ -1,0 +1,131 @@
+.cp_tab *,
+.cp_tab *:before,
+.cp_tab *:after {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+.cp_tab {
+    width: 100vw;
+    position: fixed;
+    right: 0;
+    left: 0;
+}
+
+.cp_tab>input[type='radio'] {
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 0;
+    outline: none;
+    background: none;
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+}
+
+.cp_tab .cp_tabpanel {
+    display: none;
+}
+
+.cp_tab>input:first-child:checked~.cp_tabpanels>.cp_tabpanel:first-child,
+.cp_tab>input:nth-child(3):checked~.cp_tabpanels>.cp_tabpanel:nth-child(2),
+.cp_tab>input:nth-child(5):checked~.cp_tabpanels>.cp_tabpanel:nth-child(3),
+.cp_tab>input:nth-child(7):checked~.cp_tabpanels>.cp_tabpanel:nth-child(4),
+.cp_tab>input:nth-child(9):checked~.cp_tabpanels>.cp_tabpanel:nth-child(5),
+.cp_tab>input:nth-child(11):checked~.cp_tabpanels>.cp_tabpanel:nth-child(6) {
+    display: block;
+}
+
+.cp_tab>label {
+    position: relative;
+    display: inline-block;
+    padding: 15px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-top: 0;
+    border-bottom: 0;
+}
+
+.cp_tab>label:hover,
+.cp_tab>input:focus+label {
+    color: #0066cc;
+}
+
+.cp_tab>input:checked+label {
+    margin-bottom: -1px;
+    border-color: #cccccc;
+    border-bottom: 1px solid #ffffff;
+}
+
+.cp_tab .cp_tabpanel {
+    padding: 0.5em 1em;
+    border-top: 1px solid #cccccc;
+    max-height: 65vh;
+    overflow: scroll;
+}
+
+.settings_caption {
+    font-size: larger;
+    font-weight: bolder;
+}
+
+.settings_oss_name,
+.settings_key_name {
+    font-size: large;
+}
+
+.toggle-container {
+    display: flex;
+    justify-content: space-between;
+    border: 1px solid #ccc;
+    border-radius: 25px;
+    overflow: hidden;
+}
+
+.toggle-option {
+    flex: 1;
+    text-align: center;
+    cursor: pointer;
+    background-color: #f1f1f1;
+}
+
+.toggle-option.active {
+    background-color: lightblue;
+}
+
+.settings_visibility_button,
+.settings_noteend_button {
+    user-select: none;
+    text-align: center;
+    cursor: pointer;
+}
+
+.settings_visibility_button p,
+.settings_noteend_button p {
+    margin: 0;
+    font-size: xx-small;
+    font-weight: bold;
+}
+
+.settings_hr {
+    border: none;
+    border-top: dotted;
+    opacity: 0.5;
+}
+
+kbd {
+    background-color: #eee;
+    border-radius: 3px;
+    border: 1px solid #b4b4b4;
+    box-shadow:
+        0 1px 1px rgba(0, 0, 0, 0.2),
+        0 2px 0 0 rgba(255, 255, 255, 0.7) inset;
+    color: #333;
+    display: inline-block;
+    font-size: 0.85em;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 4px;
+    white-space: nowrap;
+}

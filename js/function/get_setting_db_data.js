@@ -3,7 +3,7 @@ const get_setting_db_data = function () {
 };
 
 const user_setting = function () {
-    get_setting_db_data()
+    return get_setting_db_data()
         .then(get_db_result => {
             var setting_data = get_db_result[0] ?? null;
             if (setting_data) {
@@ -23,7 +23,8 @@ const user_setting = function () {
                     // アイコンカラーを元にUIカラーを変更するか(初期値:false)
                     "is_pick_theme_color": setting_data.is_pick_theme_color ?? false,
                 }
-                return ;
+
+                return;
             } else {
                 // ユーザー設定が存在しなかった場合に全て初期値で新規作成して再試行
                 db.setting.add({ select_user: 1, default_visibility: 1, is_note_end_mizuna: false, is_visible_icon: true, ui_mode: 1, is_darkmode: 1, is_pick_theme_color: false }).then(() => {

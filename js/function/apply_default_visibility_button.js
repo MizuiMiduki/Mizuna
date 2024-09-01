@@ -1,7 +1,6 @@
 // 公開範囲をユーザー設定に合わせて変更
 
 const apply_default_visibility_button = function () {
-
     switch (user_options.default_visibility) {
         case 1:
             // public
@@ -18,6 +17,10 @@ const apply_default_visibility_button = function () {
         default:
             $("#visibility_public").prop('checked', true);
             break;
+    }
+
+    if(true == user_options.is_note_end_mizuna){
+        $("#note_end_mizuna_checkbox").prop('checked', true);
     }
 }
 
