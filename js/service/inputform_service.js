@@ -74,6 +74,7 @@ $(document).on("click", "#form_clear_button", function () {
     localStorage.clear();
     $('.cw_content').val('');
     $('.note_content').val('');
+    $('#charCount').text(0)
 });
 
 // アカウントメニューボタン

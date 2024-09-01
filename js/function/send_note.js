@@ -33,6 +33,7 @@ const send_note = function (user_data) {
                 success: function () {
                     toastr["success"]('ノート成功');
                     $('textarea').val("");
+                    $('#charCount').text(0)
                     $(".note_submit").prop("disabled", false);
                     localStorage.clear();
                 },
