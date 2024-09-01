@@ -62,7 +62,7 @@
     padding: 0.5em 1em;
     border-top: 1px solid #cccccc;
     max-height: 65vh;
-    overflow: scroll;
+    overflow-y: scroll;
 }
 
 .settings_caption {
@@ -128,4 +128,21 @@ kbd {
     line-height: 1;
     padding: 2px 4px;
     white-space: nowrap;
+}
+
+.mizuna_share {
+    background: lightblue;
+    width: fit-content;
+    border-radius: 100px;
+    padding: 0.3em;
+    border: gray 1px solid;
+    user-select: none;
+}
+
+.mizuna_share:active {
+    background: lightblue;
+    width: fit-content;
+    border-radius: 100px;
+    padding: 0.3em;
+    border: black 1px solid;
 }

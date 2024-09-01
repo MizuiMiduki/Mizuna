@@ -134,6 +134,7 @@ $(document).on("click", "#settings_icon", function () {
             // 初回ロード
             $.getScript("/js/service/settings_service.js", function () {
                 settings_service();
+                $.getScript("/js/function/WebShare.js");
             });
             load_settings_service = true;
         } else {
