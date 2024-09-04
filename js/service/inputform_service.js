@@ -81,6 +81,14 @@ $(document).on("click", "#form_clear_button", function () {
 let load_generate_menu_service = false;
 let toggle_menu_input = 0;
 $(document).on("click", "#menu_icon", function () {
+    if($('.input_block').length){
+        if (toggle_settings_input === 0) {
+            cw_content_tmp = $('.cw_content').val();
+            note_content_tmp = $('.note_content').val();
+            cw_button_tmp = $('#cw').prop("checked");
+        }
+    }
+
     $(".main_column").empty();
     $(".back_inputform_floating_button").remove();
 
@@ -107,6 +115,12 @@ $(document).on("click", "#menu_icon", function () {
         $(".main_column").load("/parts/form.html", function () {
             apply_default_visibility_button();
             websharetarget();
+            if (cw_button_tmp) {
+                $("#cw").prop("checked", true);
+                $(".cw_input_ara").css('display', 'block');
+                $('.cw_content').text(cw_content_tmp);
+            }
+            $('.note_content').text(note_content_tmp);
         });
     }
 });
@@ -123,6 +137,14 @@ $.getScript("/js/function/WebShare.js")
 let load_settings_service = false;
 let toggle_settings_input = 0;
 $(document).on("click", "#settings_icon", function () {
+    if($('.input_block').length){
+        if (toggle_settings_input === 0) {
+            cw_content_tmp = $('.cw_content').val();
+            note_content_tmp = $('.note_content').val();
+            cw_button_tmp = $('#cw').prop("checked");
+        }
+    }
+
     $(".main_column").empty();
     $(".back_inputform_floating_button").remove();
 
@@ -148,6 +170,12 @@ $(document).on("click", "#settings_icon", function () {
         $(".main_column").load("/parts/form.html", function () {
             apply_default_visibility_button();
             websharetarget();
+            if (cw_button_tmp) {
+                $("#cw").prop("checked", true);
+                $(".cw_input_ara").css('display', 'block');
+                $('.cw_content').text(cw_content_tmp);
+            }
+            $('.note_content').text(note_content_tmp);
         });
     }
 });
