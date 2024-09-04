@@ -75,6 +75,11 @@
     font-size: large;
 }
 
+.cp_tabpanel th,
+.cp_tabpanel td {
+    border-bottom: 1px dotted #000;
+}
+
 .toggle-container {
     display: flex;
     justify-content: space-between;
