@@ -95,8 +95,6 @@
 .cw input[type="checkbox"]:checked~.menu_button {
     opacity: 1;
     border-color: #000000;
-    position: relative;
-    top: -15%;
 }
 
 [class$="_selecter"] {
