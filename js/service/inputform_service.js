@@ -121,6 +121,9 @@ $(document).on("click", "#menu_icon", function () {
                 $('.cw_content').text(cw_content_tmp);
             }
             $('.note_content').text(note_content_tmp);
+
+            $('#charCount').text($('.note_content').val().length);
+            $.getScript("/js/function/note_content_count.js")
         });
     }
 });
@@ -129,9 +132,6 @@ $(document).on("click", "#menu_icon", function () {
 $.getScript("/js/function/WebShareTarget.js", function () {
     websharetarget();
 })
-// Web Share
-$.getScript("/js/function/WebShare.js")
-
 
 // 設定メニューボタン
 let load_settings_service = false;
@@ -176,6 +176,9 @@ $(document).on("click", "#settings_icon", function () {
                 $('.cw_content').text(cw_content_tmp);
             }
             $('.note_content').text(note_content_tmp);
+
+            $('#charCount').text($('.note_content').val().length);
+            $.getScript("/js/function/note_content_count.js")
         });
     }
 });
