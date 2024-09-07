@@ -21,6 +21,7 @@ const apply_default_visibility_button = function () {
 
     if(true == user_options.is_note_end_mizuna){
         $("#note_end_mizuna_checkbox").prop('checked', true);
+        $('#max_charCount').text(2986);
     }
 }
 
