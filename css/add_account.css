@@ -1,0 +1,17 @@
+.server_address {
+    resize: none;
+    line-break: anywhere;
+    font-size: 20px;
+    border-radius: 10px;
+    border: 1px solid black;
+    box-sizing: border-box;
+    width: 70%;
+}
+
+#add_account_server_button {
+    font-weight: bolder;
+    background-color: lightblue;
+    border-radius: 20px;
+    cursor: pointer;
+    width: 20%;
+}
