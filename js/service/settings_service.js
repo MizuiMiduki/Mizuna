@@ -1,9 +1,19 @@
 const settings_service = function () {
     $(".main_column").load("/parts/settings.html", function () {
-        $("#loading_anime_area").remove();
+        var window_height = $(window).height();
+        var header_height = $('.header').height();
+        var tab_height = $('.cp_tabs').height();
+        var footer_height = $('.user_icon_back').outerHeight() + $('.footer_user_name').height();
+        var maxHeight = window_height - footer_height - header_height - tab_height;
+        $('.cp_tabpanels').height(maxHeight);
 
-        // Mizunaについてを生成
-        $(".mizuna_version_span").text(mizuna_options.mizuna_version);
+        $('.tab_label').click(function () {
+            const classes = $(this).attr('class').split(' ');
+            const tabClass = classes.find(className => className.startsWith('tab') && className !== 'tab_label');
+
+            $('.cp_tabpanel').css('display', 'none');
+            $('.cp_tabpanel.' + tabClass).css('display', 'block');
+        });
 
         // 投稿範囲
         switch (user_options.default_visibility) {
@@ -54,6 +64,9 @@ const settings_service = function () {
                 break;
         }
     });
+
+    // Mizunaについてを生成
+    $(".mizuna_version_span").text(mizuna_options.mizuna_version);
 }
 
 function visibilityOption(element) {

@@ -12,7 +12,7 @@
     left: 0;
 }
 
-.cp_tab>input[type='radio'] {
+.cp_tab>.cp_tabs>input[type='radio'] {
     margin: 0;
     padding: 0;
     border: none;
@@ -28,41 +28,50 @@
     display: none;
 }
 
-.cp_tab>input:first-child:checked~.cp_tabpanels>.cp_tabpanel:first-child,
-.cp_tab>input:nth-child(3):checked~.cp_tabpanels>.cp_tabpanel:nth-child(2),
-.cp_tab>input:nth-child(5):checked~.cp_tabpanels>.cp_tabpanel:nth-child(3),
-.cp_tab>input:nth-child(7):checked~.cp_tabpanels>.cp_tabpanel:nth-child(4),
-.cp_tab>input:nth-child(9):checked~.cp_tabpanels>.cp_tabpanel:nth-child(5),
-.cp_tab>input:nth-child(11):checked~.cp_tabpanels>.cp_tabpanel:nth-child(6) {
-    display: block;
+.cp_tabpanels {
+    overflow-y: scroll;
 }
 
-.cp_tab>label {
+.cp_tab>.cp_tabs>label {
     position: relative;
     display: inline-block;
     padding: 15px;
     cursor: pointer;
     border: 1px solid transparent;
-    border-top: 0;
     border-bottom: 0;
 }
 
-.cp_tab>label:hover,
-.cp_tab>input:focus+label {
+.cp_tab>.cp_tabs>label:hover,
+.cp_tab>.cp_tabs>input:focus+label {
     color: #0066cc;
 }
 
-.cp_tab>input:checked+label {
+.cp_tab>.cp_tabs>input:checked+label {
     margin-bottom: -1px;
     border-color: #cccccc;
     border-bottom: 1px solid #ffffff;
+    /*背景色と同じ*/
+    border-radius: 6px 6px 0 0;
 }
 
 .cp_tab .cp_tabpanel {
     padding: 0.5em 1em;
     border-top: 1px solid #cccccc;
-    max-height: 65vh;
-    overflow-y: scroll;
+}
+
+.cp_tabpanel.tab1 {
+    display: block;
+}
+
+@media (max-width: 480px) {
+    .cp_tab {
+        width: 100%;
+        font-size: 0.8em;
+    }
+
+    .cp_tab label {
+        padding: 0.5em;
+    }
 }
 
 .settings_caption {
@@ -100,14 +109,21 @@
 }
 
 .settings_visibility_button,
-.settings_noteend_button {
+.settings_noteend_button,
+.settings_icon_button {
     user-select: none;
     text-align: center;
     cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
 }
 
 .settings_visibility_button p,
-.settings_noteend_button p {
+.settings_noteend_button p,
+.settings_icon_button p {
     margin: 0;
     font-size: xx-small;
     font-weight: bold;
