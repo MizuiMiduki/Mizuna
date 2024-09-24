@@ -1,0 +1,152 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP&display=swap');
+
+* {
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    color: rgb(31, 38, 39);
+    position: relative;
+    height: 100vh;
+    width: 100vw;
+    font-family: "IBM Plex Sans JP", sans-serif;
+    font-weight: 400;
+    font-style: normal;
+    background: rgba(255, 255, 255);
+}
+
+/* Todo : 背景用(予定地) */
+.body_div {
+    height: 100vh;
+    width: 100%;
+}
+
+/* ヘッダー */
+.header {
+    background-color: lightblue;
+    display: flex;
+}
+
+.header h1 {
+    margin: 0;
+    margin-left: 1%;
+}
+
+/* メイン */
+.main_column {
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* フッター */
+
+.footer {
+    position: fixed;
+    overflow-y: auto;
+    bottom: 30px;
+    display: flex;
+    overflow-y: visible;
+}
+
+.user_icon_back {
+    background-color: lightblue;
+    border-radius: 100px 100px 0 0;
+    padding-top: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    width: fit-content;
+    height: fit-content;
+}
+
+.user_icon {
+    margin-left: 0;
+    width: 150px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.settings_icon_back {
+    background-color: lightblue;
+    border-radius: 100px 100px 0 0;
+    padding-top: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    width: fit-content;
+    height: fit-content;
+    position: absolute;
+    right: -40%;
+    bottom: 0;
+}
+
+.settings_icon {
+    margin-left: 0;
+    width: 50px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+    object-fit: cover;
+    cursor: pointer;
+}
+
+.footer_user_name {
+    bottom: 0;
+    background-color: lightblue;
+    width: 100vw;
+    position: fixed;
+    min-height: 30px;
+    height: fit-content;
+    overflow: hidden;
+    user-select: none;
+}
+
+.footer_user_name p {
+    margin: auto;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.display_none {
+    display: none;
+}
+
+/* ローディング */
+#loading_anime_area {
+    width: 50px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background:
+        radial-gradient(farthest-side, lightblue 94%, #0000) top/8px 8px no-repeat,
+        conic-gradient(#0000 30%, lightblue);
+    -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
+    animation: l13 1s infinite linear;
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+}
+
+@keyframes l13 {
+    100% {
+        transform: rotate(1turn)
+    }
+}
+
+/* jquery confirmのレイアウトを微調整 */
+.jconfirm-holder {
+    width: 90%;
+    margin: 0 auto;
+}

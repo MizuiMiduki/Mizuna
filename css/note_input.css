@@ -1,0 +1,149 @@
+/* ノート送信ボタン */
+.note_submit {
+    width: fit-content;
+    padding: 1% 5% 1% 5%;
+    font-weight: bolder;
+    background-color: lightblue;
+    border-radius: 20px;
+    display: flex;
+    margin-left: auto;
+    margin-right: 0;
+    margin-bottom: 3%;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* ノートメニュー */
+.note_menu {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+/* note入力エリア */
+.input_block {
+    margin-top: 1em;
+}
+
+.input_area {
+    width: 100%;
+    resize: none;
+    overflow-x: hidden;
+    line-break: anywhere;
+    font-size: 20px;
+    border-radius: 10px;
+    border: 1px solid black;
+    box-sizing: border-box;
+}
+
+.note_content {
+    min-height: 200px;
+}
+
+.cw_content {
+    min-height: 16px;
+}
+
+/* メニュー チェックボックス */
+.cw input[type="checkbox"],
+.note_end_mizuna input[type="checkbox"],
+[class$="_selecter"] input[type="checkbox"],
+.form_clear input[type="button"] {
+    opacity: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+    top: none;
+}
+
+/* メニュー ボタンレイアウト */
+.menu_button {
+    background-color: lightblue;
+    padding: 0.5em;
+    margin: 0.2em;
+    border-radius: 50%;
+    border: rgb(223, 222, 222) 2px solid;
+    opacity: .5;
+    width: 2.3em;
+    height: 2.3em;
+    user-select: none;
+    text-align: center;
+    cursor: pointer;
+}
+
+.menu_button svg {
+    display: flex;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.menu_button p {
+    margin: 0;
+    margin-top: -0.2em;
+    width: 100%;
+    text-align: center;
+    font-size: calc(1em/2);
+    font-weight: bold;
+}
+
+.note_end_mizuna input[type="checkbox"]:checked~.menu_button,
+.followers_selecter input[type="checkbox"]:checked~.menu_button,
+.home_selecter input[type="checkbox"]:checked~.menu_button,
+.public_selecter input[type="checkbox"]:checked~.menu_button,
+.cw input[type="checkbox"]:checked~.menu_button {
+    opacity: 1;
+    border-color: #000000;
+}
+
+[class$="_selecter"] {
+    display: flex;
+    align-items: center;
+}
+
+.visibility {
+    display: flex;
+}
+
+.select_theme_mode_button_area {
+    display: flex;
+    word-break: keep-all;
+}
+
+.select_theme_mode_button_area button {
+    opacity: .5;
+}
+
+.now_select_theme_mode_button_color {
+    opacity: 1 !important;
+}
+
+.form_clear .menu_button {
+    opacity: 1;
+    border-color: #000000;
+}
+
+.form_clear .menu_button:active {
+    opacity: 0.5;
+    border-color: rgb(223, 222, 222);
+}
+
+/* スマホ表示 */
+@media screen and (max-width: 520px) {
+
+    /* スマホ用ノートボタン */
+    .note_submit {
+        padding: 5% 15% 5% 15%;
+        /* position: fixed;
+        right: 10%;
+        bottom: 10%; */
+    }
+}
+
+.content_char_count {
+    margin: 0;
+    margin-bottom: 0px;
+    text-align: right;
+    margin-bottom: 0.1em;
+}

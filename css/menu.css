@@ -1,0 +1,174 @@
+.account_card_area {
+    display: flex;
+    margin-bottom: 5px;
+}
+
+[id^="account_card"] {
+    border: solid 1px black;
+    background-color: white;
+    border-radius: 25px;
+    padding: 5px;
+    user-select: none;
+    cursor: pointer;
+    width: 100%;
+}
+
+[class^="account_card_icon"] {
+    width: 30px;
+    height: 30px;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+}
+
+.user_card_name {
+    margin-top: 0;
+    margin-bottom: 0;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.user_card_name p {
+    margin: 0;
+    line-height: 1;
+}
+
+.user_card_user_name {
+    font-size: 0.7em;
+}
+
+.account_display_area {
+    margin-top: 10px;
+    max-height: 70vh;
+    overflow-y: scroll;
+    scrollbar-width: none;
+}
+
+.account_display_area::-webkit-scrollbar {
+    display: none;
+}
+
+/* アカウント追加ボタン */
+.add_account_floating_button,
+.back_inputform_floating_button {
+    background-color: lightblue;
+    padding: 0.5em;
+    margin: 0.2em;
+    border-radius: 100px;
+    border: #000000 2px solid;
+    opacity: 1;
+    width: 3em;
+    height: 3em;
+    user-select: none;
+    text-align: center;
+    position: fixed;
+    bottom: 35px;
+    right: 10%;
+    cursor: pointer;
+}
+
+
+
+.add_account_floating_button svg,
+.back_inputform_floating_button svg {
+    display: flex;
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.add_account_floating_button p,
+.back_inputform_floating_button p {
+    margin: 0;
+    margin-top: -0.2em;
+    width: 100%;
+    text-align: center;
+    font-size: calc(1em/2);
+    font-weight: bold;
+}
+
+/* アカウント削除ボタンを表示するボタン */
+.delete_account_mode_floating_button {
+    background-color: lightblue;
+    padding: 0.25em;
+    margin: 10px 0 0 auto;
+    border-radius: 100px;
+    border: #000000 2px solid;
+    opacity: 1;
+    width: fit-content !important;
+    user-select: none;
+    cursor: pointer;
+    display: flex;
+}
+
+.delete_account_mode_floating_button svg {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.delete_account_mode_floating_button p {
+    width: 100%;
+    text-align: center;
+    font-size: 0.7em;
+    font-weight: bold;
+    margin: auto 0 auto 0;
+}
+
+/* アカウント削除を実行するボタン */
+.delete_account_execution_floating_button {
+    background-color: lightblue;
+    padding: 0.25em;
+    margin: 10px 0 0 auto;
+    border-radius: 100px;
+    border: #000000 2px solid;
+    opacity: 1;
+    width: fit-content !important;
+    user-select: none;
+    cursor: pointer;
+}
+
+.delete_account_execution_floating_button_flex {
+    display: flex;
+}
+
+.delete_account_execution_floating_button_none {
+    display: none;
+}
+
+.delete_account_execution_floating_button svg {
+    position: relative;
+    align-items: center;
+    justify-content: center;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+.delete_account_execution_floating_button p {
+    width: 100%;
+    text-align: center;
+    font-size: 0.7em;
+    font-weight: bold;
+    margin: auto 0 auto 0;
+}
+
+/* アカウント削除のチェックボックス */
+.delete_select_checknox {
+    display: none;
+    width: 1.5em;
+    height: 1.5em;
+    margin-top: auto;
+    margin-bottom: auto;
+}
