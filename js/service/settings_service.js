@@ -13,6 +13,10 @@ const settings_service = function () {
 
             $('.cp_tabpanel').css('display', 'none');
             $('.cp_tabpanel.' + tabClass).css('display', 'block');
+            if ('tab3' === tabClass) {
+                // Mizunaについてを生成
+                $("#mizuna_version_span").text(mizuna_options.mizuna_version);
+            }
         });
 
         // 投稿範囲
@@ -64,9 +68,6 @@ const settings_service = function () {
                 break;
         }
     });
-
-    // Mizunaについてを生成
-    $(".mizuna_version_span").text(mizuna_options.mizuna_version);
 }
 
 function visibilityOption(element) {
