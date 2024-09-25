@@ -1,6 +1,6 @@
 mizuna_options = {
-    "mizuna_version": "3.0",
-    "mizuna_address": "https://" + location.hostname,
+    mizuna_version: "3.0",
+    mizuna_address: "https://" + location.hostname,
 }
 
 mizuna_share = {
