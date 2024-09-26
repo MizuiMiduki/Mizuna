@@ -10,7 +10,7 @@
 
 #add_account_server_button {
     font-weight: bolder;
-    background-color: lightblue;
+    background-color: var(--main_color);
     border-radius: 20px;
     cursor: pointer;
     width: 20%;

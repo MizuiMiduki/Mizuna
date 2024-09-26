@@ -4,6 +4,10 @@
     -webkit-tap-highlight-color: transparent;
 }
 
+:root {
+    --main_color: lightblue;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -25,7 +29,7 @@ body {
 
 /* ヘッダー */
 .header {
-    background-color: lightblue;
+    background-color: var(--main_color);
     display: flex;
 }
 
@@ -52,7 +56,7 @@ body {
 }
 
 .user_icon_back {
-    background-color: lightblue;
+    background-color: var(--main_color);
     border-radius: 100px 100px 0 0;
     padding-top: 10px;
     padding-left: 10px;
@@ -76,7 +80,7 @@ body {
 }
 
 .settings_icon_back {
-    background-color: lightblue;
+    background-color: var(--main_color);
     border-radius: 100px 100px 0 0;
     padding-top: 10px;
     padding-left: 10px;
@@ -104,7 +108,7 @@ body {
 
 .footer_user_name {
     bottom: 0;
-    background-color: lightblue;
+    background-color: var(--main_color);
     width: 100vw;
     position: fixed;
     min-height: 30px;
@@ -129,8 +133,8 @@ body {
     aspect-ratio: 1;
     border-radius: 50%;
     background:
-        radial-gradient(farthest-side, lightblue 94%, #0000) top/8px 8px no-repeat,
-        conic-gradient(#0000 30%, lightblue);
+        radial-gradient(farthest-side, var(--main_color) 94%, #0000) top/8px 8px no-repeat,
+        conic-gradient(#0000 30%, var(--main_color));
     -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
     animation: l13 1s infinite linear;
 

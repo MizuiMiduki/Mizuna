@@ -3,7 +3,7 @@
     width: fit-content;
     padding: 1% 5% 1% 5%;
     font-weight: bolder;
-    background-color: lightblue;
+    background-color: var(--main_color);
     border-radius: 20px;
     display: flex;
     margin-left: auto;
@@ -57,7 +57,7 @@
 
 /* メニュー ボタンレイアウト */
 .menu_button {
-    background-color: lightblue;
+    background-color: var(--main_color);
     padding: 0.5em;
     margin: 0.2em;
     border-radius: 50%;

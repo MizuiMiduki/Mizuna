@@ -59,7 +59,7 @@
 /* アカウント追加ボタン */
 .add_account_floating_button,
 .back_inputform_floating_button {
-    background-color: lightblue;
+    background-color: var(--main_color);
     padding: 0.5em;
     margin: 0.2em;
     border-radius: 100px;
@@ -99,7 +99,7 @@
 
 /* アカウント削除ボタンを表示するボタン */
 .delete_account_mode_floating_button {
-    background-color: lightblue;
+    background-color: var(--main_color);
     padding: 0.25em;
     margin: 10px 0 0 auto;
     border-radius: 100px;
@@ -129,7 +129,7 @@
 
 /* アカウント削除を実行するボタン */
 .delete_account_execution_floating_button {
-    background-color: lightblue;
+    background-color: var(--main_color);
     padding: 0.25em;
     margin: 10px 0 0 auto;
     border-radius: 100px;
