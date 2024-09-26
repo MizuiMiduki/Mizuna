@@ -105,7 +105,7 @@
 }
 
 .toggle-option.active {
-    background-color: lightblue;
+    background-color: var(--main_color);
 }
 
 .settings_visibility_button,
@@ -152,7 +152,7 @@ kbd {
 }
 
 .mizuna_share {
-    background: lightblue;
+    background: var(--main_color);
     width: fit-content;
     border-radius: 100px;
     padding: 0.3em;
@@ -161,7 +161,7 @@ kbd {
 }
 
 .mizuna_share:active {
-    background: lightblue;
+    background: var(--main_color);
     width: fit-content;
     border-radius: 100px;
     padding: 0.3em;

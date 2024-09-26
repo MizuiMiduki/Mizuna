@@ -1,24 +1,27 @@
+// 設定を読み込み
+$.getScript("/js/option/toastr_option.js");
+$.getScript("/js/option/mizuna_option.js", function () {
+    if (true === mizuna_options.maintenance) {
+        window.location.href = mizuna_options.mizuna_address + '/maintenance.html';
+    }
+});
 const wst_title = new URL(document.location).searchParams.get("title");
 const wst_text = new URL(document.location).searchParams.get("text");
 const wst_url = new URL(document.location).searchParams.get("url");
 
-if(wst_title || wst_text || wst_url){
+if (wst_title || wst_text || wst_url) {
     localStorage.clear();
 
-if (wst_title) {
-    localStorage.setItem('wst_title', wst_title);
+    if (wst_title) {
+        localStorage.setItem('wst_title', wst_title);
+    }
+    if (wst_text) {
+        localStorage.setItem('wst_text', wst_text);
+    }
+    if (wst_url) {
+        localStorage.setItem('wst_url', wst_url);
+    }
 }
-if (wst_text) {
-    localStorage.setItem('wst_text', wst_text);
-}
-if (wst_url) {
-    localStorage.setItem('wst_url', wst_url);
-}
-}
-
-// 設定を読み込み
-$.getScript("/js/option/toastr_option.js");
-$.getScript("/js/option/mizuna_option.js");
 
 // indexed DB接続
 var db = new Dexie("MizunaDatabase");
