@@ -1,5 +1,5 @@
 mizuna_options = {
-    mizuna_version: "3.0",
+    mizuna_version: "3.0.1",
     mizuna_address: "https://" + location.hostname,
     maintenance: false,
 }
