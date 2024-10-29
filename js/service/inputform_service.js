@@ -54,7 +54,7 @@ $.getScript("/js/function/form_mizuna.js")
 
 function note_send_submit() {
     $(".note_submit").prop("disabled", true);
-    send_note(user_data)
+    send_note(user_data);
 }
 
 // 公開範囲ボタンをラジオボタンと同じ挙動にする
@@ -81,7 +81,7 @@ $(document).on("click", "#form_clear_button", function () {
 let load_generate_menu_service = false;
 let toggle_menu_input = 0;
 $(document).on("click", "#menu_icon", function () {
-    if($('.input_block').length){
+    if ($('.input_block').length) {
         if (toggle_settings_input === 0) {
             cw_content_tmp = $('.cw_content').val();
             note_content_tmp = $('.note_content').val();
@@ -120,7 +120,7 @@ $(document).on("click", "#menu_icon", function () {
                 $(".cw_input_ara").css('display', 'block');
                 $('.cw_content').text(cw_content_tmp);
             }
-            $('.note_content').text(note_content_tmp);
+            $('.note_content').val(note_content_tmp);
 
             $('#charCount').text($('.note_content').val().length);
             $.getScript("/js/function/note_content_count.js")
@@ -137,7 +137,7 @@ $.getScript("/js/function/WebShareTarget.js", function () {
 let load_settings_service = false;
 let toggle_settings_input = 0;
 $(document).on("click", "#settings_icon", function () {
-    if($('.input_block').length){
+    if ($('.input_block').length) {
         if (toggle_settings_input === 0) {
             cw_content_tmp = $('.cw_content').val();
             note_content_tmp = $('.note_content').val();
@@ -175,7 +175,7 @@ $(document).on("click", "#settings_icon", function () {
                 $(".cw_input_ara").css('display', 'block');
                 $('.cw_content').text(cw_content_tmp);
             }
-            $('.note_content').text(note_content_tmp);
+            $('.note_content').val(note_content_tmp);
 
             $('#charCount').text($('.note_content').val().length);
             $.getScript("/js/function/note_content_count.js")
