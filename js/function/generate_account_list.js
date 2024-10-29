@@ -3,7 +3,7 @@ const generate_account_list = function () {
         get_user_db_data(account_list_array).then(account_list => {
             for (let i = 0; i < account_list.length; i++) {
                 $('.account_display_area').append
-                    (`
+                (`
                         <div class="account_card_area">
                         <div id="account_card" data-id="${account_list[i]['id']}">
                         <table>

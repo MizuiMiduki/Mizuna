@@ -1,16 +1,16 @@
 <div class="cp_tab">
     <div class="cp_tabs">
-        <input type="radio" name="cp_tab" id="tab1_1" aria-controls="first_tab01" checked>
-        <label for="tab1_1" class="tab_label tab1">設定</label>
+        <input aria-controls="first_tab01" checked id="tab1_1" name="cp_tab" type="radio">
+        <label class="tab_label tab1" for="tab1_1">設定</label>
 
-        <input type="radio" name="cp_tab" id="tab1_2" aria-controls="second_tab01">
-        <label for="tab1_2" class="tab_label tab2">ショートカット一覧</label>
+        <input aria-controls="second_tab01" id="tab1_2" name="cp_tab" type="radio">
+        <label class="tab_label tab2" for="tab1_2">ショートカット一覧</label>
 
-        <input type="radio" name="cp_tab" id="tab1_3" aria-controls="third_tab01">
-        <label for="tab1_3" class="tab_label tab3">Mizunaについて</label>
+        <input aria-controls="third_tab01" id="tab1_3" name="cp_tab" type="radio">
+        <label class="tab_label tab3" for="tab1_3">Mizunaについて</label>
     </div>
     <div class="cp_tabpanels">
-        <div id="first_tab" class="cp_tabpanel tab1">
+        <div class="cp_tabpanel tab1" id="first_tab">
             <p class="settings_caption">投稿設定</p>
 
             <p>デフォルト投稿範囲</p>
@@ -18,9 +18,9 @@
                 <!-- public -->
                 <div class="toggle-option visibility-option" id="visibility_public" onclick="visibilityOption(this)">
                     <label class="settings_visibility_button">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                        <svg height="24" viewBox="0 -960 960 960" width="24" xmlns="http://www.w3.org/2000/svg">
                             <path
-                                d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm-40-82v-78q-33 0-56.5-23.5T360-320v-40L168-552q-3 18-5.5 36t-2.5 36q0 121 79.5 212T440-162Zm276-102q20-22 36-47.5t26.5-53q10.5-27.5 16-56.5t5.5-59q0-98-54.5-179T600-776v16q0 33-23.5 56.5T520-680h-80v80q0 17-11.5 28.5T400-560h-80v80h240q17 0 28.5 11.5T600-440v120h40q26 0 47 15.5t29 40.5Z" />
+                                    d="M480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm-40-82v-78q-33 0-56.5-23.5T360-320v-40L168-552q-3 18-5.5 36t-2.5 36q0 121 79.5 212T440-162Zm276-102q20-22 36-47.5t26.5-53q10.5-27.5 16-56.5t5.5-59q0-98-54.5-179T600-776v16q0 33-23.5 56.5T520-680h-80v80q0 17-11.5 28.5T400-560h-80v80h240q17 0 28.5 11.5T600-440v120h40q26 0 47 15.5t29 40.5Z"/>
                         </svg>
                         <p>パブリック</p>
                     </label>
@@ -28,9 +28,9 @@
                 <!-- home -->
                 <div class="toggle-option visibility-option" id="visibility_home" onclick="visibilityOption(this)">
                     <label class="settings_visibility_button">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                        <svg height="24" viewBox="0 -960 960 960" width="24" xmlns="http://www.w3.org/2000/svg">
                             <path
-                                d="M240-200h120v-240h240v240h120v-360L480-740 240-560v360Zm-80 80v-480l320-240 320 240v480H520v-240h-80v240H160Zm320-350Z" />
+                                    d="M240-200h120v-240h240v240h120v-360L480-740 240-560v360Zm-80 80v-480l320-240 320 240v480H520v-240h-80v240H160Zm320-350Z"/>
                         </svg>
                         <p>ホーム</p>
                     </label>
@@ -38,9 +38,9 @@
                 <!-- followers -->
                 <div class="toggle-option visibility-option" id="visibility_followers" onclick="visibilityOption(this)">
                     <label class="settings_visibility_button">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                        <svg height="24" viewBox="0 -960 960 960" width="24" xmlns="http://www.w3.org/2000/svg">
                             <path
-                                d="M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm240-120q33 0 56.5-23.5T560-360q0-33-23.5-56.5T480-440q-33 0-56.5 23.5T400-360q0 33 23.5 56.5T480-280ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z" />
+                                    d="M240-80q-33 0-56.5-23.5T160-160v-400q0-33 23.5-56.5T240-640h40v-80q0-83 58.5-141.5T480-920q83 0 141.5 58.5T680-720v80h40q33 0 56.5 23.5T800-560v400q0 33-23.5 56.5T720-80H240Zm0-80h480v-400H240v400Zm240-120q33 0 56.5-23.5T560-360q0-33-23.5-56.5T480-440q-33 0-56.5 23.5T400-360q0 33 23.5 56.5T480-280ZM360-640h240v-80q0-50-35-85t-85-35q-50 0-85 35t-35 85v80ZM240-160v-400 400Z"/>
                         </svg>
                         <p>フォロワー</p>
                     </label>
@@ -54,9 +54,9 @@
                 <!-- false -->
                 <div class="toggle-option note_end-option" id="is_note_end_mizuna_false" onclick="noteEndOption(this)">
                     <label class="settings_noteend_button">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                        <svg height="24" viewBox="0 -960 960 960" width="24" xmlns="http://www.w3.org/2000/svg">
                             <path
-                                d="m336-280 144-144 144 144 56-56-144-144 144-144-56-56-144 144-144-144-56 56 144 144-144 144 56 56ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
+                                    d="m336-280 144-144 144 144 56-56-144-144 144-144-56-56-144 144-144-144-56 56 144 144-144 144 56 56ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
                         </svg>
                         <p>無効</p>
                     </label>
@@ -64,9 +64,9 @@
                 <!-- true -->
                 <div class="toggle-option note_end-option" id="is_note_end_mizuna_true" onclick="noteEndOption(this)">
                     <label class="settings_noteend_button">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                        <svg height="24" viewBox="0 -960 960 960" width="24" xmlns="http://www.w3.org/2000/svg">
                             <path
-                                d="m424-296 282-282-56-56-226 226-114-114-56 56 170 170Zm56 216q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
+                                    d="m424-296 282-282-56-56-226 226-114-114-56 56 170 170Zm56 216q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
                         </svg>
                         <p>有効</p>
                     </label>
@@ -79,22 +79,22 @@
             <div class="toggle-container">
                 <!-- false -->
                 <div class="toggle-option visible_icon-option" id="is_visible_icon_false"
-                    onclick="visibleIconOption(this)">
+                     onclick="visibleIconOption(this)">
                     <label class="settings_icon_button">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                        <svg height="24" viewBox="0 -960 960 960" width="24" xmlns="http://www.w3.org/2000/svg">
                             <path
-                                d="m336-280 144-144 144 144 56-56-144-144 144-144-56-56-144 144-144-144-56 56 144 144-144 144 56 56ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
+                                    d="m336-280 144-144 144 144 56-56-144-144 144-144-56-56-144 144-144-144-56 56 144 144-144 144 56 56ZM480-80q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
                         </svg>
                         <p>無効</p>
                     </label>
                 </div>
                 <!-- true -->
                 <div class="toggle-option visible_icon-option" id="is_visible_icon_true"
-                    onclick="visibleIconOption(this)">
+                     onclick="visibleIconOption(this)">
                     <label class="settings_icon_button">
-                        <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24">
+                        <svg height="24" viewBox="0 -960 960 960" width="24" xmlns="http://www.w3.org/2000/svg">
                             <path
-                                d="m424-296 282-282-56-56-226 226-114-114-56 56 170 170Zm56 216q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z" />
+                                    d="m424-296 282-282-56-56-226 226-114-114-56 56 170 170Zm56 216q-83 0-156-31.5T197-197q-54-54-85.5-127T80-480q0-83 31.5-156T197-763q54-54 127-85.5T480-880q83 0 156 31.5T763-763q54 54 85.5 127T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Zm0-80q134 0 227-93t93-227q0-134-93-227t-227-93q-134 0-227 93t-93 227q0 134 93 227t227 93Zm0-320Z"/>
                         </svg>
                         <p>有効</p>
                     </label>
@@ -103,7 +103,7 @@
             <hr class="settings_hr">
         </div>
 
-        <div id="second_tab" class="cp_tabpanel tab2">
+        <div class="cp_tabpanel tab2" id="second_tab">
             <p><span class="settings_key_name">投稿</span><br>
                 <kbd>ctrl</kbd>+<kbd>alt</kbd>+<kbd>enter</kbd>
             </p>
@@ -133,7 +133,7 @@
             </p>
         </div>
 
-        <div id="third_tab" class="cp_tabpanel tab3">
+        <div class="cp_tabpanel tab3" id="third_tab">
             <p class="settings_caption">About Mizuna</p>
             <table>
                 <tr>
@@ -149,8 +149,8 @@
                         GitHub Repository :
                     </td>
                     <td>
-                        <a href="https://github.com/MizuiMiduki/Mizuna" target="_blank"
-                            rel="noopener noreferrer">Mizuna</a>
+                        <a href="https://github.com/MizuiMiduki/Mizuna" rel="noopener noreferrer"
+                           target="_blank">Mizuna</a>
                     </td>
                 </tr>
                 <tr>
@@ -174,7 +174,7 @@
                         Developer :
                     </td>
                     <td>
-                        <a href="https://mizui-tech.uk/" target="_blank" rel="noopener noreferrer">Mizui
+                        <a href="https://mizui-tech.uk/" rel="noopener noreferrer" target="_blank">Mizui
                             Miduki</a>
                     </td>
                 </tr>
@@ -183,19 +183,19 @@
                         Donation :
                     </td>
                     <td>
-                        <a href="https://mizui-miduki.fanbox.cc/" target="_blank" rel="noopener noreferrer">PIXIV
+                        <a href="https://mizui-miduki.fanbox.cc/" rel="noopener noreferrer" target="_blank">PIXIV
                             FANBOX</a>
                         <hr>
-                        <a href="https://ofuse.me/mizuimiduki" target="_blank" rel="noopener noreferrer">OFUSE</a>
+                        <a href="https://ofuse.me/mizuimiduki" rel="noopener noreferrer" target="_blank">OFUSE</a>
                         <hr>
-                        <a href="https://www.amazon.jp/hz/wishlist/ls/2LHL5U5HV3N5X?ref_=wl_share" target="_blank"
-                            rel="noopener noreferrer">Amazon 欲しいものリスト</a>
+                        <a href="https://www.amazon.jp/hz/wishlist/ls/2LHL5U5HV3N5X?ref_=wl_share" rel="noopener noreferrer"
+                           target="_blank">Amazon 欲しいものリスト</a>
                         <hr>
-                        <a href="https://giftee.com/u/mizui_miduki" target="_blank"
-                            rel="noopener noreferrer">giftee</a>
+                        <a href="https://giftee.com/u/mizui_miduki" rel="noopener noreferrer"
+                           target="_blank">giftee</a>
                         <hr>
-                        <a href="https://amzn.to/3APogAd" target="_blank"
-                            rel="noopener noreferrer">Amazonアソシエイト<br><span
+                        <a href="https://amzn.to/3APogAd" rel="noopener noreferrer"
+                           target="_blank">Amazonアソシエイト<br><span
                                 style="font-size: xx-small;">(リンクを経由してショッピングすると紹介料が支援されます)</span></a>
                         <br>
 
@@ -209,8 +209,8 @@
 
             <p><span class="settings_oss_name">jQuery</span>
                 <br>(MIT License)
-                <br>Copyright OpenJS Foundation and other contributors, <a href="https://openjsf.org/" target="_blank"
-                    rel="noopener noreferrer">https://openjsf.org/</a>
+                <br>Copyright OpenJS Foundation and other contributors, <a href="https://openjsf.org/" rel="noopener noreferrer"
+                                                                           target="_blank">https://openjsf.org/</a>
             </p>
             <p><span class="settings_oss_name">jquery-confirm</span>
                 <br>(MIT License)

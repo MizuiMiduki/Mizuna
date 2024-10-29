@@ -1,13 +1,14 @@
 <p>サーバーアドレスから追加</p>
 <form>
-    <input type="text" class="server_address" list="server_address_list" placeholder="例:misskey.io" autocomplete="off" required>
+    <input autocomplete="off" class="server_address" list="server_address_list" placeholder="例:misskey.io" required
+           type="text">
     <datalist id="server_address_list">
         <option value="misskey.io">
         <option value="mfmf.club">
         <option value="misskey.systems">
         <option value="yojohan.cc">
     </datalist>
-<button type="button" onclick="add_account_submit();" id="add_account_server_button">追加</button>
+    <button id="add_account_server_button" onclick="add_account_submit();" type="button">追加</button>
 </form>
 <!-- <hr>
 <p>Mizunaでエクスポートしたデータから追加</p>

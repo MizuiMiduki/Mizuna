@@ -12,7 +12,7 @@
     left: 0;
 }
 
-.cp_tab>.cp_tabs>input[type='radio'] {
+.cp_tab > .cp_tabs > input[type='radio'] {
     margin: 0;
     padding: 0;
     border: none;
@@ -32,7 +32,7 @@
     overflow-y: scroll;
 }
 
-.cp_tab>.cp_tabs>label {
+.cp_tab > .cp_tabs > label {
     position: relative;
     display: inline-block;
     padding: 15px;
@@ -41,12 +41,12 @@
     border-bottom: 0;
 }
 
-.cp_tab>.cp_tabs>label:hover,
-.cp_tab>.cp_tabs>input:focus+label {
+.cp_tab > .cp_tabs > label:hover,
+.cp_tab > .cp_tabs > input:focus + label {
     color: #0066cc;
 }
 
-.cp_tab>.cp_tabs>input:checked+label {
+.cp_tab > .cp_tabs > input:checked + label {
     margin-bottom: -1px;
     border-color: #cccccc;
     border-bottom: 1px solid #ffffff;
@@ -139,9 +139,8 @@ kbd {
     background-color: #eee;
     border-radius: 3px;
     border: 1px solid #b4b4b4;
-    box-shadow:
-        0 1px 1px rgba(0, 0, 0, 0.2),
-        0 2px 0 0 rgba(255, 255, 255, 0.7) inset;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2),
+    0 2px 0 0 rgba(255, 255, 255, 0.7) inset;
     color: #333;
     display: inline-block;
     font-size: 0.85em;

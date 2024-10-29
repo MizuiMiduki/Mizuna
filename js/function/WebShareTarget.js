@@ -6,27 +6,27 @@ const websharetarget = function (retryCount = 0) {
     const url = localStorage.getItem("wst_url");
 
     if (title !== null || text !== null || url !== null) {
-            let oldValue = $(".note_content").val() || "";
+        let oldValue = $(".note_content").val() || "";
 
-            if (title) {
-                oldValue += (oldValue ? "\n" : "") + title;
-            }
+        if (title) {
+            oldValue += (oldValue ? "\n" : "") + title;
+        }
 
-            if (text) {
-                oldValue += (oldValue ? "\n" : "") + text;
-            }
+        if (text) {
+            oldValue += (oldValue ? "\n" : "") + text;
+        }
 
-            if (url) {
-                oldValue += (oldValue ? "\n" : "") + url;
-            }
+        if (url) {
+            oldValue += (oldValue ? "\n" : "") + url;
+        }
 
-            $('.note_content').val(oldValue);
+        $('.note_content').val(oldValue);
 
-            setTimeout(() => {
+        setTimeout(() => {
             if ($('.note_content').val().trim() === "" && retryCount < maxRetries) {
                 websharetarget(retryCount + 1);
             }
-        },100)
+        }, 100)
     }
     return;
 }

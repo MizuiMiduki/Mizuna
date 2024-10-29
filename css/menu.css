@@ -76,7 +76,6 @@
 }
 
 
-
 .add_account_floating_button svg,
 .back_inputform_floating_button svg {
     display: flex;
@@ -93,7 +92,7 @@
     margin-top: -0.2em;
     width: 100%;
     text-align: center;
-    font-size: calc(1em/2);
+    font-size: calc(1em / 2);
     font-weight: bold;
 }
 
