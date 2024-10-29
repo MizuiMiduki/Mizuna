@@ -11,6 +11,9 @@
     margin-bottom: 3%;
     align-items: center;
     cursor: pointer;
+    font-size: inherit;
+    color: black;
+    border: black solid 2px;
 }
 
 /* ノートメニュー */

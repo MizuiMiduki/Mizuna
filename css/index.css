@@ -8,6 +8,11 @@
     --main_color: lightblue;
 }
 
+input[type="button"], input[type="submit"] {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
 body {
     margin: 0;
     padding: 0;
