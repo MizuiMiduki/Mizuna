@@ -8,6 +8,11 @@
     --main_color: lightblue;
 }
 
+input[type="button"], input[type="submit"] {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
 body {
     margin: 0;
     padding: 0;
@@ -132,9 +137,8 @@ body {
     width: 50px;
     aspect-ratio: 1;
     border-radius: 50%;
-    background:
-        radial-gradient(farthest-side, var(--main_color) 94%, #0000) top/8px 8px no-repeat,
-        conic-gradient(#0000 30%, var(--main_color));
+    background: radial-gradient(farthest-side, var(--main_color) 94%, #0000) top/8px 8px no-repeat,
+    conic-gradient(#0000 30%, var(--main_color));
     -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
     animation: l13 1s infinite linear;
 

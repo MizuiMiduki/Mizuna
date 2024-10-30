@@ -11,6 +11,9 @@
     margin-bottom: 3%;
     align-items: center;
     cursor: pointer;
+    font-size: inherit;
+    color: black;
+    border: black solid 2px;
 }
 
 /* ノートメニュー */
@@ -84,15 +87,15 @@
     margin-top: -0.2em;
     width: 100%;
     text-align: center;
-    font-size: calc(1em/2);
+    font-size: calc(1em / 2);
     font-weight: bold;
 }
 
-.note_end_mizuna input[type="checkbox"]:checked~.menu_button,
-.followers_selecter input[type="checkbox"]:checked~.menu_button,
-.home_selecter input[type="checkbox"]:checked~.menu_button,
-.public_selecter input[type="checkbox"]:checked~.menu_button,
-.cw input[type="checkbox"]:checked~.menu_button {
+.note_end_mizuna input[type="checkbox"]:checked ~ .menu_button,
+.followers_selecter input[type="checkbox"]:checked ~ .menu_button,
+.home_selecter input[type="checkbox"]:checked ~ .menu_button,
+.public_selecter input[type="checkbox"]:checked ~ .menu_button,
+.cw input[type="checkbox"]:checked ~ .menu_button {
     opacity: 1;
     border-color: #000000;
 }

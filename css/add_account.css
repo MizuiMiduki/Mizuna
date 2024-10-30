@@ -6,12 +6,17 @@
     border: 1px solid black;
     box-sizing: border-box;
     width: 70%;
+    height: 2em;
 }
 
 #add_account_server_button {
-    font-weight: bolder;
+    font-weight: bold;
     background-color: var(--main_color);
     border-radius: 20px;
     cursor: pointer;
     width: 20%;
+    font-size: inherit;
+    height: 2em;
+    color: black;
+    border: black solid 1px;
 }
