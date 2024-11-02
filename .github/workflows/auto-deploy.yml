@@ -3,26 +3,26 @@ on:
   push:
     branches:
       - main
-name: 🚀 Deploy
+  name: 🚀 Deploy
   jobs:
-    build:
-      runs-on: ubuntu-latest
-      timeout-minutes: 60
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
 
-      steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
-      - name: 🚚SetUp
-        run: echo "$SSH_PRIVATE_KEY" > .ssh/id_rsa && chmod 600 .ssh/id_rsa
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+    - name: 🚚SetUp
+      run: echo "$SSH_PRIVATE_KEY" > .ssh/id_rsa && chmod 600 .ssh/id_rsa
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: 📂 Sync files
-        run: rsync -rlptgoD -O --delete --exclude ".git/" --exclude ".ssh/" -e "ssh -i .ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p ${REMOTE_PORT}" ./public/ ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}
-        env:
-          REMOTE_PATH: ${{ secrets.REMOTE_PATH }}
-          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
-          REMOTE_USER: ${{ secrets.REMOTE_USER }}
-          REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
+    - name: 📂 Sync files
+      run: rsync -rlptgoD -O --delete --exclude ".git/" --exclude ".ssh/" -e "ssh -i .ssh/id_rsa -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p ${REMOTE_PORT}" ./public/ ${REMOTE_USER}@${REMOTE_HOST}:${REMOTE_PATH}
+      env:
+        REMOTE_PATH: ${{ secrets.REMOTE_PATH }}
+        REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+        REMOTE_USER: ${{ secrets.REMOTE_USER }}
+        REMOTE_PORT: ${{ secrets.REMOTE_PORT }}
