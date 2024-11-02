@@ -2,6 +2,7 @@
 
 * {
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
 }
 
 html {
@@ -26,7 +27,7 @@ body {
     height: 100vh;
     width: 100vw;
     font-family: "IBM Plex Sans JP", sans-serif;
-    font-weight: 400;
+    font-weight: normal;
     font-style: normal;
     background: rgba(255, 255, 255);
 }
