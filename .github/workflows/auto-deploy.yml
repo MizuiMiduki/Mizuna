@@ -8,11 +8,6 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-    - name: 🚚SetUp
-      run: echo "$SSH_PRIVATE_KEY" > key && chmod 600 key
-      env:
-        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-
     - uses: actions/checkout@v3
     - name: 📂 Sync files
       uses: burnett01/rsync-deployments@7.0.1
