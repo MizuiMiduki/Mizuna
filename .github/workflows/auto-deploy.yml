@@ -5,26 +5,21 @@ on:
       - main
 name: 🚀 Deploy
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-
     - name: 🚚SetUp
       run: echo "$SSH_PRIVATE_KEY" > key && chmod 600 key
       env:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
+    - uses: actions/checkout@v3
     - name: 📂 Sync files
       uses: burnett01/rsync-deployments@7.0.1
       with:
-        switches: -avz --delete
+        switches: -avzr --delete --exclude="" --include="" --filter=""
         remote_path: ${{ secrets.REMOTE_PATH }}
         remote_host: ${{ secrets.REMOTE_HOST }}
-        remote_user: ${{ secrets.REMOTE_USER }}
         remote_port: ${{ secrets.REMOTE_PORT }}
+        remote_user: ${{ secrets.REMOTE_USER }}
         remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
