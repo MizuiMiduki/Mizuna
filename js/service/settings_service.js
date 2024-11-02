@@ -202,3 +202,7 @@ function visibleIconOption(element) {
 
     element.classList.add('active');
 }
+
+function clearCache() {
+    window.location.reload(true);
+}
