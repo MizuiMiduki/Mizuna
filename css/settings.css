@@ -129,6 +129,20 @@
     font-weight: bold;
 }
 
+.mizuna_clear_cache {
+    background: var(--main_color);
+    width: 100%;
+    border-radius: 100px;
+    padding: 0 1em 0 1em;
+    border: 1px solid #ccc;
+    user-select: none;
+    color: black;
+    font-size: inherit;
+    height: 2.5em;
+    font-weight: bold;
+}
+
+
 .settings_hr {
     border: none;
     border-top: dotted;
@@ -154,10 +168,11 @@ kbd {
     background: var(--main_color);
     width: fit-content;
     border-radius: 100px;
-    padding: 0.3em;
+    padding: 1em;
     border: gray 1px solid;
     user-select: none;
     color: black;
+    height: 3em;
 }
 
 .mizuna_share:active {

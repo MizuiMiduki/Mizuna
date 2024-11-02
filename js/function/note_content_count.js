@@ -1,5 +1,11 @@
 $('.note_content').on('input', function () {
     var textLength = $(this).val().length;
+
+    let digitCount = textLength.toString().length;
+    let spaceCount = Math.max(0, 5 - digitCount);
+    let spaces = '0'.repeat(spaceCount);
+    $('#charCountSpace').text(spaces);
+
     $('#charCount').text(textLength);
 
     if (2986 === Number($('#max_charCount').text())) {
