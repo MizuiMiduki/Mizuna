@@ -131,14 +131,14 @@
 
 .mizuna_clear_cache {
     background: var(--main_color);
-    width: fit-content;
+    width: 100%;
     border-radius: 100px;
-    padding: 1em;
+    padding: 0 1em 0 1em;
     border: 1px solid #ccc;
     user-select: none;
     color: black;
     font-size: inherit;
-    height: 4em;
+    height: 2.5em;
     font-weight: bold;
 }
 
