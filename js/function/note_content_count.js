@@ -2,11 +2,8 @@ $('.note_content').on('input', function () {
     var textLength = $(this).val().length;
 
     let digitCount = textLength.toString().length;
-    console.log(digitCount)
     let spaceCount = Math.max(0, 5 - digitCount);
-    console.log(spaceCount)
     let spaces = '0'.repeat(spaceCount);
-    console.log(spaces);
     $('#charCountSpace').text(spaces);
 
     $('#charCount').text(textLength);

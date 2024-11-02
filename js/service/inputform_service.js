@@ -122,14 +122,12 @@ $(document).on("click", "#menu_icon", function () {
                 $('.cw_content').text(cw_content_tmp);
             }
             $('.note_content').val(note_content_tmp);
+            let textLength = $('.note_content').val().length;
             let digitCount = textLength.toString().length;
-            console.log(digitCount)
             let spaceCount = Math.max(0, 5 - digitCount);
-            console.log(spaceCount)
             let spaces = '0'.repeat(spaceCount);
-            console.log(spaces);
             $('#charCountSpace').text(spaces);
-            $('#charCount').text($('.note_content').val().length);
+            $('#charCount').text(textLength);
             $.getScript("/js/function/note_content_count.js")
         });
     }
@@ -183,14 +181,12 @@ $(document).on("click", "#settings_icon", function () {
                 $('.cw_content').text(cw_content_tmp);
             }
             $('.note_content').val(note_content_tmp);
+            let textLength = $('.note_content').val().length;
             let digitCount = textLength.toString().length;
-            console.log(digitCount)
             let spaceCount = Math.max(0, 5 - digitCount);
-            console.log(spaceCount)
             let spaces = '0'.repeat(spaceCount);
-            console.log(spaces);
             $('#charCountSpace').text(spaces);
-            $('#charCount').text($('.note_content').val().length);
+            $('#charCount').text(textLength);
             $.getScript("/js/function/note_content_count.js")
         });
     }
