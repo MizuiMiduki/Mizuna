@@ -74,6 +74,7 @@ $(document).on("click", "#form_clear_button", function () {
     localStorage.clear();
     $('.cw_content').val('');
     $('.note_content').val('');
+    $('#charCountSpace').text('0000');
     $('#charCount').text(0)
 });
 
@@ -121,7 +122,13 @@ $(document).on("click", "#menu_icon", function () {
                 $('.cw_content').text(cw_content_tmp);
             }
             $('.note_content').val(note_content_tmp);
-
+            let digitCount = textLength.toString().length;
+            console.log(digitCount)
+            let spaceCount = Math.max(0, 5 - digitCount);
+            console.log(spaceCount)
+            let spaces = '0'.repeat(spaceCount);
+            console.log(spaces);
+            $('#charCountSpace').text(spaces);
             $('#charCount').text($('.note_content').val().length);
             $.getScript("/js/function/note_content_count.js")
         });
@@ -176,9 +183,35 @@ $(document).on("click", "#settings_icon", function () {
                 $('.cw_content').text(cw_content_tmp);
             }
             $('.note_content').val(note_content_tmp);
-
+            let digitCount = textLength.toString().length;
+            console.log(digitCount)
+            let spaceCount = Math.max(0, 5 - digitCount);
+            console.log(spaceCount)
+            let spaces = '0'.repeat(spaceCount);
+            console.log(spaces);
+            $('#charCountSpace').text(spaces);
             $('#charCount').text($('.note_content').val().length);
             $.getScript("/js/function/note_content_count.js")
         });
     }
+});
+
+// フォームのヒント表示
+$(document).on('focus', '.input_area', function () {
+    $('.now_input_user_area').removeClass("now_input_user_none");
+    $('.now_input_user_area').addClass("now_input_user_block");
+    get_user_db_data([user_options.select_user])
+        .then(get_db_result => {
+            // フッター表示
+            user_data = get_db_result[0]
+            $('.now_input_user_name').text(`${user_data.name}(${user_data.address})`);
+            if (user_options.is_visible_icon == true) {
+                $('.now_input_user_icon').attr('src', user_data.avatarurl);
+            }
+        })
+});
+
+$(document).on("blur", ".input_area", function () {
+    $('.now_input_user_area').removeClass("now_input_user_block");
+    $('.now_input_user_area').addClass("now_input_user_none");
 });

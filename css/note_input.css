@@ -38,6 +38,10 @@
     box-sizing: border-box;
 }
 
+.input_area:focus {
+    outline:  2px solid var(--main_color);
+}
+
 .note_content {
     min-height: 200px;
 }
@@ -144,9 +148,52 @@
     }
 }
 
+.input_info{
+    display: flex;
+    width: 100%;
+    margin-bottom: 0.1em;
+    user-select: none;
+}
+
+.now_input_user_area{
+    align-items: center;
+}
+
+.now_input_user{
+    display: flex;
+    align-items: center;
+}
+
+.now_input_user_none{
+    display: none;
+}
+
+.now_input_user_block{
+    display: block;
+}
+
+.now_input_user_icon {
+    width: 1em;
+    height: 1em;
+    border-radius: 50%;
+    aspect-ratio: 1/1;
+}
+
+.now_input_user_text{
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ノート文字数カウント */
+#charCountSpace{
+    color: transparent;
+}
+
 .content_char_count {
     margin: 0;
-    margin-bottom: 0px;
-    text-align: right;
-    margin-bottom: 0.1em;
+    margin-right: 0;
+    margin-left: auto;
+    width: fit-content;
 }
