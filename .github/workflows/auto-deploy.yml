@@ -15,7 +15,7 @@ jobs:
         fetch-depth: 0
 
     - name: 🚚SetUp
-      run: echo "$SSH_PRIVATE_KEY" > .ssh/id_rsa && chmod 600 .ssh/id_rsa
+      run: echo "$SSH_PRIVATE_KEY" >  key && chmod 600 key
       env:
         SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
