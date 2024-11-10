@@ -1,6 +1,7 @@
 let startY;
 let pullDistance = 0;
 let maxPullDistance = window.innerHeight * 0.2;
+let iconOffset = window.innerHeight * 0.1;
 
 document.addEventListener('touchstart', handleTouchStart);
 document.addEventListener('touchmove', handleTouchMove);
@@ -14,7 +15,7 @@ const totalTurns = 3;
 
 function handleTouchStart(event) {
     if (window.scrollY === 0) {
-        startY = event.touches[0].pageY;
+        startY = event.touches[0].pageY + iconOffset;
         pullDistance = 0;
     }
 }
@@ -24,7 +25,7 @@ function handleTouchMove(event) {
     pullDistance = currentY - startY;
 
     if (pullDistance > 0 && window.scrollY === 0) {
-        const translateY = Math.min(pullDistance / 2, maxPullDistance);
+        const translateY = Math.min(pullDistance, maxPullDistance);
         const rotateAngle = Math.min((pullDistance / maxPullDistance) * 360, 360);
 
         refreshIcon.style.transform = `translate(-50%, ${translateY}px) rotate(${rotateAngle}deg)`;
