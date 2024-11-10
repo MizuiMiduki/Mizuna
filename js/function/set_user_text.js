@@ -7,5 +7,5 @@ const set_user_text = function (data) {
     } else {
         $('#menu_icon').attr('src', "/icon.png");
     }
-    return;
+
 }
