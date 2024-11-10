@@ -7,6 +7,7 @@
 
 html {
     touch-action: manipulation;
+    overscroll-behavior: none;
 }
 
 :root {
@@ -30,6 +31,7 @@ body {
     font-weight: normal;
     font-style: normal;
     background: rgba(255, 255, 255);
+    overscroll-behavior-y: none;
 }
 
 /* Todo : 背景用(予定地) */
@@ -144,7 +146,7 @@ body {
     aspect-ratio: 1;
     border-radius: 50%;
     background: radial-gradient(farthest-side, var(--main_color) 94%, #0000) top/8px 8px no-repeat,
-        conic-gradient(#0000 30%, var(--main_color));
+    conic-gradient(#0000 30%, var(--main_color));
     -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
     animation: l13 1s infinite linear;
 
@@ -163,4 +165,21 @@ body {
 .jconfirm-holder {
     width: 90%;
     margin: 0 auto;
+}
+
+.refresh-icon {
+    position: fixed;
+    top: -65px;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: transform 0.2s ease-out;
+    width: 2em;
+    height: 2em;
+    fill: #5f6368;
+    background-color: var(--main_color);
+    padding: 0.3em;
+    border-radius: 50%;
+    overflow: hidden;
+    filter: drop-shadow(0 0 5px gray) drop-shadow(0 0 10px gray);
+    transform-origin: center center;
 }
