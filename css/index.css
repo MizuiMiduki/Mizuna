@@ -142,21 +142,37 @@ body {
 
 /* ローディング */
 #loading_anime_area {
-    width: 50px;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    background: radial-gradient(farthest-side, var(--main_color) 94%, #0000) top/8px 8px no-repeat,
-    conic-gradient(#0000 30%, var(--main_color));
-    animation: l13 1s infinite linear;
-
-    position: absolute;
+    position: fixed;
+    /* 画面全体を基準に配置 */
     top: 50%;
+    /* 上下中央 */
     left: 50%;
+    /* 左右中央 */
+    transform: translate(-50%, -50%);
+    /* 完全に中央揃え */
+    width: 50px;
+    /* サイズ */
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    /* 外側の薄い円 */
+    border-top: 5px solid var(--main_color, #3498db);
+    /* 強調部分の色 */
+    border-radius: 50%;
+    /* 丸くする */
+    animation: spin 1s linear infinite;
+    /* 回転アニメーション */
 }
 
-@keyframes l13 {
+/* 回転アニメーション */
+@keyframes spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+        /* 初期位置 */
+    }
+
     100% {
-        transform: rotate(1turn)
+        transform: translate(-50%, -50%) rotate(360deg);
+        /* 1回転 */
     }
 }
 
