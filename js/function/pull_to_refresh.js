@@ -3,8 +3,8 @@ let pullDistance = 0;
 let maxPullDistance = window.innerHeight * 0.2;
 let iconOffset = window.innerHeight * 0.1;
 
-document.addEventListener('touchstart', handleTouchStart);
-document.addEventListener('touchmove', handleTouchMove);
+document.addEventListener('touchstart', handleTouchStart, { passive: false });
+document.addEventListener('touchmove', handleTouchMove, { passive: false });
 document.addEventListener('touchend', handleTouchEnd);
 document.addEventListener('visibilitychange', handleVisibilityChange);
 
@@ -13,18 +13,24 @@ let currentRotation = 0;
 let currentTurn = 0;
 const totalTurns = 3;
 
+let isPullStartedFromHeader = false;
+
 function handleTouchStart(event) {
-    if (window.scrollY === 0) {
-        startY = event.touches[0].pageY + iconOffset;
-        pullDistance = 0;
-    }
+    const target = event.target.closest('.header');
+    if (!target) return;
+
+    isPullStartedFromHeader = true;
+    startY = event.touches[0].pageY + iconOffset;
+    pullDistance = 0;
 }
 
 function handleTouchMove(event) {
+    if (!isPullStartedFromHeader) return;
+
     const currentY = event.touches[0].pageY;
     pullDistance = currentY - startY;
 
-    if (pullDistance > 0 && window.scrollY === 0) {
+    if (pullDistance > 0) {
         const translateY = Math.min(pullDistance, maxPullDistance);
         const rotateAngle = Math.min((pullDistance / maxPullDistance) * 360, 360);
 
@@ -34,11 +40,15 @@ function handleTouchMove(event) {
 }
 
 function handleTouchEnd() {
+    if (!isPullStartedFromHeader) return;
+
     if (pullDistance >= maxPullDistance) {
         animateRotation();
     } else {
         refreshIcon.style.transform = `translate(-50%, -50px) rotate(0deg)`;
     }
+
+    isPullStartedFromHeader = false;
 }
 
 function handleVisibilityChange() {
