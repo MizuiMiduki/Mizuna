@@ -67,6 +67,19 @@ const settings_service = function () {
                 $("#is_visible_icon_false").addClass('active')
                 break;
         }
+
+        // アイコンの色を取得する
+        switch (user_options.is_pick_theme_color) {
+            case true:
+                $("#is_get_icon_keycolor_true").addClass('active')
+                break;
+            case false:
+                $("#is_get_icon_keycolor_false").addClass('active')
+                break;
+            default:
+                $("#is_get_icon_keycolor_false").addClass('active')
+                break;
+        }
     });
 }
 
@@ -197,6 +210,46 @@ function visibleIconOption(element) {
             ])
             user_options.is_visible_icon = false;
             $('#menu_icon').attr('src', "/icon.png");
+            break;
+    }
+
+    element.classList.add('active');
+}
+
+function GetIconKeycolorOption(element) {
+    var options = document.getElementsByClassName('get_icon_keycolor-option');
+    for (var i = 0; i < options.length; i++) {
+        options[i].classList.remove('active');
+    }
+
+    // アイコンを非表示にする
+    switch (element.id) {
+        case "is_get_icon_keycolor_false":
+            // false
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_pick_theme_color: false,
+                    }
+                },
+            ])
+            user_options.is_pick_theme_color = false;
+            document.documentElement.style.setProperty('--main_color', 'lightblue');
+            document.documentElement.style.setProperty('--button_text_color', 'black');
+            break;
+        case "is_get_icon_keycolor_true":
+            // true
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_pick_theme_color: true,
+                    }
+                },
+            ])
+            user_options.is_pick_theme_color = true;
+            get_icon_key_color();
             break;
     }
 

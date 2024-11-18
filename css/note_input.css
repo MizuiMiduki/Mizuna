@@ -11,8 +11,8 @@
     margin-bottom: 3%;
     align-items: center;
     cursor: pointer;
-    font-size: inherit;
-    color: black;
+    color: var(--button_text_color);
+    font-size: inherit;;
     border: black solid 2px;
 }
 
@@ -20,6 +20,7 @@
 .note_menu {
     display: flex;
     flex-wrap: wrap;
+    color: var(--button_text_color);
 }
 
 /* note入力エリア */
