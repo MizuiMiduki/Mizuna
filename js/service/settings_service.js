@@ -16,6 +16,7 @@ const settings_service = function () {
             if ('tab3' === tabClass) {
                 // Mizunaについてを生成
                 $("#mizuna_version_span").text(mizuna_options.mizuna_version);
+                document.getElementById('Copyright_year').textContent = new Date().getFullYear();
             }
         });
 
