@@ -60,6 +60,7 @@ check_accountdb_status().then(function (check_accountdb_result) {
         // **
         // アカウントがない場合
         // **
+        $(".footer").remove();
         $.getScript("/js/service/add_account_service.js")
     }
 })
