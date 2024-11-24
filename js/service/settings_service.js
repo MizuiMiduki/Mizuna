@@ -81,6 +81,22 @@ const settings_service = function () {
                 $("#is_get_icon_keycolor_false").addClass('active')
                 break;
         }
+
+        // ダークモード
+        switch (user_options.is_darkmode) {
+            case 1:
+                $("#darkmode_disable").addClass('active')
+                break;
+            case 2:
+                $("#darkmode_auto").addClass('active')
+                break;
+            case 3:
+                $("#darkmode_enable").addClass('active')
+                break;
+            default:
+                $("#darkmode_disable").addClass('active')
+                break;
+        }
     });
 }
 
@@ -223,7 +239,7 @@ function GetIconKeycolorOption(element) {
         options[i].classList.remove('active');
     }
 
-    // アイコンを非表示にする
+    // アイコンから色を取得する
     switch (element.id) {
         case "is_get_icon_keycolor_false":
             // false
@@ -236,8 +252,7 @@ function GetIconKeycolorOption(element) {
                 },
             ])
             user_options.is_pick_theme_color = false;
-            document.documentElement.style.setProperty('--main_color', 'lightblue');
-            document.documentElement.style.setProperty('--button_text_color', 'black');
+            get_icon_key_color();
             break;
         case "is_get_icon_keycolor_true":
             // true
@@ -259,4 +274,58 @@ function GetIconKeycolorOption(element) {
 
 function clearCache() {
     window.location.reload(true);
+}
+
+function darkmodeOption(element) {
+    var options = document.getElementsByClassName('darkmode-option');
+    for (var i = 0; i < options.length; i++) {
+        options[i].classList.remove('active');
+    }
+
+    // 投稿範囲
+    switch (element.id) {
+        case "darkmode_disable":
+            // public
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_darkmode: 1,
+                    }
+                },
+            ])
+            user_options.is_darkmode = 1;
+            darkmode();
+            get_icon_key_color()
+            break;
+        case "darkmode_auto":
+            // home
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_darkmode: 2,
+                    }
+                },
+            ])
+            user_options.is_darkmode = 2;
+            darkmode();
+            get_icon_key_color()
+            break;
+        case "darkmode_enable":
+            // followers
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_darkmode: 3,
+                    }
+                },
+            ])
+            user_options.is_darkmode = 3;
+            darkmode();
+            break;
+    }
+
+    element.classList.add('active');
 }

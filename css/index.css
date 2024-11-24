@@ -9,6 +9,7 @@
     --main_color: lightblue;
     --text_color: black;
     --button_text_color: black;
+    --background_color: white;
 }
 
 svg {
@@ -18,7 +19,12 @@ svg {
 html {
     touch-action: manipulation;
     overscroll-behavior: none;
-    color: var(--text_color);
+}
+
+p,
+label,
+tbody {
+    color: var(--button_text_color);
 }
 
 input[type="button"],
@@ -44,6 +50,7 @@ body {
 .body_div {
     height: 100vh;
     width: 100%;
+    background: var(--background_color);
 }
 
 /* ヘッダー */

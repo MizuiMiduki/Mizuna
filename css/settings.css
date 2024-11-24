@@ -118,7 +118,8 @@
 
 .settings_visibility_button,
 .settings_noteend_button,
-.settings_icon_button {
+.settings_icon_button,
+.darkmode_button {
     user-select: none;
     text-align: center;
     cursor: pointer;
@@ -131,7 +132,8 @@
 
 .settings_visibility_button p,
 .settings_noteend_button p,
-.settings_icon_button p {
+.settings_icon_button p,
+.darkmode_button p {
     margin: 0;
     font-size: xx-small;
     font-weight: bold;
