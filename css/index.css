@@ -5,12 +5,26 @@
     -webkit-font-smoothing: antialiased;
 }
 
-html {
-    touch-action: manipulation;
-}
-
 :root {
     --main_color: lightblue;
+    --text_color: black;
+    --button_text_color: black;
+    --background_color: white;
+}
+
+svg {
+    fill: var(--button_text_color);
+}
+
+html {
+    touch-action: manipulation;
+    overscroll-behavior: none;
+}
+
+p,
+label,
+tbody {
+    color: var(--button_text_color);
 }
 
 input[type="button"],
@@ -22,7 +36,6 @@ input[type="submit"] {
 body {
     margin: 0;
     padding: 0;
-    color: rgb(31, 38, 39);
     position: relative;
     height: 100vh;
     width: 100vw;
@@ -30,17 +43,20 @@ body {
     font-weight: normal;
     font-style: normal;
     background: rgba(255, 255, 255);
+    overscroll-behavior-y: none;
 }
 
 /* Todo : 背景用(予定地) */
 .body_div {
     height: 100vh;
     width: 100%;
+    background: var(--background_color);
 }
 
 /* ヘッダー */
 .header {
     background-color: var(--main_color);
+    color: var(--button_text_color);
     display: flex;
 }
 
@@ -64,6 +80,7 @@ body {
     bottom: 30px;
     display: flex;
     overflow-y: visible;
+    color: var(--button_text_color);
 }
 
 .user_icon_back {
@@ -140,22 +157,37 @@ body {
 
 /* ローディング */
 #loading_anime_area {
-    width: 50px;
-    aspect-ratio: 1;
-    border-radius: 50%;
-    background: radial-gradient(farthest-side, var(--main_color) 94%, #0000) top/8px 8px no-repeat,
-        conic-gradient(#0000 30%, var(--main_color));
-    -webkit-mask: radial-gradient(farthest-side, #0000 calc(100% - 8px), #000 0);
-    animation: l13 1s infinite linear;
-
-    position: absolute;
+    position: fixed;
+    /* 画面全体を基準に配置 */
     top: 50%;
+    /* 上下中央 */
     left: 50%;
+    /* 左右中央 */
+    transform: translate(-50%, -50%);
+    /* 完全に中央揃え */
+    width: 50px;
+    /* サイズ */
+    height: 50px;
+    border: 5px solid rgba(255, 255, 255, 0.3);
+    /* 外側の薄い円 */
+    border-top: 5px solid var(--main_color, #3498db);
+    /* 強調部分の色 */
+    border-radius: 50%;
+    /* 丸くする */
+    animation: spin 1s linear infinite;
+    /* 回転アニメーション */
 }
 
-@keyframes l13 {
+/* 回転アニメーション */
+@keyframes spin {
+    0% {
+        transform: translate(-50%, -50%) rotate(0deg);
+        /* 初期位置 */
+    }
+
     100% {
-        transform: rotate(1turn)
+        transform: translate(-50%, -50%) rotate(360deg);
+        /* 1回転 */
     }
 }
 
@@ -163,4 +195,22 @@ body {
 .jconfirm-holder {
     width: 90%;
     margin: 0 auto;
+}
+
+.refresh-icon {
+    position: fixed;
+    top: -10vh;
+    left: 50%;
+    transform: translateX(-50%);
+    transition: transform 0.2s ease-out;
+    width: 2em;
+    height: 2em;
+    fill: #5f6368;
+    background-color: var(--main_color);
+    padding: 0.3em;
+    border-radius: 50%;
+    overflow: hidden;
+    filter: drop-shadow(0 0 5px gray) drop-shadow(0 0 10px gray);
+    transform-origin: center center;
+    z-index: 2147483647;
 }

@@ -28,5 +28,5 @@ const websharetarget = function (retryCount = 0) {
             }
         }, 100)
     }
-    return;
+
 }

@@ -86,7 +86,7 @@
 
 .cp_tabpanel th,
 .cp_tabpanel td {
-    border-bottom: 1px dotted #000;
+    border-bottom: 1px dotted var(--button_text_color);
 }
 
 .toggle-container {
@@ -102,15 +102,32 @@
     text-align: center;
     cursor: pointer;
     background-color: #f1f1f1;
+
+    p {
+        color: var(--text_color);
+    }
+
+    svg {
+        fill: var(--text_color);
+    }
 }
 
 .toggle-option.active {
     background-color: var(--main_color);
+
+    p {
+        color: var(--button_text_color);
+    }
+
+    svg {
+        fill: var(--button_text_color);
+    }
 }
 
 .settings_visibility_button,
 .settings_noteend_button,
-.settings_icon_button {
+.settings_icon_button,
+.darkmode_button {
     user-select: none;
     text-align: center;
     cursor: pointer;
@@ -123,7 +140,8 @@
 
 .settings_visibility_button p,
 .settings_noteend_button p,
-.settings_icon_button p {
+.settings_icon_button p,
+.darkmode_button p {
     margin: 0;
     font-size: xx-small;
     font-weight: bold;
@@ -136,7 +154,7 @@
     padding: 0 1em 0 1em;
     border: 1px solid #ccc;
     user-select: none;
-    color: black;
+    color: var(--button_text_color);
     font-size: inherit;
     height: 2.5em;
     font-weight: bold;
@@ -171,7 +189,7 @@ kbd {
     padding: 1em;
     border: gray 1px solid;
     user-select: none;
-    color: black;
+    color: var(--button_text_color);
     height: 3em;
 }
 

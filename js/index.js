@@ -5,6 +5,8 @@ $.getScript("/js/option/mizuna_option.js", function () {
         window.location.href = mizuna_options.mizuna_address + '/maintenance.html';
     }
 });
+$.getScript("/js/function/pull_to_refresh.js");
+
 const wst_title = new URL(document.location).searchParams.get("title");
 const wst_text = new URL(document.location).searchParams.get("text");
 const wst_url = new URL(document.location).searchParams.get("url");
@@ -34,6 +36,9 @@ db.version(1).stores({
 // ユーザー設定を読み込み
 $.getScript("/js/function/get_setting_db_data.js", function () {
     user_setting();
+
+    $.getScript("/js/function/get_icon_key_color.js");
+    $.getScript("/js/function/darkmode.js");
 })
 
 // 初回判定
@@ -42,7 +47,7 @@ check_accountdb_status().then(function (check_accountdb_result) {
         // **
         // アカウントがある場合
         // **
-        if (location.search != "") {
+        if (location.search !== "") {
             var address = localStorage.getItem("add_server_address")
             if (address) {
                 $.getScript("/js/service/add_account_service.js")
@@ -57,6 +62,7 @@ check_accountdb_status().then(function (check_accountdb_result) {
         // **
         // アカウントがない場合
         // **
+        $(".footer").remove();
         $.getScript("/js/service/add_account_service.js")
     }
 })

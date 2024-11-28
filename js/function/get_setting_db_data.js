@@ -24,7 +24,7 @@ const user_setting = function () {
                     "is_pick_theme_color": setting_data.is_pick_theme_color ?? false,
                 }
 
-                return;
+
             } else {
                 // ユーザー設定が存在しなかった場合に全て初期値で新規作成して再試行
                 db.setting.add({

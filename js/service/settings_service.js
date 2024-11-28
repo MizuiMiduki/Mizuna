@@ -16,6 +16,7 @@ const settings_service = function () {
             if ('tab3' === tabClass) {
                 // Mizunaについてを生成
                 $("#mizuna_version_span").text(mizuna_options.mizuna_version);
+                document.getElementById('Copyright_year').textContent = new Date().getFullYear();
             }
         });
 
@@ -65,6 +66,35 @@ const settings_service = function () {
                 break;
             default:
                 $("#is_visible_icon_false").addClass('active')
+                break;
+        }
+
+        // アイコンの色を取得する
+        switch (user_options.is_pick_theme_color) {
+            case true:
+                $("#is_get_icon_keycolor_true").addClass('active')
+                break;
+            case false:
+                $("#is_get_icon_keycolor_false").addClass('active')
+                break;
+            default:
+                $("#is_get_icon_keycolor_false").addClass('active')
+                break;
+        }
+
+        // ダークモード
+        switch (user_options.is_darkmode) {
+            case 1:
+                $("#darkmode_disable").addClass('active')
+                break;
+            case 2:
+                $("#darkmode_auto").addClass('active')
+                break;
+            case 3:
+                $("#darkmode_enable").addClass('active')
+                break;
+            default:
+                $("#darkmode_disable").addClass('active')
                 break;
         }
     });
@@ -203,6 +233,97 @@ function visibleIconOption(element) {
     element.classList.add('active');
 }
 
+function GetIconKeycolorOption(element) {
+    var options = document.getElementsByClassName('get_icon_keycolor-option');
+    for (var i = 0; i < options.length; i++) {
+        options[i].classList.remove('active');
+    }
+
+    // アイコンから色を取得する
+    switch (element.id) {
+        case "is_get_icon_keycolor_false":
+            // false
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_pick_theme_color: false,
+                    }
+                },
+            ])
+            user_options.is_pick_theme_color = false;
+            darkmode();
+            break;
+        case "is_get_icon_keycolor_true":
+            // true
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_pick_theme_color: true,
+                    }
+                },
+            ])
+            user_options.is_pick_theme_color = true;
+            darkmode();
+            break;
+    }
+
+    element.classList.add('active');
+}
+
 function clearCache() {
     window.location.reload(true);
+}
+
+function darkmodeOption(element) {
+    var options = document.getElementsByClassName('darkmode-option');
+    for (var i = 0; i < options.length; i++) {
+        options[i].classList.remove('active');
+    }
+
+    // 投稿範囲
+    switch (element.id) {
+        case "darkmode_disable":
+            // public
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_darkmode: 1,
+                    }
+                },
+            ])
+            user_options.is_darkmode = 1;
+            darkmode();
+            break;
+        case "darkmode_auto":
+            // home
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_darkmode: 2,
+                    }
+                },
+            ])
+            user_options.is_darkmode = 2;
+            darkmode();
+            break;
+        case "darkmode_enable":
+            // followers
+            db.setting.bulkUpdate([
+                {
+                    key: 1,
+                    changes: {
+                        is_darkmode: 3,
+                    }
+                },
+            ])
+            user_options.is_darkmode = 3;
+            darkmode();
+            break;
+    }
+
+    element.classList.add('active');
 }
