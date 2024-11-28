@@ -252,7 +252,7 @@ function GetIconKeycolorOption(element) {
                 },
             ])
             user_options.is_pick_theme_color = false;
-            get_icon_key_color();
+            darkmode();
             break;
         case "is_get_icon_keycolor_true":
             // true
@@ -265,7 +265,7 @@ function GetIconKeycolorOption(element) {
                 },
             ])
             user_options.is_pick_theme_color = true;
-            get_icon_key_color();
+            darkmode();
             break;
     }
 
@@ -296,7 +296,6 @@ function darkmodeOption(element) {
             ])
             user_options.is_darkmode = 1;
             darkmode();
-            get_icon_key_color()
             break;
         case "darkmode_auto":
             // home
@@ -310,7 +309,6 @@ function darkmodeOption(element) {
             ])
             user_options.is_darkmode = 2;
             darkmode();
-            get_icon_key_color()
             break;
         case "darkmode_enable":
             // followers

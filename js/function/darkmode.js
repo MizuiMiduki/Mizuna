@@ -6,6 +6,9 @@ function darkmode() {
             document.documentElement.style.setProperty('--background_color', 'white');
             document.documentElement.style.setProperty('--text_color: black;', 'black');
             document.documentElement.style.setProperty('--button_text_color', 'black');
+            if (true === user_options.is_pick_theme_color) {
+                get_icon_key_color();
+            }
             break;
         case 2:
             // ダークモード自動
@@ -19,7 +22,9 @@ function darkmode() {
                 document.documentElement.style.setProperty('--background_color', 'white');
                 document.documentElement.style.setProperty('--text_color: black;', 'black');
                 document.documentElement.style.setProperty('--button_text_color', 'black');
-                get_icon_key_color();
+                if (true === user_options.is_pick_theme_color) {
+                    get_icon_key_color();
+                }
             }
             break;
         case 3:

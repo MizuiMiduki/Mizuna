@@ -47,7 +47,7 @@ check_accountdb_status().then(function (check_accountdb_result) {
         // **
         // アカウントがある場合
         // **
-        if (location.search != "") {
+        if (location.search !== "") {
             var address = localStorage.getItem("add_server_address")
             if (address) {
                 $.getScript("/js/service/add_account_service.js")
