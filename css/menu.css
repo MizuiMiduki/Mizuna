@@ -34,15 +34,12 @@
     -webkit-user-select: none;
     -ms-user-select: none;
     user-select: none;
-
-    p {
-        color: var(--text_color);
-    }
 }
 
 .user_card_name p {
     margin: 0;
     line-height: 1;
+    color: var(--text_color);
 }
 
 .user_card_user_name {
