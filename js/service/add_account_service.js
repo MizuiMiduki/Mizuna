@@ -40,6 +40,17 @@ const add_account_service = function () {
     load_add_account_service = true;
 }
 
+document.addEventListener('keydown', event => {
+    if (true === load_add_account_service) {
+        switch (event.key) {
+            case 'Enter':
+                add_account_submit();
+                break;
+        }
+    }
+});
+
+
 add_account_service();
 
 const add_account_submit = function () {
