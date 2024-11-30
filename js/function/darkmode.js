@@ -21,7 +21,7 @@ function darkmode() {
             if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
                 document.documentElement.style.setProperty('--main_color', 'darkblue');
                 document.documentElement.style.setProperty('--background_color', 'black');
-                document.documentElement.style.setProperty('--text_color', 'white');
+                document.documentElement.style.setProperty('--text_color', 'black');
                 document.documentElement.style.setProperty('--button_text_color', 'white');
             } else {
                 if (true === user_options.is_pick_theme_color) {
@@ -43,7 +43,7 @@ function darkmode() {
             // ダークモード有効
             document.documentElement.style.setProperty('--main_color', 'darkblue');
             document.documentElement.style.setProperty('--background_color', 'black');
-            document.documentElement.style.setProperty('--text_color', 'white');
+            document.documentElement.style.setProperty('--text_color', 'black');
             document.documentElement.style.setProperty('--button_text_color', 'white');
             break;
     }
