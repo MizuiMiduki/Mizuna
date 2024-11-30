@@ -8,7 +8,6 @@ function darkmode() {
                 document.documentElement.style.setProperty('--text_color: black', user_options.latest_theme_color[1] ?? 'black');
                 document.documentElement.style.setProperty('--button_text_color', user_options.latest_theme_color[2] ?? 'black');
                 document.documentElement.style.setProperty('--background_color', 'white');
-                console.log(user_options.latest_theme_color[0]);
                 get_icon_key_color();
                 break;
             }

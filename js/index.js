@@ -41,8 +41,11 @@ db.version(2).stores({
 $.getScript("/js/function/get_setting_db_data.js", function () {
     user_setting();
 
-    $.getScript("/js/function/get_icon_key_color.js");
-    $.getScript("/js/function/darkmode.js");
+    $.getScript("/js/function/get_icon_key_color.js", function () {
+        $.getScript("/js/function/darkmode.js", function () {
+            $.getScript("/js/function/img_error.js");
+        });
+    });
 })
 
 // 初回判定
