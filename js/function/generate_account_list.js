@@ -17,7 +17,7 @@ const generate_account_list = function () {
                         <input type="checkbox" class="delete_select_checknox" data-id="${account_list[i]['id']}"/>
                         </div>
                         `);
-                if (user_options.is_visible_icon == true) {
+                if (true === user_options.is_visible_icon) {
                     $('.account_card_icon' + account_list[i]['id']).attr('src', account_list[i]['avatarurl']);
                 } else {
                     $('.account_card_icon' + account_list[i]['id']).attr('src', "/icon.png");

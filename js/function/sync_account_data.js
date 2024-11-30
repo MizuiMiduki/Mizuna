@@ -1,5 +1,4 @@
 const sync_account_data = function () {
-// ToDo アカウント情報の再取得を実装する
     get_user_db_data([user_options.select_user])
         .then(get_db_result => {
             if (get_db_result[0]) {

@@ -1,5 +1,5 @@
 const add_account_service = function () {
-    if (location.search != "") {
+    if (location.search !== "") {
         // アカウント情報を取得するMisskeyサーバーのアドレスをローカルストレージから取得
         var address = localStorage.getItem("add_server_address")
         if (address) {
@@ -56,7 +56,7 @@ add_account_service();
 const add_account_submit = function () {
     // アカウント情報を取得するMisskeyサーバーのアドレス
     var address = $('.server_address').val();
-    if (address != "") {
+    if (address !== "") {
         // Mizunaをホストしているページのホスト名
         var Mizuna_host_address = location.hostname
 

@@ -4,11 +4,11 @@ const get_visibility_select = function () {
     var followers = $('#visibility_followers').prop("checked");
     var select;
 
-    if (public == true) {
+    if (public === true) {
         select = "public";
-    } else if (home == true) {
+    } else if (home === true) {
         select = "home"
-    } else if (followers == true) {
+    } else if (followers === true) {
         select = "followers"
     } else {
         select = null;
