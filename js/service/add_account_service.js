@@ -13,7 +13,7 @@ const add_account_service = function () {
             $.getScript("/js/function/get_account_data.js", function () {
                 let data = get_account_data(address, session_ID);
                 let get_user_data = JSON.parse(data);
-                if (get_user_data.ok == false) {
+                if (get_user_data.ok === false) {
                     // 取得できなかったとき
                     location.href = "/";
                 } else {
