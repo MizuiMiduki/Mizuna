@@ -272,6 +272,19 @@ function GetIconKeycolorOption(element) {
     element.classList.add('active');
 }
 
+var load_sync_account_data = false;
+function sync_account_data_trigger() {
+    if (false === load_sync_account_data) {
+        $.getScript("/js/function/sync_account_data.js", function () {
+            load_sync_account_data = true;
+
+            sync_account_data();
+        });
+        return;
+    }
+    sync_account_data();
+}
+
 function clearCache() {
     window.location.reload(true);
 }

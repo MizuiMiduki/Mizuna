@@ -201,7 +201,7 @@ $(document).on('focus', '.input_area', function () {
             // フッター表示
             user_data = get_db_result[0]
             $('.now_input_user_name').text(`${user_data.name}(${user_data.address})`);
-            if (user_options.is_visible_icon == true) {
+            if (user_options.is_visible_icon === true) {
                 $('.now_input_user_icon').attr('src', user_data.avatarurl);
             }
         })

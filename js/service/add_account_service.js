@@ -1,5 +1,5 @@
 const add_account_service = function () {
-    if (location.search != "") {
+    if (location.search !== "") {
         // アカウント情報を取得するMisskeyサーバーのアドレスをローカルストレージから取得
         var address = localStorage.getItem("add_server_address")
         if (address) {
@@ -13,7 +13,7 @@ const add_account_service = function () {
             $.getScript("/js/function/get_account_data.js", function () {
                 let data = get_account_data(address, session_ID);
                 let get_user_data = JSON.parse(data);
-                if (get_user_data.ok == false) {
+                if (get_user_data.ok === false) {
                     // 取得できなかったとき
                     location.href = "/";
                 } else {
@@ -40,12 +40,23 @@ const add_account_service = function () {
     load_add_account_service = true;
 }
 
+document.addEventListener('keydown', event => {
+    if (true === load_add_account_service) {
+        switch (event.key) {
+            case 'Enter':
+                add_account_submit();
+                break;
+        }
+    }
+});
+
+
 add_account_service();
 
 const add_account_submit = function () {
     // アカウント情報を取得するMisskeyサーバーのアドレス
     var address = $('.server_address').val();
-    if (address != "") {
+    if (address !== "") {
         // Mizunaをホストしているページのホスト名
         var Mizuna_host_address = location.hostname
 

@@ -32,13 +32,20 @@ db.version(1).stores({
     account: "++id, token, name, username, address, avatarurl, add_mizuna_versinon",
     setting: '++id, select_user, default_visibility, is_note_end_mizuna, is_visible_icon, ui_mode, is_darkmode, is_pick_theme_color',
 });
+db.version(2).stores({
+    account: "++id, token, name, username, address, avatarurl, add_mizuna_versinon",
+    setting: '++id, select_user, default_visibility, is_note_end_mizuna, is_visible_icon, ui_mode, is_darkmode, is_pick_theme_color, latest_theme_color, is_check_releasenote'
+});
 
 // ユーザー設定を読み込み
 $.getScript("/js/function/get_setting_db_data.js", function () {
     user_setting();
 
-    $.getScript("/js/function/get_icon_key_color.js");
-    $.getScript("/js/function/darkmode.js");
+    $.getScript("/js/function/get_icon_key_color.js", function () {
+        $.getScript("/js/function/darkmode.js", function () {
+            $.getScript("/js/function/img_error.js");
+        });
+    });
 })
 
 // 初回判定

@@ -1,5 +1,5 @@
 <p>サーバーアドレスから追加</p>
-<form>
+<form onsubmit="return false;">
     <input autocomplete="off" class="server_address" list="server_address_list" placeholder="例:misskey.io" required
            type="text">
     <datalist id="server_address_list">
@@ -12,7 +12,7 @@
 </form>
 <!-- <hr>
 <p>Mizunaでエクスポートしたデータから追加</p>
-<form>
+<form onsubmit="return false;">
     <input type="file" accept=".mizuna" id="import_userdata_input" required>
     <button type="button" onclick="import_userdata();">インポート</button>
 <form> -->
