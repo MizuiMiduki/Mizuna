@@ -19,6 +19,7 @@ svg {
 html {
     touch-action: manipulation;
     overscroll-behavior: none;
+    background-color: black;
 }
 
 p,
