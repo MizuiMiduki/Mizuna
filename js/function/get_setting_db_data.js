@@ -22,14 +22,10 @@ const user_setting = function () {
                     "is_darkmode": setting_data.is_darkmode ?? 1,
                     // アイコンカラーを元にUIカラーを変更するか(初期値:false)
                     "is_pick_theme_color": setting_data.is_pick_theme_color ?? false,
-                    // 最後に使用したテーマカラー
-                    "latest_theme_color": setting_data.latest_theme_color ?? [
-                        null,
-                        null,
-                        null
-                    ],
-                    // バージョンアップのチェック
-                    "is_check_releasenote": setting_data.is_check_releasenote ?? [null, false],
+                    // 最後に使用したテーマカラー(main_color, text_color, button_text_color)
+                    "latest_theme_color": setting_data.latest_theme_color ?? [null, null, null],
+                    // バージョンアップのチェック(prev, next, checked)
+                    "is_check_releasenote": setting_data.is_check_releasenote ?? [null, null, false],
                 }
             } else {
                 // ユーザー設定が存在しなかった場合に全て初期値で新規作成して再試行
@@ -46,7 +42,7 @@ const user_setting = function () {
                         null,
                         null
                     ],
-                    is_check_releasenote: [null, false]
+                    is_check_releasenote: [null, null, false]
                 }).then(() => {
                     user_setting();
                 })

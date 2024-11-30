@@ -4,7 +4,7 @@ const img = document.getElementById('menu_icon');
 const get_icon_key_color = function () {
     if (false === user_options.is_visible_icon) {
         document.documentElement.style.setProperty('--main_color', 'lightblue');
-        document.documentElement.style.setProperty('--text_color: black', 'black');
+        document.documentElement.style.setProperty('--text_color', 'black');
         document.documentElement.style.setProperty('--button_text_color', 'black');
 
         db.setting.bulkUpdate([
@@ -36,7 +36,7 @@ const get_icon_key_color = function () {
     Vibrant.from(img).getPalette()
         .then((palette) => {
             document.documentElement.style.setProperty('--main_color', `rgb(${palette.LightVibrant.rgb.join(', ')})`);
-            document.documentElement.style.setProperty('--text_color: black', `rgb(${palette.DarkVibrant.rgb.join(', ')})`);
+            document.documentElement.style.setProperty('--text_color', `rgb(${palette.DarkVibrant.rgb.join(', ')})`);
             document.documentElement.style.setProperty('--button_text_color', `rgb(${palette.DarkVibrant.rgb.join(', ')})`);
 
             db.setting.bulkUpdate([
@@ -70,7 +70,7 @@ img.onload = function () {
 const error_get_icon_key_color = function () {
     if (true === user_options.is_pick_theme_color) {
         document.documentElement.style.setProperty('--main_color', 'lightblue');
-        document.documentElement.style.setProperty('--text_color: black', 'black');
+        document.documentElement.style.setProperty('--text_color', 'black');
         document.documentElement.style.setProperty('--button_text_color', 'black');
 
         db.setting.bulkUpdate([
