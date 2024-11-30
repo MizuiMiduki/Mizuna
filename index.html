@@ -8,7 +8,8 @@
     <meta content="Mizunaは機能をノート送信のみにすることで通信量削減に重点を置いたMisskeyクライアントです"
           name="description"/>
     <link href="/manifest.json" rel="manifest">
-    <script src="https://cdn.jsdelivr.net/npm/node-vibrant/dist/vibrant.min.js"></script>    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/node-vibrant/dist/vibrant.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
     <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.4/jquery-confirm.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.4/jquery-confirm.min.js"></script>
@@ -38,7 +39,8 @@
     <!-- フッター -->
     <div class="footer">
         <div class="user_icon_back">
-            <img class="user_icon" id="menu_icon" crossorigin="anonymous" onError="this.onerror=null;this.src='/icon.png';" src="/icon.png">
+            <img class="user_icon" id="menu_icon" crossorigin="anonymous"
+                 onError="this.onerror=null;this.src='/icon.png';error_get_icon_key_color();" src="/icon.png">
         </div>
         <div class="settings_icon_back">
             <svg class="settings_icon" fill="#5f6368" id="settings_icon" viewBox="0 -960 960 960"
