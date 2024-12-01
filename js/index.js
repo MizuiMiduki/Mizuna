@@ -3,10 +3,11 @@ $.getScript("/js/option/toastr_option.js");
 $.getScript("/js/option/mizuna_option.js", function () {
     if (true === mizuna_options.maintenance) {
         window.location.href = mizuna_options.mizuna_address + '/maintenance.html';
+    } else {
+        $.getScript("/js/function/check_new_release_note.js", function () {
+            check_new_release_note();
+        });
     }
-    $.getScript("/js/function/check_new_release_note.js", function () {
-        check_new_release_note();
-    });
 });
 $.getScript("/js/function/pull_to_refresh.js");
 
