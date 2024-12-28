@@ -3,6 +3,10 @@ $.getScript("/js/option/toastr_option.js");
 $.getScript("/js/option/mizuna_option.js", function () {
     if (true === mizuna_options.maintenance) {
         window.location.href = mizuna_options.mizuna_address + '/maintenance.html';
+    } else {
+        $.getScript("/js/function/check_new_release_note.js", function () {
+            check_new_release_note();
+        });
     }
 });
 $.getScript("/js/function/pull_to_refresh.js");
@@ -56,12 +60,10 @@ check_accountdb_status().then(function (check_accountdb_result) {
         // **
         if (location.search !== "") {
             var address = localStorage.getItem("add_server_address")
-            if (address) {
-                $.getScript("/js/service/add_account_service.js")
-            } else {
+            if (!address) {
                 location.href = "/";
             }
-
+            $.getScript("/js/service/add_account_service.js")
         } else {
             $.getScript("/js/service/inputform_service.js")
         }
@@ -69,7 +71,7 @@ check_accountdb_status().then(function (check_accountdb_result) {
         // **
         // アカウントがない場合
         // **
-        $(".footer").remove();
+        $('.footer').css('display', 'none');
         $.getScript("/js/service/add_account_service.js")
     }
 })

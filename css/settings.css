@@ -148,7 +148,8 @@
 }
 
 .mizuna_clear_cache,
-.sync_account_data {
+.sync_account_data,
+.export_account_data {
     background: var(--main_color);
     width: 100%;
     border-radius: 100px;
@@ -159,6 +160,12 @@
     font-size: inherit;
     height: 2.5em;
     font-weight: bold;
+}
+
+.mizuna_clear_cache:active,
+.sync_account_data:active,
+.export_account_data:active {
+    box-shadow: 10px 10px 20px 0 rgba(0, 0, 0, .5) inset
 }
 
 

@@ -1,11 +1,21 @@
 // 入力欄の読み込み
-$(".main_column").load("/parts/form.html", function () {
-    $("#loading_anime_area").remove();
-    // 文字数カウンターをロード
-    $.getScript("/js/function/note_content_count.js")
-    // デフォルトの公開範囲ボタンにユーザー設定を適用
-    $.getScript("/js/function/apply_default_visibility_button.js");
-})
+const inputform_service = function () {
+    $(".main_column").load("/parts/form.html", function () {
+        $("#loading_anime_area").remove();
+        // 文字数カウンターをロード
+        $.getScript("/js/function/note_content_count.js")
+        // デフォルトの公開範囲ボタンにユーザー設定を適用
+        if (typeof apply_default_visibility_button === "undefined") {
+            $.getScript("/js/function/apply_default_visibility_button.js").then(() => {
+                inputform_service();
+            });
+        } else {
+            apply_default_visibility_button();
+        }
+    })
+}
+
+inputform_service();
 
 // アカウント情報読み込み
 $.getScript("/js/function/get_user_db_data.js", function () {
