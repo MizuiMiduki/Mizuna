@@ -10,5 +10,5 @@ function saveAsJsonFile(filename, data) {
 
 const export_account_data = async function () {
     const accounts = await db.account.toArray();
-    saveAsJsonFile('accounts.json', accounts);
+    saveAsJsonFile('mizuna_accounts.json', accounts);
 };
