@@ -40,8 +40,5 @@ const check_new_release_note = function () {
                     }
                 });
             })
-            .catch(error => {
-                console.error('ReleaseNote Check error:', error);
-            });
     }
 }

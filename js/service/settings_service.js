@@ -289,6 +289,19 @@ function clearCache() {
     window.location.reload(true);
 }
 
+var load_export_account_data = false;
+function export_account_data_trigger() {
+    if (false === load_export_account_data) {
+        $.getScript("/js/function/export_account_data.js", function () {
+            load_export_account_data = true;
+
+            export_account_data();
+        });
+        return;
+    }
+    export_account_data();
+}
+
 function darkmodeOption(element) {
     var options = document.getElementsByClassName('darkmode-option');
     for (var i = 0; i < options.length; i++) {

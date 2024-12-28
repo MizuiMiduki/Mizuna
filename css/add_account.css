@@ -9,7 +9,8 @@
     height: 2em;
 }
 
-#add_account_server_button {
+#add_account_server_button,
+#import_userdata_input_button {
     font-weight: bold;
     background-color: var(--main_color);
     border-radius: 20px;

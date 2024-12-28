@@ -60,12 +60,10 @@ check_accountdb_status().then(function (check_accountdb_result) {
         // **
         if (location.search !== "") {
             var address = localStorage.getItem("add_server_address")
-            if (address) {
-                $.getScript("/js/service/add_account_service.js")
-            } else {
+            if (!address) {
                 location.href = "/";
             }
-
+            $.getScript("/js/service/add_account_service.js")
         } else {
             $.getScript("/js/service/inputform_service.js")
         }
@@ -73,7 +71,7 @@ check_accountdb_status().then(function (check_accountdb_result) {
         // **
         // アカウントがない場合
         // **
-        $(".footer").remove();
+        $('.footer').css('display', 'none');
         $.getScript("/js/service/add_account_service.js")
     }
 })

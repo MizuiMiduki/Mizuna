@@ -31,10 +31,15 @@ const delete_account = function (db_key_list) {
                 $("#user_name").text("name");
                 $("#user_id").text("id@address");
                 $('#menu_icon').attr('src', "/icon.png");
-                $('#menu_icon').removeAttr('id');
-                $.getScript("/js/service/add_account_service.js")
+                $('.footer').css('display', 'none');
+                if (typeof add_account_service === "undefined") {
+                    $.getScript("/js/service/add_account_service.js").then(() => {
+                        add_account_service();
+                    });
+                } else {
+                    add_account_service();
+                }
             }
         });
-
     }
 }

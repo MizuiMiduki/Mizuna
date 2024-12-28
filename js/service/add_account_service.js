@@ -1,7 +1,7 @@
 const add_account_service = function () {
     if (location.search !== "") {
         // アカウント情報を取得するMisskeyサーバーのアドレスをローカルストレージから取得
-        var address = localStorage.getItem("add_server_address")
+        var address = localStorage.getItem("add_server_address");
         if (address) {
             // **
             // ローカルストレージが空ではない場合
@@ -23,9 +23,9 @@ const add_account_service = function () {
                         // ローカルストレージを全削除
                         localStorage.clear();
                         location.href = "/";
-                    })
+                    });
                 }
-            })
+            });
         } else {
             // miauthのリンクだがアドレスが記憶されていなかった場合
             location.href = "/";
@@ -34,11 +34,11 @@ const add_account_service = function () {
         // 新規登録画面を表示
         $(".main_column").load("/parts/add_account.html", function () {
             $("#loading_anime_area").remove();
-        })
-        $.getScript("/js/function/miauth.js")
+        });
+        $.getScript("/js/function/miauth.js");
     }
     load_add_account_service = true;
-}
+};
 
 document.addEventListener('keydown', event => {
     if (true === load_add_account_service) {
@@ -58,7 +58,7 @@ const add_account_submit = function () {
     var address = $('.server_address').val();
     if (address !== "") {
         // Mizunaをホストしているページのホスト名
-        var Mizuna_host_address = location.hostname
+        var Mizuna_host_address = location.hostname;
 
         // セッションIDを生成
         var session_ID = crypto.randomUUID();
@@ -67,7 +67,19 @@ const add_account_submit = function () {
         // miauthを呼び出し
         miauth(address, session_ID, Mizuna_host_address);
     } else {
-        toastr["error"]("アドレスを入力してください")
+        toastr["error"]("アドレスを入力してください");
     }
-}
+};
 
+var load_import_account_data = false;
+const import_account_data_submit = function () {
+    if (false === load_import_account_data) {
+        $.getScript("/js/function/import_account_data.js", function () {
+            load_import_account_data = true;
+
+            import_account_data();
+        });
+        return;
+    }
+    import_account_data();
+}
