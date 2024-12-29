@@ -15,9 +15,14 @@
     background-color: var(--main_color);
     border-radius: 20px;
     cursor: pointer;
-    width: 20%;
+    min-width: 25%;
+    width: fit-content;
     font-size: inherit;
     height: 2em;
     color: var(--button_text_color);
     border: black solid 1px;
+}
+
+#import_userdata_input{
+    width: 70%;
 }
