@@ -10,6 +10,7 @@ $.getScript("/js/option/mizuna_option.js", function () {
     }
 });
 $.getScript("/js/function/pull_to_refresh.js");
+$.getScript("/js/function/comparison_version.js");
 
 const wst_title = new URL(document.location).searchParams.get("title");
 const wst_text = new URL(document.location).searchParams.get("text");

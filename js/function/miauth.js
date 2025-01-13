@@ -7,7 +7,7 @@ var miauth = function (address, session_ID, Mizuna_host_address) {
         .then(response => response.json())
         .then(data => {
             if (data.status === 'success') {
-                location.assign("https://" + address + "/miauth/" + session_ID + "?name=Mizuna&callback=https://" + Mizuna_host_address + "&permission=write:notes,read:account", "_blank")
+                location.assign("https://" + address + "/miauth/" + session_ID + "?name=Mizuna&callback=https://" + Mizuna_host_address + "&permission=write:notes,read:account,write:drive", "_blank")
             } else {
                 toastr["error"]("アドレスのサーバーは見つかりませんでした")
             }
