@@ -11,6 +11,12 @@ const send_note = function (user_data) {
             $(".note_submit").prop("disabled", false);
             return;
         }
+
+        if (100< trimmed_cw_content.length) {
+            toastr["warning"]('100文字以内で入力してください', 'CWが長すぎます');
+            $(".note_submit").prop("disabled", false);
+            return;
+        }
     }
 
     var trimmed_content = note_content.replace(/[\s\u3000]/g, '');
