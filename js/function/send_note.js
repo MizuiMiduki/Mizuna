@@ -3,6 +3,23 @@ const send_note = function (user_data) {
     var note_content = $(".note_content").val();
     var file = $('#fileInput')[0].files[0];
 
+
+    if ($('.cw_input_ara').css('display') === 'block') {
+        var trimmed_cw_content = cw_content.replace(/[\s\u3000]/g, '');
+        if (0 === trimmed_cw_content.length) {
+            toastr["warning"]('なにか入力してください', 'CWが空です');
+            $(".note_submit").prop("disabled", false);
+            return;
+        }
+    }
+
+    var trimmed_content = note_content.replace(/[\s\u3000]/g, '');
+    if (0 === trimmed_content.length) {
+        toastr["warning"]('なにか入力してください', 'ノートが空です');
+        $(".note_submit").prop("disabled", false);
+        return;
+    }
+
     if (file) {
         uploadImage(file, user_data, note_content, cw_content);
     } else {
