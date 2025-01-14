@@ -24,14 +24,12 @@ const sync_account_data = function () {
                                     name: data.name,
                                     username: data.username,
                                     avatarurl: data.avatarUrl,
-                                    add_mizuna_versinon: mizuna_options.mizuna_version
                                 }
                             },
                         ]);
                         user_data['name'] = data.name;
                         user_data['username'] = data.username;
                         user_data['avatarurl'] = data.avatarUrl;
-                        user_data['add_mizuna_versinon'] = mizuna_options.mizuna_version
                         set_user_text(user_data);
 
                         toastr["success"]('アカウント情報を同期しました');
