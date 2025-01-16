@@ -64,6 +64,8 @@ $.getScript("/js/function/form_mizuna.js")
 
 function note_send_submit() {
     $(".note_submit").prop("disabled", true);
+    $(".note_submit").addClass('loading');
+    $(".note_submit").html('送信中...<div class="loading-spinner"></div>');
     send_note(user_data);
 }
 
