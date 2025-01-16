@@ -1,20 +1,4 @@
 /* ノート送信ボタン */
-/* .note_submit {
-    width: fit-content;
-    padding: 1% 5% 1% 5%;
-    font-weight: bolder;
-    background-color: var(--main_color);
-    border-radius: 20px;
-    display: flex;
-    margin-left: auto;
-    margin-right: 0;
-    margin-bottom: 3%;
-    align-items: center;
-    cursor: pointer;
-    color: var(--button_text_color);
-    font-size: inherit;;
-    border: black solid 2px;
-} */
 .note_submit {
     width: fit-content;
     padding: 1% 5%;
