@@ -1,5 +1,5 @@
 /* ノート送信ボタン */
-.note_submit {
+/* .note_submit {
     width: fit-content;
     padding: 1% 5% 1% 5%;
     font-weight: bolder;
@@ -14,6 +14,48 @@
     color: var(--button_text_color);
     font-size: inherit;;
     border: black solid 2px;
+} */
+.note_submit {
+    width: fit-content;
+    padding: 1% 5%;
+    font-weight: bolder;
+    background-color: var(--main_color);
+    border-radius: 20px;
+    display: flex;
+    margin-left: auto;
+    margin-right: 0;
+    margin-bottom: 3%;
+    align-items: center;
+    cursor: pointer;
+    color: var(--button_text_color);
+    font-size: inherit;
+    border: black solid 2px;
+    justify-content: center;
+}
+
+.note_submit.loading {
+    cursor: not-allowed;
+    color: gray;
+    background-color: #ccc;
+}
+
+.loading-spinner {
+    border: 2px solid #ccc;
+    border-top: 2px solid #000;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    animation: spin 1s linear infinite;
+    margin-left: 5px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 /* ノートメニュー */

@@ -1,3 +1,7 @@
+const end_note_send_anim = function () {
+    $(".note_submit").removeClass('loading');
+    $(".note_submit").html('ノートする');
+}
 const send_note = function (user_data) {
     var cw_content = $(".cw_content").val();
     var note_content = $(".note_content").val();
@@ -9,12 +13,14 @@ const send_note = function (user_data) {
         if (0 === trimmed_cw_content.length) {
             toastr["warning"]('なにか入力してください', 'CWが空です');
             $(".note_submit").prop("disabled", false);
+            end_note_send_anim();
             return;
         }
 
-        if (100< trimmed_cw_content.length) {
+        if (100 < trimmed_cw_content.length) {
             toastr["warning"]('100文字以内で入力してください', 'CWが長すぎます');
             $(".note_submit").prop("disabled", false);
+            end_note_send_anim();
             return;
         }
     }
@@ -23,6 +29,7 @@ const send_note = function (user_data) {
     if (0 === trimmed_content.length) {
         toastr["warning"]('なにか入力してください', 'ノートが空です');
         $(".note_submit").prop("disabled", false);
+        end_note_send_anim();
         return;
     }
 
@@ -55,6 +62,7 @@ function uploadImage(file, user_data, note_content, cw_content) {
             error: function () {
                 toastr["error"]('画像のアップロードに失敗しました');
                 $(".note_submit").prop("disabled", false);
+                end_note_send_anim();
             }
         });
     } else {
@@ -92,17 +100,19 @@ function sendNoteContent(user_data, note_content, cw_content, visibility, fileId
                 $('textarea').val("");
                 $('#charCount').text(0);
                 $(".note_submit").prop("disabled", false);
+                end_note_send_anim();
                 $('#fileInput').val(''); // ファイル入力をクリア
                 localStorage.clear();
             },
             error: function (response) {
                 toastr["error"]("ノートできませんでした");
                 $(".note_submit").prop("disabled", false);
-                console.log(response);
+                end_note_send_anim();
             }
         });
     } else {
         toastr["warning"]('文字数が多すぎます');
         $(".note_submit").prop("disabled", false);
+        end_note_send_anim();
     }
 }

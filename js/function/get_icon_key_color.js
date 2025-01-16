@@ -58,9 +58,6 @@ const get_icon_key_color = function () {
                 `rgb(${palette.DarkVibrant.rgb.join(', ')})`
             ];
         })
-        .catch((error) => {
-            console.error(error);
-        });
 }
 
 img.onload = function () {
