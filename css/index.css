@@ -248,6 +248,10 @@ body {
     }
 }
 
+.marquee-container svg{
+    fill: black;
+}
+
 .close-icon {
     position: absolute;
     right: 10px;
