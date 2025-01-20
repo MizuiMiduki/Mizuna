@@ -7,6 +7,7 @@ $.getScript("/js/option/mizuna_option.js", function () {
         $.getScript("/js/function/check_new_release_note.js", function () {
             check_new_release_note();
         });
+        $.getScript("/js/function/news_marquee.js");
     }
 });
 $.getScript("/js/function/pull_to_refresh.js");
