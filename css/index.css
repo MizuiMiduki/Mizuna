@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP&display=swap");
 
 * {
     -webkit-tap-highlight-color: transparent;
@@ -214,4 +214,46 @@ body {
     filter: drop-shadow(0 0 5px gray) drop-shadow(0 0 10px gray);
     transform-origin: center center;
     z-index: 2147483647;
+}
+
+/* マーキーエリア */
+
+.marquee-container {
+    overflow: hidden;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    padding: 10px 40px 10px 10px;
+    position: relative;
+    display: none;
+}
+
+.marquee-content-wrapper {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.marquee-content {
+    display: inline-block;
+    animation: marquee 20s linear infinite;
+}
+
+@keyframes marquee {
+    from {
+        transform: translateX(75%);
+    }
+    to {
+        transform: translateX(-125%);
+    }
+}
+
+.close-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
 }
