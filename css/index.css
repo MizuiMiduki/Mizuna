@@ -66,6 +66,21 @@ body {
     margin-left: 1%;
 }
 
+.donation-banner {
+    background-color: #ffcc00;
+    color: #000;
+    padding: 10px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    margin-right: 1%;
+    margin-left: auto;
+}
+.donation-banner:hover {
+    background-color: #ffa500;
+}
+
 /* メイン */
 .main_column {
     width: 80%;
@@ -248,7 +263,7 @@ body {
     }
 }
 
-.marquee-container svg{
+.marquee-container svg {
     fill: black;
 }
 
