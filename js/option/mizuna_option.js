@@ -2,7 +2,8 @@ mizuna_options = {
     mizuna_version: '3.6.0',
     mizuna_address: 'https://' + location.hostname,
     maintenance: false,
-    marquee_text: '',
+    news_banner_title: '',
+    news_banner_text: '',
 }
 
 mizuna_share = {

@@ -4,7 +4,7 @@ $.getScript("/js/option/mizuna_option.js", function () {
     if (true === mizuna_options.maintenance) {
         window.location.href = mizuna_options.mizuna_address + '/maintenance.html';
     } else {
-        $.getScript("/js/function/news_marquee.js");
+        $.getScript("/js/function/news_area.js");
         $.getScript("/js/function/check_new_release_note.js", function () {
             check_new_release_note();
         });

@@ -231,9 +231,8 @@ body {
     z-index: 2147483647;
 }
 
-/* マーキーエリア */
-
-.marquee-container {
+/* ニュースエリア */
+.news-container {
     overflow: hidden;
     background-color: #f8f9fa;
     border: 1px solid #ddd;
@@ -242,28 +241,21 @@ body {
     display: none;
 }
 
-.marquee-content-wrapper {
+.news-content-wrapper {
     display: flex;
     align-items: center;
     overflow: hidden;
     white-space: nowrap;
 }
 
-.marquee-content {
+.news-content {
     display: inline-block;
-    animation: marquee 20s linear infinite;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-@keyframes marquee {
-    from {
-        transform: translateX(0%);
-    }
-    to {
-        transform: translateX(-100%);
-    }
-}
-
-.marquee-container svg {
+.news-container svg {
     fill: black;
 }
 
