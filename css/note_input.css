@@ -224,3 +224,7 @@
     margin-left: auto;
     width: fit-content;
 }
+
+#fileInput{
+    color: var(--button_text_color);
+}
