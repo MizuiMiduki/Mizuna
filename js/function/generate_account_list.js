@@ -3,7 +3,7 @@ const generate_account_list = function () {
         get_user_db_data(account_list_array).then(account_list => {
             for (let i = 0; i < account_list.length; i++) {
                 $('.account_display_area').append
-                (`
+                    (`
                         <div class="account_card_area">
                         <div id="account_card" data-id="${account_list[i]['id']}">
                         <table>
@@ -13,6 +13,10 @@ const generate_account_list = function () {
                         <td class="user_card_name"><p>${account_list[i]['name']}<br><span class="user_card_user_name">${account_list[i]['username']}@${account_list[i]['address']}</span></p></td>
                         </tr>
                         </table>
+                        <div class="add_mizuna_versinon_label">
+                        ${account_list[i]['add_mizuna_versinon']}
+                        <div class="add_mizuna_versinon_label_triangle"></div>
+                        </div>
                         </div>
                         <input type="checkbox" class="delete_select_checknox" data-id="${account_list[i]['id']}"/>
                         </div>

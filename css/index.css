@@ -66,6 +66,21 @@ body {
     margin-left: 1%;
 }
 
+.donation-banner {
+    background-color: #ffcc00;
+    color: #000;
+    padding: 10px 15px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s;
+    margin-right: 1%;
+    margin-left: auto;
+}
+.donation-banner:hover {
+    background-color: #ffa500;
+}
+
 /* メイン */
 .main_column {
     width: 80%;
@@ -216,9 +231,8 @@ body {
     z-index: 2147483647;
 }
 
-/* マーキーエリア */
-
-.marquee-container {
+/* ニュースエリア */
+.news-container {
     overflow: hidden;
     background-color: #f8f9fa;
     border: 1px solid #ddd;
@@ -227,25 +241,22 @@ body {
     display: none;
 }
 
-.marquee-content-wrapper {
+.news-content-wrapper {
     display: flex;
     align-items: center;
     overflow: hidden;
     white-space: nowrap;
 }
 
-.marquee-content {
+.news-content {
     display: inline-block;
-    animation: marquee 20s linear infinite;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-@keyframes marquee {
-    from {
-        transform: translateX(75%);
-    }
-    to {
-        transform: translateX(-125%);
-    }
+.news-container svg {
+    fill: black;
 }
 
 .close-icon {

@@ -87,6 +87,7 @@ $(document).on("click", "#form_clear_button", function () {
     $('.cw_content').val('');
     $('.note_content').val('');
     $('#charCountSpace').text('0000');
+    $('#cw_charCount').text(0)
     $('#charCount').text(0)
 });
 
@@ -135,11 +136,13 @@ $(document).on("click", "#menu_icon", function () {
             }
             $('.note_content').val(note_content_tmp);
             let textLength = $('.note_content').val().length;
+            let cw_textLength = $('.cw_content').val().length;
             let digitCount = textLength.toString().length;
             let spaceCount = Math.max(0, 5 - digitCount);
             let spaces = '0'.repeat(spaceCount);
             $('#charCountSpace').text(spaces);
             $('#charCount').text(textLength);
+            $('#cw_charCount').text(cw_textLength);
             $.getScript("/js/function/note_content_count.js")
         });
     }

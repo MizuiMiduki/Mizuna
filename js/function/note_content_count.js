@@ -49,3 +49,16 @@ $('.note_end_mizuna').on('input', function () {
         }
     }
 });
+
+$('.cw_content').on('input', function () {
+    var textLength = $(this).val().length;
+    $('#cw_charCount').text(textLength);
+
+    if (textLength >= 90 && textLength <= 99) {
+        $('#cw_charCount').css("color", "goldenrod");
+    } else if (textLength === 100) {
+        $('#cw_charCount').css("color", "red");
+    } else {
+        $('#cw_charCount').css("color", "");
+    }
+});
