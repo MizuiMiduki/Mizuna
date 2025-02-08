@@ -1,7 +1,7 @@
 /* ノート送信ボタン */
 .note_submit {
     width: fit-content;
-    padding: 1% 5%;
+    padding: 1% 3%;
     font-weight: bolder;
     background-color: var(--main_color);
     border-radius: 20px;
@@ -66,7 +66,7 @@
 }
 
 .input_area:focus {
-    outline:  2px solid var(--main_color);
+    outline: 2px solid var(--main_color);
 }
 
 .note_content {
@@ -96,7 +96,7 @@
     margin: 0.2em;
     border-radius: 50%;
     border: rgb(223, 222, 222) 2px solid;
-    opacity: .5;
+    opacity: 0.5;
     width: 2.3em;
     height: 2.3em;
     user-select: none;
@@ -146,7 +146,7 @@
 }
 
 .select_theme_mode_button_area button {
-    opacity: .5;
+    opacity: 0.5;
 }
 
 .now_select_theme_mode_button_color {
@@ -165,37 +165,33 @@
 
 /* スマホ表示 */
 @media screen and (max-width: 520px) {
-
     /* スマホ用ノートボタン */
     .note_submit {
-        padding: 5% 15% 5% 15%;
-        /* position: fixed;
-        right: 10%;
-        bottom: 10%; */
+        padding: 0.75em 2em;
     }
 }
 
-.input_info{
+.input_info {
     display: flex;
     width: 100%;
     margin-bottom: 0.1em;
     user-select: none;
 }
 
-.now_input_user_area{
+.now_input_user_area {
     align-items: center;
 }
 
-.now_input_user{
+.now_input_user {
     display: flex;
     align-items: center;
 }
 
-.now_input_user_none{
+.now_input_user_none {
     display: none;
 }
 
-.now_input_user_block{
+.now_input_user_block {
     display: block;
 }
 
@@ -206,7 +202,7 @@
     aspect-ratio: 1/1;
 }
 
-.now_input_user_text{
+.now_input_user_text {
     margin: 0;
     white-space: nowrap;
     overflow: hidden;
@@ -214,7 +210,7 @@
 }
 
 /* ノート文字数カウント */
-#charCountSpace{
+#charCountSpace {
     color: transparent;
 }
 
@@ -225,6 +221,30 @@
     width: fit-content;
 }
 
-#fileInput{
+#fileInput {
     color: var(--button_text_color);
+}
+
+#note_list {
+    background-color: var(--main_color);
+    padding: 0.5em;
+    border-radius: 50%;
+    border: rgb(223, 222, 222) 2px solid;
+    user-select: none;
+    text-align: center;
+    cursor: pointer;
+    position: absolute;
+    bottom: 10vw;
+    right: 10vw;
+    width: 3em;
+    height: 3em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.5;
+}
+
+#note_list svg {
+    width: 2.5em;
+    height: 2.5em;
 }

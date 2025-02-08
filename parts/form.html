@@ -1,7 +1,7 @@
 <!-- 入力エリア -->
 <div class="input_block">
     <div class="cw_input_ara display_none">
-        <textarea class="cw_content input_area" maxlength="100" placeholder="注釈 ※必須" size="30"></textarea>
+        <textarea class="cw_content input_area" maxlength="100" placeholder="注釈" size="30"></textarea>
         <p class="content_char_count"><span id="charCountSpace">000</span><span id="cw_charCount">0</span>/100</p>
     </div>
     <textarea class="note_content input_area" maxlength="3000" size="30"></textarea>
@@ -13,7 +13,8 @@
                 <p class="now_input_user_text"><span class="now_input_user_name"></span></p>
             </div>
         </div>
-        <p class="content_char_count"><span id="charCountSpace">0000</span><span id="charCount">0</span>/<span id="max_charCount">3000</span></p>
+        <p class="content_char_count"><span id="charCountSpace">0000</span><span id="charCount">0</span>/<span
+                id="max_charCount">3000</span></p>
     </div>
 </div>
 
@@ -88,4 +89,14 @@
         </label>
     </div>
 </form>
-<button class="note_submit" onclick="note_send_submit()" type="button">ノートする</button>
+<button class="note_submit" onclick="note_send_submit()" type="button">ノートする&nbsp;<svg xmlns="http://www.w3.org/2000/svg"
+        height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368">
+        <path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z" />
+    </svg></button>
+
+<!-- <div id="note_list">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" fill="#5f6368">
+        <path
+            d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-120H640q-30 38-71.5 59T480-240q-47 0-88.5-21T320-320H200v120Zm280-120q38 0 69-22t43-58h168v-360H200v360h168q12 36 43 58t69 22ZM200-200h560-560Z" />
+    </svg>
+</div> -->

@@ -1,6 +1,6 @@
 const end_note_send_anim = function () {
     $(".note_submit").removeClass('loading');
-    $(".note_submit").html('ノートする');
+    $(".note_submit").html('ノートする&nbsp;<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"> <path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z" /> </svg>');
 }
 const send_note = function (user_data) {
     var cw_content = $(".cw_content").val();
