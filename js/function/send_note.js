@@ -6,8 +6,7 @@ const send_note = function (user_data) {
     $(".note_submit").addClass('loading');
     var cw_content = $(".cw_content").val();
     var note_content = $(".note_content").val();
-    var file = $('#fileInput')[0].files[0];
-
+    var file = $('#fileInput')[0].files;
 
     if ($('.cw_input_ara').css('display') === 'block') {
         var trimmed_cw_content = cw_content.replace(/[\s\u3000]/g, '');
@@ -42,31 +41,46 @@ const send_note = function (user_data) {
     }
 };
 
-function uploadImage(file, user_data, note_content, cw_content) {
+function uploadImage(files, user_data, note_content, cw_content) {
+    console.log(files)
     if (0 >= comparison_version("3.5.0", user_data.add_mizuna_versinon)) {
-        $(".note_submit").html('画像アップロード中...<div class="loading-spinner"></div>');
-        var ImgFormData = new FormData();
-        ImgFormData.append('file', file);
-        ImgFormData.append('i', user_data.token);
+        $(".note_submit").html(`画像アップロード中 (0/${files.length})...<div class="loading-spinner"></div>`);
+        var fileIds_list = [];
+        var uploadCount = 0;
 
-        $.ajax({
-            url: `https://${user_data.address}/api/drive/files/create`,
-            type: 'POST',
-            data: ImgFormData,
-            processData: false,
-            contentType: false,
-            success: function (response) {
+        function uploadNext(index) {
+            if (index >= files.length) {
+                // すべての画像がアップロード完了したらノートを送信
                 var visibility = get_visibility_select();
-                var fileIds_list = [response.id];
-                var updatedNoteContent = note_content;
-                sendNoteContent(user_data, updatedNoteContent, cw_content, visibility, fileIds_list);
-            },
-            error: function () {
-                toastr["error"]('画像のアップロードに失敗しました');
-                $(".note_submit").prop("disabled", false);
-                end_note_send_anim();
+                sendNoteContent(user_data, note_content, cw_content, visibility, fileIds_list);
+                return;
             }
-        });
+
+            var file = files[index];
+            var ImgFormData = new FormData();
+            ImgFormData.append('file', file);
+            ImgFormData.append('i', user_data.token);
+
+            $.ajax({
+                url: `https://${user_data.address}/api/drive/files/create`,
+                type: 'POST',
+                data: ImgFormData,
+                processData: false,
+                contentType: false,
+                success: function (response) {
+                    fileIds_list.push(response.id);
+                    uploadNext(index + 1); // 次のファイルをアップロード
+                    $(".note_submit").html(`画像アップロード中 (${index + 1}/${files.length})...<div class="loading-spinner"></div>`);
+                },
+                error: function () {
+                    toastr["error"]('画像のアップロードに失敗しました: ' + file.name);
+                    $(".note_submit").prop("disabled", false);
+                    end_note_send_anim();
+                }
+            });
+        }
+
+        uploadNext(0); // 最初の画像からアップロード開始
     } else {
         toastr["warning"]('Mizuna 3.5.0以上のバージョンでアカウントを追加してください', 'このアカウントでは画像付きノートが出来ません');
     }
@@ -105,6 +119,7 @@ function sendNoteContent(user_data, note_content, cw_content, visibility, fileId
                 $(".note_submit").prop("disabled", false);
                 end_note_send_anim();
                 $('#fileInput').val('');
+                $('.input_image_preview_area').empty();
                 localStorage.clear();
             },
             error: function (response) {

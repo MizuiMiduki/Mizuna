@@ -85,8 +85,10 @@ $(document).on("click", "#form_clear_button", function () {
     $('.cw_content').val('');
     $('.note_content').val('');
     $('#charCountSpace').text('0000');
-    $('#cw_charCount').text(0)
-    $('#charCount').text(0)
+    $('#cw_charCount').text(0);
+    $('#charCount').text(0);
+    $('#fileInput').val('');
+    $('.input_image_preview_area').empty();
 });
 
 // アカウントメニューボタン
@@ -227,20 +229,34 @@ $(document).on("blur", ".input_area", function () {
 
 // 画像プレビュー
 $(document).on('change', '#fileInput', function () {
-    var file = this.files[0];
-    if (file) {
-        var reader = new FileReader();
+    if (16 < this.files.length) {
+        toastr["error"]('画像は16枚までです', '画像選択エラー');
+        this.value = "";
+    }
 
-        reader.onload = function (e) {
-            var imgElement = $('<img>', {
-                class: 'input_image_preview',
-                src: e.target.result
-            });
+    if (1 <= this.files.length) {
+        $('.input_image_preview_area').empty();
 
-            $('.input_image_preview_area').html(imgElement);
-        };
+        Array.from(this.files).forEach(file => {
+            var reader = new FileReader();
 
-        reader.readAsDataURL(file);
+            reader.onload = function (e) {
+                var previewArea = $('<div>', {
+                    class: 'image_preview_area'
+                });
+
+                var imgElement = $('<img>', {
+                    class: 'input_image_preview',
+                    src: e.target.result
+                });
+
+                previewArea.append(imgElement);
+
+                $('.input_image_preview_area').append(previewArea);
+            };
+
+            reader.readAsDataURL(file);
+        });
     }
 });
 

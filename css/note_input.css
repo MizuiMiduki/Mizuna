@@ -221,7 +221,6 @@
 }
 
 /* 画像アップロード */
-
 #input_image_area {
     display: flex;
     max-width: 100%;
@@ -242,6 +241,7 @@
     width: 3em;
     height: 3em;
     margin: 0.1em;
+    aspect-ratio: 1/1;
 }
 
 .fileInput-label svg {
@@ -250,9 +250,8 @@
 
 .input_image_preview_area {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+    max-width: calc(100% - (3em + 0.2em));
+    overflow: scroll;
 }
 
 .input_image_preview {
@@ -261,10 +260,10 @@
     object-fit: cover;
     border-radius: 25%;
     border: #000 1px solid;
+    margin: 0.1em;
 }
 
 /* 画像拡大表示 */
-/* モーダルのスタイル */
 #imageModal {
     position: fixed;
     z-index: 1000;
@@ -281,7 +280,6 @@
     justify-content: center;
 }
 
-/* 画像を中央に配置 */
 .modal-content {
     max-width: 90%;
     max-height: 90%;
@@ -291,7 +289,6 @@
     object-fit: contain;
 }
 
-/* モーダルが開いたときの表示 */
 #imageModal.active {
     opacity: 1;
     visibility: visible;
