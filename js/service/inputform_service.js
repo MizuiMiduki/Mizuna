@@ -64,8 +64,6 @@ $.getScript("/js/function/form_mizuna.js")
 
 function note_send_submit() {
     $(".note_submit").prop("disabled", true);
-    $(".note_submit").addClass('loading');
-    $(".note_submit").html('送信中...<div class="loading-spinner"></div>');
     send_note(user_data);
 }
 
@@ -87,8 +85,10 @@ $(document).on("click", "#form_clear_button", function () {
     $('.cw_content').val('');
     $('.note_content').val('');
     $('#charCountSpace').text('0000');
-    $('#cw_charCount').text(0)
-    $('#charCount').text(0)
+    $('#cw_charCount').text(0);
+    $('#charCount').text(0);
+    $('#fileInput').val('');
+    $('.input_image_preview_area').empty();
 });
 
 // アカウントメニューボタン
@@ -225,4 +225,48 @@ $(document).on('focus', '.input_area', function () {
 $(document).on("blur", ".input_area", function () {
     $('.now_input_user_area').removeClass("now_input_user_block");
     $('.now_input_user_area').addClass("now_input_user_none");
+});
+
+// 画像プレビュー
+$(document).on('change', '#fileInput', function () {
+    if (16 < this.files.length) {
+        toastr["error"]('画像は16枚までです', '画像選択エラー');
+        this.value = "";
+    }
+
+    if (1 <= this.files.length) {
+        $('.input_image_preview_area').empty();
+
+        Array.from(this.files).forEach(file => {
+            var reader = new FileReader();
+
+            reader.onload = function (e) {
+                var previewArea = $('<div>', {
+                    class: 'image_preview_area'
+                });
+
+                var imgElement = $('<img>', {
+                    class: 'input_image_preview',
+                    src: e.target.result
+                });
+
+                previewArea.append(imgElement);
+
+                $('.input_image_preview_area').append(previewArea);
+            };
+
+            reader.readAsDataURL(file);
+        });
+    }
+});
+
+// 画像をクリックでモーダル表示
+$(document).on('click', '.input_image_preview', function () {
+    $('#modalImage').attr('src', $(this).attr('src'));
+    $('#imageModal').addClass('active');
+});
+
+// モーダルを閉じる
+$(document).on('click', '#imageModal', function () {
+    $('#imageModal').removeClass('active');
 });

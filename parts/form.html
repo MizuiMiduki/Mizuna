@@ -5,7 +5,6 @@
         <p class="content_char_count"><span id="charCountSpace">000</span><span id="cw_charCount">0</span>/100</p>
     </div>
     <textarea class="note_content input_area" maxlength="3000" size="30"></textarea>
-    <input type="file" id="fileInput" name="image" accept="image/*" />
     <div class="input_info">
         <div class="now_input_user_area now_input_user_none">
             <div class="now_input_user">
@@ -16,6 +15,21 @@
         <p class="content_char_count"><span id="charCountSpace">0000</span><span id="charCount">0</span>/<span
                 id="max_charCount">3000</span></p>
     </div>
+    <div id="input_image_area">
+        <div class="input_image_preview_area">
+        </div>
+        <label for="fileInput" class="fileInput-label">
+            <svg class="file-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960"
+                width="24px" fill="#5f6368">
+                <path
+                    d="M440-440ZM120-120q-33 0-56.5-23.5T40-200v-480q0-33 23.5-56.5T120-760h126l74-80h240v80H355l-73 80H120v480h640v-360h80v360q0 33-23.5 56.5T760-120H120Zm640-560v-80h-80v-80h80v-80h80v80h80v80h-80v80h-80ZM440-260q75 0 127.5-52.5T620-440q0-75-52.5-127.5T440-620q-75 0-127.5 52.5T260-440q0 75 52.5 127.5T440-260Zm0-80q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29Z" />
+            </svg>
+        </label>
+        <input type="file" multiple id="fileInput" name="image" accept="image/*" />
+    </div>
+</div>
+
+<div class="image_block">
 </div>
 
 <!-- メニュー -->
@@ -100,3 +114,8 @@
             d="M200-120q-33 0-56.5-23.5T120-200v-560q0-33 23.5-56.5T200-840h560q33 0 56.5 23.5T840-760v560q0 33-23.5 56.5T760-120H200Zm0-80h560v-120H640q-30 38-71.5 59T480-240q-47 0-88.5-21T320-320H200v120Zm280-120q38 0 69-22t43-58h168v-360H200v360h168q12 36 43 58t69 22ZM200-200h560-560Z" />
     </svg>
 </div> -->
+
+<!-- 画像拡大プレビュー -->
+<div id="imageModal">
+    <img class="modal-content" id="modalImage">
+</div>
