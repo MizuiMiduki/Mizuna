@@ -3,6 +3,7 @@ const end_note_send_anim = function () {
     $(".note_submit").html('ノートする&nbsp;<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368"> <path d="M120-160v-640l760 320-760 320Zm80-120 474-200-474-200v140l240 60-240 60v140Zm0 0v-400 400Z" /> </svg>');
 }
 const send_note = function (user_data) {
+    $(".note_submit").addClass('loading');
     var cw_content = $(".cw_content").val();
     var note_content = $(".note_content").val();
     var file = $('#fileInput')[0].files[0];
@@ -43,6 +44,7 @@ const send_note = function (user_data) {
 
 function uploadImage(file, user_data, note_content, cw_content) {
     if (0 >= comparison_version("3.5.0", user_data.add_mizuna_versinon)) {
+        $(".note_submit").html('画像アップロード中...<div class="loading-spinner"></div>');
         var ImgFormData = new FormData();
         ImgFormData.append('file', file);
         ImgFormData.append('i', user_data.token);
@@ -71,6 +73,7 @@ function uploadImage(file, user_data, note_content, cw_content) {
 }
 
 function sendNoteContent(user_data, note_content, cw_content, visibility, fileIds_list) {
+    $(".note_submit").html('送信中...<div class="loading-spinner"></div>');
     var url = `https://${user_data.address}/api/notes/create`;
     var param = {
         "i": user_data.token,
@@ -101,7 +104,7 @@ function sendNoteContent(user_data, note_content, cw_content, visibility, fileId
                 $('#charCount').text(0);
                 $(".note_submit").prop("disabled", false);
                 end_note_send_anim();
-                $('#fileInput').val(''); // ファイル入力をクリア
+                $('#fileInput').val('');
                 localStorage.clear();
             },
             error: function (response) {

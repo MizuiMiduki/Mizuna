@@ -64,8 +64,6 @@ $.getScript("/js/function/form_mizuna.js")
 
 function note_send_submit() {
     $(".note_submit").prop("disabled", true);
-    $(".note_submit").addClass('loading');
-    $(".note_submit").html('送信中...<div class="loading-spinner"></div>');
     send_note(user_data);
 }
 
@@ -225,4 +223,34 @@ $(document).on('focus', '.input_area', function () {
 $(document).on("blur", ".input_area", function () {
     $('.now_input_user_area').removeClass("now_input_user_block");
     $('.now_input_user_area').addClass("now_input_user_none");
+});
+
+// 画像プレビュー
+$(document).on('change', '#fileInput', function () {
+    var file = this.files[0];
+    if (file) {
+        var reader = new FileReader();
+
+        reader.onload = function (e) {
+            var imgElement = $('<img>', {
+                class: 'input_image_preview',
+                src: e.target.result
+            });
+
+            $('.input_image_preview_area').html(imgElement);
+        };
+
+        reader.readAsDataURL(file);
+    }
+});
+
+// 画像をクリックでモーダル表示
+$(document).on('click', '.input_image_preview', function () {
+    $('#modalImage').attr('src', $(this).attr('src'));
+    $('#imageModal').addClass('active');
+});
+
+// モーダルを閉じる
+$(document).on('click', '#imageModal', function () {
+    $('#imageModal').removeClass('active');
 });

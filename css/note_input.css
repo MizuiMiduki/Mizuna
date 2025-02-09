@@ -86,7 +86,6 @@
     -webkit-appearance: none;
     appearance: none;
     position: absolute;
-    top: none;
 }
 
 /* メニュー ボタンレイアウト */
@@ -221,10 +220,84 @@
     width: fit-content;
 }
 
-#fileInput {
-    color: var(--button_text_color);
+/* 画像アップロード */
+
+#input_image_area {
+    display: flex;
+    max-width: 100%;
+    overflow: scroll;
 }
 
+#fileInput {
+    display: none;
+}
+
+.fileInput-label {
+    border: #000 1px solid;
+    border-radius: 25%;
+    background-color: var(--main_color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3em;
+    height: 3em;
+    margin: 0.1em;
+}
+
+.fileInput-label svg {
+    fill: var(--button_text_color);
+}
+
+.input_image_preview_area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.input_image_preview {
+    width: 3em;
+    height: 3em;
+    object-fit: cover;
+    border-radius: 25%;
+    border: #000 1px solid;
+}
+
+/* 画像拡大表示 */
+/* モーダルのスタイル */
+#imageModal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 画像を中央に配置 */
+.modal-content {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 10px;
+    display: block;
+    margin: auto;
+    object-fit: contain;
+}
+
+/* モーダルが開いたときの表示 */
+#imageModal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* ノート履歴 */
 #note_list {
     background-color: var(--main_color);
     padding: 0.5em;
