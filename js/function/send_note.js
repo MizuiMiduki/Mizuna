@@ -42,7 +42,6 @@ const send_note = function (user_data) {
 };
 
 function uploadImage(files, user_data, note_content, cw_content) {
-    console.log(files);
     if (0 >= comparison_version("3.5.0", user_data.add_mizuna_versinon)) {
         $(".note_submit").html(`画像アップロード中 (0/${files.length})...<div class="loading-spinner"></div>`);
 
