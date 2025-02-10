@@ -224,7 +224,6 @@
 #input_image_area {
     display: flex;
     max-width: 100%;
-    overflow: scroll;
 }
 
 #fileInput {
@@ -242,6 +241,8 @@
     height: 3em;
     margin: 0.1em;
     aspect-ratio: 1/1;
+    margin-left: auto;
+    margin-right: 0;
 }
 
 .fileInput-label svg {
@@ -251,7 +252,22 @@
 .input_image_preview_area {
     display: flex;
     max-width: calc(100% - (3em + 0.2em));
-    overflow: scroll;
+    overflow-x: scroll;
+    scrollbar-width: thin;
+    scrollbar-color: #999 transparent;
+}
+
+.input_image_preview_area::-webkit-scrollbar {
+    height: 6px;
+}
+
+.input_image_preview_area::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.input_image_preview_area::-webkit-scrollbar-thumb {
+    background: rgba(150, 150, 150, 0.6);
+    border-radius: 3px;
 }
 
 .input_image_preview {
