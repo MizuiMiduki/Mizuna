@@ -253,21 +253,6 @@
     display: flex;
     max-width: calc(100% - (3em + 0.2em));
     overflow-x: scroll;
-    scrollbar-width: thin;
-    scrollbar-color: #999 transparent;
-}
-
-.input_image_preview_area::-webkit-scrollbar {
-    height: 6px;
-}
-
-.input_image_preview_area::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.input_image_preview_area::-webkit-scrollbar-thumb {
-    background: rgba(150, 150, 150, 0.6);
-    border-radius: 3px;
 }
 
 .input_image_preview {

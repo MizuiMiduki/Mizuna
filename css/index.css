@@ -3,6 +3,21 @@
 * {
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
+    scrollbar-width: thin;
+    scrollbar-color: #999 transparent;
+}
+
+*::-webkit-scrollbar {
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: rgba(150, 150, 150, 0.6);
+    border-radius: 3px;
 }
 
 :root {
@@ -159,6 +174,8 @@ body {
     height: fit-content;
     overflow: hidden;
     user-select: none;
+    white-space: nowrap;
+    overflow-x: scroll;
 }
 
 .footer_user_name p {
