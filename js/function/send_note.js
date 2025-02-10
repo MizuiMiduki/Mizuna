@@ -107,7 +107,7 @@ function sendNoteContent(user_data, note_content, cw_content, visibility, fileId
         param["cw"] = cw_content;
     }
 
-    if (fileIds_list) {
+    if (fileIds_list?.length) {
         param["fileIds"] = fileIds_list;
     }
 
