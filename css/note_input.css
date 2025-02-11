@@ -152,12 +152,14 @@
     opacity: 1 !important;
 }
 
-.form_clear .menu_button {
+.form_clear .menu_button,
+.select_picture .menu_button{
     opacity: 1;
     border-color: #000000;
 }
 
-.form_clear .menu_button:active {
+.form_clear .menu_button:active,
+.select_picture .menu_button:active{
     opacity: 0.5;
     border-color: rgb(223, 222, 222);
 }
@@ -228,25 +230,6 @@
 
 #fileInput {
     display: none;
-}
-
-.fileInput-label {
-    border: #000 1px solid;
-    border-radius: 25%;
-    background-color: var(--main_color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 3em;
-    height: 3em;
-    margin: 0.1em;
-    aspect-ratio: 1/1;
-    margin-left: auto;
-    margin-right: 0;
-}
-
-.fileInput-label svg {
-    fill: var(--button_text_color);
 }
 
 .input_image_preview_area {
