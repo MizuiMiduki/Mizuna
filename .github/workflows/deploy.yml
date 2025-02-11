@@ -37,8 +37,8 @@ jobs:
           local-dir: "./"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
-      - name: Wait for Build
-        run: sleep 900
+      - name: Wait Build
+        run: sleep {{ secrets.FTP_BUILD_TIME }}
 
       - name: Disable maintenance mode
         run: |
@@ -55,14 +55,8 @@ jobs:
           server-dir: "${{ secrets.FTP_TARGET_DIR }}js/option/"
           exclude: "*"
           include: "mizuna_option.js"
-          
-      - name: Re-upload the updated mizuna_option.js (if necessary)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: "js/option/"
-          server-dir: "${{ secrets.FTP_TARGET_DIR }}js/option/"
-          exclude: "*"
-          include: "mizuna_option.js"
+
+      - name: Delete .ftp-deploy-sync-state.json
+        run: |
+          rm -f .ftp-deploy-sync-state.json
+        continue-on-error: true
