@@ -47,8 +47,8 @@ jobs:
 
       - name: Re-upload latest mizuna_option.js
         run: |
-          git checkout HEAD js/option/mizuna_option.js  # 最新の状態を取得
-          ls js/option/mizuna_option.js  # 変更内容を確認
+          git checkout HEAD js/option/mizuna_option.js
+          ls js/option/mizuna_option.js
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
