@@ -52,34 +52,8 @@ const import_account_data = async function () {
                     }
 
                     if (true === isEmpty) {
-                        db.table('account').orderBy('id').first().then(record => {
-
-                            db.setting.bulkUpdate([
-                                {
-                                    key: 1,
-                                    changes: {
-                                        select_user: record.id,
-                                    }
-                                },
-                            ]).then(function () {
-                                get_user_db_data([record.id])
-                                    .then(get_db_result => {
-                                        user_data = get_db_result[0];
-                                        set_user_text(user_data);
-                                        if (typeof inputform_service === "undefined") {
-                                            $.getScript("/js/service/inputform_service.js").then(() => {
-                                                inputform_service();
-                                            });
-                                        } else {
-                                            inputform_service();
-                                        }
-                                        toggle_menu_input = 0;
-                                    })
-                            })
-
-                        });
+                        window.location.reload(true);
                     }
-
                     toastr["success"]('アカウント情報をインポートしました');
                 } catch (error) {
                     toastr["error"]('インポートに失敗しました');
