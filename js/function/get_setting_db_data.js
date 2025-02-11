@@ -26,6 +26,8 @@ const user_setting = function () {
                     "latest_theme_color": setting_data.latest_theme_color ?? [null, null, null],
                     // バージョンアップのチェック(prev, checked)
                     "is_check_releasenote": setting_data.is_check_releasenote ?? null,
+                    // 言語設定
+                    "language": setting_data.language ?? 'ja_jp',
                 }
             } else {
                 // ユーザー設定が存在しなかった場合に全て初期値で新規作成して再試行
@@ -42,7 +44,8 @@ const user_setting = function () {
                         null,
                         null
                     ],
-                    is_check_releasenote: null
+                    is_check_releasenote: null,
+                    language: 'ja_jp'
                 }).then(() => {
                     user_setting();
                 })
