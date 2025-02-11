@@ -1,4 +1,4 @@
-name: Deploy to FTP
+name: Deploy
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
           local-dir: "./"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
-      - name: Wait for 15 minutes
+      - name: Wait for Build
         run: sleep 900
 
       - name: Disable maintenance mode
@@ -46,6 +46,17 @@ jobs:
           cat js/option/mizuna_option.js
 
       - name: Re-upload only mizuna_option.js
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: "js/option/"
+          server-dir: "${{ secrets.FTP_TARGET_DIR }}js/option/"
+          exclude: "*"
+          include: "mizuna_option.js"
+          
+      - name: Re-upload the updated mizuna_option.js (if necessary)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
