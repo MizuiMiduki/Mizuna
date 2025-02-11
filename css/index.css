@@ -3,6 +3,21 @@
 * {
     -webkit-tap-highlight-color: transparent;
     -webkit-font-smoothing: antialiased;
+    scrollbar-width: thin;
+    scrollbar-color: #999 transparent;
+}
+
+*::-webkit-scrollbar {
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: rgba(150, 150, 150, 0.6);
+    border-radius: 3px;
 }
 
 :root {
@@ -38,7 +53,7 @@ body {
     margin: 0;
     padding: 0;
     position: relative;
-    height: 100vh;
+    height: 100svh;
     width: 100vw;
     font-family: "IBM Plex Sans JP", sans-serif;
     font-weight: normal;
@@ -47,9 +62,8 @@ body {
     overscroll-behavior-y: none;
 }
 
-/* Todo : 背景用(予定地) */
 .body_div {
-    height: 100vh;
+    height: 100%;
     width: 100%;
     background: var(--background_color);
 }
@@ -159,6 +173,8 @@ body {
     height: fit-content;
     overflow: hidden;
     user-select: none;
+    white-space: nowrap;
+    overflow-x: scroll;
 }
 
 .footer_user_name p {

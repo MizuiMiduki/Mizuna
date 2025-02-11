@@ -26,6 +26,10 @@ document.addEventListener('keydown', event => {
                 // from Mizuna
                 $("#note_end_mizuna_checkbox").click();
                 break;
+            case 'v':
+                // 画像選択
+                $("#select_picture_button").click();
+                break;
             case 'c':
                 // フォームクリア
                 $("#form_clear_button").click();

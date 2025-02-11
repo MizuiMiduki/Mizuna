@@ -152,12 +152,14 @@
     opacity: 1 !important;
 }
 
-.form_clear .menu_button {
+.form_clear .menu_button,
+.select_picture .menu_button {
     opacity: 1;
     border-color: #000000;
 }
 
-.form_clear .menu_button:active {
+.form_clear .menu_button:active,
+.select_picture .menu_button:active {
     opacity: 0.5;
     border-color: rgb(223, 222, 222);
 }
@@ -230,44 +232,10 @@
     display: none;
 }
 
-.fileInput-label {
-    border: #000 1px solid;
-    border-radius: 25%;
-    background-color: var(--main_color);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 3em;
-    height: 3em;
-    margin: 0.1em;
-    aspect-ratio: 1/1;
-    margin-left: auto;
-    margin-right: 0;
-}
-
-.fileInput-label svg {
-    fill: var(--button_text_color);
-}
-
 .input_image_preview_area {
     display: flex;
     max-width: calc(100% - (3em + 0.2em));
     overflow-x: scroll;
-    scrollbar-width: thin;
-    scrollbar-color: #999 transparent;
-}
-
-.input_image_preview_area::-webkit-scrollbar {
-    height: 6px;
-}
-
-.input_image_preview_area::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-.input_image_preview_area::-webkit-scrollbar-thumb {
-    background: rgba(150, 150, 150, 0.6);
-    border-radius: 3px;
 }
 
 .input_image_preview {
@@ -282,33 +250,53 @@
 /* 画像拡大表示 */
 #imageModal {
     position: fixed;
-    z-index: 1000;
-    left: 0;
     top: 0;
+    left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.8);
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    background: rgba(0, 0, 0, 0.8);
     display: flex;
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
-}
-
-.modal-content {
-    max-width: 90%;
-    max-height: 90%;
-    border-radius: 10px;
-    display: block;
-    margin: auto;
-    object-fit: contain;
+    align-items: center;
+    z-index: 1000;
+    display: none;
 }
 
 #imageModal.active {
-    opacity: 1;
-    visibility: visible;
+    display: flex;
 }
+
+/* モーダル内の画像 */
+.modal-content {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 5px;
+}
+
+/* 削除ボタン */
+#deleteImageButton {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: rgba(255, 255, 255, 0.9);
+    border: none;
+    padding: 10px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.2s;
+}
+
+#deleteImageButton:hover {
+    background: rgba(255, 255, 255, 1);
+}
+
+#deleteImageButton svg {
+    width: 24px;
+    height: 24px;
+}
+
 
 /* ノート履歴 */
 #note_list {

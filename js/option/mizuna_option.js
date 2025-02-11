@@ -1,5 +1,5 @@
 mizuna_options = {
-    mizuna_version: '3.8.1',
+    mizuna_version: '3.9.0',
     mizuna_address: 'https://' + location.hostname,
     maintenance: false,
     news_banner_title: '',

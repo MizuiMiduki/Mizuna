@@ -14,6 +14,9 @@
       "purpose": "any maskable"
     }
   ],
+  "permissions": [
+    "*://*/*"
+  ],
   "share_target": {
     "action": "/",
     "method": "GET",
