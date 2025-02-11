@@ -37,8 +37,8 @@ jobs:
           local-dir: "./"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
-      - name: Wait Build
-        run: sleep {{ secrets.FTP_BUILD_TIME }}
+      - name: Wait for Build
+        run: sleep ${{ secrets.FTP_BUILD_TIME }}
 
       - name: Disable maintenance mode
         run: |
