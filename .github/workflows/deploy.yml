@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -16,7 +17,7 @@ jobs:
       - name: Enable maintenance mode
         run: |
           sed -i "s/maintenance: false/maintenance: true/" js/option/mizuna_option.js
-          cat js/option/mizuna_option.js  # 確認用（ログ出力）
+          cat js/option/mizuna_option.js
 
       - name: Clear FTP Directory
         uses: SamKirkland/FTP-Deploy-Action@4.3.4
@@ -25,7 +26,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
-          dangerous-clean-slate: true  # すべて削除
+          dangerous-clean-slate: true
 
       - name: Deploy files via FTP
         uses: SamKirkland/FTP-Deploy-Action@4.3.4
@@ -36,13 +37,13 @@ jobs:
           local-dir: "./"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
-      - name: Wait for 15 minutes
-        run: sleep 900  # 900秒 = 15分
+      - name: Wait for Build
+        run: sleep 900
 
       - name: Disable maintenance mode
         run: |
           sed -i "s/maintenance: true/maintenance: false/" js/option/mizuna_option.js
-          cat js/option/mizuna_option.js  # 確認用（ログ出力）
+          cat js/option/mizuna_option.js
 
       - name: Re-upload only mizuna_option.js
         uses: SamKirkland/FTP-Deploy-Action@4.3.4
@@ -52,5 +53,5 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: "js/option/"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}js/option/"
-          exclude: "*"  # デフォルトで全除外
-          include: "mizuna_option.js"  # このファイルのみアップロード
+          exclude: "*" 
+          include: "mizuna_option.js" 
