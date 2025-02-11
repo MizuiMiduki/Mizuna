@@ -24,7 +24,7 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: "/public_html/mizuna.blossomsarchive.com/"
+          server-dir: "${{ secrets.FTP_TARGET_DIR }}"
           dangerous-clean-slate: true  # すべて削除
 
       - name: Deploy files via FTP
@@ -34,7 +34,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: "./"
-          server-dir: "/public_html/mizuna.blossomsarchive.com/"
+          server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
       - name: Wait for 15 minutes
         run: sleep 900  # 900秒 = 15分
@@ -51,6 +51,6 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: "js/option/"
-          server-dir: "/public_html/mizuna.blossomsarchive.com/js/option/"
+          server-dir: "${{ secrets.FTP_TARGET_DIR }}js/option/"
           exclude: "*"  # デフォルトで全除外
           include: "mizuna_option.js"  # このファイルのみアップロード
