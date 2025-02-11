@@ -20,7 +20,7 @@ jobs:
           cat js/option/mizuna_option.js
 
       - name: Clear FTP Directory
-        uses: SamKirkland/FTP-Deploy-Action@v4
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
@@ -29,7 +29,7 @@ jobs:
           dangerous-clean-slate: true
 
       - name: Deploy files via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
@@ -46,7 +46,7 @@ jobs:
           cat js/option/mizuna_option.js
 
       - name: Re-upload only mizuna_option.js
-        uses: SamKirkland/FTP-Deploy-Action@v4
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
