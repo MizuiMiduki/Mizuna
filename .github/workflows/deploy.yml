@@ -1,4 +1,4 @@
-name: Deploy to FTP
+name: Deploy
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
           local-dir: "./"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
-      - name: Wait for configured time
+      - name: Wait for Build
         run: sleep ${{ secrets.FTP_BUILD_TIME }}
 
       - name: Disable maintenance mode
@@ -45,7 +45,10 @@ jobs:
           sed -i "s/maintenance: true/maintenance: false/" js/option/mizuna_option.js
           cat js/option/mizuna_option.js
 
-      - name: Re-upload only mizuna_option.js
+      - name: Re-upload latest mizuna_option.js
+        run: |
+          git checkout HEAD js/option/mizuna_option.js  # 最新の状態を取得
+          ls js/option/mizuna_option.js  # 変更内容を確認
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -53,9 +56,3 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: "js/option/"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}js/option/"
-          exclude: "*.!(mizuna_option.js)"  # mizuna_option.js以外を除外
-
-      - name: Delete .ftp-deploy-sync-state.json
-        run: |
-          rm -f .ftp-deploy-sync-state.json
-        continue-on-error: true
