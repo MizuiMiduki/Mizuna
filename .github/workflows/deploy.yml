@@ -1,4 +1,4 @@
-name: Deploy to FTP
+name: Deploy
 
 on:
   push:
@@ -37,8 +37,8 @@ jobs:
           local-dir: "./"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
-      - name: Wait for 15 minutes
-        run: sleep 900
+      - name: Wait Build
+        run: sleep {{ secrets.FTP_BUILD_TIME }}
 
       - name: Disable maintenance mode
         run: |
@@ -55,3 +55,8 @@ jobs:
           server-dir: "${{ secrets.FTP_TARGET_DIR }}js/option/"
           exclude: "*"
           include: "mizuna_option.js"
+
+      - name: Delete .ftp-deploy-sync-state.json
+        run: |
+          rm -f .ftp-deploy-sync-state.json
+        continue-on-error: true
