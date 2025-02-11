@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy to FTP
 
 on:
   push:
@@ -37,7 +37,7 @@ jobs:
           local-dir: "./"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
-      - name: Wait for Build
+      - name: Wait for configured time
         run: sleep ${{ secrets.FTP_BUILD_TIME }}
 
       - name: Disable maintenance mode
