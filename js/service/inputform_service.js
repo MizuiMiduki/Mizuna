@@ -229,44 +229,69 @@ $(document).on("blur", ".input_area", function () {
 
 // 画像プレビュー
 $(document).on('change', '#fileInput', function () {
-    if (16 < this.files.length) {
+    if (this.files.length > 16) {
         toastr["error"]('画像は16枚までです', '画像選択エラー');
         this.value = "";
+        return;
     }
 
-    if (1 <= this.files.length) {
-        $('.input_image_preview_area').empty();
+    $('.input_image_preview_area').empty();
+    let filesArray = Array.from(this.files);
 
-        Array.from(this.files).forEach(file => {
-            var reader = new FileReader();
+    filesArray.forEach((file) => {
+        let reader = new FileReader();
 
-            reader.onload = function (e) {
-                var previewArea = $('<div>', {
-                    class: 'image_preview_area'
-                });
+        reader.onload = function (e) {
+            let previewArea = $('<div>', {
+                class: 'image_preview_area',
+                'data-name': file.name // ファイル名をデータ属性として保存
+            });
 
-                var imgElement = $('<img>', {
-                    class: 'input_image_preview',
-                    src: e.target.result
-                });
+            let imgElement = $('<img>', {
+                class: 'input_image_preview',
+                src: e.target.result,
+                'data-name': file.name
+            });
 
-                previewArea.append(imgElement);
+            previewArea.append(imgElement);
+            $('.input_image_preview_area').append(previewArea);
+        };
 
-                $('.input_image_preview_area').append(previewArea);
-            };
-
-            reader.readAsDataURL(file);
-        });
-    }
+        reader.readAsDataURL(file);
+    });
 });
 
-// 画像をクリックでモーダル表示
+// 画像クリックでモーダル表示
 $(document).on('click', '.input_image_preview', function () {
-    $('#modalImage').attr('src', $(this).attr('src'));
+    let src = $(this).attr('src');
+    let name = $(this).data('name');
+
+    $('#modalImage').attr('src', src).attr('data-name', name);
     $('#imageModal').addClass('active');
 });
 
 // モーダルを閉じる
-$(document).on('click', '#imageModal', function () {
-    $('#imageModal').removeClass('active');
+$(document).on('click', '#imageModal', function (e) {
+    if (!$(e.target).is('#deleteImageButton')) {
+        $(this).removeClass('active');
+    }
+});
+
+// 画像削除ボタンの処理
+$(document).on('click', '#deleteImageButton', function () {
+    let nameToRemove = $('#modalImage').attr('data-name');
+    let dt = new DataTransfer();
+    let input = document.getElementById('fileInput');
+
+    Array.from(input.files).forEach(file => {
+        if (file.name !== nameToRemove) {
+            dt.items.add(file);
+        }
+    });
+
+    input.files = dt.files; // 新しいFileListを適用
+
+    // プレビューの削除
+    $('.image_preview_area[data-name="' + nameToRemove + '"]').remove();
+    $('#imageModal').removeClass('active'); // モーダルを閉じる
 });
