@@ -59,21 +59,25 @@
             }
         });
     </script>
+    <script src="https://unpkg.com/budoux/bundle/budoux-ja.min.js"></script>
 </head>
 
 <body>
-<div class="container">
-    <img alt="Mizuna" class="logo" src="/icon.png">
-
-    <h1>現在メンテナンス中です</h1>
-    <p>しばらくお待ちください。<br>メンテナンスが完了次第、サービスを再開いたします。</p>
-
-    <div class="footer">
-        &copy; <span id="Copyright_year"></span> Mizui Miduki
+    <div class="container">
+        <img alt="Mizuna" class="logo" src="/icon.png">
+        <budoux-ja>
+            <h1>現在メンテナンス中です</h1>
+        </budoux-ja>
+        <budoux-ja>
+            <p>しばらくお待ちください。<br>メンテナンスが完了次第、サービスを再開いたします。</p>
+        </budoux-ja>
+        <div class="footer">
+            &copy; <span id="Copyright_year"></span> Mizui Miduki
+        </div>
     </div>
-</div>
-<script>
-    document.getElementById('Copyright_year').textContent = new Date().getFullYear();
-</script>
+    <script>
+        document.getElementById('Copyright_year').textContent = new Date().getFullYear();
+    </script>
 </body>
+
 </html>
