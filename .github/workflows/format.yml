@@ -1,0 +1,45 @@
+name: Format Code
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:  # 手動実行用
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --save-dev prettier
+
+      - name: Determine changed files
+        id: changed-files
+        if: github.event_name == 'pull_request'
+        run: |
+          FILES=$(git diff --name-only origin/${{ github.base_ref }}... | grep -E '\.(js|html|css|json)$' || true)
+          echo "FILES=$FILES" >> $GITHUB_ENV
+
+      - name: Format code (Pull Request)
+        if: github.event_name == 'pull_request' && env.FILES != ''
+        run: npx prettier --write $FILES
+
+      - name: Format all code (Manual Trigger)
+        if: github.event_name == 'workflow_dispatch'
+        run: npx prettier --write "**/*.{js,html,css,json}"
+
+      - name: Commit formatted files
+        if: github.event_name == 'pull_request' && env.FILES != ''
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Apply Prettier formatting" || echo "No changes to commit"
+          git push
