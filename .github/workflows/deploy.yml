@@ -1,23 +1,41 @@
-name: Deploy to FTP
+name: Deploy to FTP on PR Merge
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-    inputs:
-      manual_ftp_build_time:
-        description: 'Custom wait time before re-uploading mizuna_option.js (seconds)'
-        required: false
-        default: ''
+  pull_request:
+    types:
+      - closed
+
+permissions:
+  pull-requests: read  # PRのコメントを取得するために必要
 
 jobs:
   deploy:
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Get latest PR comment for wait time
+        id: get_comment
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          REPO=${{ github.repository }}
+          
+          COMMENT=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json comments --jq '.comments[-1].body' || echo "")
+          
+          DEFAULT_TIME=${{ secrets.FTP_BUILD_TIME }}
+          
+          if [[ "$COMMENT" =~ wait-([0-9]+) ]]; then
+            WAIT_TIME=${BASH_REMATCH[1]}
+          else
+            WAIT_TIME=$DEFAULT_TIME
+          fi
+
+          echo "WAIT_TIME=$WAIT_TIME" >> $GITHUB_ENV
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable maintenance mode
         run: |
@@ -44,15 +62,6 @@ jobs:
           local-dir: "./"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
           exclude: "js/option/mizuna_option.js"
-
-      - name: Determine wait time
-        id: wait_time
-        run: |
-          if [ -n "${{ github.event.inputs.manual_ftp_build_time }}" ]; then
-            echo "WAIT_TIME=${{ github.event.inputs.manual_ftp_build_time }}" >> $GITHUB_ENV
-          else
-            echo "WAIT_TIME=${{ secrets.FTP_BUILD_TIME }}" >> $GITHUB_ENV
-          fi
 
       - name: Wait for configured time
         run: sleep $WAIT_TIME
