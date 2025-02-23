@@ -1,12 +1,10 @@
-name: Deploy to FTP on PR Merge
+name: Deploy
 
 on:
   push:
     branches:
-      - main  # mainブランチに変更が入った場合のみ実行
-
-permissions:
-  pull-requests: read  # PRのコメントを取得するために必要
+      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -16,27 +14,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get latest PR comment for wait time
-        id: get_comment
-        run: |
-          PR_NUMBER=$(gh pr list --repo "${{ github.repository }}" --state merged --base main --limit 1 --json number --jq '.[0].number' || echo "")
-          COMMENT=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json comments --jq '.comments[-1].body' || echo "")
-
-          DEFAULT_TIME=${{ secrets.FTP_BUILD_TIME }}
-
-          if [[ "$COMMENT" =~ wait-([0-9]+) ]]; then
-            WAIT_TIME=${BASH_REMATCH[1]}
-          else
-            WAIT_TIME=$DEFAULT_TIME
-          fi
-
-          echo "WAIT_TIME=$WAIT_TIME" >> $GITHUB_ENV
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Enable maintenance mode
         run: |
           sed -i "s/maintenance: false/maintenance: true/" js/option/mizuna_option.js
+          cat js/option/mizuna_option.js
 
       - name: Upload only mizuna_option.js with maintenance mode enabled
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -60,7 +41,7 @@ jobs:
           exclude: "js/option/mizuna_option.js"
 
       - name: Wait for configured time
-        run: sleep $WAIT_TIME
+        run: sleep ${{ secrets.FTP_BUILD_TIME }}
 
       - name: Checkout the latest mizuna_option.js
         run: git checkout HEAD js/option/mizuna_option.js
