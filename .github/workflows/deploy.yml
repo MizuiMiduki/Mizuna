@@ -5,6 +5,11 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      manual_ftp_build_time:
+        description: 'Custom wait time before re-uploading mizuna_option.js (seconds)'
+        required: false
+        default: ''
 
 jobs:
   deploy:
@@ -40,8 +45,17 @@ jobs:
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
           exclude: "js/option/mizuna_option.js"
 
+      - name: Determine wait time
+        id: wait_time
+        run: |
+          if [ -n "${{ github.event.inputs.manual_ftp_build_time }}" ]; then
+            echo "WAIT_TIME=${{ github.event.inputs.manual_ftp_build_time }}" >> $GITHUB_ENV
+          else
+            echo "WAIT_TIME=${{ secrets.FTP_BUILD_TIME }}" >> $GITHUB_ENV
+          fi
+
       - name: Wait for configured time
-        run: sleep ${{ secrets.FTP_BUILD_TIME }}
+        run: sleep $WAIT_TIME
 
       - name: Checkout the latest mizuna_option.js
         run: git checkout HEAD js/option/mizuna_option.js
