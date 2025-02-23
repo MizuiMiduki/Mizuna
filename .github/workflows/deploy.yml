@@ -1,16 +1,15 @@
 name: Deploy to FTP on PR Merge
 
 on:
-  pull_request:
-    types:
-      - closed
+  push:
+    branches:
+      - main  # mainブランチに変更が入った場合のみ実行
 
 permissions:
   pull-requests: read  # PRのコメントを取得するために必要
 
 jobs:
   deploy:
-    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
 
     steps:
@@ -20,13 +19,11 @@ jobs:
       - name: Get latest PR comment for wait time
         id: get_comment
         run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          REPO=${{ github.repository }}
-          
-          COMMENT=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json comments --jq '.comments[-1].body' || echo "")
-          
+          PR_NUMBER=$(gh pr list --repo "${{ github.repository }}" --state merged --base main --limit 1 --json number --jq '.[0].number' || echo "")
+          COMMENT=$(gh pr view "$PR_NUMBER" --repo "${{ github.repository }}" --json comments --jq '.comments[-1].body' || echo "")
+
           DEFAULT_TIME=${{ secrets.FTP_BUILD_TIME }}
-          
+
           if [[ "$COMMENT" =~ wait-([0-9]+) ]]; then
             WAIT_TIME=${BASH_REMATCH[1]}
           else
@@ -40,7 +37,6 @@ jobs:
       - name: Enable maintenance mode
         run: |
           sed -i "s/maintenance: false/maintenance: true/" js/option/mizuna_option.js
-          cat js/option/mizuna_option.js
 
       - name: Upload only mizuna_option.js with maintenance mode enabled
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
