@@ -1,4 +1,4 @@
-name: Deploy
+name: Deploy to FTP
 
 on:
   push:
@@ -19,18 +19,16 @@ jobs:
           sed -i "s/maintenance: false/maintenance: true/" js/option/mizuna_option.js
           cat js/option/mizuna_option.js
 
-      - name: Upload only mizuna_option.js with maintenance mode enabled
+      - name: Clear FTP Directory
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: "js/option/"
-          server-dir: "${{ secrets.FTP_TARGET_DIR }}js/option/"
-          exclude: "*"
-          include: "mizuna_option.js"
+          server-dir: "${{ secrets.FTP_TARGET_DIR }}"
+          dangerous-clean-slate: true
 
-      - name: Upload all other files (excluding mizuna_option.js)
+      - name: Deploy files via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -38,10 +36,14 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: "./"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
-          exclude: "js/option/mizuna_option.js"
 
       - name: Wait for configured time
         run: sleep ${{ secrets.FTP_BUILD_TIME }}
+
+      - name: Disable maintenance mode
+        run: |
+          sed -i "s/maintenance: true/maintenance: false/" js/option/mizuna_option.js
+          cat js/option/mizuna_option.js
 
       - name: Checkout the latest mizuna_option.js
         run: git checkout HEAD js/option/mizuna_option.js
@@ -54,5 +56,3 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: "js/option/"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}js/option/"
-          exclude: "*"
-          include: "mizuna_option.js"
