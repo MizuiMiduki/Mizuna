@@ -3,70 +3,54 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title>Mizuna -ノート専用Misskeyクライアント</title>
-    <meta content="Mizunaは機能をノート送信のみにすることで通信量削減に重点を置いたMisskeyクライアントです"
-            name="description"/>
-    <link href="/manifest.json" rel="manifest">
-    <script src="https://cdn.jsdelivr.net/npm/node-vibrant/dist/vibrant.min.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-    <script src="https://unpkg.com/dexie/dist/dexie.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.4/jquery-confirm.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-confirm/3.3.4/jquery-confirm.min.js"></script>
-    <script src="/js/function/check_store_empty.js"></script>
-    <script src="js/index.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css" rel="stylesheet">
-    <link href="css/index.css" rel="stylesheet">
-    <link href="css/settings.css" rel="stylesheet">
-    <link href="/icon.png" rel="icon">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mizuna</title>
+    <link rel="manifest" href="/lunanthus/pwa/manifest.json">
+    <script src="/lunanthus/router.js"></script>
+    <script src="/lunanthus/pwa/sw.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
+        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <!-- beer css -->
+    <link href="https://cdn.jsdelivr.net/npm/beercss@3.11.30/dist/cdn/beer.min.css" rel="stylesheet">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/beercss@3.11.30/dist/cdn/beer.min.js"></script>
+    <script type="module"
+        src="https://cdn.jsdelivr.net/npm/material-dynamic-colors@1.1.2/dist/cdn/material-dynamic-colors.min.js"></script>
+    <!-- css -->
+    <link rel="stylesheet" href="/style.css">
 </head>
 
-<body>
-<div class="body_div">
-    <svg class="refresh-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px">
-        <path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-110h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 139-44t87-116h84q-28 106-114 173t-196 67Z"/>
-    </svg>
-    <!-- ヘッダー -->
-    <div class="header">
-        <h1>Mizuna</h1>
-        <a href="https://mizuna-project.blossomsarchive.com/donation" class="donation-banner" target="_blank">Support Us</a>
-    </div>
+<body id="viewport_body" class="light"
+    style="--primary:#006876;--on-primary:#ffffff;--primary-container:#a1efff;--on-primary-container:#001f25;--secondary:#4a6268;--on-secondary:#ffffff;--secondary-container:#cde7ed;--on-secondary-container:#051f23;--tertiary:#545d7e;--on-tertiary:#ffffff;--tertiary-container:#dbe1ff;--on-tertiary-container:#101a37;--error:#ba1a1a;--on-error:#ffffff;--error-container:#ffdad6;--on-error-container:#410002;--background:#fbfcfd;--on-background:#191c1d;--surface:#f8fafa;--on-surface:#191c1d;--surface-variant:#dbe4e6;--on-surface-variant:#3f484a;--outline:#6f797b;--outline-variant:#bfc8ca;--shadow:#000000;--scrim:#000000;--inverse-surface:#2e3132;--inverse-on-surface:#eff1f2;--inverse-primary:#44d8f1;--surface-dim:#d8dadb;--surface-bright:#f8fafa;--surface-container-lowest:#ffffff;--surface-container-low:#f2f4f4;--surface-container:#eceeef;--surface-container-high:#e6e8e9;--surface-container-highest:#e1e3e3;">
+    <header class="secondary-container">
+        <nav>
+            <button class="circle transparent" data-ui="#side_menu"><i>menu</i></button>
+            <h5 class="max center-align bold"><a href="/">Mizuna</a></h5>
+            <a href="/mypage" class="button circle transparent"><img class="responsive"
+                    src="/lunanthus/pwa/icon.png"></a>
+        </nav>
+    </header>
 
-    <div class="news-container">
-        <div class="news-content-wrapper">
-            <div class="news-content"></div>
-        </div>
-        <svg xmlns="http://www.w3.org/2000/svg" class="close-icon" height="24px" viewBox="0 -960 960 960" width="24px" fill="#5f6368">
-            <path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/>
-        </svg>
-    </div>
+    <dialog class="left scroll" id="side_menu">
+        <header class="fixed">
+            <nav><img class="circle" src="/lunanthus/pwa/icon.png">
+                <div class="max">
+                    <h6>Mizuna</h6>
+                </div><button class="transparent circle" data-ui="#side_menu"><i>close</i></button>
+            </nav>
+        </header>
+        <ol class="list">
+            <li class="wave round" data-ui="#side_menu"><a href="/"><i>home</i><span>ホーム</span></a></li>
+            <li class="wave round" data-ui="#side_menu"><a href="/account"><i>person</i><span>アカウント</span></a></li>
+            <li class="wave round" data-ui="#side_menu"><a href="/notice"><i>notifications</i>
+                    <div class="badge">New</div><span>お知らせ</span>
+                </a></li>
+            <li class="wave round" data-ui="#side_menu"><a href="/setting"><i>settings</i><span>設定</span></a></li>
+            <hr class="small">
+            <li class="wave round" data-ui="#side_menu"><a href="/about"><i>info</i><span>Mizunaについて</span></a></li>
+        </ol>
+    </dialog>
 
-    <div class="main_column">
-        <div id="loading_anime_area"></div>
-    </div>
-
-    <!-- フッター -->
-    <div class="footer">
-        <div class="user_icon_back">
-            <img class="user_icon" id="menu_icon" crossorigin="anonymous"
-                 onError="img_error(this);" src="/icon.png">
-        </div>
-        <div class="settings_icon_back">
-            <svg class="settings_icon" fill="#5f6368" id="settings_icon" viewBox="0 -960 960 960"
-                 xmlns="http://www.w3.org/2000/svg">
-                <path
-                        d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm70-80h79l14-106q31-8 57.5-23.5T639-327l99 41 39-68-86-65q5-14 7-29.5t2-31.5q0-16-2-31.5t-7-29.5l86-65-39-68-99 42q-22-23-48.5-38.5T533-694l-13-106h-79l-14 106q-31 8-57.5 23.5T321-633l-99-41-39 68 86 64q-5 15-7 30t-2 32q0 16 2 31t7 30l-86 65 39 68 99-42q22 23 48.5 38.5T427-266l13 106Zm42-180q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Zm-2-140Z"/>
-            </svg>
-        </div>
-        <div class="footer_user_name">
-            <p><span id="user_name">name</span>(@<span id="user_id">id@address</span>)</p>
-        </div>
-    </div>
-    <link href="css/note_input.css" rel="stylesheet">
-    <link href="css/menu.css" rel="stylesheet">
-    <link href="css/add_account.css" rel="stylesheet">
-</div>
+    <main class="responsive" id="app"></main>
 </body>
 
 </html>

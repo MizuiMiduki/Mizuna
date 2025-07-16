@@ -1,0 +1,11 @@
+RewriteEngine On
+RewriteBase /
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
+
+SetEnvIf User-Agent "Googlebot" ng_ua
+SetEnvIf User-Agent "bingbot" ng_ua
+order Allow,Deny
+Allow from all
+Deny from env=ng_ua

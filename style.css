@@ -1,0 +1,50 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP&display=swap");
+
+* {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    scrollbar-width: thin;
+    scrollbar-color: #999 transparent;
+}
+
+*::-webkit-scrollbar {
+    height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: rgba(150, 150, 150, 0.6);
+    border-radius: 3px;
+}
+
+/* svg {
+    fill: var(--button_text_color);
+} */
+
+#viewport_body {
+    margin: 0;
+    padding: 0;
+    position: relative;
+    height: 100svh;
+    width: 100vw;
+    font-family: "IBM Plex Sans JP", sans-serif;
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* header {
+    background-color: var(--main_color);
+    color: var(--button_text_color);
+    display: flex;
+}
+
+header h1 {
+    margin: 0 auto;
+    a{
+        text-decoration: none;
+
+    }
+} */
