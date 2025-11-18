@@ -22,23 +22,27 @@ const check_new_release_note = function () {
                 return response.json();
             })
             .then(data => {
-                $.confirm({
-                    title: `🎉Mizunaアップデート🎉`,
-                    content: `バージョン${mizuna_options.mizuna_version}に更新されました<br>
-                        更新内容 : <a href="${data.url}" rel="noopener noreferrer"target="_blank">${data.title}</a>`,
-                    buttons: {
-                        "わかった": function () {
-                            db.setting.bulkUpdate([
-                                {
-                                    key: 1,
-                                    changes: {
-                                        is_check_releasenote: mizuna_options.mizuna_version,
-                                    }
-                                },
-                            ]);
+                const latestPost = data.posts[0];
+
+                if (latestPost) {
+                    $.confirm({
+                        title: `🎉Mizunaアップデート🎉`,
+                        content: `バージョン${mizuna_options.mizuna_version}に更新されました<br>
+                    更新内容 : <a href="${latestPost.url}" rel="noopener noreferrer"target="_blank">${latestPost.title}</a>`,
+                        buttons: {
+                            "わかった": function () {
+                                db.setting.bulkUpdate([
+                                    {
+                                        key: 1,
+                                        changes: {
+                                            is_check_releasenote: mizuna_options.mizuna_version,
+                                        }
+                                    },
+                                ]);
+                            }
                         }
-                    }
-                });
+                    });
+                }
             })
     }
 }
