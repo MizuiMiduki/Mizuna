@@ -1,6 +1,13 @@
 const generate_menu_service = function () {
     $(".main_column").load("/parts/change_account.html", function () {
         $("#loading_anime_area").remove();
+
+        var window_height = $(window).height();
+        var header_height = $('.header').height();
+        var footer_height = $('.user_icon_back').outerHeight() + $('.footer_user_name').height();
+        var maxHeight = window_height - footer_height - header_height;
+        $('.account_display_area').height(maxHeight);
+
         // アカウント一覧を表示
         generate_account_list()
     });
