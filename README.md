@@ -1,4 +1,5 @@
-[![Deploy to FTP](https://github.com/MizuiMiduki/Mizuna/actions/workflows/deploy.yml/badge.svg?branch=main&event=deployment)](https://github.com/MizuiMiduki/Mizuna/actions/workflows/deploy.yml)
+[![Deploy to FTP](https://github.com/MizuiMiduki/Mizuna/actions/workflows/deploy.yml/badge.svg)](https://github.com/MizuiMiduki/Mizuna/actions/workflows/deploy.yml)
+[![Format Code](https://github.com/MizuiMiduki/Mizuna/actions/workflows/format.yml/badge.svg)](https://github.com/MizuiMiduki/Mizuna/actions/workflows/format.yml)
 
 # Mizunaとは
 
