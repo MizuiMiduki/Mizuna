@@ -1,3 +1,5 @@
+[![Deploy to FTP](https://github.com/MizuiMiduki/Mizuna/actions/workflows/deploy.yml/badge.svg?branch=main&event=deployment)](https://github.com/MizuiMiduki/Mizuna/actions/workflows/deploy.yml)
+
 # Mizunaとは
 
 ノート時に無駄な通信を行わず通信量を削減したい方向けのノート専用Misskeyクライアントです
