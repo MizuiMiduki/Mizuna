@@ -19,6 +19,9 @@ jobs:
           sed -i "s/maintenance: false/maintenance: true/" js/option/mizuna_option.js
           cat js/option/mizuna_option.js
 
+      - name: Wait for configured time
+        run: sleep ${{ secrets.FTP_BUILD_TIME }}
+        
       - name: Clear FTP Directory
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
