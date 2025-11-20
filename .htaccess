@@ -9,3 +9,9 @@ SetEnvIf User-Agent "bingbot" ng_ua
 order Allow,Deny
 Allow from all
 Deny from env=ng_ua
+
+<Files "lunanthus/pwa/manifest.json">
+    Header set Cache-Control "no-store, no-cache, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires 0
+</Files>

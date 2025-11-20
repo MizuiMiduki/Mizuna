@@ -10,6 +10,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             const html = await response.text();
             app.innerHTML = html;
 
+            if (route.style) {
+                const existingStyle = document.querySelector('link[data-page-style]');
+                if (existingStyle) {
+                    existingStyle.remove();
+                }
+
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = route.style + `?t=${Date.now()}`; // キャッシュ防止
+                link.dataset.pageStyle = true;
+                document.head.appendChild(link);
+            }
+
             if (route.script) {
                 const existingScript = document.querySelector(`script[src="${route.script}"]`);
                 if (existingScript) {

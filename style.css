@@ -20,10 +20,6 @@
     border-radius: 3px;
 }
 
-/* svg {
-    fill: var(--button_text_color);
-} */
-
 #viewport_body {
     margin: 0;
     padding: 0;
@@ -35,16 +31,6 @@
     font-style: normal;
 }
 
-/* header {
-    background-color: var(--main_color);
-    color: var(--button_text_color);
-    display: flex;
+.display_none {
+    display: none !important;
 }
-
-header h1 {
-    margin: 0 auto;
-    a{
-        text-decoration: none;
-
-    }
-} */

@@ -1,57 +1,81 @@
-<nav class="right-align">
-    <button>
-        <span><i>public</i>
-            <span>パブリック</span></span>
-        <i>arrow_drop_down</i>
-        <menu>
-            <li><i>public</i>
-                <span>パブリック</span>
-            </li>
-            <li><i>home</i>
-                <span>ホーム</span>
-            </li>
-            <li><i>lock</i>
-                <span>フォロワー</span>
-            </li>
-        </menu>
-    </button>
-
-    <button class="circle">
-        <i>add_a_photo</i>
-        <input type="file" multiple name="image" accept="image/*" />
-    </button>
-</nav>
-<div class="field textarea label border">
-    <textarea></textarea>
+<div id="cw_textarea_container" class="field textarea fill label border display_none">
+    <textarea id="cw_textarea"></textarea>
     <label>CW</label>
     <span class="helper">0/100</span>
 </div>
-<div class="field textarea label border">
-    <textarea></textarea>
+
+<div class="field textarea fill label border">
+    <textarea id="main_textarea"></textarea>
     <label>本文</label>
     <span class="helper">0/3000</span>
 </div>
 
 <nav class="center-align tiny-space">
     <nav class="toolbar">
-        <a>
-            <i>signature</i>
-            <div>Video</div>
-        </a>
-        <a class="active">
-            <i>delete</i>
-            <div>Video</div>
-        </a>
+        <nav class="min">
+            <button class="border circle medium" id="cw_switch" onclick="cw_switch()">
+                <i>visibility</i>
+            </button>
+        </nav>
+
+        <nav class="min">
+            <button class="border circle medium">
+                <i>add_a_photo</i>
+            </button>
+            <input type="file" multiple name="image" accept="image/*" />
+        </nav>
+
+        <button class="circle">
+            <i id="visibility_icon">public</i>
+            <menu class="no-wrap">
+                <li onclick="visibility_switch('public')">
+                    <i>public</i>
+                    <div class="max">
+                        <div>パブリック</div>
+                        <label>公開範囲：全員</label>
+                    </div>
+                </li>
+
+                <li onclick="visibility_switch('home')">
+                    <i>home</i>
+                    <div class="max">
+                        <div>ホーム</div>
+                        <label>公開範囲：ホームタイムライン</label>
+                    </div>
+                </li>
+
+                <li onclick="visibility_switch('lock')">
+                    <i>lock</i>
+                    <div class="max">
+                        <div>フォロワー</div>
+                        <label>公開範囲：フォロワー</label>
+                    </div>
+                </li>
+            </menu>
+        </button>
+
+        <button class="circle">
+            <i id="more_vert_icon">more_vert</i>
+            <menu class="left no-wrap">
+                <li>
+                    <i>signature</i>
+                    <div class="max">
+                        <div>from Mizuna</div>
+                        <label>ノートの末尾に署名を追加</label>
+                    </div>
+                </li>
+
+                <li onclick="clear_input()">
+                    <i>delete</i>
+                    <div class="max">
+                        <div>クリア</div>
+                        <label>入力内容を削除する</label>
+                    </div>
+                </li>
+            </menu>
+        </button>
     </nav>
-    <button class="extra round circle secondary-container">
+    <button class="extra round circle">
         <i>send</i>
     </button>
 </nav>
-
-
-<label class="switch icon">
-    <input type="checkbox">
-    <span>
-        <i>visibility_off</i>
-    </span>
-</label>
