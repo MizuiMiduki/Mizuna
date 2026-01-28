@@ -1,0 +1,24 @@
+{
+  "name": "mizuna",
+  "version": "1.0.0",
+  "description": "[![Deploy to FTP](https://github.com/MizuiMiduki/Mizuna/actions/workflows/deploy.yml/badge.svg)](https://github.com/MizuiMiduki/Mizuna/actions/workflows/deploy.yml)\r [![Format Code](https://github.com/MizuiMiduki/Mizuna/actions/workflows/format.yml/badge.svg)](https://github.com/MizuiMiduki/Mizuna/actions/workflows/format.yml)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MizuiMiduki/Mizuna.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MizuiMiduki/Mizuna/issues"
+  },
+  "homepage": "https://github.com/MizuiMiduki/Mizuna#readme",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
