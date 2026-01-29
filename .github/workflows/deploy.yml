@@ -31,8 +31,19 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: "./"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
+          exclude: |
+            **/.git*
+            **/.github
+            .idea
+            node_modules
+            jsconfig.json
+            package.json
+            package-lock.json
+            tsconfig.json
+            *.md
+            LICENSE
+            .gitignore
 
       - name: Wait for configured time
         run: sleep ${{ secrets.FTP_BUILD_TIME }}
