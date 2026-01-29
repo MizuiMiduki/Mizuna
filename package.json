@@ -21,7 +21,10 @@
   "homepage": "https://github.com/MizuiMiduki/Mizuna#readme",
   "devDependencies": {
     "@types/jquery": "^3.5.33",
+<<<<<<< HEAD
     "@types/serviceworker": "^0.0.181",
+=======
+>>>>>>> 2832abecef9c364f0e72af286f59f726bf032d4e
     "typescript": "^5.9.3"
   }
 }
