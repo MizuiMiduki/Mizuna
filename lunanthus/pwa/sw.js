@@ -8,7 +8,7 @@ async function loadVersion() {
     CACHE_NAME = "app-cache-" + CURRENT_VERSION;
 }
 
-self.addEventListener("install", (event) => {
+self.addEventListener("install", (/** @type {ExtendableEvent} */ event) => {
     event.waitUntil(
         (async () => {
             await loadVersion();
@@ -17,7 +17,7 @@ self.addEventListener("install", (event) => {
     );
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener("activate", (/** @type {ExtendableEvent} */ event) => {
     event.waitUntil(
         (async () => {
             clients.claim();
@@ -34,6 +34,6 @@ self.addEventListener("activate", (event) => {
     );
 });
 
-self.addEventListener("fetch", (event) => {
+self.addEventListener("fetch", (/** @type {FetchEvent} */ event) => {
     event.respondWith(fetch(event.request));
 });

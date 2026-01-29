@@ -2,8 +2,8 @@ async function fetchData(page_num = 1) {
     const response = await fetch('https://blossomsarchive.com/wp-json/api/v1/mizuna-latest-release_note/?page=' + page_num);
     const data = await response.json();
 
-    $('#news_list').empty();
-    data['posts'].forEach(post => {
+$('#news_list').empty();
+    data['posts'].forEach((/** @type {{ title: string, date: string, url: string }} */ post) => {
         $('#news_list').append(`
             <li>
                 <div class="max">
@@ -15,14 +15,16 @@ async function fetchData(page_num = 1) {
         `);
     });
 
-    renderPagination(data);
+renderPagination(data);
 
-    // URLに現在のページ番号を反映
-    const url = new URL(window.location);
-    url.searchParams.set("page", data.current_page);
-    history.pushState(null, "", url);
+    const url = new URL(window.location.href);
+    url.searchParams.set("page", String(data.current_page));
+    history.pushState(null, "", url.toString());
 }
 
+/**
+ * @param {{ current_page: number, total_pages: number }} data
+ */
 function renderPagination(data) {
     const $pagination = $('#news_pagination');
     $pagination.empty();
@@ -64,6 +66,6 @@ function renderPagination(data) {
 // 初期ページをURLから読み取って表示
 $(document).ready(() => {
     const params = new URLSearchParams(window.location.search);
-    const initialPage = parseInt(params.get("page")) || 1;
+    const initialPage = parseInt(params.get("page") || "1") || 1;
     fetchData(initialPage);
 });

@@ -1,5 +1,8 @@
-window.cw_switch = function () {
-    document.getElementById("cw_switch").classList.toggle("border");
+/** @type {any} */
+const global = window;
+
+global.cw_switch = function () {
+    document.getElementById("cw_switch")?.classList.toggle("border");
 
     const el = document.getElementById("cw_textarea_container");
     const icon = document.querySelector("#cw_switch i");
@@ -11,20 +14,30 @@ window.cw_switch = function () {
         : "visibility_off";
 };
 
-window.visibility_switch = function (icon_name) {
-    const visibility_icon = document.querySelector("#visibility_icon");
-    visibility_icon.innerText = icon_name;
+/**
+ * アイコンのテキストを切り替えて、ボタンのフォーカスを外す
+ *
+ * @param {string} icon_name
+ */
+global.visibility_switch = function (icon_name) {
+    const visibility_icon = /** @type {HTMLElement | null} */ (document.querySelector("#visibility_icon"));
 
-    const btn = visibility_icon.closest("button");
-    btn.blur();
+    if (visibility_icon) {
+        visibility_icon.innerText = icon_name;
+
+        const btn = visibility_icon.closest("button");
+        btn?.blur();
+    }
 };
 
+
 // フォームクリア(クリアボタン)
-window.clear_input = function () {
+global.clear_input = function () {
     textarea_crear();
 
-    const btn = document.querySelector("#more_vert_icon").closest("button");
-    btn.blur();
+    const btn = document.querySelector("#more_vert_icon")?.closest("button");
+
+    btn?.blur();
 };
 
 // フォームクリア関数(送信後、クリアボタン共用)
