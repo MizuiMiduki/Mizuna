@@ -1,4 +1,4 @@
-$(document).ready(async function () {
+$(async function () {
     const routes = await import("./routes.js");
     const $app = $("#app");
 
