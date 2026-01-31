@@ -1,5 +1,5 @@
 /**
- * @param {string} url - 遷移先のパスまたはURL
+ * @param {string} url
  */
 export function navigateTo(url) {
     history.pushState({}, "", url);
