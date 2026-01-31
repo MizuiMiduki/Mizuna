@@ -1,0 +1,49 @@
+{
+    "name": "Mizuna -ノート専用Misskeyクライアント",
+    "short_name": "Mizuna",
+    "version": "0.4.0",
+    "theme_color": "#add8e6",
+    "background_color": "#add8e6",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "start_url": "/",
+    "icons": [
+        {
+            "src": "icon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "icon.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "lunanthus_install.png",
+            "sizes": "1082x2402",
+            "type": "image/png"
+        },
+        {
+            "src": "lunanthus_install_wide.png",
+            "sizes": "1169x658",
+            "type": "image/png",
+            "form_factor": "wide"
+        }
+    ],
+    "description": "Install Lunanthus as a PWA on your device!",
+    "permissions": ["*://*/*"],
+    "share_target": {
+        "action": "/",
+        "method": "GET",
+        "enctype": "application/x-www-form-urlencoded",
+        "params": {
+            "title": "title",
+            "text": "text",
+            "url": "url"
+        }
+    }
+}

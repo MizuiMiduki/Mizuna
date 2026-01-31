@@ -1,0 +1,102 @@
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden !important; /* 横スクロール防止 */
+    overflow-y: auto !important;
+    box-sizing: border-box;
+    -webkit-overflow-scrolling: touch;
+}
+
+main.responsive,
+#app {
+    width: 100%;
+    height: auto;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    box-sizing: border-box;
+}
+
+/* list全体をスマホ幅で収める */
+.list {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 auto;
+    overflow-x: hidden;
+    word-wrap: break-word;
+}
+
+/* ←ここが重要：BeerCSSの「max」が折り返しを阻害してる */
+.list .max {
+    min-width: 0 !important; /* 必須！flexアイテムの横伸び防止 */
+    word-break: break-word;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* 各liの中身も制限 */
+.list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* タイトルや日付部分が自然に折り返せるように */
+.list li h6,
+.list li div {
+    word-break: break-word;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+
+/* ページネーション部分 */
+#news_pagination {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding: 0.5rem 0;
+    box-sizing: border-box;
+}
+
+#news_pagination nav.group {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+
+/* ボタン系のはみ出し防止 */
+#news_pagination button {
+    flex: 0 0 auto;
+    min-width: 2.5rem;
+}
+
+#news_pagination i,
+#news_pagination span {
+    white-space: nowrap;
+}
+
+/* 画像のはみ出し防止 */
+img,
+video {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* dialog（サイドメニュー）対応 */
+dialog.scroll {
+    max-width: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
