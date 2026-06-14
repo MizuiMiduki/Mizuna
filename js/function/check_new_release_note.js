@@ -12,7 +12,8 @@ const check_new_release_note = function () {
     }
 
     if (mizuna_options.mizuna_version !== user_options.is_check_releasenote) {
-        const apiUrl = 'https://blossomsarchive.com/wp-json/api/v1/mizuna-latest-release_note/';
+        // 新しいAPIのエンドポイントに差し替えたにゃ
+        const apiUrl = 'https://blossomsarchive.com/wp-json/wp/v2/posts?categories=162';
 
         fetch(apiUrl)
             .then(response => {
@@ -22,13 +23,15 @@ const check_new_release_note = function () {
                 return response.json();
             })
             .then(data => {
-                const latestPost = data.posts[0];
+                // WordPress標準APIは配列がそのまま返ってくるので、data[0] で最新記事を取得するにゃ
+                const latestPost = data[0];
 
                 if (latestPost) {
+                    // タイトルは latestPost.title.rendered、URLは latestPost.link に変わるにゃ
                     $.confirm({
                         title: `🎉Mizunaアップデート🎉`,
                         content: `バージョン${mizuna_options.mizuna_version}に更新されました<br>
-                    更新内容 : <a href="${latestPost.url}" rel="noopener noreferrer"target="_blank">${latestPost.title}</a>`,
+更新内容 : <a href="${latestPost.link}" rel="noopener noreferrer" target="_blank">${latestPost.title.rendered}</a>`,
                         buttons: {
                             "わかった": function () {
                                 db.setting.bulkUpdate([
@@ -44,5 +47,8 @@ const check_new_release_note = function () {
                     });
                 }
             })
+            .catch(error => {
+                console.error("リリースノートの取得に失敗しましたにゃ:", error);
+            });
     }
 }

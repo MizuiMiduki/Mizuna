@@ -27,8 +27,6 @@ $.getScript("/js/function/get_user_db_data.js", function () {
                 $.getScript("/js/function/set_user_text.js", function () {
                     set_user_text(user_data)
                 })
-                // ノート送信関数をロード
-                $.getScript("/js/function/send_note.js")
             } else {
                 db.table('account').orderBy('id').first()
                     .then(record => {
@@ -59,8 +57,18 @@ $.getScript("/js/function/keybordshortcut.js")
 
 // ノート送信ボタン
 var send_standby = 1
-$.getScript("/js/function/get_visibility_select.js")
-$.getScript("/js/function/form_mizuna.js")
+
+if (typeof get_visibility_select === "undefined") {
+    $.getScript("/js/function/get_visibility_select.js");
+}
+
+if (typeof from_mizuna === "undefined") {
+    $.getScript("/js/function/form_mizuna.js");
+}
+
+if (typeof send_note === "undefined") {
+    $.getScript("/js/function/send_note.js");
+}
 
 function note_send_submit() {
     $(".note_submit").prop("disabled", true);

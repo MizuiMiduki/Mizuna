@@ -1,4 +1,5 @@
-const comparison_version = function compareVersions(version1, version2) {
+// 一番外側を var にして、二重読み込みエラーを防ぐにゃ！
+var comparison_version = function (version1, version2) {
     var parseVersion = (version) => version.split('.').map(Number);
 
     var [major1, minor1, patch1] = parseVersion(version1);

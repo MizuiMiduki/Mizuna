@@ -1,12 +1,16 @@
-const from_mizuna = function () {
+// 外側の関数宣言を var にして二重読み込みエラーを防ぐにゃ！
+var from_mizuna = function () {
+    // チェックボックスの状態を取得
     var from_mizuna_select = $('#note_end_mizuna_checkbox').prop("checked");
-    var from_mizuna;
+
+    // 関数名と被らないように、結果を入れる変数名を新しくしたにゃ
+    var result_text = "";
 
     if (from_mizuna_select === true) {
-        from_mizuna = "\n(from Mizuna)";
+        result_text = "\n(from Mizuna)";
     } else {
-        from_mizuna = "";
+        result_text = "";
     }
 
-    return from_mizuna;
+    return result_text;
 }
