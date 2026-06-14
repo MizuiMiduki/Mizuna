@@ -1,0 +1,43 @@
+<nav>
+    <div class="center-align">
+        <button class="circle small">
+            1
+            <!-- <i>done</i> -->
+        </button>
+        <div class="small-margin">サーバー選択</div>
+    </div>
+    <hr class="max">
+    <div class="center-align">
+        <button class="circle small">2</button>
+        <div class="small-margin">Current</div>
+    </div>
+    <hr class="max">
+    <div class="center-align">
+        <button class="circle small" disabled>3</button>
+        <div class="small-margin">Next</div>
+    </div>
+</nav>
+
+<article class="round">
+    <p class="bold">サーバーアドレスから追加</p>
+    <form onsubmit="return false;">
+        <nav class="no-space">
+            <div class="max field border left-round    suffix invalid">
+                <input id="server_address_input" name="server_address" list="server_address_list"
+                    placeholder="例:misskey.io" autocomplete="off" required="" type="text" />
+
+                <datalist id="server_address_list">
+                    <option value="misskey.io">
+                    </option>
+                    <option value="mfmf.club">
+                    </option>
+                    <option value="misskey.systems">
+                    </option>
+                    <option value="yojohan.cc">
+                    </option>
+                </datalist>
+            </div>
+            <button class="large right-round">追加</button>
+        </nav>
+    </form>
+</article>
