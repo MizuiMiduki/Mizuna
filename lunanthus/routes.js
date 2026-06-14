@@ -1,6 +1,7 @@
 export default [
-    { path: "/", file: "/pages/html/home/home.html", script: "/pages/js/home/index.js", style: null },
-    { path: "/index.html", file: "/pages/html/home/home.html", script: "/pages/js/home/index.js", style: null },
+    { path: "/", file: "/pages/html/root/root.html", script: "/pages/js/root/index.js", style: null },
+    { path: "/index.html", file: "/pages/html/root/root.html", script: "/pages/js/root/index.js", style: null },
+    { path: "/create", file: "/pages/html/create/home.html", script: "/pages/js/create/index.js", style: null },
     { path: "/account", file: "/pages/html/account/account.html", style: null },
     { path: "/notice", file: "/pages/html/notice/notice.html", style: "/pages/css/notice/style.css", script: "/pages/js/notice/index.js"},
     { path: "/setting", file: "/pages/html/setting/setting.html", style: null },
