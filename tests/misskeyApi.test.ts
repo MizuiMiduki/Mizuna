@@ -6,6 +6,8 @@ import {
   fetchLatestAccountInfo,
   createMisskeyNote,
   fetchLatestReleaseNote,
+  fetchAnnouncements,
+  formatAnnouncementDate,
   MisskeyApiError,
 } from '../src/services/misskeyApi';
 import type { AccountRecord } from '../src/db/database';
@@ -201,6 +203,47 @@ describe('misskeyApi service', () => {
       expect(result).not.toBeNull();
       expect(result?.title).toBe('Mizuna v3.10.0 WP 記事');
       expect(result?.link).toBe('https://blossomsarchive.com/blog/wp-post-url/');
+    });
+  });
+
+  describe('formatAnnouncementDate', () => {
+    it('日付文字列を YYYY年M月D日 形式にフォーマットすること', () => {
+      expect(formatAnnouncementDate('2025-02-11T17:16:57')).toBe('2025年2月11日');
+      expect(formatAnnouncementDate('Tue, 11 Feb 2025 08:16:57 +0000')).toBe('2025年2月11日');
+    });
+
+    it('無効な日付文字列の場合は元の文字列を返すこと', () => {
+      expect(formatAnnouncementDate('invalid-date')).toBe('invalid-date');
+    });
+  });
+
+  describe('fetchAnnouncements', () => {
+    it('WordPress REST API から10件ずつ取得してページネーション情報を返すこと', async () => {
+      const mockPosts = Array.from({ length: 10 }, (_, i) => ({
+        id: 100 + i,
+        title: { rendered: `記事タイトル ${i + 1}` },
+        link: `https://blossomsarchive.com/blog/post-${i + 1}/`,
+        date: '2025-02-11T12:00:00',
+        excerpt: { rendered: `<p>概要文 ${i + 1}</p>` },
+      }));
+
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify(mockPosts), {
+          status: 200,
+          headers: {
+            'x-wp-total': '26',
+            'x-wp-totalpages': '3',
+          },
+        })
+      );
+
+      const result = await fetchAnnouncements(1, 10);
+      expect(result.items.length).toBe(10);
+      expect(result.totalPages).toBe(3);
+      expect(result.totalItems).toBe(26);
+      expect(result.currentPage).toBe(1);
+      expect(result.items[0].title).toBe('記事タイトル 1');
+      expect(result.items[0].snippet).toBe('概要文 1');
     });
   });
 });

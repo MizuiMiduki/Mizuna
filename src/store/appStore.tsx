@@ -27,7 +27,14 @@ import {
 } from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
 
-export type ViewType = 'note' | 'accounts' | 'add_account' | 'settings' | 'shortcuts' | 'about';
+export type ViewType =
+  | 'note'
+  | 'accounts'
+  | 'add_account'
+  | 'settings'
+  | 'shortcuts'
+  | 'about'
+  | 'announcements';
 export type VisibilityType = 'public' | 'home' | 'followers';
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -137,6 +144,7 @@ const VALID_VIEWS: ViewType[] = [
   'settings',
   'shortcuts',
   'about',
+  'announcements',
 ];
 
 function getSavedView(): ViewType | null {
@@ -209,7 +217,8 @@ export function AppProvider(props: { children: JSX.Element }) {
       accounts().length === 0 &&
       view !== 'add_account' &&
       view !== 'shortcuts' &&
-      view !== 'about'
+      view !== 'about' &&
+      view !== 'announcements'
     ) {
       setCurrentViewInternal('add_account');
       return;

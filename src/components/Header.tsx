@@ -100,6 +100,18 @@ export function Header() {
           </div>
 
           <div class="mizuna-topbar-right">
+            <HoldHoverTip label="お知らせ" sublabel="更新情報・リリースノート" placement="bottom">
+              <button
+                type="button"
+                id="announcements_button"
+                class={`mizuna-topbar-btn ${currentView() === 'announcements' ? 'is-active' : ''}`}
+                onClick={() => toggleTopView('announcements')}
+                aria-label="お知らせ"
+              >
+                <i>notifications</i>
+              </button>
+            </HoldHoverTip>
+
             <HoldHoverTip label="ショートカット一覧" sublabel="キーボードショートカット" placement="bottom">
               <button
                 type="button"

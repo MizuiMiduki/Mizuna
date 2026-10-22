@@ -41,6 +41,8 @@ describe('appStore', () => {
       expect(result.currentView()).toBe('about');
       result.setCurrentView('shortcuts');
       expect(result.currentView()).toBe('shortcuts');
+      result.setCurrentView('announcements');
+      expect(result.currentView()).toBe('announcements');
       result.setCurrentView('add_account');
       expect(result.currentView()).toBe('add_account');
     });

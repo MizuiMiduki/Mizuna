@@ -346,3 +346,120 @@ export async function fetchLatestReleaseNote(): Promise<{ title: string; link: s
     link: 'https://blossomsarchive.com/blog/category/mizuna/',
   };
 }
+
+export interface AnnouncementItem {
+  id: string | number;
+  title: string;
+  link: string;
+  date: string;
+  snippet?: string;
+}
+
+export interface AnnouncementsResult {
+  items: AnnouncementItem[];
+  totalPages: number;
+  totalItems: number;
+  currentPage: number;
+}
+
+export function formatAnnouncementDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    return `${y}年${m}月${day}日`;
+  } catch {
+    return dateStr;
+  }
+}
+
+function decodeHtmlEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&#8216;/g, '‘')
+    .replace(/&#8217;/g, '’')
+    .replace(/&#8220;/g, '“')
+    .replace(/&#8221;/g, '”')
+    .replace(/&#8230;|&hellip;/g, '…')
+    .replace(/&#160;|&nbsp;/g, ' ');
+}
+
+export async function fetchAnnouncements(page = 1, perPage = 10): Promise<AnnouncementsResult> {
+  // 1. まず CORS サポートがある WordPress REST API を優先試行
+  try {
+    const apiUrl = `https://blossomsarchive.com/wp-json/wp/v2/posts?categories=162&per_page=${perPage}&page=${page}`;
+    const res = await fetch(apiUrl);
+    if (res.ok) {
+      const totalPages = parseInt(res.headers.get('x-wp-totalpages') || '1', 10);
+      const totalItems = parseInt(res.headers.get('x-wp-total') || '0', 10);
+      const data = await res.json();
+      const items: AnnouncementItem[] = data.map((post: any) => ({
+        id: post.id,
+        title: post.title?.rendered ? decodeHtmlEntities(post.title.rendered) : '無題',
+        link: post.link,
+        date: post.date,
+        snippet: post.excerpt?.rendered
+          ? decodeHtmlEntities(post.excerpt.rendered.replace(/<[^>]+>/g, '')).trim()
+          : undefined,
+      }));
+      return {
+        items,
+        totalPages: Math.max(1, totalPages),
+        totalItems,
+        currentPage: page,
+      };
+    }
+  } catch (err) {
+    console.warn('[Announcements] WordPress REST API 取得失敗、RSS フィードへフォールバック:', err);
+  }
+
+  // 2. RSS フィードからの取得（フォールバック）
+  try {
+    const rssUrl =
+      page === 1
+        ? 'https://blossomsarchive.com/blog/category/mizuna/feed/'
+        : `https://blossomsarchive.com/blog/category/mizuna/feed/?paged=${page}`;
+    const res = await fetch(rssUrl);
+    if (res.ok) {
+      const xmlText = await res.text();
+      const itemMatches = xmlText.match(/<item[\s\S]*?<\/item>/gi) || [];
+      const clean = (s: string) => decodeHtmlEntities(s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1').trim());
+
+      const items: AnnouncementItem[] = itemMatches.map((itemXml, idx) => {
+        const titleMatch = itemXml.match(/<title>([\s\S]*?)<\/title>/i);
+        const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/i);
+        const dateMatch = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/i);
+        const descMatch = itemXml.match(/<description>([\s\S]*?)<\/description>/i);
+        return {
+          id: `rss_${page}_${idx}`,
+          title: clean(titleMatch ? titleMatch[1] : `お知らせ (${idx + 1})`),
+          link: clean(linkMatch ? linkMatch[1] : 'https://blossomsarchive.com/blog/category/mizuna/'),
+          date: clean(dateMatch ? dateMatch[1] : ''),
+          snippet: descMatch ? clean(descMatch[1].replace(/<[^>]+>/g, '')) : undefined,
+        };
+      });
+
+      return {
+        items,
+        totalPages: items.length >= perPage ? page + 1 : page,
+        totalItems: items.length,
+        currentPage: page,
+      };
+    }
+  } catch (rssErr) {
+    console.error('[Announcements] RSS フィード取得失敗:', rssErr);
+  }
+
+  return {
+    items: [],
+    totalPages: 1,
+    totalItems: 0,
+    currentPage: page,
+  };
+}

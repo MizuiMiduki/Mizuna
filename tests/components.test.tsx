@@ -5,6 +5,7 @@ import { Header } from '../src/components/Header';
 import { FooterNav } from '../src/components/FooterNav';
 import { AboutView } from '../src/components/AboutView';
 import { ShortcutsView } from '../src/components/ShortcutsView';
+import { AnnouncementsView } from '../src/components/AnnouncementsView';
 import { HoldHoverTip } from '../src/components/HoldHoverTip';
 import { DialogHost } from '../src/components/DialogHost';
 import { SnackbarHost } from '../src/components/SnackbarHost';
@@ -27,7 +28,7 @@ describe('UI Components', () => {
   });
 
   describe('Header & FooterNav', () => {
-    it('ヘッダーにタイトルが表示されること', () => {
+    it('ヘッダーにタイトルとお知らせアイコンが表示されること', () => {
       render(() => (
         <AppProvider>
           <Header />
@@ -35,6 +36,7 @@ describe('UI Components', () => {
       ));
 
       expect(screen.getByText('Mizuna')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'お知らせ' })).toBeInTheDocument();
     });
 
     it('フッターナビゲーションにアカウント管理ボタンと設定ボタンが存在すること', async () => {
@@ -50,6 +52,19 @@ describe('UI Components', () => {
 
       const settingsBtn = await screen.findByRole('button', { name: /設定/ });
       expect(settingsBtn).toBeInTheDocument();
+    });
+  });
+
+  describe('AnnouncementsView', () => {
+    it('お知らせ一覧のヘッダーと戻るボタンが表示されること', () => {
+      render(() => (
+        <AppProvider>
+          <AnnouncementsView />
+        </AppProvider>
+      ));
+
+      expect(screen.getByText('お知らせ')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /もどる/i })).toBeInTheDocument();
     });
   });
 

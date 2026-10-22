@@ -2,6 +2,7 @@ import { Match, Show, Switch } from 'solid-js';
 import { AboutView } from './components/AboutView';
 import { AccountView } from './components/AccountView';
 import { AddAccountView } from './components/AddAccountView';
+import { AnnouncementsView } from './components/AnnouncementsView';
 import { DebugMenu } from './components/DebugMenu';
 import { DialogHost } from './components/DialogHost';
 import { FooterNav } from './components/FooterNav';
@@ -46,6 +47,9 @@ function MainContent() {
             </Match>
             <Match when={currentView() === 'about'}>
               <AboutView />
+            </Match>
+            <Match when={currentView() === 'announcements'}>
+              <AnnouncementsView />
             </Match>
           </Switch>
         </Show>
