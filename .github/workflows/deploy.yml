@@ -1,7 +1,19 @@
-name: Deploy to FTP
+name: Deploy Release to FTP
 
 on:
   workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: 'デプロイ対象を選択 (release: 最新の本番リリース / prerelease: 最新のプレリリース[Canary])'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - prerelease
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
@@ -10,13 +22,54 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Enable maintenance mode
+      - name: Resolve Latest Release Tag
+        id: target_release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          sed -i "s/maintenance: false/maintenance: true/" js/option/mizuna_option.js
-          cat js/option/mizuna_option.js
-        
-      - name: Clear FTP Directory
+          if [ "${{ inputs.deploy_target }}" = "prerelease" ]; then
+            echo "最新のプレリリース (Canary) を検索しています..."
+            TAG_NAME=$(gh api "repos/${{ github.repository }}/releases" --jq '[.[] | select(.prerelease == true and .draft == false)][0].tag_name // empty')
+          else
+            echo "最新の正式リリース (Production) を検索しています..."
+            TAG_NAME=$(gh api "repos/${{ github.repository }}/releases" --jq '[.[] | select(.prerelease == false and .draft == false)][0].tag_name // empty')
+          fi
+
+          if [ -z "$TAG_NAME" ]; then
+            echo "::error::対象となる '${{ inputs.deploy_target }}' のリリースが見つかりませんでした。先に Create Release ワークフローを実行してリリースを作成してください。"
+            exit 1
+          fi
+
+          echo "デプロイ対象タグ: $TAG_NAME"
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Release Tag (${{ steps.target_release.outputs.tag_name }})
+        run: |
+          git checkout "${{ steps.target_release.outputs.tag_name }}"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies & Build
+        run: |
+          npm ci
+          if [ "${{ inputs.deploy_target }}" = "prerelease" ]; then
+            npm run build:canary
+          else
+            npm run build
+          fi
+
+      # ==========================================
+      # 本番 (release) デプロイ
+      # ==========================================
+      - name: Clear Production FTP Directory
+        if: inputs.deploy_target == 'release'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -25,31 +78,35 @@ jobs:
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
           dangerous-clean-slate: true
 
-      - name: Deploy files via FTP
+      - name: Deploy Production dist via FTP
+        if: inputs.deploy_target == 'release'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: "./"
+          local-dir: "./dist/"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
-      - name: Wait for configured time
-        run: sleep ${{ secrets.FTP_BUILD_TIME }}
-
-      - name: Disable maintenance mode
-        run: |
-          sed -i "s/maintenance: true/maintenance: false/" js/option/mizuna_option.js
-          cat js/option/mizuna_option.js
-
-      - name: Checkout the latest mizuna_option.js
-        run: git checkout HEAD js/option/mizuna_option.js
-
-      - name: Re-upload latest mizuna_option.js
+      # ==========================================
+      # プレリリース / Canary (prerelease) デプロイ
+      # ==========================================
+      - name: Clear Canary FTP Directory
+        if: inputs.deploy_target == 'prerelease'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: "js/option/"
-          server-dir: "${{ secrets.FTP_TARGET_DIR }}js/option/"
+          server: ${{ secrets.CANARY_FTP_SERVER }}
+          username: ${{ secrets.CANARY_FTP_USERNAME }}
+          password: ${{ secrets.CANARY_FTP_PASSWORD }}
+          server-dir: "${{ secrets.CANARY_FTP_TARGET_DIR }}"
+          dangerous-clean-slate: true
+
+      - name: Deploy Canary dist via FTP
+        if: inputs.deploy_target == 'prerelease'
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.CANARY_FTP_SERVER }}
+          username: ${{ secrets.CANARY_FTP_USERNAME }}
+          password: ${{ secrets.CANARY_FTP_PASSWORD }}
+          local-dir: "./dist/"
+          server-dir: "${{ secrets.CANARY_FTP_TARGET_DIR }}"

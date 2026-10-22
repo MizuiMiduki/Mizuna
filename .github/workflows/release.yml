@@ -1,0 +1,86 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'リリースの種類 (release: 正式リリース / prerelease: プレリリース)'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - prerelease
+      custom_version:
+        description: 'バージョン番号の上書き (空欄の場合は package.json のバージョンを自動使用)'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine Version, Tag, and Generate Changelog
+        id: meta
+        run: |
+          if [ -n "${{ inputs.custom_version }}" ]; then
+            RAW_VER="${{ inputs.custom_version }}"
+          else
+            RAW_VER=$(node -p "require('./package.json').version")
+          fi
+
+          # 先頭に v が無ければ付与
+          if [[ "$RAW_VER" == v* ]]; then
+            TAG_NAME="$RAW_VER"
+            VER_NUM="${RAW_VER#v}"
+          else
+            TAG_NAME="v$RAW_VER"
+            VER_NUM="$RAW_VER"
+          fi
+
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VER_NUM" >> "$GITHUB_OUTPUT"
+
+          if [ "${{ inputs.release_type }}" = "prerelease" ]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "release_title=Mizuna $TAG_NAME (Pre-release)" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "release_title=Mizuna $TAG_NAME" >> "$GITHUB_OUTPUT"
+          fi
+
+          # 直前のタグを取得して変更履歴を生成
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          {
+            echo "## Mizuna $TAG_NAME"
+            echo ""
+            if [ -n "$PREV_TAG" ]; then
+              echo "### 変更内容 ($PREV_TAG からの差分)"
+              git log "${PREV_TAG}..HEAD" --no-merges --pretty=format:"- %s (%h)"
+            else
+              echo "### 変更内容 (直近のコミット)"
+              git log -n 30 --no-merges --pretty=format:"- %s (%h)"
+            fi
+            echo ""
+          } > RELEASE_NOTES.md
+
+      - name: Create Git Tag and Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag_name }}
+          name: ${{ steps.meta.outputs.release_title }}
+          body_path: RELEASE_NOTES.md
+          prerelease: ${{ steps.meta.outputs.is_prerelease }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

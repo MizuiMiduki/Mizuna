@@ -1,3 +1,6 @@
-/.github/
 /.idea/
+/.agents/
+/.gemini/
 /node_modules/
+/dist/
+.DS_Store
