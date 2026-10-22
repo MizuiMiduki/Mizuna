@@ -399,6 +399,11 @@ body {
   background: var(--surface-container-highest);
 }
 
+.mizuna-author-chip:active {
+  background: var(--surface-container-highest);
+  transform: scale(0.98);
+}
+
 .mizuna-author-avatar {
   width: 34px !important;
   height: 34px !important;
@@ -2156,6 +2161,7 @@ body {
   background: rgba(10, 14, 22, 0.62);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  opacity: 0;
 }
 
 .mizuna-modal-card {
@@ -2176,6 +2182,7 @@ body {
   flex-direction: column;
   align-items: center;
   text-align: center;
+  opacity: 0;
 }
 
 .mizuna-modal-top {
@@ -2423,6 +2430,7 @@ body {
   color: var(--on-surface);
   display: flex;
   flex-direction: column;
+  opacity: 0;
 }
 
 .mizuna-picker-header {

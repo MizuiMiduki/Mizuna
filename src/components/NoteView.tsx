@@ -295,25 +295,13 @@ export function NoteView() {
 
   const openAccountPicker = () => {
     setIsAccountPickerOpen(true);
-    setTimeout(() => {
-      if (pickerBackdropRef) {
-        gsap.fromTo(pickerBackdropRef, { opacity: 0 }, { opacity: 1, duration: 0.2 });
-      }
-      if (pickerCardRef) {
-        gsap.fromTo(
-          pickerCardRef,
-          { opacity: 0, scale: 0.9, y: 14 },
-          { opacity: 1, scale: 1, y: 0, duration: 0.28, ease: 'back.out(1.5)' }
-        );
-      }
-    }, 10);
   };
 
   const closeAccountPicker = async () => {
     if (pickerCardRef && pickerBackdropRef) {
       await Promise.all([
-        gsap.to(pickerCardRef, { opacity: 0, scale: 0.94, y: 8, duration: 0.15 }),
-        gsap.to(pickerBackdropRef, { opacity: 0, duration: 0.15 }),
+        gsap.to(pickerCardRef, { opacity: 0, scale: 0.94, y: 8, duration: 0.15, ease: 'power2.in' }),
+        gsap.to(pickerBackdropRef, { opacity: 0, duration: 0.15, ease: 'power2.in' }),
       ]);
     }
     setIsAccountPickerOpen(false);
@@ -644,17 +632,33 @@ export function NoteView() {
       <Show when={isAccountPickerOpen()}>
         <Portal>
           <div class="mizuna-modal-portal" role="dialog" aria-modal="true">
-          <div
-            ref={pickerBackdropRef}
-            class="mizuna-modal-backdrop"
-            onClick={closeAccountPicker}
-          />
+            <div
+              ref={(el) => {
+                pickerBackdropRef = el;
+                gsap.fromTo(
+                  el,
+                  { opacity: 0 },
+                  { opacity: 1, duration: 0.22, ease: 'power2.out' }
+                );
+              }}
+              class="mizuna-modal-backdrop"
+              style={{ opacity: 0 }}
+              onClick={closeAccountPicker}
+            />
 
-          <div
-            ref={pickerCardRef}
-            class="mizuna-picker-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
+            <div
+              ref={(el) => {
+                pickerCardRef = el;
+                gsap.fromTo(
+                  el,
+                  { opacity: 0, scale: 0.92, y: 14 },
+                  { opacity: 1, scale: 1, y: 0, duration: 0.28, ease: 'back.out(1.5)' }
+                );
+              }}
+              class="mizuna-picker-modal"
+              style={{ opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
             <div class="mizuna-picker-header">
               <div class="mizuna-picker-title-wrap">
                 <div class="mizuna-picker-icon">
