@@ -273,19 +273,76 @@ export async function createMisskeyNote(
 }
 
 /**
- * WordPress APIから最新のリリースノートを取得する
+ * 最新のリリースノート記事情報を RSS フィードから取得する
+ * 対象 RSS: https://blossomsarchive.com/blog/category/mizuna/feed/
+ * (万が一の CORS 制約時は WordPress REST API に自動フォールバック)
  */
 export async function fetchLatestReleaseNote(): Promise<{ title: string; link: string } | null> {
-  const apiUrl = 'https://blossomsarchive.com/wp-json/wp/v2/posts?categories=162';
-  const res = await fetch(apiUrl);
-  if (!res.ok) {
-    throw new Error(`HTTP error! status: ${res.status}`);
+  const rssUrl = 'https://blossomsarchive.com/blog/category/mizuna/feed/';
+
+  // 1. RSS フィードからの取得
+  try {
+    const res = await fetch(rssUrl);
+    if (res.ok) {
+      const xmlText = await res.text();
+
+      // DOMParser による抽出
+      if (typeof DOMParser !== 'undefined') {
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(xmlText, 'text/xml');
+        const item = xml.querySelector('item');
+        if (item) {
+          const title = item.querySelector('title')?.textContent?.trim();
+          const link = item.querySelector('link')?.textContent?.trim();
+          if (link) {
+            return {
+              title: title || `Mizuna v${mizuna_options.mizuna_version}`,
+              link,
+            };
+          }
+        }
+      }
+
+      // 正規表現による抽出（CDATA対応・フォールバック）
+      const itemMatch = xmlText.match(/<item[\s\S]*?<\/item>/i);
+      if (itemMatch) {
+        const itemContent = itemMatch[0];
+        const linkMatch = itemContent.match(/<link>([\s\S]*?)<\/link>/i);
+        const titleMatch = itemContent.match(/<title>([\s\S]*?)<\/title>/i);
+        if (linkMatch && linkMatch[1]) {
+          const cleanLink = linkMatch[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1').trim();
+          const cleanTitle = titleMatch && titleMatch[1]
+            ? titleMatch[1].replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1').trim()
+            : `Mizuna v${mizuna_options.mizuna_version}`;
+          return { title: cleanTitle, link: cleanLink };
+        }
+      }
+    }
+  } catch (err) {
+    console.warn('[ReleaseNote] RSS直接取得失敗、WordPress REST APIへフォールバック:', err);
   }
-  const data = await res.json();
-  const latestPost = data?.[0];
-  if (!latestPost) return null;
+
+  // 2. ブラウザ CORS 等による制限時のフォールバック (CORSヘッダー付きの WP REST API)
+  try {
+    const apiUrl = 'https://blossomsarchive.com/wp-json/wp/v2/posts?categories=162&per_page=1';
+    const res = await fetch(apiUrl);
+    if (res.ok) {
+      const data = await res.json();
+      const latestPost = data?.[0];
+      if (latestPost && latestPost.link) {
+        return {
+          title: latestPost.title?.rendered ?? `Mizuna v${mizuna_options.mizuna_version}`,
+          link: latestPost.link,
+        };
+      }
+    }
+  } catch (apiErr) {
+    console.error('[ReleaseNote] REST APIフォールバック失敗:', apiErr);
+  }
+
+  // 3. 最終フォールバック (カテゴリ一覧URL)
   return {
-    title: latestPost.title?.rendered ?? `Mizuna v${mizuna_options.mizuna_version}`,
-    link: latestPost.link ?? 'https://blossomsarchive.com/blog/category/mizuna/',
+    title: `Mizuna v${mizuna_options.mizuna_version} リリースノート`,
+    link: 'https://blossomsarchive.com/blog/category/mizuna/',
   };
 }

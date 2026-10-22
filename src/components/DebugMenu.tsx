@@ -2,6 +2,7 @@ import gsap from 'gsap';
 import { createSignal, For, Show } from 'solid-js';
 import { MIZUNA_VERSION, mizuna_options } from '../config/mizunaOptions';
 import { db, DEFAULT_USER_SETTINGS, updateSettingDb } from '../db/database';
+import { fetchLatestReleaseNote } from '../services/misskeyApi';
 import { useApp, type ViewType } from '../store/appStore';
 
 const PRESET_COLORS = [
@@ -104,7 +105,8 @@ export function DebugMenu() {
   };
 
   // アップデート通知モーダルのテスト表示
-  const testReleaseNoteModal = () => {
+  const testReleaseNoteModal = async () => {
+    const latestPost = await fetchLatestReleaseNote();
     openDialog({
       title: 'Mizuna がアップデートされました',
       icon: 'celebration',
@@ -113,8 +115,8 @@ export function DebugMenu() {
       contentText: `いつもご利用ありがとうございます。Mizuna v${mizuna_options.mizuna_version} への更新が完了しました。新機能や改善点についてはリリースノートをご覧ください。`,
       linkCard: {
         label: 'RELEASE NOTE',
-        title: `Mizuna ${mizuna_options.mizuna_version} リリースノート (テスト表示)`,
-        url: 'https://blossomsarchive.com/blog/category/mizuna/',
+        title: latestPost?.title ?? `Mizuna ${mizuna_options.mizuna_version} リリースノート`,
+        url: latestPost?.link ?? 'https://blossomsarchive.com/blog/category/mizuna/',
       },
       buttons: [
         {
