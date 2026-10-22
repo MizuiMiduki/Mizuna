@@ -33,6 +33,7 @@ jobs:
       - name: Determine Version, Tag, and Generate Changelog
         id: meta
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CUSTOM_VERSION: ${{ inputs.custom_version }}
           RELEASE_TYPE: ${{ inputs.release_type }}
           REPO: ${{ github.repository }}
@@ -67,8 +68,20 @@ jobs:
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
           echo "version=$VER_NUM" >> "$GITHUB_OUTPUT"
 
-          # 直前のタグを取得して変更履歴を生成 (同名タグ自身は除外)
-          PREV_TAG=$(git describe --tags --abbrev=0 --exclude="$TAG_NAME" 2>/dev/null || echo "")
+          # 差分比較対象の直前タグ (PREV_TAG) を決定
+          if [ "$RELEASE_TYPE" = "release" ]; then
+            # 正式リリースの場合はプレリリースタグを除外し、前回の「正式リリース」タグとの差分を取得
+            PREV_TAG=$(gh api "repos/${REPO}/releases" --jq '[.[] | select(.prerelease == false and .draft == false and .tag_name != "'"$TAG_NAME"'")][0].tag_name // empty' 2>/dev/null || echo "")
+            if [ -z "$PREV_TAG" ]; then
+              PREV_TAG=$(git describe --tags --abbrev=0 --exclude="$TAG_NAME" --exclude="*-pre*" --exclude="*-rc*" --exclude="*-beta*" --exclude="*-alpha*" HEAD 2>/dev/null || echo "")
+            fi
+          else
+            # プレリリースの場合は直前のタグ（同名タグ自身は除外）を取得
+            PREV_TAG=$(git describe --tags --abbrev=0 --exclude="$TAG_NAME" HEAD 2>/dev/null || echo "")
+          fi
+
+          echo "差分比較ベースタグ (PREV_TAG): ${PREV_TAG:-なし (初回)}"
+
           {
             echo "## Mizuna $TAG_NAME"
             echo ""
