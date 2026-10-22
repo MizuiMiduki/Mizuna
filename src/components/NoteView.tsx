@@ -196,7 +196,7 @@ export function NoteView() {
       gsap.fromTo(
         viewContainerRef,
         { opacity: 0, y: 14, scale: 0.99 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: 'power3.out' }
+        { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: 'power3.out', clearProps: 'transform' }
       );
     }
 

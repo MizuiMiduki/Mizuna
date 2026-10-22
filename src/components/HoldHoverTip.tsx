@@ -36,52 +36,60 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
     }
   };
 
-  const adjustPositionWithinViewport = () => {
-    if (!tipRef || !anchorRef) return;
+  const calculateShift = (): number => {
+    if (!tipRef || !anchorRef) return 0;
     const anchorRect = anchorRef.getBoundingClientRect();
-    // スケールやパディング込みのレンダリング済み矩形を取得
-    const tipRect = tipRef.getBoundingClientRect();
-    const tipWidth = tipRect.width || tipRef.offsetWidth;
-    const margin = 16; // 画面端からの安全マージンを16px確保
+    const tipWidth = tipRef.offsetWidth;
+    const margin = 16; // 画面端から 16px の安全余白
     const vw = document.documentElement.clientWidth || window.innerWidth;
 
-    // アンカー中央揃え基準でのTIPS左端・右端座標
+    // 近接するカード・コンテナの境界を取得（PC表示でコンポーザーカード等の枠をはみ出さないように制御）
+    const container = anchorRef.closest<HTMLElement>(
+      '.mizuna-studio-composer, .mizuna-topbar-inner, .mizuna-main-container'
+    );
+    let minLeft = margin;
+    let maxRight = vw - margin;
+
+    if (container) {
+      const containerRect = container.getBoundingClientRect();
+      minLeft = Math.max(margin, containerRect.left + 8);
+      maxRight = Math.min(vw - margin, containerRect.right - 8);
+    }
+
     const anchorCenter = anchorRect.left + anchorRect.width / 2;
     const defaultLeft = anchorCenter - tipWidth / 2;
     const defaultRight = anchorCenter + tipWidth / 2;
 
     let shift = 0;
-    if (defaultLeft < margin) {
-      // 左端から突き抜ける場合、右へ確実に押し戻す
-      shift = margin - defaultLeft;
-    } else if (defaultRight > vw - margin) {
-      // 右端から突き抜ける場合、左へ確実に押し戻す
-      shift = vw - margin - defaultRight;
+    const availableWidth = maxRight - minLeft;
+    if (tipWidth > availableWidth && availableWidth > 0) {
+      const targetCenter = (minLeft + maxRight) / 2;
+      shift = targetCenter - anchorCenter;
+    } else if (defaultLeft < minLeft) {
+      shift = minLeft - defaultLeft;
+    } else if (defaultRight > maxRight) {
+      shift = maxRight - defaultRight;
     }
-
-    setXOffset(shift);
+    return shift;
   };
 
   const showTip = () => {
     if (visible()) return;
-    setXOffset(0);
     setVisible(true);
     const dir = props.placement === 'bottom' ? -8 : 8;
 
     requestAnimationFrame(() => {
-      // 1フレーム待って要素のDOM計測を完了させた上で画面端チェック
-      adjustPositionWithinViewport();
-      requestAnimationFrame(() => {
-        adjustPositionWithinViewport();
-        if (tipRef) {
-          gsap.killTweensOf(tipRef);
-          gsap.fromTo(
-            tipRef,
-            { opacity: 0, y: dir, scale: 0.92 },
-            { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(1.7)', force3D: true }
-          );
-        }
-      });
+      const shift = calculateShift();
+      setXOffset(shift);
+
+      if (tipRef) {
+        gsap.killTweensOf(tipRef);
+        gsap.fromTo(
+          tipRef,
+          { opacity: 0, y: dir, scale: 0.92, xPercent: -50, x: shift },
+          { opacity: 1, y: 0, scale: 1, xPercent: -50, x: shift, duration: 0.2, ease: 'back.out(1.7)' }
+        );
+      }
     });
   };
 
@@ -91,13 +99,15 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
     if (tipRef) {
       gsap.killTweensOf(tipRef);
       const dir = props.placement === 'bottom' ? -6 : 6;
+      const currentShift = xOffset();
       gsap.to(tipRef, {
         opacity: 0,
         y: dir,
         scale: 0.94,
+        xPercent: -50,
+        x: currentShift,
         duration: 0.14,
         ease: 'power2.in',
-        force3D: true,
         onComplete: () => {
           setVisible(false);
           setXOffset(0);
@@ -184,9 +194,6 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
         <div
           ref={tipRef}
           class={`mizuna-tip-bubble is-${props.placement ?? 'top'}`}
-          style={{
-            transform: `translateX(calc(-50% + ${xOffset()}px))`,
-          }}
           role="tooltip"
         >
           <span class="mizuna-tip-title">{props.label}</span>
