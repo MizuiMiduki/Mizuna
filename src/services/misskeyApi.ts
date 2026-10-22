@@ -377,7 +377,6 @@ export function formatAnnouncementDate(dateStr: string): string {
 
 function decodeHtmlEntities(str: string): string {
   return str
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&quot;/g, '"')
@@ -387,7 +386,26 @@ function decodeHtmlEntities(str: string): string {
     .replace(/&#8220;/g, '“')
     .replace(/&#8221;/g, '”')
     .replace(/&#8230;|&hellip;/g, '…')
-    .replace(/&#160;|&nbsp;/g, ' ');
+    .replace(/&#160;|&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&'); // &amp; は二重展開を防ぐため最後にデコード
+}
+
+function stripHtmlTags(input: string): string {
+  if (typeof DOMParser !== 'undefined') {
+    try {
+      const doc = new DOMParser().parseFromString(input, 'text/html');
+      return doc.body.textContent || '';
+    } catch {
+      // フォールバック
+    }
+  }
+  let sanitized = input;
+  let prev = '';
+  do {
+    prev = sanitized;
+    sanitized = sanitized.replace(/<[^>]*>/g, '');
+  } while (sanitized !== prev);
+  return sanitized;
 }
 
 export async function fetchAnnouncements(page = 1, perPage = 10): Promise<AnnouncementsResult> {
@@ -405,7 +423,7 @@ export async function fetchAnnouncements(page = 1, perPage = 10): Promise<Announ
         link: post.link,
         date: post.date,
         snippet: post.excerpt?.rendered
-          ? decodeHtmlEntities(post.excerpt.rendered.replace(/<[^>]+>/g, '')).trim()
+          ? decodeHtmlEntities(stripHtmlTags(post.excerpt.rendered)).trim()
           : undefined,
       }));
       return {
@@ -441,7 +459,7 @@ export async function fetchAnnouncements(page = 1, perPage = 10): Promise<Announ
           title: clean(titleMatch ? titleMatch[1] : `お知らせ (${idx + 1})`),
           link: clean(linkMatch ? linkMatch[1] : 'https://blossomsarchive.com/blog/category/mizuna/'),
           date: clean(dateMatch ? dateMatch[1] : ''),
-          snippet: descMatch ? clean(descMatch[1].replace(/<[^>]+>/g, '')) : undefined,
+          snippet: descMatch ? clean(stripHtmlTags(descMatch[1])) : undefined,
         };
       });
 

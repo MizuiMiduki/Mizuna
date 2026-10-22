@@ -63,9 +63,14 @@ export function DebugMenu() {
 
   // ダミーアカウント追加
   const addMockAccount = async (ver: string, suffix: string, isLongName = false) => {
-    const rand = Math.floor(100 + Math.random() * 900);
+    const randArr = new Uint8Array(4);
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      crypto.getRandomValues(randArr);
+    }
+    const rand = 100 + ((randArr[0] << 8 | randArr[1]) % 900);
+    const secureTokenPart = Array.from(randArr, (b) => b.toString(16).padStart(2, '0')).join('');
     const id = await db.account.put({
-      token: `mock_token_${rand}`,
+      token: `mock_token_${secureTokenPart}_${rand}`,
       name: isLongName
         ? `超長文テストユーザー名_寿限無寿限無五劫のすりきれ海砂利水魚の水行末雲来末風来末_${rand}`
         : `テストユーザー${rand} (${suffix})`,

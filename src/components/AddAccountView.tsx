@@ -46,10 +46,20 @@ export function AddAccountView() {
         return;
       }
 
-      const sessionId =
-        typeof crypto !== 'undefined' && crypto.randomUUID
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      let sessionId: string;
+      if (typeof crypto !== 'undefined') {
+        if (typeof crypto.randomUUID === 'function') {
+          sessionId = crypto.randomUUID();
+        } else if (typeof crypto.getRandomValues === 'function') {
+          const arr = new Uint8Array(16);
+          crypto.getRandomValues(arr);
+          sessionId = Array.from(arr, (b) => b.toString(16).padStart(2, '0')).join('');
+        } else {
+          sessionId = `${Date.now()}-${performance.now().toString(36)}`;
+        }
+      } else {
+        sessionId = `${Date.now()}-${performance.now().toString(36)}`;
+      }
 
       localStorage.setItem('add_server_address', cleanAddress);
       const miauthUrl = buildMiAuthUrl(cleanAddress, sessionId);
