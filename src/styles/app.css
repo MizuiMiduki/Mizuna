@@ -1024,22 +1024,30 @@ body {
 }
 
 .mizuna-lightbox-close-icon-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  max-width: 40px !important;
+  max-height: 40px !important;
+  aspect-ratio: 1 / 1 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   color: #f8fafc;
   cursor: pointer;
   flex-shrink: 0;
+  box-sizing: border-box !important;
   transition: background 0.18s ease, transform 0.18s ease;
 }
 
 .mizuna-lightbox-close-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.22);
   transform: scale(1.06);
 }
 
@@ -1049,6 +1057,9 @@ body {
 
 .mizuna-lightbox-close-icon-btn i {
   font-size: 20px !important;
+  line-height: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* メイン画像ステージ */

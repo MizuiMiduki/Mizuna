@@ -766,7 +766,7 @@ export function NoteView() {
 
                   <button
                     type="button"
-                    class="mizuna-lightbox-close-icon-btn"
+                    class="circle mizuna-lightbox-close-icon-btn"
                     onClick={() => setPreviewModalImage(null)}
                     aria-label="閉じる"
                   >
