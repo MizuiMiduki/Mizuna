@@ -11,6 +11,11 @@ on:
         options:
           - release
           - prerelease
+      scheduled_time:
+        description: 'デプロイ予約日時 (日本時間 JST。例: 02:00, 2026-10-23 02:00, +30m。空欄の場合は即時デプロイ)'
+        required: false
+        default: ''
+        type: string
 
 permissions:
   contents: read
@@ -18,12 +23,45 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Calculate Scheduled Deploy Time (JST)
+        id: schedule
+        env:
+          SCHEDULE_TIME: ${{ inputs.scheduled_time }}
+        run: |
+          node scripts/parse-schedule.cjs
+
+      - name: Wait until Scheduled Time (JST)
+        if: steps.schedule.outputs.wait_seconds != '0'
+        env:
+          WAIT_SEC: ${{ steps.schedule.outputs.wait_seconds }}
+        run: |
+          echo "=========================================================="
+          echo "🕒 デプロイ予約待機中..."
+          echo "${{ steps.schedule.outputs.schedule_info }}"
+          echo "=========================================================="
+          REMAINING=$WAIT_SEC
+          while [ "$REMAINING" -gt 0 ]; do
+            if [ "$REMAINING" -gt 600 ]; then
+              echo "[$(date -u)] 残り待機時間: 約 $((REMAINING / 60)) 分 ($REMAINING 秒)..."
+              sleep 600
+              REMAINING=$((REMAINING - 600))
+            else
+              echo "[$(date -u)] 残り待機時間: $REMAINING 秒..."
+              sleep "$REMAINING"
+              REMAINING=0
+            fi
+          done
+          echo "=========================================================="
+          echo "🚀 予約時刻に到達しました！デプロイ処理を開始します。"
+          echo "=========================================================="
 
       - name: Resolve Latest Release Tag
         id: target_release
