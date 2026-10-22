@@ -45,7 +45,7 @@ export function SettingsView() {
                     type="button"
                     id="visibility_public"
                     class={`mizuna-seg-pill ${
-                      settings().default_visibility === 1 ? 'active is-active' : ''
+                      settings().default_visibility === 1 ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ default_visibility: 1 })}
                   >
@@ -56,7 +56,7 @@ export function SettingsView() {
                     type="button"
                     id="visibility_home"
                     class={`mizuna-seg-pill ${
-                      settings().default_visibility === 2 ? 'active is-active' : ''
+                      settings().default_visibility === 2 ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ default_visibility: 2 })}
                   >
@@ -67,7 +67,7 @@ export function SettingsView() {
                     type="button"
                     id="visibility_followers"
                     class={`mizuna-seg-pill ${
-                      settings().default_visibility === 3 ? 'active is-active' : ''
+                      settings().default_visibility === 3 ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ default_visibility: 3 })}
                   >
@@ -89,7 +89,7 @@ export function SettingsView() {
                     type="button"
                     id="is_note_end_mizuna_false"
                     class={`mizuna-seg-pill ${
-                      !settings().is_note_end_mizuna ? 'active is-active' : ''
+                      !settings().is_note_end_mizuna ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ is_note_end_mizuna: false })}
                   >
@@ -99,7 +99,7 @@ export function SettingsView() {
                     type="button"
                     id="is_note_end_mizuna_true"
                     class={`mizuna-seg-pill ${
-                      settings().is_note_end_mizuna ? 'active is-active' : ''
+                      settings().is_note_end_mizuna ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ is_note_end_mizuna: true })}
                   >
@@ -125,7 +125,7 @@ export function SettingsView() {
                     type="button"
                     id="darkmode_disable"
                     class={`mizuna-seg-pill ${
-                      settings().is_darkmode === 1 ? 'active is-active' : ''
+                      settings().is_darkmode === 1 ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ is_darkmode: 1 })}
                   >
@@ -136,7 +136,7 @@ export function SettingsView() {
                     type="button"
                     id="darkmode_auto"
                     class={`mizuna-seg-pill ${
-                      settings().is_darkmode === 2 ? 'active is-active' : ''
+                      settings().is_darkmode === 2 ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ is_darkmode: 2 })}
                   >
@@ -147,7 +147,7 @@ export function SettingsView() {
                     type="button"
                     id="darkmode_enable"
                     class={`mizuna-seg-pill ${
-                      settings().is_darkmode === 3 ? 'active is-active' : ''
+                      settings().is_darkmode === 3 ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ is_darkmode: 3 })}
                   >
@@ -169,7 +169,7 @@ export function SettingsView() {
                     type="button"
                     id="is_get_icon_keycolor_false"
                     class={`mizuna-seg-pill ${
-                      !settings().is_pick_theme_color ? 'active is-active' : ''
+                      !settings().is_pick_theme_color ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ is_pick_theme_color: false })}
                   >
@@ -179,7 +179,7 @@ export function SettingsView() {
                     type="button"
                     id="is_get_icon_keycolor_true"
                     class={`mizuna-seg-pill ${
-                      settings().is_pick_theme_color ? 'active is-active' : ''
+                      settings().is_pick_theme_color ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ is_pick_theme_color: true })}
                   >
@@ -200,7 +200,7 @@ export function SettingsView() {
                     type="button"
                     id="is_visible_icon_false"
                     class={`mizuna-seg-pill ${
-                      settings().is_visible_icon ? 'active is-active' : ''
+                      settings().is_visible_icon ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ is_visible_icon: true })}
                   >
@@ -210,7 +210,7 @@ export function SettingsView() {
                     type="button"
                     id="is_visible_icon_true"
                     class={`mizuna-seg-pill ${
-                      !settings().is_visible_icon ? 'active is-active' : ''
+                      !settings().is_visible_icon ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ is_visible_icon: false })}
                   >

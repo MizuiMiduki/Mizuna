@@ -8,10 +8,11 @@ export function FooterNav() {
   const { accounts, currentUser, settings, currentView, setCurrentView } = useApp();
 
   const handleNavClick = (targetView: ViewType, el: HTMLElement) => {
+    gsap.killTweensOf(el);
     gsap.fromTo(
       el,
-      { scale: 0.93 },
-      { scale: 1, duration: 0.28, ease: 'back.out(2)' }
+      { scale: 0.95 },
+      { scale: 1, duration: 0.18, ease: 'power2.out', force3D: true, clearProps: 'transform' }
     );
 
     if (targetView !== 'note' && currentView() === targetView && accounts().length > 0) {
@@ -31,9 +32,7 @@ export function FooterNav() {
           {/* 左側：アカウントアイコンのみのボタン（長押し・長時間ホバーでTIPS表示） */}
           <HoldHoverTip
             label={currentUser()?.name ?? 'アカウント管理'}
-            sublabel={`@${currentUser()?.username ?? 'id'}@${
-              currentUser()?.address ?? 'address'
-            } · タップでアカウント一覧`}
+            sublabel={`@${currentUser()?.username ?? 'id'}@${currentUser()?.address ?? 'address'}`}
             placement="top"
           >
             <button
@@ -76,7 +75,7 @@ export function FooterNav() {
               </button>
             </HoldHoverTip>
 
-            <HoldHoverTip label="環境設定" sublabel="テーマ・ショートカット・情報" placement="top">
+            <HoldHoverTip label="環境設定" sublabel="公開範囲・外観テーマ・データバックアップ" placement="top">
               <button
                 type="button"
                 id="settings_icon"

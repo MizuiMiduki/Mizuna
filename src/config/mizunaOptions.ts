@@ -59,5 +59,5 @@ export const mizuna_options: MizunaOptions = {
 export const mizuna_share: MizunaShare = {
   title: `${MIZUNA_APP_NAME} - ノート専用Misskeyクライアント`,
   text: 'Mizunaは機能をノート送信のみにすることで通信量削減に重点を置いたMisskeyクライアントです',
-  url: 'https://mizuna-project.blossomsarchive.com/',
+  url: 'https://mizuna.blossomsarchive.com/',
 };

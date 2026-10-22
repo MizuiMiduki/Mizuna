@@ -17,9 +17,11 @@ export interface HoldHoverTipProps {
 
 export function HoldHoverTip(props: HoldHoverTipProps) {
   const [visible, setVisible] = createSignal(false);
+  const [xOffset, setXOffset] = createSignal(0);
   let hoverTimer: ReturnType<typeof setTimeout> | undefined;
   let touchTimer: ReturnType<typeof setTimeout> | undefined;
   let didLongPress = false;
+  let isTouching = false;
   let anchorRef: HTMLDivElement | undefined;
   let tipRef: HTMLDivElement | undefined;
 
@@ -34,16 +36,43 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
     }
   };
 
+  const adjustPositionWithinViewport = () => {
+    if (!tipRef || !anchorRef) return;
+    const anchorRect = anchorRef.getBoundingClientRect();
+    const tipWidth = tipRef.offsetWidth;
+    const margin = 12; // 画面端からの安全マージン
+    const vw = document.documentElement.clientWidth || window.innerWidth;
+
+    // 通常の中央揃え時のTIPSの左右端座標
+    const defaultLeft = anchorRect.left + anchorRect.width / 2 - tipWidth / 2;
+    const defaultRight = defaultLeft + tipWidth;
+
+    let shift = 0;
+    if (defaultLeft < margin) {
+      // 左端からはみ出す場合は右へ押し戻す
+      shift = margin - defaultLeft;
+    } else if (defaultRight > vw - margin) {
+      // 右端からはみ出す場合は左へ押し戻す
+      shift = vw - margin - defaultRight;
+    }
+
+    setXOffset(shift);
+  };
+
   const showTip = () => {
     if (visible()) return;
+    setXOffset(0);
     setVisible(true);
     const dir = props.placement === 'bottom' ? -8 : 8;
+
     requestAnimationFrame(() => {
+      adjustPositionWithinViewport();
       if (tipRef) {
+        gsap.killTweensOf(tipRef);
         gsap.fromTo(
           tipRef,
           { opacity: 0, y: dir, scale: 0.92 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(1.7)' }
+          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(1.7)', force3D: true }
         );
       }
     });
@@ -53,6 +82,7 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
     clearTimers();
     if (!visible()) return;
     if (tipRef) {
+      gsap.killTweensOf(tipRef);
       const dir = props.placement === 'bottom' ? -6 : 6;
       gsap.to(tipRef, {
         opacity: 0,
@@ -60,15 +90,22 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
         scale: 0.94,
         duration: 0.14,
         ease: 'power2.in',
-        onComplete: () => setVisible(false),
+        force3D: true,
+        onComplete: () => {
+          setVisible(false);
+          setXOffset(0);
+        },
       });
     } else {
       setVisible(false);
+      setXOffset(0);
     }
   };
 
-  // マウスカーソルを一定時間合わせたとき
+  // マウスカーソルを一定時間合わせたとき（タッチ直後の擬似ホバーは除外）
   const handleMouseEnter = () => {
+    if (isTouching) return;
+    if (window.matchMedia('(hover: none)').matches) return;
     clearTimers();
     hoverTimer = setTimeout(() => {
       showTip();
@@ -81,6 +118,7 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
 
   // タッチ長押し開始
   const handleTouchStart = () => {
+    isTouching = true;
     clearTimers();
     didLongPress = false;
     touchTimer = setTimeout(() => {
@@ -90,10 +128,15 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
   };
 
   const handleTouchEnd = () => {
+    clearTimers();
     hideTip();
+    // タッチ終了後、ブラウザが生成する遅延mouse/hoverイベントを無視できるように少しだけ待機
+    setTimeout(() => {
+      isTouching = false;
+    }, 400);
   };
 
-  // 長押しでTIPSを表示した場合は直後のクリックイベントをキャンセルする
+  // クリック時のハンドラ
   const handleClickCapture = (e: MouseEvent) => {
     if (didLongPress) {
       e.preventDefault();
@@ -134,6 +177,9 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
         <div
           ref={tipRef}
           class={`mizuna-tip-bubble is-${props.placement ?? 'top'}`}
+          style={{
+            transform: `translateX(calc(-50% + ${xOffset()}px))`,
+          }}
           role="tooltip"
         >
           <span class="mizuna-tip-title">{props.label}</span>

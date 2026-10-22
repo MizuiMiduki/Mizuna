@@ -26,6 +26,28 @@
   max-block-size: none;
 }
 
+/* BeerCSSの :is(.button,button):not(.chip).active による border-radius: .5rem!important (四角化) を防止 */
+:is(.button, button):not(.chip):active,
+:is(.button, button):not(.chip).active {
+  border-radius: inherit;
+}
+
+/* タッチデバイスでタップ後にBeerCSSの波紋(after)やfocusが残留する問題を解消 */
+@media (hover: none) {
+  :is(.wave, .chip, .button, button, nav.tabbed > a, .tabs > a, nav.toolbar > a):not(.slow-ripple, .ripple, .fast-ripple):after {
+    display: none !important;
+  }
+  button:focus:not(:focus-visible),
+  .button:focus:not(:focus-visible),
+  .chip:focus:not(:focus-visible) {
+    outline: none !important;
+  }
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
 html,
 body {
   margin: 0;
@@ -1704,11 +1726,12 @@ body {
   outline: none !important;
   cursor: pointer;
   text-transform: none;
+  transform: translateZ(0);
+  will-change: transform, background-color, border-color;
   transition:
-    background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-    border-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.18s ease;
+    background-color 0.15s ease-out,
+    border-color 0.15s ease-out,
+    color 0.15s ease-out;
 }
 
 .mizuna-dock-avatar-btn::before,
@@ -2237,9 +2260,10 @@ body {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 360px;
-  border-radius: 24px;
-  padding: 12px;
+  max-width: 520px;
+  max-height: calc(85svh - 32px);
+  border-radius: 28px;
+  padding: 18px;
   background: color-mix(in srgb, var(--surface-container-low) 96%, transparent);
   backdrop-filter: blur(24px);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 65%, transparent);
@@ -2293,14 +2317,17 @@ body {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 290px;
+  max-height: 60svh;
   overflow-y: auto;
-  padding-right: 2px;
+  overflow-x: hidden;
+  padding: 2px 6px 2px 2px;
+  box-sizing: border-box;
 }
 
 .mizuna-picker-item {
   width: 100%;
   max-width: 100%;
+  box-sizing: border-box !important;
   height: auto !important;
   min-height: 58px;
   padding: 10px 14px !important;

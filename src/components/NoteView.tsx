@@ -1,3 +1,4 @@
+import { Portal } from 'solid-js/web';
 import gsap from 'gsap';
 import {
   createEffect,
@@ -641,7 +642,8 @@ export function NoteView() {
 
       {/* アカウント切り替えポップアップ */}
       <Show when={isAccountPickerOpen()}>
-        <div class="mizuna-modal-portal" role="dialog" aria-modal="true">
+        <Portal>
+          <div class="mizuna-modal-portal" role="dialog" aria-modal="true">
           <div
             ref={pickerBackdropRef}
             class="mizuna-modal-backdrop"
@@ -653,6 +655,26 @@ export function NoteView() {
             class="mizuna-picker-modal"
             onClick={(e) => e.stopPropagation()}
           >
+            <div class="mizuna-picker-header">
+              <div class="mizuna-picker-title-wrap">
+                <div class="mizuna-picker-icon">
+                  <i>switch_account</i>
+                </div>
+                <div>
+                  <h3 class="mizuna-picker-title">投稿アカウントの選択</h3>
+                  <p class="mizuna-picker-sub">切り替えるアカウントをタップしてください</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="mizuna-icon-btn-sm"
+                onClick={closeAccountPicker}
+                aria-label="閉じる"
+              >
+                <i>close</i>
+              </button>
+            </div>
+
             <div class="mizuna-picker-list">
               <For each={accounts()}>
                 {(acc) => {
@@ -692,6 +714,7 @@ export function NoteView() {
             </div>
           </div>
         </div>
+        </Portal>
       </Show>
 
       {/* 画像拡大プレビューモーダル */}
