@@ -32,9 +32,13 @@ jobs:
 
       - name: Determine Version, Tag, and Generate Changelog
         id: meta
+        env:
+          CUSTOM_VERSION: ${{ inputs.custom_version }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+          REPO: ${{ github.repository }}
         run: |
-          if [ -n "${{ inputs.custom_version }}" ]; then
-            RAW_VER="${{ inputs.custom_version }}"
+          if [ -n "$CUSTOM_VERSION" ]; then
+            RAW_VER="$CUSTOM_VERSION"
           else
             RAW_VER=$(node -p "require('./package.json').version")
           fi
@@ -48,7 +52,7 @@ jobs:
             VER_NUM="$RAW_VER"
           fi
 
-          if [ "${{ inputs.release_type }}" = "prerelease" ]; then
+          if [ "$RELEASE_TYPE" = "prerelease" ]; then
             # プレリリース時はタグ名に -pre を付与 (既に含まれていなければ)
             if [[ "$TAG_NAME" != *-pre* ]]; then
               TAG_NAME="${TAG_NAME}-pre"
@@ -73,7 +77,7 @@ jobs:
               git log "${PREV_TAG}..HEAD" --no-merges --pretty=format:"- %s (%h)"
               echo ""
               echo ""
-              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG_NAME}"
+              echo "**Full Changelog**: https://github.com/${REPO}/compare/${PREV_TAG}...${TAG_NAME}"
             else
               echo "### 変更内容 (直近のコミット)"
               git log -n 30 --no-merges --pretty=format:"- %s (%h)"

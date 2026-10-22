@@ -29,21 +29,27 @@ jobs:
         id: target_release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
+          CANARY_FTP_USER: ${{ secrets.CANARY_FTP_USERNAME }}
+          CANARY_FTP_PASS: ${{ secrets.CANARY_FTP_PASSWORD }}
+          PROD_FTP_USER: ${{ secrets.FTP_USERNAME }}
+          PROD_FTP_PASS: ${{ secrets.FTP_PASSWORD }}
+          REPO: ${{ github.repository }}
         run: |
-          if [ "${{ inputs.deploy_target }}" = "prerelease" ]; then
+          if [ "$DEPLOY_TARGET" = "prerelease" ]; then
             echo "最新のプレリリース (Canary) を検索しています..."
-            TAG_NAME=$(gh api "repos/${{ github.repository }}/releases" --jq '[.[] | select(.prerelease == true and .draft == false)][0].tag_name // empty')
-            FTP_USER="${{ secrets.CANARY_FTP_USERNAME }}"
-            FTP_PASS="${{ secrets.CANARY_FTP_PASSWORD }}"
+            TAG_NAME=$(gh api "repos/${REPO}/releases" --jq '[.[] | select(.prerelease == true and .draft == false)][0].tag_name // empty')
+            FTP_USER="$CANARY_FTP_USER"
+            FTP_PASS="$CANARY_FTP_PASS"
           else
             echo "最新の正式リリース (Production) を検索しています..."
-            TAG_NAME=$(gh api "repos/${{ github.repository }}/releases" --jq '[.[] | select(.prerelease == false and .draft == false)][0].tag_name // empty')
-            FTP_USER="${{ secrets.FTP_USERNAME }}"
-            FTP_PASS="${{ secrets.FTP_PASSWORD }}"
+            TAG_NAME=$(gh api "repos/${REPO}/releases" --jq '[.[] | select(.prerelease == false and .draft == false)][0].tag_name // empty')
+            FTP_USER="$PROD_FTP_USER"
+            FTP_PASS="$PROD_FTP_PASS"
           fi
 
           if [ -z "$TAG_NAME" ]; then
-            echo "::error::対象となる '${{ inputs.deploy_target }}' のリリースが見つかりませんでした。先に Create Release ワークフローを実行してリリースを作成してください。"
+            echo "::error::対象となる '$DEPLOY_TARGET' のリリースが見つかりませんでした。先に Create Release ワークフローを実行してリリースを作成してください。"
             exit 1
           fi
 
@@ -52,9 +58,11 @@ jobs:
           echo "ftp_user=$FTP_USER" >> "$GITHUB_OUTPUT"
           echo "ftp_pass=$FTP_PASS" >> "$GITHUB_OUTPUT"
 
-      - name: Checkout Release Tag (${{ steps.target_release.outputs.tag_name }})
+      - name: Checkout Release Tag
+        env:
+          TARGET_TAG: ${{ steps.target_release.outputs.tag_name }}
         run: |
-          git checkout "${{ steps.target_release.outputs.tag_name }}"
+          git checkout "$TARGET_TAG"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -63,9 +71,11 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies & Build
+        env:
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
         run: |
           npm ci
-          if [ "${{ inputs.deploy_target }}" = "prerelease" ]; then
+          if [ "$DEPLOY_TARGET" = "prerelease" ]; then
             npm run build:canary
           else
             npm run build
