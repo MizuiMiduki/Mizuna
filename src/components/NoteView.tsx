@@ -804,14 +804,6 @@ export function NoteView() {
                     <i>delete</i>
                     <span>削除する</span>
                   </button>
-                  <button
-                    type="button"
-                    class="mizuna-btn mizuna-btn-tonal mizuna-lightbox-action-btn"
-                    onClick={() => setPreviewModalImage(null)}
-                  >
-                    <i>close</i>
-                    <span>閉じる</span>
-                  </button>
                 </div>
               </div>
             </div>

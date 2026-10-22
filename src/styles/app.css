@@ -1091,18 +1091,18 @@ body {
 }
 
 .mizuna-lightbox-bottombar-inner {
-  max-width: 440px;
+  max-width: 320px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
 }
 
 .mizuna-lightbox-action-btn {
-  flex: 1;
-  height: 42px !important;
-  font-size: 0.9rem !important;
+  width: 100%;
+  max-width: 260px;
+  height: 44px !important;
+  font-size: 0.92rem !important;
   font-weight: 700 !important;
   border-radius: var(--mizuna-radius-pill) !important;
   justify-content: center !important;
