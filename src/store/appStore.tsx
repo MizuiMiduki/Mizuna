@@ -470,17 +470,29 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
 
     // OSのカラースキーム変更を監視（端末設定モード時）
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleSchemeChange = () => {
-      if (settings().is_darkmode === 2) {
-        applyThemeAndMode(settings(), currentUser()?.avatarurl, currentUser()?.address);
-      }
-    };
-    mediaQuery.addEventListener('change', handleSchemeChange);
-    onCleanup(() => {
-      mediaQuery.removeEventListener('change', handleSchemeChange);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    });
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleSchemeChange = () => {
+        if (settings().is_darkmode === 2) {
+          applyThemeAndMode(settings(), currentUser()?.avatarurl, currentUser()?.address);
+        }
+      };
+      mediaQuery.addEventListener?.('change', handleSchemeChange);
+      onCleanup(() => {
+        try {
+          mediaQuery.removeEventListener?.('change', handleSchemeChange);
+        } catch {
+          // テスト環境等のティアダウン時は無視
+        }
+        if (typeof document !== 'undefined') {
+          try {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+          } catch {
+            // 無視
+          }
+        }
+      });
+    }
   });
 
   // 添付画像の追加（Base64変換ではなくゼロコピーの ObjectURL を使用してCPU・メモリ・バッテリー消費を削減）

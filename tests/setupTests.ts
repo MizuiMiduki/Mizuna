@@ -71,7 +71,21 @@ window.getComputedStyle = function (elt: Element, pseudoElt?: string | null) {
   }
 };
 
-// 5. 各テスト終了時に GSAP のアクティブなトゥイーンをすべて停止
+// 5. デフォルトの fetch モック (ネットワーク遮断環境や非同期リクエストの安全性確保)
+if (typeof globalThis.fetch === 'undefined' || !vi.isMockFunction(globalThis.fetch)) {
+  globalThis.fetch = vi.fn().mockImplementation(async () => ({
+    ok: true,
+    status: 200,
+    text: async () => '',
+    json: async () => [],
+    headers: new Headers({
+      'x-wp-total': '0',
+      'x-wp-totalpages': '0',
+    }),
+  })) as any;
+}
+
+// 6. 各テスト終了時に GSAP のアクティブなトゥイーンをすべて停止
 afterEach(() => {
   gsap.killTweensOf('*');
 });
