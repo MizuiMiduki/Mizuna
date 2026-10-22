@@ -1,0 +1,42 @@
+name: Type Check
+
+on:
+    pull_request:
+    workflow_dispatch:
+        inputs:
+            今回のみ待機時間チェックを省略:
+                description: "選択すると、この実行に限り公開後の待機時間チェックを省略します"
+                type: boolean
+                required: false
+                default: false
+
+permissions:
+    contents: read
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v5
+
+            - uses: actions/setup-node@v5
+              with:
+                  node-version: "24"
+                  package-manager-cache: false
+
+            - uses: pnpm/action-setup@v5
+
+            - name: Install dependencies
+              if: github.event_name != 'workflow_dispatch' || !inputs['今回のみ待機時間チェックを省略']
+              run: pnpm install --frozen-lockfile
+
+            - name: Install dependencies (temporary policy bypass)
+              if: github.event_name == 'workflow_dispatch' && inputs['今回のみ待機時間チェックを省略']
+              run: pnpm install --frozen-lockfile --config.minimum-release-age=0
+
+            - name: Run Type Check
+              run: pnpm run type-check
