@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
 
@@ -6,7 +7,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      solidPlugin(),
+      solidPlugin({ hot: false }),
       {
         name: 'mizuna-pwa-channel',
         transformIndexHtml(html) {
@@ -27,12 +28,25 @@ export default defineConfig(({ mode }) => {
         },
       },
     ],
+    resolve: {
+      conditions: mode === 'test' ? ['development', 'browser'] : [],
+    },
     server: {
       port: 3000,
       host: true,
     },
     build: {
       target: 'esnext',
+    },
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      setupFiles: ['./src/setupTests.ts'],
+      server: {
+        deps: {
+          inline: [/solid-js/],
+        },
+      },
     },
   };
 });

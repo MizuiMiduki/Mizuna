@@ -54,7 +54,7 @@ export function NoteView() {
   let cwInputRef: HTMLTextAreaElement | undefined;
   let noteInputRef: HTMLTextAreaElement | undefined;
   let fileInputRef: HTMLInputElement | undefined;
-  let modalContentRef: HTMLDivElement | undefined;
+  let modalContentRef: HTMLImageElement | undefined;
   let pickerCardRef: HTMLDivElement | undefined;
   let pickerBackdropRef: HTMLDivElement | undefined;
 

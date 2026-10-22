@@ -64,6 +64,9 @@ export interface AttachedImageItem {
   name: string;
   file: File;
   dataUrl: string;
+  compressedFile?: File;
+  originalSize: number;
+  compressedSize?: number;
 }
 
 export function visibilityNumToString(num: 1 | 2 | 3): VisibilityType {
