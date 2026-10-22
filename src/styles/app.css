@@ -929,116 +929,183 @@ body {
 .mizuna-lightbox {
   position: fixed;
   inset: 0;
-  background: rgba(10, 12, 16, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(8, 11, 16, 0.94);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   z-index: 500;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 24px;
-  box-sizing: border-box;
-}
-
-.mizuna-lightbox-content {
-  display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  max-width: min(84vw, 800px);
-  max-height: 84svh;
-  margin: auto;
+  justify-content: space-between;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
 }
 
-.mizuna-lightbox-content img.modal-content {
-  max-width: 100%;
-  max-height: calc(84svh - 68px);
-  object-fit: contain;
-  border-radius: 20px;
-  box-shadow:
-    0 24px 60px -10px rgba(0, 0, 0, 0.65),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
+/* トップバー (ファイル情報・WebP削減率 & 閉じるボタン) */
+.mizuna-lightbox-topbar {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: max(10px, env(safe-area-inset-top, 10px)) 16px 10px;
+  z-index: 2;
+  flex-shrink: 0;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
-.mizuna-lightbox-bar {
+.mizuna-lightbox-topbar-inner {
+  max-width: 860px;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 10px 18px;
-  border-radius: var(--mizuna-radius-pill);
-  background: rgba(22, 27, 34, 0.92);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  color: #fff;
-  width: 100%;
-  max-width: 580px;
-  box-sizing: border-box;
+  gap: 12px;
 }
 
-.mizuna-lightbox-info {
+.mizuna-lightbox-fileinfo {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
   flex: 1;
 }
 
-.mizuna-lightbox-name {
-  font-size: 0.82rem;
-  font-weight: 600;
-  max-width: 240px;
+.mizuna-lightbox-filename {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #f8fafc;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.mizuna-lightbox-metrics {
-  display: inline-flex;
+.mizuna-lightbox-meta {
+  display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.72rem;
-  color: #94a3b8;
+  font-size: 0.74rem;
   font-variant-numeric: tabular-nums;
   flex-wrap: wrap;
 }
 
-.mizuna-lightbox-size {
-  color: #cbd5e1;
+.mizuna-lightbox-raw-size {
+  color: #94a3b8;
+  font-weight: 500;
 }
 
-.mizuna-lightbox-arrow {
+.mizuna-lightbox-meta-arrow {
   font-size: 13px !important;
   color: #64748b;
 }
 
 .mizuna-lightbox-webp-size {
   color: #38bdf8;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .mizuna-lightbox-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 0.65rem;
+  font-size: 0.68rem;
   font-weight: 800;
   padding: 1px 7px;
   border-radius: 9999px;
-  background: rgba(16, 185, 129, 0.18);
-  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.45);
   color: #34d399;
   letter-spacing: 0.02em;
 }
 
 .mizuna-lightbox-compressing {
-  font-size: 0.68rem;
-  color: #f59e0b;
+  font-size: 0.72rem;
+  color: #fbbf24;
+  font-weight: 600;
 }
 
-.mizuna-lightbox-actions {
+.mizuna-lightbox-close-icon-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f8fafc;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.18s ease, transform 0.18s ease;
+}
+
+.mizuna-lightbox-close-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.06);
+}
+
+.mizuna-lightbox-close-icon-btn:active {
+  transform: scale(0.94);
+}
+
+.mizuna-lightbox-close-icon-btn i {
+  font-size: 20px !important;
+}
+
+/* メイン画像ステージ */
+.mizuna-lightbox-stage {
+  flex: 1;
   display: flex;
-  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  width: 100%;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.mizuna-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 16px;
+  box-shadow:
+    0 24px 60px -10px rgba(0, 0, 0, 0.75),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  cursor: default;
+}
+
+/* ボトムバー (アクションボタン) */
+.mizuna-lightbox-bottombar {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 12px 16px max(14px, env(safe-area-inset-bottom, 14px));
+  z-index: 2;
+  flex-shrink: 0;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
+}
+
+.mizuna-lightbox-bottombar-inner {
+  max-width: 440px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.mizuna-lightbox-action-btn {
+  flex: 1;
+  height: 42px !important;
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  border-radius: var(--mizuna-radius-pill) !important;
+  justify-content: center !important;
 }
 
 /* =========================================

@@ -260,7 +260,7 @@ export function NoteView() {
         gsap.fromTo(
           modalContentRef,
           { scale: 0.88, opacity: 0 },
-          { scale: 1, opacity: 1, duration: 0.24, ease: 'back.out(1.5)' }
+          { scale: 1, opacity: 1, duration: 0.24, ease: 'back.out(1.5)', clearProps: 'transform' }
         );
       }
     }, 10);
@@ -726,55 +726,79 @@ export function NoteView() {
               class="mizuna-lightbox"
               onClick={() => setPreviewModalImage(null)}
             >
-            <div
-              ref={modalContentRef}
-              class="mizuna-lightbox-content"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img
-                id="modalImage"
-                class="modal-content"
-                src={imgItem().dataUrl}
-                alt={imgItem().name}
-                data-name={imgItem().name}
-                decoding="async"
-              />
-              <div class="mizuna-lightbox-bar">
-                <div class="mizuna-lightbox-info">
-                  <span class="mizuna-lightbox-name">{imgItem().name}</span>
-                  <div class="mizuna-lightbox-metrics">
-                    <span class="mizuna-lightbox-size">
-                      {(imgItem().originalSize / 1024).toFixed(1)} KB
+              {/* トップバー: ファイル情報・WebP削減率 & 閉じるボタン */}
+              <div class="mizuna-lightbox-topbar" onClick={(e) => e.stopPropagation()}>
+                <div class="mizuna-lightbox-topbar-inner">
+                  <div class="mizuna-lightbox-fileinfo">
+                    <span class="mizuna-lightbox-filename" title={imgItem().name}>
+                      {imgItem().name}
                     </span>
-                    <Show
-                      when={imgItem().compressedSize}
-                      fallback={<span class="mizuna-lightbox-compressing">WebP圧縮中...</span>}
-                    >
-                      {(compSize) => {
-                        const savedPercent = Math.max(
-                          0,
-                          Math.round(((imgItem().originalSize - compSize()) / imgItem().originalSize) * 100)
-                        );
-                        return (
-                          <>
-                            <i class="mizuna-lightbox-arrow">arrow_forward</i>
-                            <span class="mizuna-lightbox-webp-size">
-                              {(compSize() / 1024).toFixed(1)} KB (WebP)
-                            </span>
-                            <span class="mizuna-lightbox-badge">
-                              {savedPercent}% 削減
-                            </span>
-                          </>
-                        );
-                      }}
-                    </Show>
+                    <div class="mizuna-lightbox-meta">
+                      <span class="mizuna-lightbox-raw-size">
+                        {(imgItem().originalSize / 1024).toFixed(1)} KB
+                      </span>
+                      <Show
+                        when={imgItem().compressedSize}
+                        fallback={<span class="mizuna-lightbox-compressing">WebP圧縮中...</span>}
+                      >
+                        {(compSize) => {
+                          const savedPercent = Math.max(
+                            0,
+                            Math.round(
+                              ((imgItem().originalSize - compSize()) / imgItem().originalSize) * 100
+                            )
+                          );
+                          return (
+                            <>
+                              <i class="mizuna-lightbox-meta-arrow">arrow_forward</i>
+                              <span class="mizuna-lightbox-webp-size">
+                                {(compSize() / 1024).toFixed(1)} KB (WebP)
+                              </span>
+                              <span class="mizuna-lightbox-badge">
+                                {savedPercent}% 削減
+                              </span>
+                            </>
+                          );
+                        }}
+                      </Show>
+                    </div>
                   </div>
+
+                  <button
+                    type="button"
+                    class="mizuna-lightbox-close-icon-btn"
+                    onClick={() => setPreviewModalImage(null)}
+                    aria-label="閉じる"
+                  >
+                    <i>close</i>
+                  </button>
                 </div>
-                <div class="mizuna-lightbox-actions">
+              </div>
+
+              {/* メイン画像ステージ */}
+              <div
+                class="mizuna-lightbox-stage"
+                onClick={() => setPreviewModalImage(null)}
+              >
+                <img
+                  ref={modalContentRef}
+                  id="modalImage"
+                  class="mizuna-lightbox-img"
+                  src={imgItem().dataUrl}
+                  alt={imgItem().name}
+                  data-name={imgItem().name}
+                  decoding="async"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+
+              {/* ボトムバー: アクションボタン */}
+              <div class="mizuna-lightbox-bottombar" onClick={(e) => e.stopPropagation()}>
+                <div class="mizuna-lightbox-bottombar-inner">
                   <button
                     type="button"
                     id="deleteImageButton"
-                    class="mizuna-btn mizuna-btn-danger"
+                    class="mizuna-btn mizuna-btn-danger mizuna-lightbox-action-btn"
                     onClick={handleDeletePreviewImage}
                   >
                     <i>delete</i>
@@ -782,7 +806,7 @@ export function NoteView() {
                   </button>
                   <button
                     type="button"
-                    class="mizuna-btn mizuna-btn-tonal"
+                    class="mizuna-btn mizuna-btn-tonal mizuna-lightbox-action-btn"
                     onClick={() => setPreviewModalImage(null)}
                   >
                     <i>close</i>
@@ -791,7 +815,6 @@ export function NoteView() {
                 </div>
               </div>
             </div>
-          </div>
           </Portal>
         )}
       </Show>
