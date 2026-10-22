@@ -77,6 +77,10 @@ jobs:
             fi
           } > RELEASE_NOTES.md
 
+          # 同名タグが既に存在する場合も現在のコミットへ上書き更新
+          git tag -f "$TAG_NAME" HEAD
+          git push -f origin "refs/tags/$TAG_NAME"
+
       - name: Create Git Tag and Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
