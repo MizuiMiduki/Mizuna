@@ -59,28 +59,32 @@ jobs:
             echo "release_title=Mizuna $TAG_NAME" >> "$GITHUB_OUTPUT"
           fi
 
-          # 直前のタグを取得して変更履歴を生成
-          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          # 直前のタグを取得して変更履歴を生成 (同名タグ自身は除外)
+          PREV_TAG=$(git describe --tags --abbrev=0 --exclude="$TAG_NAME" 2>/dev/null || echo "")
           {
             echo "## Mizuna $TAG_NAME"
             echo ""
             if [ -n "$PREV_TAG" ]; then
               echo "### 変更内容 ($PREV_TAG からの差分)"
               git log "${PREV_TAG}..HEAD" --no-merges --pretty=format:"- %s (%h)"
+              echo ""
+              echo ""
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREV_TAG}...${TAG_NAME}"
             else
               echo "### 変更内容 (直近のコミット)"
               git log -n 30 --no-merges --pretty=format:"- %s (%h)"
+              echo ""
             fi
-            echo ""
           } > RELEASE_NOTES.md
 
       - name: Create Git Tag and Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag_name }}
+          target_commitish: ${{ github.sha }}
           name: ${{ steps.meta.outputs.release_title }}
           body_path: RELEASE_NOTES.md
           prerelease: ${{ steps.meta.outputs.is_prerelease }}
-          generate_release_notes: true
+          generate_release_notes: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
