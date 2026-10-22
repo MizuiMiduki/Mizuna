@@ -117,7 +117,7 @@ export function AboutView() {
       </div>
 
       {/* 詳細情報カード */}
-      <div class="mizuna-setting-card bottom-margin-medium">
+      <div class="mizuna-setting-card mizuna-about-details-card">
         <div class="mizuna-meta-row">
           <span class="mizuna-meta-label">GitHub Repository</span>
           <a

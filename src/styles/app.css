@@ -2658,8 +2658,8 @@ body {
   line-height: 1.35;
 }
 
-.bottom-margin-medium {
-  margin-bottom: 16px !important;
+.mizuna-about-details-card {
+  margin-bottom: 16px;
 }
 
 /* =========================================
