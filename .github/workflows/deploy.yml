@@ -66,19 +66,9 @@ jobs:
           fi
 
       # ==========================================
-      # 本番 (release) デプロイ
+      # 本番 (release) 差分デプロイ
       # ==========================================
-      - name: Clear Production FTP Directory
-        if: inputs.deploy_target == 'release'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: "${{ secrets.FTP_TARGET_DIR }}"
-          dangerous-clean-slate: true
-
-      - name: Deploy Production dist via FTP
+      - name: Deploy Production dist via FTP (Differential Sync)
         if: inputs.deploy_target == 'release'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -89,19 +79,9 @@ jobs:
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
       # ==========================================
-      # プレリリース / Canary (prerelease) デプロイ
+      # プレリリース / Canary (prerelease) 差分デプロイ
       # ==========================================
-      - name: Clear Canary FTP Directory
-        if: inputs.deploy_target == 'prerelease'
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.CANARY_FTP_USERNAME }}
-          password: ${{ secrets.CANARY_FTP_PASSWORD }}
-          server-dir: "${{ secrets.FTP_TARGET_DIR }}"
-          dangerous-clean-slate: true
-
-      - name: Deploy Canary dist via FTP
+      - name: Deploy Canary dist via FTP (Differential Sync)
         if: inputs.deploy_target == 'prerelease'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
