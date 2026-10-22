@@ -33,9 +33,13 @@ jobs:
           if [ "${{ inputs.deploy_target }}" = "prerelease" ]; then
             echo "最新のプレリリース (Canary) を検索しています..."
             TAG_NAME=$(gh api "repos/${{ github.repository }}/releases" --jq '[.[] | select(.prerelease == true and .draft == false)][0].tag_name // empty')
+            FTP_USER="${{ secrets.CANARY_FTP_USERNAME }}"
+            FTP_PASS="${{ secrets.CANARY_FTP_PASSWORD }}"
           else
             echo "最新の正式リリース (Production) を検索しています..."
             TAG_NAME=$(gh api "repos/${{ github.repository }}/releases" --jq '[.[] | select(.prerelease == false and .draft == false)][0].tag_name // empty')
+            FTP_USER="${{ secrets.FTP_USERNAME }}"
+            FTP_PASS="${{ secrets.FTP_PASSWORD }}"
           fi
 
           if [ -z "$TAG_NAME" ]; then
@@ -45,6 +49,8 @@ jobs:
 
           echo "デプロイ対象タグ: $TAG_NAME"
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "ftp_user=$FTP_USER" >> "$GITHUB_OUTPUT"
+          echo "ftp_pass=$FTP_PASS" >> "$GITHUB_OUTPUT"
 
       - name: Checkout Release Tag (${{ steps.target_release.outputs.tag_name }})
         run: |
@@ -65,28 +71,32 @@ jobs:
             npm run build
           fi
 
-      # ==========================================
-      # 本番 (release) 差分デプロイ
-      # ==========================================
-      - name: Deploy Production dist via FTP (Differential Sync)
-        if: inputs.deploy_target == 'release'
+      # ========================================================
+      # 1. メンテナンス中画面の適用 (デプロイ中の操作・破損を防止)
+      # ========================================================
+      - name: Prepare Maintenance Page
+        run: |
+          mkdir -p maintenance_staging
+          cp public/maintenance.html maintenance_staging/index.html
+          cp public/icon.png maintenance_staging/icon.png
+
+      - name: Enable Maintenance Mode via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: "./dist/"
+          username: ${{ steps.target_release.outputs.ftp_user }}
+          password: ${{ steps.target_release.outputs.ftp_pass }}
+          local-dir: "./maintenance_staging/"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
 
-      # ==========================================
-      # プレリリース / Canary (prerelease) 差分デプロイ
-      # ==========================================
-      - name: Deploy Canary dist via FTP (Differential Sync)
-        if: inputs.deploy_target == 'prerelease'
+      # ========================================================
+      # 2. アプリ本体の差分同期 (JS, CSS, 画像などの高速転送)
+      # ========================================================
+      - name: Deploy dist via FTP (Differential Sync)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.CANARY_FTP_USERNAME }}
-          password: ${{ secrets.CANARY_FTP_PASSWORD }}
+          username: ${{ steps.target_release.outputs.ftp_user }}
+          password: ${{ steps.target_release.outputs.ftp_pass }}
           local-dir: "./dist/"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
