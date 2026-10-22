@@ -1,0 +1,26 @@
+{
+  "name": "mizuna",
+  "private": true,
+  "version": "3.10.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:canary": "vite build --mode canary",
+    "type-check": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "beercss": "^3.11.20",
+    "dexie": "^4.0.11",
+    "gsap": "^3.12.7",
+    "material-dynamic-colors": "^1.1.2",
+    "pulltorefreshjs": "^0.1.22",
+    "solid-js": "^1.9.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3",
+    "vite": "^6.1.0",
+    "vite-plugin-solid": "^2.11.2"
+  }
+}

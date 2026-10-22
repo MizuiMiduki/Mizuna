@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="IE=edge" http-equiv="X-UA-Compatible">
+  <title>メンテナンス | Mizuna</title>
+  <link href="/icon.png" rel="icon">
+
+  <style>
+    body {
+      font-family: "IBM Plex Sans JP", system-ui, -apple-system, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+
+    .container {
+      text-align: center;
+      background-color: #fff;
+      padding: 48px 36px;
+      box-shadow: 0 8px 24px rgba(43, 140, 190, 0.16);
+      border-radius: 20px;
+      max-width: 480px;
+      width: 100%;
+    }
+
+    h1 {
+      color: #181c20;
+      font-size: 28px;
+      margin: 0 0 16px;
+    }
+
+    p {
+      font-size: 16px;
+      line-height: 1.6;
+      color: #555;
+      margin: 0 0 32px;
+    }
+
+    .logo {
+      width: 120px;
+      border-radius: 24px;
+      margin-bottom: 20px;
+    }
+
+    .footer {
+      font-size: 13px;
+      color: #888;
+      margin-top: 20px;
+    }
+  </style>
+  <script src="https://unpkg.com/budoux/bundle/budoux-ja.min.js"></script>
+</head>
+
+<body>
+  <div class="container">
+    <img alt="Mizuna" class="logo" src="/icon.png">
+    <budoux-ja>
+      <h1>現在メンテナンス中です</h1>
+    </budoux-ja>
+    <budoux-ja>
+      <p>しばらくお待ちください。<br>メンテナンスが完了次第、サービスを再開いたします。</p>
+    </budoux-ja>
+    <div class="footer">
+      &copy; <span id="Copyright_year"></span> Mizui Miduki
+    </div>
+  </div>
+  <script>
+    document.getElementById('Copyright_year').textContent = new Date().getFullYear();
+  </script>
+</body>
+
+</html>

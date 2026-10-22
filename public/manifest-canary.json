@@ -1,0 +1,30 @@
+{
+  "name": "Mizuna Canary -ノート専用Misskeyクライアント",
+  "short_name": "Mizuna Canary",
+  "theme_color": "#f59e0b",
+  "background_color": "#add8e6",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "start_url": "./index.html",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "permissions": [
+    "*://*/*"
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "enctype": "application/x-www-form-urlencoded",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}
