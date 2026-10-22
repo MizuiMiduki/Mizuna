@@ -3,7 +3,7 @@ import { onMount } from 'solid-js';
 import { useApp } from '../store/appStore';
 
 export function SettingsView() {
-  const { settings, updateSettings, syncCurrentAccount, exportAccounts } = useApp();
+  const { settings, updateSettings, isSyncingAccounts, syncAllAccounts, exportAccounts } = useApp();
   let panelRef: HTMLDivElement | undefined;
 
   onMount(() => {
@@ -228,15 +228,19 @@ export function SettingsView() {
             <div class="mizuna-setting-card">
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">アカウント情報の同期</div>
+                  <div class="mizuna-setting-title">全アカウント情報の同期</div>
+                  <div class="mizuna-setting-desc">
+                    登録済み全アカウントの最新プロフィール（名前・アイコン等）を取得します
+                  </div>
                 </div>
                 <button
                   type="button"
                   class="sync_account_data mizuna-btn mizuna-btn-tonal"
-                  onClick={syncCurrentAccount}
+                  disabled={isSyncingAccounts()}
+                  onClick={syncAllAccounts}
                 >
-                  <i>sync</i>
-                  <span>同期する</span>
+                  <i class={isSyncingAccounts() ? 'is-spinning' : ''}>sync</i>
+                  <span>{isSyncingAccounts() ? '同期中...' : '全件同期'}</span>
                 </button>
               </div>
 

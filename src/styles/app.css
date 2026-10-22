@@ -261,6 +261,11 @@ body {
   }
 }
 
+.is-spinning {
+  animation: ptr-spin 0.9s linear infinite;
+  display: inline-block;
+}
+
 /* お知らせバナー */
 .mizuna-news-wrap {
   max-width: 720px;

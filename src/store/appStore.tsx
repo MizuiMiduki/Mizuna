@@ -23,6 +23,7 @@ import {
   checkMiAuthSession,
   fetchLatestAccountInfo,
   fetchLatestReleaseNote,
+  MisskeyApiError,
 } from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
 
@@ -107,6 +108,8 @@ interface AppContextValue {
   switchAccount: (accountId: number) => Promise<void>;
   deleteSelectedAccounts: (accountIds: number[]) => Promise<void>;
   updateSettings: (changes: Partial<SettingRecord>) => Promise<void>;
+  isSyncingAccounts: Accessor<boolean>;
+  syncAllAccounts: () => Promise<void>;
   syncCurrentAccount: () => Promise<void>;
   exportAccounts: () => Promise<void>;
   importAccountsFromFile: (file: File) => Promise<void>;
@@ -179,6 +182,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   // トースト・ダイアログ状態
   const [toasts, setToasts] = createSignal<ToastItem[]>([]);
   const [dialogConfig, setDialogConfig] = createSignal<DialogConfig | null>(null);
+  const [isSyncingAccounts, setIsSyncingAccounts] = createSignal(false);
 
   const showToast = (message: string, type: ToastType = 'info', title?: string) => {
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -592,32 +596,113 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
   };
 
-  const syncCurrentAccount = async () => {
-    const user = currentUser();
-    if (!user || user.id === undefined) {
-      showToast('選択中のアカウントがありません', 'warning');
+  const syncAllAccounts = async () => {
+    if (isSyncingAccounts()) return;
+
+    const list = accounts();
+    if (list.length === 0) {
+      showToast('同期対象のアカウントがありません', 'warning', 'アカウント同期');
       return;
     }
 
+    setIsSyncingAccounts(true);
+    showToast(`全 ${list.length} 件のアカウント情報を同期中...`, 'info', 'アカウント同期');
+
     try {
-      const data = await fetchLatestAccountInfo(user);
-      const changes = {
-        name: data.name || data.username,
-        username: data.username,
-        avatarurl: data.avatarUrl,
-      };
-      await db.account.bulkUpdate([
-        {
-          key: user.id,
-          changes,
-        },
-      ]);
-      await reloadAccounts();
-      showToast('アカウント情報を同期しました', 'success');
-    } catch (err) {
-      console.error('Failed to sync account:', err);
-      showToast('アカウント情報の同期に失敗しました', 'error');
+      const results = await Promise.all(
+        list.map(async (acc) => {
+          try {
+            const data = await fetchLatestAccountInfo(acc);
+            return {
+              account: acc,
+              success: true,
+              changes: {
+                name: data.name || data.username,
+                username: data.username,
+                avatarurl: data.avatarUrl || '/icon.png',
+              },
+            };
+          } catch (err: any) {
+            return {
+              account: acc,
+              success: false,
+              error: err,
+            };
+          }
+        })
+      );
+
+      const successful = results.filter((r) => r.success && r.account.id !== undefined && r.changes);
+      const failed = results.filter((r) => !r.success);
+
+      if (successful.length > 0) {
+        await db.account.bulkUpdate(
+          successful.map((r) => ({
+            key: r.account.id!,
+            changes: r.changes!,
+          }))
+        );
+        await reloadAccounts();
+
+        // 選択中のアカウントが同期対象に含まれる場合は状態とテーマを即座に最新化
+        const current = currentUser();
+        if (current && current.id !== undefined) {
+          const fresh = accounts().find((a) => a.id === current.id);
+          if (fresh) {
+            setCurrentUser(fresh);
+            if (settings().is_pick_theme_color) {
+              await applyThemeAndMode(settings(), fresh.avatarurl, fresh.address);
+            }
+          }
+        }
+      }
+
+      if (failed.length === 0) {
+        showToast(`全 ${successful.length} 件のアカウント情報を同期しました`, 'success', 'アカウント同期完了');
+      } else if (successful.length > 0) {
+        const authFailed = failed.filter(
+          (r) => r.error instanceof MisskeyApiError && r.error.isAuthError
+        );
+        const networkFailed = failed.filter(
+          (r) => !(r.error instanceof MisskeyApiError && r.error.isAuthError)
+        );
+
+        const failDetails: string[] = [];
+        if (authFailed.length > 0) {
+          failDetails.push(`認証切れ: ${authFailed.map((f) => `@${f.account.username}`).join(', ')}`);
+        }
+        if (networkFailed.length > 0) {
+          failDetails.push(`接続失敗: ${networkFailed.map((f) => `@${f.account.username}`).join(', ')}`);
+        }
+
+        console.warn('[AccountSync] 一部のアカウントの同期に失敗しました:', failed);
+        showToast(
+          `${successful.length}/${list.length} 件同期完了 (${failed.length}件失敗: ${failDetails.join(' / ')})`,
+          'warning',
+          '同期完了（一部失敗）'
+        );
+      } else {
+        console.error('[AccountSync] すべてのアカウントの同期に失敗しました:', failed);
+        const hasAuth = failed.some(
+          (r) => r.error instanceof MisskeyApiError && r.error.isAuthError
+        );
+        const msg = hasAuth
+          ? `全 ${list.length} 件のアカウント同期に失敗しました。認証トークンが無効または失効している可能性があります。`
+          : `全 ${list.length} 件のアカウント同期に失敗しました。ネットワーク接続またはサーバー状態をご確認ください。`;
+
+        showToast(msg, 'error', 'アカウント同期エラー');
+      }
+    } catch (unexpectedErr) {
+      console.error('[AccountSync] 予期しない同期エラー:', unexpectedErr);
+      showToast('アカウント同期処理中に予期せぬエラーが発生しました', 'error', '同期エラー');
+    } finally {
+      setIsSyncingAccounts(false);
     }
+  };
+
+  const syncCurrentAccount = async () => {
+    // 既存の互換性のため残しつつ、全アカウント同期を実行
+    await syncAllAccounts();
   };
 
   const exportAccounts = async () => {
@@ -724,6 +809,8 @@ export function AppProvider(props: { children: JSX.Element }) {
     switchAccount,
     deleteSelectedAccounts,
     updateSettings,
+    isSyncingAccounts,
+    syncAllAccounts,
     syncCurrentAccount,
     exportAccounts,
     importAccountsFromFile,

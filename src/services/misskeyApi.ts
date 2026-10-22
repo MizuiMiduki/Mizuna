@@ -20,6 +20,25 @@ export interface MisskeyUserResponse {
   avatarUrl: string;
 }
 
+export class MisskeyApiError extends Error {
+  status?: number;
+  code?: string;
+  isAuthError: boolean;
+  isNetworkError: boolean;
+
+  constructor(
+    message: string,
+    options?: { status?: number; code?: string; isAuthError?: boolean; isNetworkError?: boolean }
+  ) {
+    super(message);
+    this.name = 'MisskeyApiError';
+    this.status = options?.status;
+    this.code = options?.code;
+    this.isAuthError = options?.isAuthError ?? false;
+    this.isNetworkError = options?.isNetworkError ?? false;
+  }
+}
+
 export interface NoteParam {
   i: string;
   text: string;
@@ -104,18 +123,72 @@ export async function checkMiAuthSession(
 
 /**
  * 登録済みアカウントの最新プロフィール情報をサーバーから取得する
+ * - 10秒のタイムアウト付き
+ * - 認証失効(401/403/AUTHENTICATION_FAILED)やネットワーク断・サーバー停止を詳細に判定
  */
-export async function fetchLatestAccountInfo(account: AccountRecord): Promise<MisskeyUserResponse> {
-  const url = `https://${account.address}/api/i`;
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ i: account.token }),
-  });
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status}`);
+export async function fetchLatestAccountInfo(
+  account: AccountRecord,
+  timeoutMs = 10000
+): Promise<MisskeyUserResponse> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const cleanAddress = account.address.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+    const url = `https://${cleanAddress}/api/i`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ i: account.token }),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      let code: string | undefined;
+      let errorMsg = `HTTP ${res.status}`;
+      try {
+        const errJson = await res.json();
+        if (errJson?.error) {
+          code = errJson.error.code;
+          errorMsg = errJson.error.message || code || errorMsg;
+        }
+      } catch {
+        // レスポンスがJSONでない場合はステータスコードを使用
+      }
+
+      const isAuth =
+        res.status === 401 ||
+        res.status === 403 ||
+        code === 'AUTHENTICATION_FAILED' ||
+        code === 'INVALID_PARAM';
+
+      throw new MisskeyApiError(errorMsg, {
+        status: res.status,
+        code,
+        isAuthError: isAuth,
+      });
+    }
+
+    const data = (await res.json()) as MisskeyUserResponse;
+    if (!data || typeof data !== 'object' || !data.username) {
+      throw new MisskeyApiError('不正なユーザー情報レスポンスを受信しました');
+    }
+    return data;
+  } catch (err: any) {
+    if (err instanceof MisskeyApiError) {
+      throw err;
+    }
+    if (err?.name === 'AbortError') {
+      throw new MisskeyApiError('通信がタイムアウトしました（サーバー無応答）', {
+        isNetworkError: true,
+      });
+    }
+    throw new MisskeyApiError(err?.message || 'サーバーに接続できませんでした', {
+      isNetworkError: true,
+    });
+  } finally {
+    clearTimeout(timer);
   }
-  return (await res.json()) as MisskeyUserResponse;
 }
 
 /**

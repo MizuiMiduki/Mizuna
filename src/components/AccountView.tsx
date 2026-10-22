@@ -10,6 +10,8 @@ export function AccountView() {
     settings,
     switchAccount,
     deleteSelectedAccounts,
+    isSyncingAccounts,
+    syncAllAccounts,
     setCurrentView,
     openDialog,
     showToast,
@@ -92,6 +94,19 @@ export function AccountView() {
         </div>
 
         <div class="mizuna-header-actions">
+          <Show when={!isDeleteMode()}>
+            <button
+              type="button"
+              class="mizuna-btn mizuna-btn-outline"
+              disabled={isSyncingAccounts() || accounts().length === 0}
+              onClick={syncAllAccounts}
+              title="登録済み全アカウントの最新プロフィールを取得"
+            >
+              <i class={isSyncingAccounts() ? 'is-spinning' : ''}>sync</i>
+              <span>{isSyncingAccounts() ? '同期中...' : '全件同期'}</span>
+            </button>
+          </Show>
+
           <button
             type="button"
             class={`mizuna-btn ${isDeleteMode() ? 'mizuna-btn-tonal' : 'mizuna-btn-outline'}`}
