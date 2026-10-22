@@ -600,13 +600,9 @@ export function AppProvider(props: { children: JSX.Element }) {
     if (isSyncingAccounts()) return;
 
     const list = accounts();
-    if (list.length === 0) {
-      showToast('同期対象のアカウントがありません', 'warning', 'アカウント同期');
-      return;
-    }
+    if (list.length === 0) return;
 
     setIsSyncingAccounts(true);
-    showToast(`全 ${list.length} 件のアカウント情報を同期中...`, 'info', 'アカウント同期');
 
     try {
       const results = await Promise.all(
@@ -655,46 +651,22 @@ export function AppProvider(props: { children: JSX.Element }) {
             }
           }
         }
+
+        // 成功した件数のみトースト通知（エラートーストは不要のため表示しない）
+        showToast(
+          list.length === successful.length
+            ? `全 ${successful.length} 件のアカウント情報を同期しました`
+            : `${successful.length} 件のアカウント情報を同期しました`,
+          'success',
+          'アカウント同期完了'
+        );
       }
 
-      if (failed.length === 0) {
-        showToast(`全 ${successful.length} 件のアカウント情報を同期しました`, 'success', 'アカウント同期完了');
-      } else if (successful.length > 0) {
-        const authFailed = failed.filter(
-          (r) => r.error instanceof MisskeyApiError && r.error.isAuthError
-        );
-        const networkFailed = failed.filter(
-          (r) => !(r.error instanceof MisskeyApiError && r.error.isAuthError)
-        );
-
-        const failDetails: string[] = [];
-        if (authFailed.length > 0) {
-          failDetails.push(`認証切れ: ${authFailed.map((f) => `@${f.account.username}`).join(', ')}`);
-        }
-        if (networkFailed.length > 0) {
-          failDetails.push(`接続失敗: ${networkFailed.map((f) => `@${f.account.username}`).join(', ')}`);
-        }
-
-        console.warn('[AccountSync] 一部のアカウントの同期に失敗しました:', failed);
-        showToast(
-          `${successful.length}/${list.length} 件同期完了 (${failed.length}件失敗: ${failDetails.join(' / ')})`,
-          'warning',
-          '同期完了（一部失敗）'
-        );
-      } else {
-        console.error('[AccountSync] すべてのアカウントの同期に失敗しました:', failed);
-        const hasAuth = failed.some(
-          (r) => r.error instanceof MisskeyApiError && r.error.isAuthError
-        );
-        const msg = hasAuth
-          ? `全 ${list.length} 件のアカウント同期に失敗しました。認証トークンが無効または失効している可能性があります。`
-          : `全 ${list.length} 件のアカウント同期に失敗しました。ネットワーク接続またはサーバー状態をご確認ください。`;
-
-        showToast(msg, 'error', 'アカウント同期エラー');
+      if (failed.length > 0) {
+        console.warn('[AccountSync] アカウント同期失敗ログ (エラートースト非表示):', failed);
       }
     } catch (unexpectedErr) {
-      console.error('[AccountSync] 予期しない同期エラー:', unexpectedErr);
-      showToast('アカウント同期処理中に予期せぬエラーが発生しました', 'error', '同期エラー');
+      console.error('[AccountSync] 予期しない同期エラー (エラートースト非表示):', unexpectedErr);
     } finally {
       setIsSyncingAccounts(false);
     }
