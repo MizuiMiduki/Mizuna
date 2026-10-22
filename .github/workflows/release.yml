@@ -48,16 +48,20 @@ jobs:
             VER_NUM="$RAW_VER"
           fi
 
-          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
-          echo "version=$VER_NUM" >> "$GITHUB_OUTPUT"
-
           if [ "${{ inputs.release_type }}" = "prerelease" ]; then
+            # プレリリース時はタグ名に -pre を付与 (既に含まれていなければ)
+            if [[ "$TAG_NAME" != *-pre* ]]; then
+              TAG_NAME="${TAG_NAME}-pre"
+            fi
             echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
             echo "release_title=Mizuna $TAG_NAME (Pre-release)" >> "$GITHUB_OUTPUT"
           else
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
             echo "release_title=Mizuna $TAG_NAME" >> "$GITHUB_OUTPUT"
           fi
+
+          echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
+          echo "version=$VER_NUM" >> "$GITHUB_OUTPUT"
 
           # 直前のタグを取得して変更履歴を生成 (同名タグ自身は除外)
           PREV_TAG=$(git describe --tags --abbrev=0 --exclude="$TAG_NAME" 2>/dev/null || echo "")
