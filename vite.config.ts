@@ -41,7 +41,7 @@ export default defineConfig(({ mode }) => {
     test: {
       environment: 'jsdom',
       globals: true,
-      setupFiles: ['./src/setupTests.ts'],
+      setupFiles: ['./tests/setupTests.ts'],
       server: {
         deps: {
           inline: [/solid-js/],

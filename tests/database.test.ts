@@ -4,7 +4,7 @@ import {
   loadOrCreateSettings,
   updateSettingDb,
   DEFAULT_USER_SETTINGS,
-} from '../db/database';
+} from '../src/db/database';
 
 describe('database operations', () => {
   beforeEach(async () => {

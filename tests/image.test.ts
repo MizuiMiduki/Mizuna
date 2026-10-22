@@ -4,7 +4,7 @@ import {
   normalizeMisskeyAvatarUrl,
   getDisplayAvatarUrl,
   compressAndConvertToWebP,
-} from '../utils/image';
+} from '../src/utils/image';
 
 describe('image utilities', () => {
   describe('generateRandomFileName', () => {

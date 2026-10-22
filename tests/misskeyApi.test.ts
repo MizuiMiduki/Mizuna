@@ -7,8 +7,8 @@ import {
   createMisskeyNote,
   fetchLatestReleaseNote,
   MisskeyApiError,
-} from '../services/misskeyApi';
-import type { AccountRecord } from '../db/database';
+} from '../src/services/misskeyApi';
+import type { AccountRecord } from '../src/db/database';
 
 describe('misskeyApi service', () => {
   beforeEach(() => {

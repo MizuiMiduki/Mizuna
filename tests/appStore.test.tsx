@@ -4,8 +4,8 @@ import {
   AppProvider,
   useApp,
   visibilityNumToString,
-} from '../store/appStore';
-import { db, DEFAULT_USER_SETTINGS } from '../db/database';
+} from '../src/store/appStore';
+import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
 
 describe('appStore', () => {
   beforeEach(async () => {

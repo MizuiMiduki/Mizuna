@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { comparisonVersion } from '../utils/version';
+import { comparisonVersion } from '../src/utils/version';
 
 describe('comparisonVersion', () => {
   it('同一バージョンで 0 を返すこと', () => {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { applyThemeAndMode } from '../utils/theme';
-import { DEFAULT_USER_SETTINGS, db, type SettingRecord } from '../db/database';
+import { applyThemeAndMode } from '../src/utils/theme';
+import { DEFAULT_USER_SETTINGS, db, type SettingRecord } from '../src/db/database';
 
 describe('theme utilities', () => {
   beforeEach(async () => {

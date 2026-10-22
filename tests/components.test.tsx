@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@solidjs/testing-library';
-import { AppProvider } from '../store/appStore';
-import { Header } from '../components/Header';
-import { FooterNav } from '../components/FooterNav';
-import { AboutView } from '../components/AboutView';
-import { ShortcutsView } from '../components/ShortcutsView';
-import { HoldHoverTip } from '../components/HoldHoverTip';
-import { DialogHost } from '../components/DialogHost';
-import { SnackbarHost } from '../components/SnackbarHost';
-import { db, DEFAULT_USER_SETTINGS } from '../db/database';
+import { AppProvider } from '../src/store/appStore';
+import { Header } from '../src/components/Header';
+import { FooterNav } from '../src/components/FooterNav';
+import { AboutView } from '../src/components/AboutView';
+import { ShortcutsView } from '../src/components/ShortcutsView';
+import { HoldHoverTip } from '../src/components/HoldHoverTip';
+import { DialogHost } from '../src/components/DialogHost';
+import { SnackbarHost } from '../src/components/SnackbarHost';
+import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
 
 describe('UI Components', () => {
   beforeEach(async () => {
