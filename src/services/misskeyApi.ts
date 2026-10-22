@@ -127,7 +127,11 @@ export async function uploadImagesToDrive(
   onStatusChange?: (statusText: string) => void
 ): Promise<string[]> {
   onStatusChange?.('画像圧縮中...');
-  const compressedFiles = await Promise.all(files.map((file) => compressAndConvertToWebP(file, 0.75)));
+  const compressedFiles = await Promise.all(
+    files.map((file) =>
+      file.type === 'image/webp' ? Promise.resolve(file) : compressAndConvertToWebP(file, 0.75)
+    )
+  );
 
   onStatusChange?.(`画像アップロード中 (0/${compressedFiles.length})...`);
   const fileIds: string[] = new Array(compressedFiles.length);

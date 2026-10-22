@@ -1,3 +1,4 @@
+import { compressAndConvertToWebP } from '../utils/image';
 import gsap from 'gsap';
 import {
   createContext,
@@ -482,7 +483,23 @@ export function AppProvider(props: { children: JSX.Element }) {
       name: file.name,
       file,
       dataUrl: URL.createObjectURL(file),
+      originalSize: file.size,
     }));
+
+    // バックグラウンドでWebPへ事前圧縮し、削減率と圧縮後サイズを記録
+    newItems.forEach((item) => {
+      compressAndConvertToWebP(item.file, 0.75)
+        .then((compressed) => {
+          setAttachedImages((prev) =>
+            prev.map((img) =>
+              img.id === item.id
+                ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
+                : img
+            )
+          );
+        })
+        .catch((err) => console.warn('Pre-compression failed:', err));
+    });
 
     setAttachedImages((prev) => {
       const combined = [...prev, ...newItems];

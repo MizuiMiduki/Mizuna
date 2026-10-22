@@ -71,12 +71,12 @@ body {
   background:
     radial-gradient(
       800px circle at 15% -10%,
-      color-mix(in srgb, var(--primary) 11%, transparent),
+      color-mix(in srgb, var(--primary) 14%, transparent),
       transparent 70%
     ),
     radial-gradient(
       700px circle at 85% 5%,
-      color-mix(in srgb, var(--tertiary, var(--primary)) 8%, transparent),
+      color-mix(in srgb, var(--tertiary, var(--primary)) 10%, transparent),
       transparent 65%
     ),
     var(--surface);
@@ -91,10 +91,11 @@ body {
   z-index: 80;
   width: 100%;
   height: 62px;
-  background: color-mix(in srgb, var(--surface) 84%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-bottom: 1px solid color-mix(in srgb, var(--outline-variant) 50%, transparent);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid color-mix(in srgb, var(--primary) 20%, color-mix(in srgb, var(--outline-variant) 45%, transparent));
+  box-shadow: 0 2px 12px -2px color-mix(in srgb, var(--primary) 8%, transparent);
   display: flex;
   align-items: center;
   padding: 0 20px;
@@ -337,9 +338,9 @@ body {
 .mizuna-studio-composer {
   background: var(--surface-container-low);
   border-radius: var(--mizuna-radius-xl);
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 65%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, color-mix(in srgb, var(--outline-variant) 55%, transparent));
   box-shadow:
-    0 12px 36px -8px rgba(0, 0, 0, 0.07),
+    0 12px 36px -8px color-mix(in srgb, var(--primary) 10%, rgba(0, 0, 0, 0.06)),
     0 2px 8px -2px rgba(0, 0, 0, 0.04);
   overflow: visible;
   transition: border-color 0.22s ease, box-shadow 0.22s ease;
@@ -538,6 +539,8 @@ body {
   font-variant-numeric: tabular-nums;
   color: var(--on-surface-variant);
   flex-shrink: 0;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* メインテキストエディタ */
@@ -777,6 +780,8 @@ body {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--on-surface-variant);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .mizuna-progress-ring {
@@ -919,52 +924,111 @@ body {
 .mizuna-lightbox {
   position: fixed;
   inset: 0;
-  background: rgba(10, 12, 16, 0.85);
-  backdrop-filter: blur(12px);
-  z-index: 350;
+  background: rgba(10, 12, 16, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 500;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 32px 24px;
+  box-sizing: border-box;
 }
 
 .mizuna-lightbox-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
-  max-width: 92vw;
-  max-height: 88vh;
+  gap: 16px;
+  max-width: min(84vw, 800px);
+  max-height: 84svh;
+  margin: auto;
 }
 
 .mizuna-lightbox-content img.modal-content {
   max-width: 100%;
-  max-height: 75vh;
+  max-height: calc(84svh - 68px);
   object-fit: contain;
-  border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  border-radius: 20px;
+  box-shadow:
+    0 24px 60px -10px rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 .mizuna-lightbox-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 10px 16px;
+  gap: 14px;
+  padding: 10px 18px;
   border-radius: var(--mizuna-radius-pill);
-  background: rgba(30, 35, 45, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(22, 27, 34, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: #fff;
-  min-width: min(420px, 90vw);
+  width: 100%;
+  max-width: 580px;
+  box-sizing: border-box;
+}
+
+.mizuna-lightbox-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
 }
 
 .mizuna-lightbox-name {
-  font-size: 0.8rem;
-  opacity: 0.8;
-  max-width: 180px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.mizuna-lightbox-metrics {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+  flex-wrap: wrap;
+}
+
+.mizuna-lightbox-size {
+  color: #cbd5e1;
+}
+
+.mizuna-lightbox-arrow {
+  font-size: 13px !important;
+  color: #64748b;
+}
+
+.mizuna-lightbox-webp-size {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.mizuna-lightbox-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 7px;
+  border-radius: 9999px;
+  background: rgba(16, 185, 129, 0.18);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  color: #34d399;
+  letter-spacing: 0.02em;
+}
+
+.mizuna-lightbox-compressing {
+  font-size: 0.68rem;
+  color: #f59e0b;
 }
 
 .mizuna-lightbox-actions {
@@ -1202,7 +1266,8 @@ body {
   margin-bottom: 16px;
   border-radius: var(--mizuna-radius-xl);
   background: color-mix(in srgb, var(--surface-container-low) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 65%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, color-mix(in srgb, var(--outline-variant) 55%, transparent));
+  box-shadow: 0 6px 20px -4px color-mix(in srgb, var(--primary) 8%, transparent);
   box-shadow: 0 8px 28px -8px rgba(0, 0, 0, 0.05);
 }
 
@@ -1413,7 +1478,8 @@ body {
 .mizuna-setting-card {
   border-radius: var(--mizuna-radius-lg);
   background: color-mix(in srgb, var(--surface-container-low) 92%, transparent);
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, color-mix(in srgb, var(--outline-variant) 55%, transparent));
+  box-shadow: 0 4px 16px -4px color-mix(in srgb, var(--primary) 7%, transparent);
   overflow: hidden;
 }
 
@@ -1698,12 +1764,12 @@ body {
   gap: 8px;
   padding: 6px 8px;
   border-radius: var(--mizuna-radius-pill);
-  background: color-mix(in srgb, var(--surface-container-high) 92%, transparent);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 65%, transparent);
+  background: color-mix(in srgb, var(--primary) 3.5%, color-mix(in srgb, var(--surface-container-high) 94%, transparent));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, color-mix(in srgb, var(--outline-variant) 60%, transparent));
   box-shadow:
-    0 14px 36px -6px rgba(0, 0, 0, 0.16),
+    0 14px 36px -6px color-mix(in srgb, var(--primary) 14%, rgba(0, 0, 0, 0.16)),
     0 2px 10px rgba(0, 0, 0, 0.06);
   max-width: min(680px, 100%);
   user-select: none;
@@ -1751,7 +1817,7 @@ body {
 
 .mizuna-dock-avatar-btn.is-active,
 .mizuna-m3e-item.is-active {
-  background: color-mix(in srgb, var(--primary) 16%, var(--surface-container-highest)) !important;
+  background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
   border-color: color-mix(in srgb, var(--primary) 48%, transparent) !important;
   color: var(--primary) !important;
   box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 14%, transparent) !important;
@@ -2454,20 +2520,20 @@ body {
   transform: translateX(-50%);
   z-index: 320;
   pointer-events: none;
-  padding: 7px 12px;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.94);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 10px 26px -4px rgba(0, 0, 0, 0.35);
+  padding: 8px 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.4);
   color: #f8fafc;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
-  max-width: min(280px, 84vw);
-  overflow: hidden;
+  gap: 3px;
+  width: max-content;
+  max-width: min(400px, calc(100vw - 28px));
   user-select: none;
 }
 
@@ -2481,25 +2547,23 @@ body {
 
 .mizuna-tip-title {
   display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.76rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   color: #ffffff;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
 }
 
 .mizuna-tip-sub {
   display: block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 0.67rem;
+  font-size: 0.72rem;
   font-weight: 500;
   color: #94a3b8;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
 }
 
 .bottom-margin-medium {

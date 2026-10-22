@@ -160,7 +160,7 @@ export function NoteView() {
       let fileIds: string[] | undefined;
       if (images.length > 0) {
         fileIds = await uploadImagesToDrive(
-          images.map((item) => item.file),
+          images.map((item) => item.compressedFile ?? item.file),
           user,
           (status) => setSendingStatus(status)
         );
@@ -720,11 +720,12 @@ export function NoteView() {
       {/* 画像拡大プレビューモーダル */}
       <Show when={previewModalImage()}>
         {(imgItem) => (
-          <div
-            id="imageModal"
-            class="mizuna-lightbox"
-            onClick={() => setPreviewModalImage(null)}
-          >
+          <Portal>
+            <div
+              id="imageModal"
+              class="mizuna-lightbox"
+              onClick={() => setPreviewModalImage(null)}
+            >
             <div
               ref={modalContentRef}
               class="mizuna-lightbox-content"
@@ -739,7 +740,36 @@ export function NoteView() {
                 decoding="async"
               />
               <div class="mizuna-lightbox-bar">
-                <span class="mizuna-lightbox-name">{imgItem().name}</span>
+                <div class="mizuna-lightbox-info">
+                  <span class="mizuna-lightbox-name">{imgItem().name}</span>
+                  <div class="mizuna-lightbox-metrics">
+                    <span class="mizuna-lightbox-size">
+                      {(imgItem().originalSize / 1024).toFixed(1)} KB
+                    </span>
+                    <Show
+                      when={imgItem().compressedSize}
+                      fallback={<span class="mizuna-lightbox-compressing">WebP圧縮中...</span>}
+                    >
+                      {(compSize) => {
+                        const savedPercent = Math.max(
+                          0,
+                          Math.round(((imgItem().originalSize - compSize()) / imgItem().originalSize) * 100)
+                        );
+                        return (
+                          <>
+                            <i class="mizuna-lightbox-arrow">arrow_forward</i>
+                            <span class="mizuna-lightbox-webp-size">
+                              {(compSize() / 1024).toFixed(1)} KB (WebP)
+                            </span>
+                            <span class="mizuna-lightbox-badge">
+                              {savedPercent}% 削減
+                            </span>
+                          </>
+                        );
+                      }}
+                    </Show>
+                  </div>
+                </div>
                 <div class="mizuna-lightbox-actions">
                   <button
                     type="button"
@@ -762,6 +792,7 @@ export function NoteView() {
               </div>
             </div>
           </div>
+          </Portal>
         )}
       </Show>
     </div>

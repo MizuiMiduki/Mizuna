@@ -8,7 +8,7 @@ export interface HoldHoverTipProps {
   sublabel?: string;
   /** 表示位置 ('top' | 'bottom') */
   placement?: 'top' | 'bottom';
-  /** カーソルホバーから表示までの待機ミリ秒 (デフォルト: 480ms) */
+  /** カーソルホバーから表示までの待機ミリ秒 (デフォルト: 800ms) */
   hoverDelayMs?: number;
   /** タッチ長押しから表示までの待機ミリ秒 (デフォルト: 380ms) */
   longPressDelayMs?: number;
@@ -39,20 +39,23 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
   const adjustPositionWithinViewport = () => {
     if (!tipRef || !anchorRef) return;
     const anchorRect = anchorRef.getBoundingClientRect();
-    const tipWidth = tipRef.offsetWidth;
-    const margin = 12; // 画面端からの安全マージン
+    // スケールやパディング込みのレンダリング済み矩形を取得
+    const tipRect = tipRef.getBoundingClientRect();
+    const tipWidth = tipRect.width || tipRef.offsetWidth;
+    const margin = 16; // 画面端からの安全マージンを16px確保
     const vw = document.documentElement.clientWidth || window.innerWidth;
 
-    // 通常の中央揃え時のTIPSの左右端座標
-    const defaultLeft = anchorRect.left + anchorRect.width / 2 - tipWidth / 2;
-    const defaultRight = defaultLeft + tipWidth;
+    // アンカー中央揃え基準でのTIPS左端・右端座標
+    const anchorCenter = anchorRect.left + anchorRect.width / 2;
+    const defaultLeft = anchorCenter - tipWidth / 2;
+    const defaultRight = anchorCenter + tipWidth / 2;
 
     let shift = 0;
     if (defaultLeft < margin) {
-      // 左端からはみ出す場合は右へ押し戻す
+      // 左端から突き抜ける場合、右へ確実に押し戻す
       shift = margin - defaultLeft;
     } else if (defaultRight > vw - margin) {
-      // 右端からはみ出す場合は左へ押し戻す
+      // 右端から突き抜ける場合、左へ確実に押し戻す
       shift = vw - margin - defaultRight;
     }
 
@@ -66,15 +69,19 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
     const dir = props.placement === 'bottom' ? -8 : 8;
 
     requestAnimationFrame(() => {
+      // 1フレーム待って要素のDOM計測を完了させた上で画面端チェック
       adjustPositionWithinViewport();
-      if (tipRef) {
-        gsap.killTweensOf(tipRef);
-        gsap.fromTo(
-          tipRef,
-          { opacity: 0, y: dir, scale: 0.92 },
-          { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(1.7)', force3D: true }
-        );
-      }
+      requestAnimationFrame(() => {
+        adjustPositionWithinViewport();
+        if (tipRef) {
+          gsap.killTweensOf(tipRef);
+          gsap.fromTo(
+            tipRef,
+            { opacity: 0, y: dir, scale: 0.92 },
+            { opacity: 1, y: 0, scale: 1, duration: 0.2, ease: 'back.out(1.7)', force3D: true }
+          );
+        }
+      });
     });
   };
 
@@ -109,7 +116,7 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
     clearTimers();
     hoverTimer = setTimeout(() => {
       showTip();
-    }, props.hoverDelayMs ?? 480);
+    }, props.hoverDelayMs ?? 800);
   };
 
   const handleMouseLeave = () => {
