@@ -95,18 +95,18 @@ jobs:
         if: inputs.deploy_target == 'prerelease'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.CANARY_FTP_SERVER }}
+          server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.CANARY_FTP_USERNAME }}
           password: ${{ secrets.CANARY_FTP_PASSWORD }}
-          server-dir: "${{ secrets.CANARY_FTP_TARGET_DIR }}"
+          server-dir: "${{ secrets.FTP_TARGET_DIR }}"
           dangerous-clean-slate: true
 
       - name: Deploy Canary dist via FTP
         if: inputs.deploy_target == 'prerelease'
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
-          server: ${{ secrets.CANARY_FTP_SERVER }}
+          server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.CANARY_FTP_USERNAME }}
           password: ${{ secrets.CANARY_FTP_PASSWORD }}
           local-dir: "./dist/"
-          server-dir: "${{ secrets.CANARY_FTP_TARGET_DIR }}"
+          server-dir: "${{ secrets.FTP_TARGET_DIR }}"
