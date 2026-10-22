@@ -200,7 +200,7 @@ export function AboutView() {
 
       {/* OSS ライセンス一覧 */}
       <div class="mizuna-group-label">Open Source Licenses</div>
-      <div class="mizuna-oss-bento">
+      <div class="mizuna-oss-list">
         <For each={OSS_LICENSES}>
           {(oss) => (
             <div class="mizuna-oss-card">
