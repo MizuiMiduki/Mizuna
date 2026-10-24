@@ -1,6 +1,7 @@
 import gsap from 'gsap';
-import { onMount, Show } from 'solid-js';
+import { For, onMount, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
+import { SUPPORTED_LANGUAGES } from '../i18n';
 
 export function SettingsView() {
   const {
@@ -233,6 +234,37 @@ export function SettingsView() {
                   >
                     <span>ON</span>
                   </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 言語設定グループ */}
+          <div class="mizuna-setting-group">
+            <div class="mizuna-group-label">言語設定</div>
+
+            <div class="mizuna-setting-card">
+              <div class="mizuna-setting-row">
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">表示言語</div>
+                  <div class="mizuna-setting-desc">アプリ内の表示言語を設定します</div>
+                </div>
+
+                <div class="mizuna-seg-pills">
+                  <For each={SUPPORTED_LANGUAGES}>
+                    {(lang) => (
+                      <button
+                        type="button"
+                        id={`language_${lang.code}`}
+                        class={`mizuna-seg-pill ${
+                          settings().language === lang.code ? 'is-active' : ''
+                        }`}
+                        onClick={() => updateSettings({ language: lang.code })}
+                      >
+                        <span>{lang.label}</span>
+                      </button>
+                    )}
+                  </For>
                 </div>
               </div>
             </div>

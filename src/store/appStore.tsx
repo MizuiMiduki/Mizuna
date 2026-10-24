@@ -19,13 +19,9 @@ import {
   type AccountRecord,
   type SettingRecord,
 } from '../db/database';
-import {
-  checkMiAuthSession,
-  fetchLatestAccountInfo,
-  fetchLatestReleaseNote,
-  MisskeyApiError,
-} from '../services/misskeyApi';
+import { checkMiAuthSession, fetchLatestAccountInfo, fetchLatestReleaseNote, MisskeyApiError } from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
+import { translate, type I18nKey } from '../i18n';
 
 export type ViewType =
   | 'note'
@@ -140,6 +136,9 @@ interface AppContextValue {
   promptUpdateDialog: () => void;
   applyPendingUpdate: () => void;
   checkForUpdate: () => Promise<void>;
+
+  // 多言語対応 (i18n)
+  t: (key: I18nKey, params?: Record<string, string | number>) => string;
 }
 
 const AppContext = createContext<AppContextValue>();
@@ -218,6 +217,11 @@ export function AppProvider(props: { children: JSX.Element }) {
 
   const closeDialog = () => {
     setDialogConfig(null);
+  };
+
+  // 多言語翻訳ヘルパー（Solid.js のリアクティビティと連動し、言語切替時に最小コストで即座に反映）
+  const t = (key: I18nKey, params?: Record<string, string | number>): string => {
+    return translate(key, params, settings().language);
   };
 
   // PWA アップデート状態管理
@@ -970,6 +974,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     promptUpdateDialog,
     applyPendingUpdate,
     checkForUpdate,
+    t,
   };
 
   return <AppContext.Provider value={contextValue}>{props.children}</AppContext.Provider>;
