@@ -263,7 +263,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   const checkForUpdate = async () => {
-    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker) {
       showToast('お使いの環境はService Workerに対応していません', 'info');
       return;
     }
@@ -510,18 +510,18 @@ export function AppProvider(props: { children: JSX.Element }) {
 
     // Service Worker の登録とPWA更新待機監視
     let handleControllerChange: (() => void) | null = null;
-    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker) {
       let isRefreshing = false;
       handleControllerChange = () => {
         if (isRefreshing) return;
         isRefreshing = true;
         window.location.reload();
       };
-      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+      navigator.serviceWorker.addEventListener?.('controllerchange', handleControllerChange);
 
       navigator.serviceWorker
-        .register('/sw.js')
-        .then((registration) => {
+        .register?.('/sw.js')
+        ?.then((registration) => {
           activeSwRegistration = registration;
 
           // 前回の起動などで既に待機状態のワーカーがいる場合
@@ -532,11 +532,11 @@ export function AppProvider(props: { children: JSX.Element }) {
           }
 
           // 新しいService Workerのインストールを検知
-          registration.addEventListener('updatefound', () => {
+          registration.addEventListener?.('updatefound', () => {
             const installingWorker = registration.installing;
             if (!installingWorker) return;
 
-            installingWorker.addEventListener('statechange', () => {
+            installingWorker.addEventListener?.('statechange', () => {
               if (
                 installingWorker.state === 'installed' &&
                 navigator.serviceWorker.controller
@@ -549,7 +549,7 @@ export function AppProvider(props: { children: JSX.Element }) {
             });
           });
         })
-        .catch((error) => {
+        ?.catch((error) => {
           console.error('Service Worker registration error:', error);
         });
     }
@@ -626,7 +626,7 @@ export function AppProvider(props: { children: JSX.Element }) {
           try {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
-            if ('serviceWorker' in navigator && handleControllerChange) {
+            if ('serviceWorker' in navigator && navigator.serviceWorker?.removeEventListener && handleControllerChange) {
               navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
             }
           } catch {

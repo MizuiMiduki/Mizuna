@@ -89,3 +89,24 @@ if (typeof globalThis.fetch === 'undefined' || !vi.isMockFunction(globalThis.fet
 afterEach(() => {
   gsap.killTweensOf('*');
 });
+
+// 7. navigator.serviceWorker mock (jsdom lacks serviceWorker implementation)
+if (typeof navigator !== 'undefined') {
+  Object.defineProperty(navigator, 'serviceWorker', {
+    writable: true,
+    configurable: true,
+    value: {
+      register: vi.fn().mockResolvedValue({
+        waiting: null,
+        installing: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        update: vi.fn().mockResolvedValue(undefined),
+      }),
+      getRegistration: vi.fn().mockResolvedValue(null),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      controller: null,
+    },
+  });
+}

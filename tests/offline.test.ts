@@ -5,15 +5,13 @@ import * as fs from 'fs';
 // @ts-ignore
 import * as path from 'path';
 
-// @ts-ignore
-declare const __dirname: string;
-
 describe('PWA Offline Screen, Cache & Update Management', () => {
-  const offlineHtmlPath = path.resolve(__dirname, '../public/offline.html');
-  const swJsPath = path.resolve(__dirname, '../public/sw.js');
-  const indexHtmlPath = path.resolve(__dirname, '../index.html');
-  const appStorePath = path.resolve(__dirname, '../src/store/appStore.tsx');
-  const settingsViewPath = path.resolve(__dirname, '../src/components/SettingsView.tsx');
+  const rootDir = process.cwd();
+  const offlineHtmlPath = path.resolve(rootDir, 'public/offline.html');
+  const swJsPath = path.resolve(rootDir, 'public/sw.js');
+  const indexHtmlPath = path.resolve(rootDir, 'index.html');
+  const appStorePath = path.resolve(rootDir, 'src/store/appStore.tsx');
+  const settingsViewPath = path.resolve(rootDir, 'src/components/SettingsView.tsx');
 
   it('offline.html が存在し、必要なメタタグおよび要素が含まれていること', () => {
     expect(fs.existsSync(offlineHtmlPath)).toBe(true);
