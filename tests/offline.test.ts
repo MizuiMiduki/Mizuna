@@ -59,7 +59,8 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toContain("'/icon.png'");
 
     // 自動での skipWaiting は呼ばない（ユーザーが選択するまで待機状態を維持）
-    expect(content).not.toMatch(/addEventListener\(\s*['"]install['"].*self\.skipWaiting\(\)/s);
+    const installBlock = content.match(/addEventListener\(\s*['"]install['"][\s\S]*?\n\}\);/)?.[0] || '';
+    expect(installBlock).not.toContain('self.skipWaiting()');
 
     // SKIP_WAITING メッセージを受信した時のみ skipWaiting を呼ぶ
     expect(content).toContain("event.data.type === 'SKIP_WAITING'");
@@ -85,7 +86,7 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toContain('applyPendingUpdate');
     expect(content).toContain('checkForUpdate');
     expect(content).toContain("type: 'SKIP_WAITING'");
-    expect(content).toContain("navigator.serviceWorker.addEventListener('controllerchange'");
+    expect(content).toContain("navigator.serviceWorker.addEventListener?.('controllerchange'");
   });
 
   it('SettingsView に待機中アップデートの適用と更新確認UIが実装されていること', () => {
