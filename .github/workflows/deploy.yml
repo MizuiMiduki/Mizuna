@@ -99,6 +99,29 @@ jobs:
         with:
           fetch-depth: 0
 
+      # FTP_SERVER(ドメイン)をシークレット登録していても、接続エラー時などに
+      # 名前解決後のIPアドレスがログへ出力されるため、解決結果をマスクする
+      - name: Mask FTP Server IP Addresses
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        run: |
+          # ftp:// 等のスキームやポート表記が付いていても、ホスト名のみを取り出す
+          HOST="${FTP_SERVER#*://}"
+          HOST="${HOST%%/*}"
+          HOST="${HOST%%:*}"
+          if [ -z "$HOST" ]; then
+            echo "::warning::FTP_SERVER が空のため IP マスクをスキップしました"
+            exit 0
+          fi
+          # IPv4 / IPv6 を含め、解決されるすべてのアドレスを登録する
+          for ADDR in $(getent ahosts "$HOST" | awk '{print $1}' | sort -u); do
+            echo "::add-mask::$ADDR"
+          done
+          # 直接IPが指定されている場合もマスクする
+          if echo "$HOST" | grep -Eq '^[0-9.]+$|^[0-9a-fA-F:]+$'; then
+            echo "::add-mask::$HOST"
+          fi
+
       - name: Resolve Latest Release Tag
         id: target_release
         env:
