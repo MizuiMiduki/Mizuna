@@ -1,6 +1,6 @@
 import { ja } from './locales/ja';
 import { en } from './locales/en';
-import type { I18nKey, LanguageCode, LanguageOption } from './types';
+import type { I18nKey, LanguageCode, LanguageOption, LocaleDictionary } from './types';
 
 export * from './types';
 export { ja } from './locales/ja';
@@ -15,7 +15,7 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: 'en_us', label: 'English' },
 ];
 
-const dictionaries: Record<LanguageCode, typeof ja> = {
+const dictionaries: Record<LanguageCode, LocaleDictionary> = {
   ja_jp: ja,
   en_us: en,
 };
@@ -70,7 +70,7 @@ export function translate(
   }
 
   // 指定言語にキーが存在しない場合のフォールバック（英語 en を参照）
-  if (typeof current !== 'string' && dict !== en) {
+  if (typeof current !== 'string' && targetCode !== 'en_us') {
     let fallback: any = en;
     for (let i = 0; i < segments.length; i++) {
       if (fallback == null) {

@@ -18,6 +18,12 @@ type Leaves<T, D extends number = 4> = [D] extends [never]
 
 export type I18nKey = Leaves<typeof ja>;
 
+export type LocaleDictionary = {
+  [K in keyof typeof ja]: {
+    [P in keyof (typeof ja)[K]]: string;
+  };
+};
+
 export interface LanguageOption {
   code: LanguageCode;
   label: string;
