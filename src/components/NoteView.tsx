@@ -458,14 +458,18 @@ export function NoteView() {
               <For each={attachedImages()}>
                 {(item) => (
                   <div class="mizuna-media-item" onClick={() => handleOpenPreview(item)}>
-                    <img
-                      class="input_image_preview"
-                      src={item.dataUrl}
-                      alt={item.name}
-                      data-name={item.name}
-                      loading="lazy"
-                      decoding="async"
-                    />
+                    <Show when={item.thumbUrl}>
+                      {(thumb) => (
+                        <img
+                          class="input_image_preview"
+                          src={thumb()}
+                          alt={item.name}
+                          data-name={item.name}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      )}
+                    </Show>
                     <div class="mizuna-media-zoom-hint">
                       <i>zoom_in</i>
                     </div>

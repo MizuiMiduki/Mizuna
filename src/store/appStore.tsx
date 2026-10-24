@@ -1,4 +1,4 @@
-import { compressAndConvertToWebP } from '../utils/image';
+import { compressAndConvertToWebP, createThumbnailUrl } from '../utils/image';
 import gsap from 'gsap';
 import {
   createContext,
@@ -67,9 +67,19 @@ export interface AttachedImageItem {
   name: string;
   file: File;
   dataUrl: string;
+  /** 一覧表示用の縮小サムネイル (ObjectURL)。生成前は undefined */
+  thumbUrl?: string;
   compressedFile?: File;
   originalSize: number;
   compressedSize?: number;
+}
+
+// 添付画像のサムネイル生成・事前圧縮を直列化するキュー
+let attachProcessQueue: Promise<void> = Promise.resolve();
+
+function revokeAttachedUrls(item: AttachedImageItem): void {
+  if (item.dataUrl.startsWith('blob:')) URL.revokeObjectURL(item.dataUrl);
+  if (item.thumbUrl) URL.revokeObjectURL(item.thumbUrl);
 }
 
 export function visibilityNumToString(num: 1 | 2 | 3): VisibilityType {
@@ -665,10 +675,23 @@ export function AppProvider(props: { children: JSX.Element }) {
       originalSize: file.size,
     }));
 
-    // バックグラウンドでWebPへ事前圧縮し、削減率と圧縮後サイズを記録
+    // サムネイル生成とWebP事前圧縮は、原寸デコードのピークメモリを抑えるため1枚ずつ直列に処理する
     newItems.forEach((item) => {
-      compressAndConvertToWebP(item.file, 0.75)
-        .then((compressed) => {
+      attachProcessQueue = attachProcessQueue.then(async () => {
+        const thumbUrl = (await createThumbnailUrl(item.file)) ?? item.dataUrl; // 生成不可なら原寸にフォールバック
+        {
+          let alive = false;
+          setAttachedImages((prev) =>
+            prev.map((img) => {
+              if (img.id !== item.id) return img;
+              alive = true;
+              return { ...img, thumbUrl };
+            })
+          );
+          if (!alive && thumbUrl !== item.dataUrl) URL.revokeObjectURL(thumbUrl);
+        }
+        try {
+          const compressed = await compressAndConvertToWebP(item.file, 0.75);
           setAttachedImages((prev) =>
             prev.map((img) =>
               img.id === item.id
@@ -676,14 +699,16 @@ export function AppProvider(props: { children: JSX.Element }) {
                 : img
             )
           );
-        })
-        .catch((err) => console.warn('Pre-compression failed:', err));
+        } catch (err) {
+          console.warn('Pre-compression failed:', err);
+        }
+      });
     });
 
     setAttachedImages((prev) => {
       const combined = [...prev, ...newItems];
       if (combined.length > 16) {
-        combined.slice(16).forEach((extra) => URL.revokeObjectURL(extra.dataUrl));
+        combined.slice(16).forEach(revokeAttachedUrls);
         return combined.slice(0, 16);
       }
       return combined;
@@ -693,9 +718,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   const removeAttachedImage = (id: string) => {
     setAttachedImages((prev) => {
       const target = prev.find((item) => item.id === id);
-      if (target && target.dataUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(target.dataUrl);
-      }
+      if (target) revokeAttachedUrls(target);
       return prev.filter((item) => item.id !== id);
     });
   };
@@ -707,11 +730,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     setCwText('');
     setNoteText('');
     setAttachedImages((prev) => {
-      prev.forEach((item) => {
-        if (item.dataUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(item.dataUrl);
-        }
-      });
+      prev.forEach(revokeAttachedUrls);
       return [];
     });
     if (showNotification) {
