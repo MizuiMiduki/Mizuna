@@ -1,9 +1,18 @@
 import gsap from 'gsap';
-import { onMount } from 'solid-js';
+import { onMount, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 
 export function SettingsView() {
-  const { settings, updateSettings, isSyncingAccounts, syncAllAccounts, exportAccounts } = useApp();
+  const {
+    settings,
+    updateSettings,
+    isSyncingAccounts,
+    syncAllAccounts,
+    exportAccounts,
+    hasPendingUpdate,
+    applyPendingUpdate,
+    checkForUpdate,
+  } = useApp();
   let panelRef: HTMLDivElement | undefined;
 
   onMount(() => {
@@ -16,7 +25,15 @@ export function SettingsView() {
     }
   });
 
-  const handleClearCache = () => {
+  const handleClearCache = async () => {
+    if (typeof caches !== 'undefined') {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch (e) {
+        console.error('Cache delete error:', e);
+      }
+    }
     window.location.reload();
   };
 
@@ -226,6 +243,28 @@ export function SettingsView() {
             <div class="mizuna-group-label">アカウント同期 ＆ バックアップ</div>
 
             <div class="mizuna-setting-card">
+              <Show when={hasPendingUpdate()}>
+                <div class="mizuna-setting-row" style="background: color-mix(in srgb, var(--primary) 12%, transparent); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);">
+                  <div class="mizuna-setting-info">
+                    <div class="mizuna-setting-title" style="color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                      <i style="font-size: 20px;">system_update</i>
+                      <span>新しいアップデートが待機中</span>
+                    </div>
+                    <div class="mizuna-setting-desc">
+                      ダウンロード済みの最新バージョンがあります。「今すぐ適用」を押すと反映されます。
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="mizuna-btn mizuna-btn-primary"
+                    onClick={applyPendingUpdate}
+                  >
+                    <i>restart_alt</i>
+                    <span>今すぐ適用</span>
+                  </button>
+                </div>
+              </Show>
+
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
                   <div class="mizuna-setting-title">全アカウント情報の同期</div>
@@ -273,6 +312,23 @@ export function SettingsView() {
                 >
                   <i>refresh</i>
                   <span>再読み込み</span>
+                </button>
+              </div>
+
+              <div class="mizuna-row-divider" />
+
+              <div class="mizuna-setting-row">
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">最新バージョンの確認</div>
+                  <div class="mizuna-setting-desc">PWA Service Worker のアップデートを確認します</div>
+                </div>
+                <button
+                  type="button"
+                  class="mizuna-btn mizuna-btn-outline"
+                  onClick={checkForUpdate}
+                >
+                  <i>sync</i>
+                  <span>更新を確認</span>
                 </button>
               </div>
             </div>

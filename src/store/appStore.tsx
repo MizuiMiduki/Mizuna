@@ -132,6 +132,12 @@ interface AppContextValue {
   dialogConfig: Accessor<DialogConfig | null>;
   openDialog: (config: DialogConfig) => void;
   closeDialog: () => void;
+
+  // PWA アップデート制御
+  hasPendingUpdate: Accessor<boolean>;
+  promptUpdateDialog: () => void;
+  applyPendingUpdate: () => void;
+  checkForUpdate: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue>();
@@ -210,6 +216,75 @@ export function AppProvider(props: { children: JSX.Element }) {
 
   const closeDialog = () => {
     setDialogConfig(null);
+  };
+
+  // PWA アップデート状態管理
+  const [waitingWorker, setWaitingWorker] = createSignal<ServiceWorker | null>(null);
+  const [hasPendingUpdate, setHasPendingUpdate] = createSignal(false);
+  let activeSwRegistration: ServiceWorkerRegistration | null = null;
+
+  const promptUpdateDialog = () => {
+    const worker = waitingWorker();
+    if (!worker) return;
+
+    openDialog({
+      title: '新しいバージョンが利用可能です',
+      icon: 'system_update',
+      tone: 'primary',
+      badgeText: 'PWA UPDATE',
+      contentText:
+        'Mizunaの新しいバージョンが準備できました。今すぐアップデートを適用して再読み込みしますか？\n\n「あとで」を選択した場合は現在の作業を中断せず、設定画面などからいつでも適用できます。',
+      buttons: [
+        {
+          label: 'あとで',
+          variant: 'text',
+          onClick: () => {
+            showToast('アップデートを保留しました。設定画面からいつでも適用できます。', 'info');
+          },
+        },
+        {
+          label: '今すぐアップデート',
+          variant: 'fill',
+          onClick: () => {
+            applyPendingUpdate();
+          },
+        },
+      ],
+    });
+  };
+
+  const applyPendingUpdate = () => {
+    const worker = waitingWorker();
+    if (worker) {
+      worker.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      window.location.reload();
+    }
+  };
+
+  const checkForUpdate = async () => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+      showToast('お使いの環境はService Workerに対応していません', 'info');
+      return;
+    }
+    try {
+      const reg = activeSwRegistration || (await navigator.serviceWorker.getRegistration());
+      if (reg) {
+        await reg.update();
+        if (reg.waiting) {
+          setWaitingWorker(reg.waiting);
+          setHasPendingUpdate(true);
+          promptUpdateDialog();
+        } else {
+          showToast('最新のバージョンを使用しています', 'info');
+        }
+      } else {
+        showToast('Service Workerが登録されていません', 'info');
+      }
+    } catch (err) {
+      console.error('アップデート確認エラー:', err);
+      showToast('アップデートの確認に失敗しました', 'error');
+    }
   };
 
   const setCurrentView = (view: ViewType) => {
@@ -433,6 +508,52 @@ export function AppProvider(props: { children: JSX.Element }) {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Service Worker の登録とPWA更新待機監視
+    let handleControllerChange: (() => void) | null = null;
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+      let isRefreshing = false;
+      handleControllerChange = () => {
+        if (isRefreshing) return;
+        isRefreshing = true;
+        window.location.reload();
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange);
+
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((registration) => {
+          activeSwRegistration = registration;
+
+          // 前回の起動などで既に待機状態のワーカーがいる場合
+          if (registration.waiting && navigator.serviceWorker.controller) {
+            setWaitingWorker(registration.waiting);
+            setHasPendingUpdate(true);
+            promptUpdateDialog();
+          }
+
+          // 新しいService Workerのインストールを検知
+          registration.addEventListener('updatefound', () => {
+            const installingWorker = registration.installing;
+            if (!installingWorker) return;
+
+            installingWorker.addEventListener('statechange', () => {
+              if (
+                installingWorker.state === 'installed' &&
+                navigator.serviceWorker.controller
+              ) {
+                // 新しいバージョンがインストール完了＆待機状態（ユーザーの選択待ち）
+                setWaitingWorker(installingWorker);
+                setHasPendingUpdate(true);
+                promptUpdateDialog();
+              }
+            });
+          });
+        })
+        .catch((error) => {
+          console.error('Service Worker registration error:', error);
+        });
+    }
+
     if (mizuna_options.maintenance) {
       window.location.href = `${mizuna_options.mizuna_address}/maintenance.html`;
       return;
@@ -505,6 +626,9 @@ export function AppProvider(props: { children: JSX.Element }) {
           try {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
+            if ('serviceWorker' in navigator && handleControllerChange) {
+              navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+            }
           } catch {
             // 無視
           }
@@ -835,6 +959,10 @@ export function AppProvider(props: { children: JSX.Element }) {
     dialogConfig,
     openDialog,
     closeDialog,
+    hasPendingUpdate,
+    promptUpdateDialog,
+    applyPendingUpdate,
+    checkForUpdate,
   };
 
   return <AppContext.Provider value={contextValue}>{props.children}</AppContext.Provider>;

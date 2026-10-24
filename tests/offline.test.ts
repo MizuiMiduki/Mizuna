@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 
-describe('PWA Offline Screen & Service Worker', () => {
+describe('PWA Offline Screen, Cache & Update Management', () => {
   const offlineHtmlPath = path.resolve(__dirname, '../public/offline.html');
   const swJsPath = path.resolve(__dirname, '../public/sw.js');
   const indexHtmlPath = path.resolve(__dirname, '../index.html');
+  const appStorePath = path.resolve(__dirname, '../src/store/appStore.tsx');
+  const settingsViewPath = path.resolve(__dirname, '../src/components/SettingsView.tsx');
 
   it('offline.html が存在し、必要なメタタグおよび要素が含まれていること', () => {
     expect(fs.existsSync(offlineHtmlPath)).toBe(true);
@@ -39,27 +41,52 @@ describe('PWA Offline Screen & Service Worker', () => {
     expect(content).toContain('Mizuna Canary');
   });
 
-  it('sw.js が存在し、オフラインキャッシュとナビゲーションフォールバックが設定されていること', () => {
+  it('sw.js が存在し、キャッシュ機能とユーザー制御によるアップデート適用をサポートしていること', () => {
     expect(fs.existsSync(swJsPath)).toBe(true);
     const content = fs.readFileSync(swJsPath, 'utf-8');
 
-    // キャッシュ名およびキャッシュ対象
-    expect(content).toContain("const CACHE_NAME = 'mizuna-offline-v1'");
+    // コアアセットのキャッシュ
+    expect(content).toContain('CACHE_NAME');
+    expect(content).toContain("'/index.html'");
     expect(content).toContain("'/offline.html'");
     expect(content).toContain("'/icon.png'");
 
-    // Service Worker ライフサイクルイベント
-    expect(content).toContain("self.addEventListener('install'");
-    expect(content).toContain("self.addEventListener('activate'");
-    expect(content).toContain("self.addEventListener('fetch'");
+    // 自動での skipWaiting は呼ばない（ユーザーが選択するまで待機状態を維持）
+    expect(content).not.toMatch(/addEventListener\(\s*['"]install['"].*self\.skipWaiting\(\)/s);
 
-    // ナビゲーションフォールバック処理
+    // SKIP_WAITING メッセージを受信した時のみ skipWaiting を呼ぶ
+    expect(content).toContain("event.data.type === 'SKIP_WAITING'");
+    expect(content).toContain('self.skipWaiting()');
+
+    // キャッシュ戦略
     expect(content).toContain("event.request.mode === 'navigate'");
+    expect(content).toContain('url.origin !== self.location.origin'); // 外部APIはキャッシュしない
   });
 
   it('index.html に Service Worker 登録スクリプトが含まれていること', () => {
     const content = fs.readFileSync(indexHtmlPath, 'utf-8');
     expect(content).toContain("'serviceWorker' in navigator");
     expect(content).toContain("navigator.serviceWorker.register('/sw.js')");
+  });
+
+  it('appStore に PWA アップデート制御機能が実装されていること', () => {
+    expect(fs.existsSync(appStorePath)).toBe(true);
+    const content = fs.readFileSync(appStorePath, 'utf-8');
+
+    expect(content).toContain('hasPendingUpdate');
+    expect(content).toContain('promptUpdateDialog');
+    expect(content).toContain('applyPendingUpdate');
+    expect(content).toContain('checkForUpdate');
+    expect(content).toContain("type: 'SKIP_WAITING'");
+    expect(content).toContain("navigator.serviceWorker.addEventListener('controllerchange'");
+  });
+
+  it('SettingsView に待機中アップデートの適用と更新確認UIが実装されていること', () => {
+    expect(fs.existsSync(settingsViewPath)).toBe(true);
+    const content = fs.readFileSync(settingsViewPath, 'utf-8');
+
+    expect(content).toContain('hasPendingUpdate');
+    expect(content).toContain('applyPendingUpdate');
+    expect(content).toContain('checkForUpdate');
   });
 });

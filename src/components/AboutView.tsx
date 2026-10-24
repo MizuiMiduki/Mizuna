@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { For, onMount } from 'solid-js';
+import { For, onMount, Show } from 'solid-js';
 import { mizuna_options, mizuna_share } from '../config/mizunaOptions';
 import { useApp } from '../store/appStore';
 
@@ -47,7 +47,7 @@ const OSS_LICENSES = [
 ];
 
 export function AboutView() {
-  const { accounts, setCurrentView, showToast } = useApp();
+  const { accounts, setCurrentView, showToast, hasPendingUpdate, applyPendingUpdate } = useApp();
   let containerRef: HTMLDivElement | undefined;
 
   onMount(() => {
@@ -105,6 +105,19 @@ export function AboutView() {
               v{mizuna_options.mizuna_version}
             </span>
           </div>
+          <Show when={hasPendingUpdate()}>
+            <div style="margin-top: 8px;">
+              <button
+                type="button"
+                class="mizuna-btn mizuna-btn-tonal"
+                style="padding: 0 14px; height: 32px; font-size: 0.8rem; gap: 4px;"
+                onClick={applyPendingUpdate}
+              >
+                <i>system_update</i>
+                <span>最新版にアップデート</span>
+              </button>
+            </div>
+          </Show>
         </div>
         <button
           type="button"
