@@ -98,7 +98,7 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
 
     expect(content).toContain('hasPendingUpdate() && showUpdateBanner()');
     expect(content).toContain('mizuna-update-card');
-    expect(content).toContain('今すぐ更新');
+    expect(content).toMatch(/(今すぐ更新|update\.apply_now)/);
   });
 
   it('SettingsView に待機中アップデートの適用と更新確認UIが実装されていること', () => {

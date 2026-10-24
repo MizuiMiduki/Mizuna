@@ -53,7 +53,9 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
   is_pick_theme_color: false,
   latest_theme_color: [null, null, null],
   is_check_releasenote: null,
-  language: 'ja_jp',
+  get language() {
+    return detectBrowserLanguage();
+  },
 };
 
 export class MizunaDatabase extends Dexie {
