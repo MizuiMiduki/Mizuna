@@ -160,7 +160,7 @@ export function AboutView() {
         <div class="mizuna-meta-row">
           <span class="mizuna-meta-label">License / Copyright</span>
           <span class="mizuna-meta-val">
-            MIT License · (c) <span id="Copyright_year">{currentYear}</span> Mizui Miduki
+            MIT License · ©<span id="Copyright_year">{currentYear}</span> Mizui Miduki
           </span>
         </div>
         <div class="mizuna-row-divider" />
