@@ -1,19 +1,46 @@
 import { ja } from './locales/ja';
+import { en } from './locales/en';
 import type { I18nKey, LanguageCode, LanguageOption } from './types';
 
 export * from './types';
 export { ja } from './locales/ja';
+export { en } from './locales/en';
 
-export const DEFAULT_LANGUAGE: LanguageCode = 'ja_jp';
+// 対応外の言語の場合は英語で表示する
+export const DEFAULT_FALLBACK_LANGUAGE: LanguageCode = 'en_us';
+export const DEFAULT_LANGUAGE: LanguageCode = DEFAULT_FALLBACK_LANGUAGE;
 
 export const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: 'ja_jp', label: '日本語' },
+  { code: 'en_us', label: 'English' },
 ];
 
-const dictionaries: Record<string, typeof ja> = {
+const dictionaries: Record<LanguageCode, typeof ja> = {
   ja_jp: ja,
-  ja: ja,
+  en_us: en,
 };
+
+/**
+ * ブラウザまたはOSの言語設定を判定します。
+ * 日本語環境の場合は 'ja_jp' を、それ以外（対応外の言語含む）は英語 'en_us' を返します。
+ */
+export function detectBrowserLanguage(): LanguageCode {
+  if (typeof navigator === 'undefined') {
+    return DEFAULT_FALLBACK_LANGUAGE;
+  }
+
+  const browserLangs = navigator.languages || [navigator.language || ''];
+  for (const lang of browserLangs) {
+    if (!lang) continue;
+    const lower = lang.toLowerCase();
+    if (lower.startsWith('ja')) {
+      return 'ja_jp';
+    }
+  }
+
+  // 対応外の言語はすべて英語にする
+  return DEFAULT_FALLBACK_LANGUAGE;
+}
 
 /**
  * 超軽量・ゼロ依存の翻訳テキスト取得関数
@@ -21,14 +48,16 @@ const dictionaries: Record<string, typeof ja> = {
  *
  * @param key ネストキー (例: 'common.back')
  * @param params プレースホルダー置換 (例: { version: '3.11.0' })
- * @param lang 言語コード (未指定時は ja_jp)
+ * @param lang 言語コード (未指定時または対応外は英語にフォールバック)
  */
 export function translate(
   key: I18nKey,
   params?: Record<string, string | number>,
-  lang: string = DEFAULT_LANGUAGE
+  lang?: string
 ): string {
-  const dict = dictionaries[lang] || dictionaries[DEFAULT_LANGUAGE] || ja;
+  const targetCode: LanguageCode =
+    lang === 'ja_jp' || lang === 'en_us' ? lang : DEFAULT_FALLBACK_LANGUAGE;
+  const dict = dictionaries[targetCode] || en;
   const segments = key.split('.');
 
   let current: any = dict;
@@ -40,9 +69,9 @@ export function translate(
     current = current[segments[i]];
   }
 
-  // 指定言語にキーが存在しない場合のフォールバック（ja を参照）
-  if (typeof current !== 'string' && dict !== ja) {
-    let fallback: any = ja;
+  // 指定言語にキーが存在しない場合のフォールバック（英語 en を参照）
+  if (typeof current !== 'string' && dict !== en) {
+    let fallback: any = en;
     for (let i = 0; i < segments.length; i++) {
       if (fallback == null) {
         fallback = undefined;

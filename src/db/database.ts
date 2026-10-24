@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import { detectBrowserLanguage } from '../i18n';
 
 /**
  * アカウント情報レコード
@@ -105,19 +106,25 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
       is_pick_theme_color: settingData.is_pick_theme_color ?? DEFAULT_USER_SETTINGS.is_pick_theme_color,
       latest_theme_color: settingData.latest_theme_color ?? DEFAULT_USER_SETTINGS.latest_theme_color,
       is_check_releasenote: settingData.is_check_releasenote ?? DEFAULT_USER_SETTINGS.is_check_releasenote,
-      language: settingData.language ?? DEFAULT_USER_SETTINGS.language,
+      language: settingData.language ?? detectBrowserLanguage(),
     };
   }
 
-  // id: 1 として初期設定を作成
+  // id: 1 として初期設定を作成（OS/ブラウザ言語から自動判定）
+  const initialLanguage = detectBrowserLanguage();
+  const initialSettings = {
+    ...DEFAULT_USER_SETTINGS,
+    language: initialLanguage,
+  };
+
   await db.setting.put({
     id: 1,
-    ...DEFAULT_USER_SETTINGS,
+    ...initialSettings,
   });
 
   return {
     id: 1,
-    ...DEFAULT_USER_SETTINGS,
+    ...initialSettings,
   };
 }
 
