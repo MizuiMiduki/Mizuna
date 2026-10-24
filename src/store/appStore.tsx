@@ -423,6 +423,16 @@ export function AppProvider(props: { children: JSX.Element }) {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // オンライン・オフライン検知
+    const handleOnline = () => {
+      showToast('インターネット接続が回復しました', 'success');
+    };
+    const handleOffline = () => {
+      showToast('ネットワークが切断されました（オフライン）', 'warning');
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     if (mizuna_options.maintenance) {
       window.location.href = `${mizuna_options.mizuna_address}/maintenance.html`;
       return;
@@ -487,6 +497,14 @@ export function AppProvider(props: { children: JSX.Element }) {
         if (typeof document !== 'undefined') {
           try {
             document.removeEventListener('visibilitychange', handleVisibilityChange);
+          } catch {
+            // 無視
+          }
+        }
+        if (typeof window !== 'undefined') {
+          try {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
           } catch {
             // 無視
           }

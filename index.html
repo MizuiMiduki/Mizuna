@@ -19,6 +19,13 @@
         if (manifestLink) manifestLink.setAttribute('href', '/manifest-canary.json');
       }
     })();
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js').catch(function (error) {
+          console.error('Service Worker registration failed:', error);
+        });
+      });
+    }
   </script>
   <link href="/icon.png" rel="icon" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
