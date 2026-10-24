@@ -15,6 +15,7 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
   const indexHtmlPath = path.resolve(rootDir, 'index.html');
   const appStorePath = path.resolve(rootDir, 'src/store/appStore.tsx');
   const settingsViewPath = path.resolve(rootDir, 'src/components/SettingsView.tsx');
+  const headerPath = path.resolve(rootDir, 'src/components/Header.tsx');
 
   it('offline.html が存在し、必要なメタタグおよび要素が含まれていること', () => {
     expect(fs.existsSync(offlineHtmlPath)).toBe(true);
@@ -77,16 +78,27 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toContain("navigator.serviceWorker.register('/sw.js')");
   });
 
-  it('appStore に PWA アップデート制御機能が実装されていること', () => {
+  it('appStore に PWA アップデート制御およびリリースノート自動表示機能が実装されていること', () => {
     expect(fs.existsSync(appStorePath)).toBe(true);
     const content = fs.readFileSync(appStorePath, 'utf-8');
 
     expect(content).toContain('hasPendingUpdate');
-    expect(content).toContain('promptUpdateDialog');
+    expect(content).toContain('showUpdateBanner');
+    expect(content).toContain('dismissUpdateBanner');
     expect(content).toContain('applyPendingUpdate');
     expect(content).toContain('checkForUpdate');
+    expect(content).toContain('mizuna_show_release_notes_after_update');
     expect(content).toContain("type: 'SKIP_WAITING'");
     expect(content).toContain("navigator.serviceWorker.addEventListener?.('controllerchange'");
+  });
+
+  it('Header に控えめなアップデートバナーが実装されていること', () => {
+    expect(fs.existsSync(headerPath)).toBe(true);
+    const content = fs.readFileSync(headerPath, 'utf-8');
+
+    expect(content).toContain('hasPendingUpdate() && showUpdateBanner()');
+    expect(content).toContain('mizuna-update-card');
+    expect(content).toContain('今すぐ更新');
   });
 
   it('SettingsView に待機中アップデートの適用と更新確認UIが実装されていること', () => {

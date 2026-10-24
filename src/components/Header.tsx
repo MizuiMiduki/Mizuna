@@ -6,7 +6,16 @@ import { useApp, type ViewType } from '../store/appStore';
 import { HoldHoverTip } from './HoldHoverTip';
 
 export function Header() {
-  const { openDialog, currentView, setCurrentView, accounts } = useApp();
+  const {
+    openDialog,
+    currentView,
+    setCurrentView,
+    accounts,
+    hasPendingUpdate,
+    showUpdateBanner,
+    applyPendingUpdate,
+    dismissUpdateBanner,
+  } = useApp();
   const [showNews, setShowNews] = createSignal(Boolean(mizuna_options.news_banner_title));
   let topbarRef: HTMLElement | undefined;
   let newsRef: HTMLDivElement | undefined;
@@ -136,6 +145,32 @@ export function Header() {
           </div>
         </div>
       </header>
+
+      {/* PWAアップデート控えめバナー */}
+      <Show when={hasPendingUpdate() && showUpdateBanner()}>
+        <div class="mizuna-update-wrap">
+          <div class="mizuna-update-card">
+            <span class="mizuna-update-badge">UPDATE</span>
+            <span class="mizuna-update-title">新しいバージョンが利用可能です</span>
+            <button
+              type="button"
+              class="mizuna-update-btn-action"
+              onClick={applyPendingUpdate}
+            >
+              <i>refresh</i>
+              <span>今すぐ更新</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-icon-btn-sm"
+              onClick={dismissUpdateBanner}
+              aria-label="アップデート通知を閉じる"
+            >
+              <i>close</i>
+            </button>
+          </div>
+        </div>
+      </Show>
 
       {/* お知らせバナー */}
       <Show when={showNews()}>

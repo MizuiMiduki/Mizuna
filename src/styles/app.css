@@ -318,6 +318,73 @@ body {
   cursor: pointer;
 }
 
+.mizuna-update-wrap {
+  max-width: 720px;
+  width: 100%;
+  margin: 10px auto 0;
+  padding: 0 16px;
+}
+
+.mizuna-update-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  border-radius: var(--mizuna-radius-md);
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.08);
+}
+
+.mizuna-update-badge {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--primary);
+  color: var(--on-primary);
+  letter-spacing: 0.04em;
+}
+
+.mizuna-update-title {
+  flex: 1;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mizuna-update-btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 9999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.mizuna-update-btn-action:hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.mizuna-update-btn-action:active {
+  transform: translateY(0);
+}
+
+.mizuna-update-btn-action i {
+  font-size: 15px;
+}
+
 /* =========================================
    メインコンテナ
    ========================================= */

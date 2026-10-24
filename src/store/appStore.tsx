@@ -135,6 +135,8 @@ interface AppContextValue {
 
   // PWA アップデート制御
   hasPendingUpdate: Accessor<boolean>;
+  showUpdateBanner: Accessor<boolean>;
+  dismissUpdateBanner: () => void;
   promptUpdateDialog: () => void;
   applyPendingUpdate: () => void;
   checkForUpdate: () => Promise<void>;
@@ -221,39 +223,31 @@ export function AppProvider(props: { children: JSX.Element }) {
   // PWA アップデート状態管理
   const [waitingWorker, setWaitingWorker] = createSignal<ServiceWorker | null>(null);
   const [hasPendingUpdate, setHasPendingUpdate] = createSignal(false);
+  const [showUpdateBanner, setShowUpdateBanner] = createSignal(false);
   let activeSwRegistration: ServiceWorkerRegistration | null = null;
+
+  const dismissUpdateBanner = () => {
+    setShowUpdateBanner(false);
+  };
 
   const promptUpdateDialog = () => {
     const worker = waitingWorker();
     if (!worker) return;
 
-    openDialog({
-      title: '新しいバージョンが利用可能です',
-      icon: 'system_update',
-      tone: 'primary',
-      badgeText: 'PWA UPDATE',
-      contentText:
-        'Mizunaの新しいバージョンが準備できました。今すぐアップデートを適用して再読み込みしますか？\n\n「あとで」を選択した場合は現在の作業を中断せず、設定画面などからいつでも適用できます。',
-      buttons: [
-        {
-          label: 'あとで',
-          variant: 'text',
-          onClick: () => {
-            showToast('アップデートを保留しました。設定画面からいつでも適用できます。', 'info');
-          },
-        },
-        {
-          label: '今すぐアップデート',
-          variant: 'fill',
-          onClick: () => {
-            applyPendingUpdate();
-          },
-        },
-      ],
-    });
+    // ヘッダー下の控えめバナーを再表示
+    setShowUpdateBanner(true);
   };
 
   const applyPendingUpdate = () => {
+    // アップデート適用直後フラグを保存（リロード後にリリースノートを自動表示するため）
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('mizuna_show_release_notes_after_update', 'true');
+      } catch {
+        // 無視
+      }
+    }
+
     const worker = waitingWorker();
     if (worker) {
       worker.postMessage({ type: 'SKIP_WAITING' });
@@ -427,47 +421,58 @@ export function AppProvider(props: { children: JSX.Element }) {
    * リリースノートの更新チェック
    */
   const checkNewReleaseNote = async (currentSettings: SettingRecord) => {
-    if (currentSettings.is_check_releasenote === null) {
+    let forceShowAfterUpdate = false;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        forceShowAfterUpdate = localStorage.getItem('mizuna_show_release_notes_after_update') === 'true';
+        if (forceShowAfterUpdate) {
+          localStorage.removeItem('mizuna_show_release_notes_after_update');
+        }
+      } catch {
+        // 無視
+      }
+    }
+
+    if (currentSettings.is_check_releasenote === null && !forceShowAfterUpdate) {
       await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
       setSettings((prev) => ({ ...prev, is_check_releasenote: mizuna_options.mizuna_version }));
       return;
     }
 
-    if (mizuna_options.mizuna_version !== currentSettings.is_check_releasenote) {
+    // バージョン更新時、またはPWAアップデート適用直後の初回起動時にダイアログを確実に表示
+    if (forceShowAfterUpdate || mizuna_options.mizuna_version !== currentSettings.is_check_releasenote) {
+      let latestPost: { title: string; link: string } | null = null;
       try {
-        const latestPost = await fetchLatestReleaseNote();
-        if (latestPost) {
-          openDialog({
-            title: 'Mizuna がアップデートされました',
-            icon: 'celebration',
-            tone: 'primary',
-            badgeText: `VERSION ${mizuna_options.mizuna_version}`,
-            contentText: `いつもご利用ありがとうございます。Mizuna v${mizuna_options.mizuna_version} への更新が完了しました。新機能や改善点についてはリリースノートをご覧ください。`,
-            linkCard: {
-              label: 'RELEASE NOTE',
-              title: latestPost.title,
-              url: latestPost.link,
-            },
-            buttons: [
-              {
-                label: '確認してはじめる',
-                variant: 'fill',
-                onClick: async () => {
-                  await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
-                  setSettings((prev) => ({
-                    ...prev,
-                    is_check_releasenote: mizuna_options.mizuna_version,
-                  }));
-                },
-              },
-            ],
-          });
-        } else {
-          await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
-        }
+        latestPost = await fetchLatestReleaseNote();
       } catch (err) {
         console.error('リリースノートの取得に失敗しました:', err);
       }
+
+      openDialog({
+        title: 'Mizuna がアップデートされました',
+        icon: 'celebration',
+        tone: 'primary',
+        badgeText: `VERSION ${mizuna_options.mizuna_version}`,
+        contentText: `いつもご利用ありがとうございます。Mizuna v${mizuna_options.mizuna_version} への更新が完了しました。新機能や改善点についてはリリースノートをご覧ください。`,
+        linkCard: {
+          label: 'RELEASE NOTE',
+          title: latestPost?.title || `Mizuna v${mizuna_options.mizuna_version} リリースノート`,
+          url: latestPost?.link || 'https://github.com/MizuiMiduki/Mizuna/releases',
+        },
+        buttons: [
+          {
+            label: '確認してはじめる',
+            variant: 'fill',
+            onClick: async () => {
+              await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
+              setSettings((prev) => ({
+                ...prev,
+                is_check_releasenote: mizuna_options.mizuna_version,
+              }));
+            },
+          },
+        ],
+      });
     }
   };
 
@@ -960,6 +965,8 @@ export function AppProvider(props: { children: JSX.Element }) {
     openDialog,
     closeDialog,
     hasPendingUpdate,
+    showUpdateBanner,
+    dismissUpdateBanner,
     promptUpdateDialog,
     applyPendingUpdate,
     checkForUpdate,
