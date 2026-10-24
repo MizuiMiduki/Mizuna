@@ -92,7 +92,7 @@ afterEach(() => {
 
 // 7. navigator.serviceWorker mock (jsdom lacks serviceWorker implementation)
 if (typeof navigator !== 'undefined') {
-  Object.defineProperty(navigator, 'serviceWorker', {
+  Object.defineProperty(navigator as any, 'serviceWorker', {
     writable: true,
     configurable: true,
     value: {

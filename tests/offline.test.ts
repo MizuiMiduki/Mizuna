@@ -5,6 +5,9 @@ import * as fs from 'fs';
 // @ts-ignore
 import * as path from 'path';
 
+// @ts-ignore
+declare const process: any;
+
 describe('PWA Offline Screen, Cache & Update Management', () => {
   const rootDir = process.cwd();
   const offlineHtmlPath = path.resolve(rootDir, 'public/offline.html');
