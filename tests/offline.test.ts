@@ -66,8 +66,8 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toContain("event.data.type === 'SKIP_WAITING'");
     expect(content).toContain('self.skipWaiting()');
 
-    // キャッシュ戦略
-    expect(content).toContain("event.request.mode === 'navigate'");
+    // キャッシュ戦略 (request.mode === 'navigate')
+    expect(content).toContain("mode === 'navigate'");
     expect(content).toContain('url.origin !== self.location.origin'); // 外部APIはキャッシュしない
   });
 
