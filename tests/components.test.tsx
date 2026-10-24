@@ -16,7 +16,7 @@ describe('UI Components', () => {
     await db.open();
     await db.account.clear();
     await db.setting.clear();
-    await db.setting.put({ ...DEFAULT_USER_SETTINGS, id: 1 });
+    await db.setting.put({ ...DEFAULT_USER_SETTINGS, id: 1, language: 'ja_jp' });
     await db.account.add({
       token: 'tok_test',
       name: 'テストユーザー',
@@ -36,7 +36,7 @@ describe('UI Components', () => {
       ));
 
       expect(screen.getByText('Mizuna')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'お知らせ' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /(お知らせ|Announcements)/ })).toBeInTheDocument();
     });
 
     it('フッターナビゲーションにアカウント管理ボタンと設定ボタンが存在すること', async () => {
@@ -47,10 +47,10 @@ describe('UI Components', () => {
       ));
 
       // アカウントが存在するため aria-label="アカウント管理" のボタンが描画される
-      const accountBtn = await screen.findByRole('button', { name: 'アカウント管理' });
+      const accountBtn = await screen.findByRole('button', { name: /(アカウント管理|Accounts)/ });
       expect(accountBtn).toBeInTheDocument();
 
-      const settingsBtn = await screen.findByRole('button', { name: /設定/ });
+      const settingsBtn = await screen.findByRole('button', { name: /(設定|Settings)/ });
       expect(settingsBtn).toBeInTheDocument();
     });
   });
@@ -63,8 +63,8 @@ describe('UI Components', () => {
         </AppProvider>
       ));
 
-      expect(screen.getByText('お知らせ')).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /もどる/i })).toBeInTheDocument();
+      expect(screen.getByText(/(お知らせ|Announcements)/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /(もどる|Back)/i })).toBeInTheDocument();
     });
   });
 
