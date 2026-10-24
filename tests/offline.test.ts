@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
+
+// @ts-ignore
 import * as fs from 'fs';
+// @ts-ignore
 import * as path from 'path';
+
+// @ts-ignore
+declare const __dirname: string;
 
 describe('PWA Offline Screen, Cache & Update Management', () => {
   const offlineHtmlPath = path.resolve(__dirname, '../public/offline.html');
