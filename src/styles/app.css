@@ -4078,369 +4078,299 @@ body.is-simple-mode .mizuna-setting-col {
 /* =========================================
    ローカル画像加工モーダル (ImageEditorModal)
    ========================================= */
-.mizuna-img-editor-portal {
+.mizuna-image-editor-portal {
   position: fixed;
   inset: 0;
-  z-index: 500;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.mizuna-img-editor-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-}
-
-.mizuna-img-editor-dialog {
-  position: relative;
-  z-index: 1;
-  width: 95vw;
-  max-width: 900px;
-  max-height: 94vh;
+  z-index: 10000;
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  color: var(--on-surface);
-  border-radius: var(--mizuna-radius-xl, 24px);
-  border: 1px solid color-mix(in srgb, var(--primary) 25%, color-mix(in srgb, var(--outline-variant) 60%, transparent));
-  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.5);
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #f8fafc;
   overflow: hidden;
-}
-
-.mizuna-img-editor-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 20px;
-  border-bottom: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
-}
-
-.mizuna-img-editor-header-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.mizuna-img-editor-title {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mizuna-img-editor-header-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mizuna-img-editor-body {
-  flex: 1;
-  display: flex;
-  flex-direction: row;
-  min-height: 0;
-  overflow: hidden;
-}
-
-@media (max-width: 720px) {
-  .mizuna-img-editor-body {
-    flex-direction: column;
-  }
-}
-
-.mizuna-img-editor-stage-wrap {
-  flex: 1;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  background: color-mix(in srgb, var(--surface-container-lowest) 70%, #000);
-  overflow: hidden;
+  touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
 
-.mizuna-img-editor-stage {
+/* トップバー */
+.mizuna-editor-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.85);
+  flex-shrink: 0;
+}
+
+.mizuna-editor-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.mizuna-editor-topbar .mizuna-btn {
+  height: 36px !important;
+  padding: 0 14px !important;
+  font-size: 0.82rem !important;
+}
+
+/* ステージエリア */
+.mizuna-editor-stage {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 16px;
+  touch-action: none;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.95) 100%);
+}
+
+.mizuna-editor-canvas-wrap {
   position: relative;
   display: inline-block;
   max-width: 100%;
   max-height: 100%;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
-  border-radius: 4px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .mizuna-editor-preview-img {
   display: block;
-  max-width: min(100%, 560px);
-  max-height: min(52vh, 480px);
+  max-width: min(100%, 82vw);
+  max-height: min(48vh, 520px);
   width: auto;
   height: auto;
   object-fit: contain;
   pointer-events: none;
   -webkit-user-drag: none;
-  transition: transform 0.15s ease-out;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .mizuna-editor-preview-img {
     max-height: 38vh;
+    max-width: 90vw;
   }
 }
 
-/* クロップ枠 */
-.mizuna-img-editor-crop-box {
+/* クロップ枠 & グリッド */
+.mizuna-crop-box {
   position: absolute;
-  border: 2px solid var(--primary);
-  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  border: 2px solid var(--primary, #38bdf8);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
   box-sizing: border-box;
-  cursor: move;
-  touch-action: none;
+  pointer-events: none;
 }
 
-.mizuna-crop-handle {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  background: #fff;
-  border: 2px solid var(--primary);
-  border-radius: 50%;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+.mizuna-crop-grid {
+  width: 100%;
+  height: 100%;
+  background: 
+    linear-gradient(to right, transparent 33%, rgba(255,255,255,0.25) 33%, rgba(255,255,255,0.25) 34%, transparent 34%, transparent 66%, rgba(255,255,255,0.25) 66%, rgba(255,255,255,0.25) 67%, transparent 67%),
+    linear-gradient(to bottom, transparent 33%, rgba(255,255,255,0.25) 33%, rgba(255,255,255,0.25) 34%, transparent 34%, transparent 66%, rgba(255,255,255,0.25) 66%, rgba(255,255,255,0.25) 67%, transparent 67%);
 }
-
-.mizuna-crop-handle-nw { top: -7px; left: -7px; cursor: nwse-resize; }
-.mizuna-crop-handle-ne { top: -7px; right: -7px; cursor: nesw-resize; }
-.mizuna-crop-handle-sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
-.mizuna-crop-handle-se { bottom: -7px; right: -7px; cursor: nwse-resize; }
 
 /* モザイク枠 */
-.mizuna-img-editor-mosaic-overlay {
-  position: absolute;
-  inset: 0;
-  cursor: crosshair;
-  touch-action: none;
-}
-
-.mizuna-img-editor-mosaic-rect {
+.mizuna-mosaic-box {
   position: absolute;
   border: 1.5px dashed #f43f5e;
   background: color-mix(in srgb, #f43f5e 20%, transparent);
-  box-sizing: border-box;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  box-sizing: border-box;
+  pointer-events: none;
 }
 
-.mizuna-mosaic-badge {
+.mizuna-mosaic-grid-pattern {
+  width: 100%;
+  height: 100%;
+}
+
+/* ドラッグ中のプレビュー枠 */
+.mizuna-drag-preview-box {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  padding: 1px 5px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  background: #f43f5e;
-  color: #fff;
-  border-radius: 4px;
+  border: 2px dashed #38bdf8;
+  background: rgba(56, 189, 248, 0.18);
+  pointer-events: none;
+  box-sizing: border-box;
 }
 
-.mizuna-mosaic-del-btn {
+.mizuna-drag-preview-box.is-mosaic {
+  border-color: #f43f5e;
+  background: rgba(244, 63, 94, 0.22);
+}
+
+.mizuna-editor-stage-hint {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 20px !important;
-  height: 20px !important;
-  min-width: 20px !important;
-  padding: 0 !important;
-  border-radius: 50% !important;
-  background: rgba(0, 0, 0, 0.7) !important;
-  color: #fff !important;
-  border: none !important;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.mizuna-mosaic-del-btn i {
-  font-size: 13px !important;
-}
-
-/* 右側（下側）操作パネル */
-.mizuna-img-editor-controls {
-  width: 320px;
-  display: flex;
-  flex-direction: column;
-  background: var(--surface-container-low);
-  border-left: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
-}
-
-@media (max-width: 720px) {
-  .mizuna-img-editor-controls {
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
-  }
-}
-
-.mizuna-editor-tabs {
-  display: flex;
-  padding: 6px;
-  gap: 4px;
-  border-bottom: 1px solid color-mix(in srgb, var(--outline-variant) 35%, transparent);
-}
-
-.mizuna-editor-tab {
-  flex: 1;
+  bottom: 12px;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 4px;
-  height: 34px !important;
-  padding: 0 8px !important;
-  border-radius: var(--mizuna-radius-pill) !important;
-  border: none !important;
-  background: transparent !important;
-  color: var(--on-surface-variant) !important;
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  background: rgba(0, 0, 0, 0.7);
+  color: #e2e8f0;
+  font-size: 0.76rem;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
-.mizuna-editor-tab i {
+.mizuna-editor-stage-hint i {
   font-size: 16px !important;
 }
 
-.mizuna-editor-tab.is-active {
-  background: var(--surface) !important;
-  color: var(--primary) !important;
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
-}
-
+/* コントロールパネル */
 .mizuna-editor-panel {
-  flex: 1;
-  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  background: rgba(30, 41, 59, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+  max-height: 48vh;
+}
+
+.mizuna-editor-tab-content {
+  padding: 14px 16px;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   overflow-y: auto;
 }
 
-.mizuna-editor-panel-title {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--on-surface-variant);
-  margin-bottom: 2px;
+.mizuna-editor-sublabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
 }
 
-.mizuna-editor-btn-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-}
-
-.mizuna-editor-action-btn {
-  display: inline-flex;
+/* 1. トリミングツール */
+.mizuna-editor-crop-tools {
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: 38px !important;
-  padding: 0 12px !important;
-  border-radius: var(--mizuna-radius-md, 12px) !important;
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 50%, transparent) !important;
-  background: var(--surface) !important;
-  color: var(--on-surface) !important;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.mizuna-editor-action-btn:hover {
-  border-color: var(--primary) !important;
-  color: var(--primary) !important;
-}
-
-.mizuna-editor-action-btn.is-active {
-  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
-  border-color: var(--primary) !important;
-  color: var(--primary) !important;
-}
-
-.mizuna-editor-slider-group {
-  display: flex;
-  flex-direction: column;
   gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
 }
 
-.mizuna-editor-slider-item {
+/* 2. 回転・反転ツール */
+.mizuna-editor-rotate-tools {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.mizuna-editor-rotate-tools .mizuna-btn {
+  height: 38px !important;
+  font-size: 0.8rem !important;
+}
+
+/* 3. 色調補正ツール */
+.mizuna-editor-adjust-tools {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-}
-
-.mizuna-editor-slider-header {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.78rem;
-  color: var(--on-surface-variant);
-}
-
-.mizuna-editor-slider {
+  gap: 10px;
   width: 100%;
-  accent-color: var(--primary);
+  max-width: 440px;
+}
+
+.mizuna-adjust-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.mizuna-adjust-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 72px;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.mizuna-adjust-label i {
+  font-size: 17px !important;
+}
+
+.mizuna-slider {
+  flex: 1;
+  accent-color: var(--primary, #38bdf8);
   height: 6px;
   cursor: pointer;
 }
 
-.mizuna-mosaic-hint {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: var(--mizuna-radius-md, 12px);
-  background: color-mix(in srgb, var(--primary) 8%, transparent);
-  font-size: 0.76rem;
-  color: var(--primary);
-  line-height: 1.4;
-}
-
-.mizuna-mosaic-hint i {
-  font-size: 20px !important;
+.mizuna-adjust-value {
+  width: 46px;
+  text-align: right;
+  font-size: 0.8rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: #94a3b8;
   flex-shrink: 0;
 }
 
-.mizuna-mosaic-actions {
+/* 4. モザイクツール */
+.mizuna-editor-mosaic-tools {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: 4px;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.82rem;
+  color: #cbd5e1;
 }
 
-.mizuna-mosaic-count {
-  font-size: 0.78rem;
+/* 下部機能切り替えタブバー */
+.mizuna-editor-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.95);
+  padding: 4px 6px;
+  flex-shrink: 0;
+}
+
+.mizuna-editor-tab-btn {
+  flex: 1;
+  max-width: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border: none !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  font-size: 0.70rem;
   font-weight: 600;
-  color: var(--on-surface-variant);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s ease;
 }
 
-.mizuna-img-editor-footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 12px 20px;
-  border-top: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
-  background: var(--surface-container-lowest);
+.mizuna-editor-tab-btn i {
+  font-size: 20px !important;
 }
 
-.mizuna-editor-save-btn {
-  min-width: 110px;
+.mizuna-editor-tab-btn.is-active {
+  color: var(--primary, #38bdf8) !important;
+  background: rgba(56, 189, 248, 0.14) !important;
 }
 
 /* =========================================
@@ -4537,8 +4467,9 @@ body.is-simple-mode .mizuna-setting-col {
 .mizuna-editor-watermark-tools {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   width: 100%;
+  max-width: 440px;
 }
 
 .mizuna-watermark-header {
@@ -4567,17 +4498,18 @@ body.is-simple-mode .mizuna-setting-col {
   height: 36px;
   padding: 0 12px;
   border-radius: var(--mizuna-radius-md, 10px);
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 60%, transparent);
-  background: var(--surface);
-  color: var(--on-surface);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+  color: #ffffff;
   font-size: 0.82rem;
   font-family: inherit;
   outline: none;
+  box-sizing: border-box;
 }
 
 .mizuna-editor-text-input:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 15%, transparent);
+  border-color: var(--primary, #38bdf8);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
 
