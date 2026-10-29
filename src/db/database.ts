@@ -45,6 +45,8 @@ export interface SettingRecord {
   account_order?: number[];
   /** ユーザー定義のカスタムCSS */
   custom_css?: string;
+  /** 画像編集用のカスタム透かしテキスト (未設定時は @username@address) */
+  watermark_text?: string;
 }
 
 export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
@@ -62,6 +64,7 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
   },
   account_order: [],
   custom_css: '',
+  watermark_text: '',
 };
 
 export class MizunaDatabase extends Dexie {
@@ -117,6 +120,7 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
       language: settingData.language ?? detectBrowserLanguage(),
       account_order: Array.isArray(settingData.account_order) ? settingData.account_order : [],
       custom_css: typeof settingData.custom_css === 'string' ? settingData.custom_css : DEFAULT_USER_SETTINGS.custom_css,
+      watermark_text: typeof settingData.watermark_text === 'string' ? settingData.watermark_text : DEFAULT_USER_SETTINGS.watermark_text,
     };
   }
 

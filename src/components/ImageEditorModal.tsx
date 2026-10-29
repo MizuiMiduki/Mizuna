@@ -5,6 +5,8 @@ import {
   MosaicRect,
   ImageAdjustments,
   ImageEditOptions,
+  WatermarkOptions,
+  WatermarkPosition,
   editImageOptimized,
 } from '../utils/imageEditor';
 import { useApp } from '../store/appStore';
@@ -15,11 +17,11 @@ export interface ImageEditorModalProps {
   onClose: () => void;
 }
 
-type TabType = 'crop' | 'rotate' | 'adjust' | 'mosaic';
+type TabType = 'crop' | 'rotate' | 'adjust' | 'mosaic' | 'watermark';
 type AspectRatioType = 'free' | '1:1' | '4:3' | '16:9';
 
 export function ImageEditorModal(props: ImageEditorModalProps) {
-  const { showToast } = useApp();
+  const { currentUser, settings, showToast } = useApp();
 
   const [activeTab, setActiveTab] = createSignal<TabType>('crop');
   const [isProcessing, setIsProcessing] = createSignal(false);
@@ -31,6 +33,20 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   const [contrast, setContrast] = createSignal<number>(100);
   const [saturation, setSaturation] = createSignal<number>(100);
   const [aspectRatio, setAspectRatio] = createSignal<AspectRatioType>('free');
+
+  // 透かしステート (初期値は設定値、未設定なら現在のアカウント情報)
+  const getInitialWatermarkText = () => {
+    const custom = settings().watermark_text?.trim();
+    if (custom) return custom;
+    const user = currentUser();
+    if (user) return `@${user.username}@${user.address}`;
+    return '';
+  };
+
+  const [watermarkEnabled, setWatermarkEnabled] = createSignal<boolean>(false);
+  const [watermarkText, setWatermarkText] = createSignal<string>(getInitialWatermarkText());
+  const [watermarkPosition, setWatermarkPosition] = createSignal<WatermarkPosition>('bottom-right');
+  const [watermarkOpacity, setWatermarkOpacity] = createSignal<number>(75);
 
   // クロップ座標 (元画像に対する比率 0.0 - 1.0)
   const [cropBox, setCropBox] = createSignal<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -220,6 +236,15 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         blockSize: Math.max(8, Math.round(Math.min(w, h) / 35)),
       }));
 
+      const watermarkOption: WatermarkOptions | null =
+        watermarkEnabled() && watermarkText().trim()
+          ? {
+              text: watermarkText().trim(),
+              position: watermarkPosition(),
+              opacity: watermarkOpacity() / 100,
+            }
+          : null;
+
       const options: ImageEditOptions = {
         crop: cropPixel,
         rotate: rotation(),
@@ -230,6 +255,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
           saturation: saturation(),
         },
         mosaics: mosaicPixels,
+        watermark: watermarkOption,
         quality: 0.85,
       };
 
@@ -357,6 +383,18 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                   }}
                 />
               )}
+            </Show>
+
+            {/* 透かしリアルタイムプレビュー */}
+            <Show when={watermarkEnabled() && watermarkText().trim()}>
+              <div
+                class={`mizuna-watermark-preview-pill is-${watermarkPosition()}`}
+                style={{
+                  opacity: watermarkOpacity() / 100,
+                }}
+              >
+                <span>{watermarkText()}</span>
+              </div>
             </Show>
           </div>
 
@@ -541,6 +579,100 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                 </button>
               </div>
             </Show>
+
+            {/* 5. 透かしタブ */}
+            <Show when={activeTab() === 'watermark'}>
+              <div class="mizuna-editor-watermark-tools">
+                <div class="mizuna-watermark-header">
+                  <span class="mizuna-editor-sublabel">透かしを合成:</span>
+                  <div class="mizuna-seg-pills">
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${!watermarkEnabled() ? 'is-active' : ''}`}
+                      onClick={() => setWatermarkEnabled(false)}
+                    >
+                      <span>OFF</span>
+                    </button>
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${watermarkEnabled() ? 'is-active' : ''}`}
+                      onClick={() => setWatermarkEnabled(true)}
+                    >
+                      <span>ON</span>
+                    </button>
+                  </div>
+                </div>
+
+                <Show when={watermarkEnabled()}>
+                  <div class="mizuna-watermark-options">
+                    <div class="mizuna-watermark-input-group">
+                      <span class="mizuna-editor-sublabel">テキスト:</span>
+                      <input
+                        type="text"
+                        class="mizuna-editor-text-input"
+                        value={watermarkText()}
+                        placeholder="@username@instance"
+                        onInput={(e) => setWatermarkText(e.currentTarget.value)}
+                      />
+                    </div>
+
+                    <div class="mizuna-watermark-pos-group">
+                      <span class="mizuna-editor-sublabel">位置:</span>
+                      <div class="mizuna-seg-pills mizuna-seg-pills-wrap">
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${watermarkPosition() === 'bottom-right' ? 'is-active' : ''}`}
+                          onClick={() => setWatermarkPosition('bottom-right')}
+                        >
+                          <span>右下</span>
+                        </button>
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${watermarkPosition() === 'bottom-left' ? 'is-active' : ''}`}
+                          onClick={() => setWatermarkPosition('bottom-left')}
+                        >
+                          <span>左下</span>
+                        </button>
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${watermarkPosition() === 'top-right' ? 'is-active' : ''}`}
+                          onClick={() => setWatermarkPosition('top-right')}
+                        >
+                          <span>右上</span>
+                        </button>
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${watermarkPosition() === 'top-left' ? 'is-active' : ''}`}
+                          onClick={() => setWatermarkPosition('top-left')}
+                        >
+                          <span>左上</span>
+                        </button>
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${watermarkPosition() === 'center' ? 'is-active' : ''}`}
+                          onClick={() => setWatermarkPosition('center')}
+                        >
+                          <span>中央</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="mizuna-adjust-slider-row">
+                      <span class="mizuna-editor-sublabel">不透明度:</span>
+                      <input
+                        type="range"
+                        min="20"
+                        max="100"
+                        value={watermarkOpacity()}
+                        onInput={(e) => setWatermarkOpacity(Number(e.currentTarget.value))}
+                        class="mizuna-slider"
+                      />
+                      <span class="mizuna-adjust-value">{watermarkOpacity()}%</span>
+                    </div>
+                  </div>
+                </Show>
+              </div>
+            </Show>
           </div>
 
           {/* 下部機能切り替えタブバー */}
@@ -576,6 +708,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             >
               <i>blur_on</i>
               <span>モザイク</span>
+            </button>
+            <button
+              type="button"
+              class={`mizuna-editor-tab-btn ${activeTab() === 'watermark' ? 'is-active' : ''}`}
+              onClick={() => {
+                setActiveTab('watermark');
+                if (!watermarkEnabled() && watermarkText()) {
+                  setWatermarkEnabled(true);
+                }
+              }}
+            >
+              <i>branding_watermark</i>
+              <span>透かし</span>
             </button>
           </div>
         </div>

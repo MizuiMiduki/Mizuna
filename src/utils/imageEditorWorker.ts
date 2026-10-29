@@ -1,5 +1,6 @@
 import {
   applyMosaicsToContext,
+  applyWatermarkToContext,
   ImageEditOptions,
 } from './imageEditor';
 
@@ -83,6 +84,15 @@ self.onmessage = async (e: MessageEvent<WorkerEditRequest>) => {
       if (cropCtx) {
         cropCtx.drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
         finalCanvas = cropCanvas;
+      }
+    }
+
+    // 透かし（ウォーターマーク）
+    const { watermark = null } = options;
+    if (watermark && watermark.text && watermark.text.trim()) {
+      const finalCtx = finalCanvas.getContext('2d');
+      if (finalCtx) {
+        applyWatermarkToContext(finalCtx, finalCanvas.width, finalCanvas.height, watermark);
       }
     }
 

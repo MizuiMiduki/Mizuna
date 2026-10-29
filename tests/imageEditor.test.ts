@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { applyMosaicsToContext, MosaicRect } from '../src/utils/imageEditor';
+import {
+  applyMosaicsToContext,
+  applyWatermarkToContext,
+  MosaicRect,
+  WatermarkOptions,
+} from '../src/utils/imageEditor';
 
 describe('imageEditor utility', () => {
   it('applyMosaicsToContext が指定領域のピクセルを正しくモザイク化すること', () => {
@@ -42,5 +47,46 @@ describe('imageEditor utility', () => {
 
     expect(() => applyMosaicsToContext(mockCtx, invalidMosaics)).not.toThrow();
     expect(mockCtx.getImageData).not.toHaveBeenCalled();
+  });
+
+  it('applyWatermarkToContext がテキストを正しく描画すること', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      measureText: vi.fn((text: string) => ({ width: text.length * 10 })),
+      beginPath: vi.fn(),
+      roundRect: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      fillText: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    const watermark: WatermarkOptions = {
+      text: '@Mizui_Miduki@misskey.io',
+      position: 'bottom-right',
+      opacity: 0.8,
+    };
+
+    applyWatermarkToContext(mockCtx, 800, 600, watermark);
+
+    expect(mockCtx.save).toHaveBeenCalled();
+    expect(mockCtx.measureText).toHaveBeenCalledWith('@Mizui_Miduki@misskey.io');
+    expect(mockCtx.fillText).toHaveBeenCalled();
+    expect(mockCtx.restore).toHaveBeenCalled();
+  });
+
+  it('空文字や未指定の透かしでは描画が行われないこと', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      fillText: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    applyWatermarkToContext(mockCtx, 800, 600, { text: '   ' });
+    expect(mockCtx.save).not.toHaveBeenCalled();
+    expect(mockCtx.fillText).not.toHaveBeenCalled();
+
+    applyWatermarkToContext(mockCtx, 800, 600, null);
+    expect(mockCtx.save).not.toHaveBeenCalled();
   });
 });

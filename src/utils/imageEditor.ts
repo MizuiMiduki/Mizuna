@@ -19,12 +19,21 @@ export interface ImageAdjustments {
   saturation: number; // 100% が標準 (0 - 200)
 }
 
+export type WatermarkPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center';
+
+export interface WatermarkOptions {
+  text: string;
+  position?: WatermarkPosition;
+  opacity?: number; // 0.0 - 1.0 (default: 0.75)
+}
+
 export interface ImageEditOptions {
   crop?: CropRect | null;
   rotate?: number; // 0, 90, 180, 270
   flipHorizontal?: boolean;
   adjustments?: ImageAdjustments;
   mosaics?: MosaicRect[];
+  watermark?: WatermarkOptions | null;
   quality?: number; // 0.0 - 1.0 (default 0.85)
 }
 
@@ -96,7 +105,78 @@ export function applyMosaicsToContext(
 }
 
 /**
- * 簡易画像加工処理（クロップ・回転・反転・色調・モザイク）を実行し、新しいWebP Fileを返す
+ * Canvasに対して透かし（ウォーターマーク）を描画する
+ */
+export function applyWatermarkToContext(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  width: number,
+  height: number,
+  watermark?: WatermarkOptions | null
+): void {
+  if (!watermark || !watermark.text || !watermark.text.trim()) return;
+
+  const text = watermark.text.trim();
+  const shortSide = Math.min(width, height);
+  const fontSize = Math.max(13, Math.round(shortSide * 0.038));
+  const paddingH = Math.round(fontSize * 0.55);
+  const paddingV = Math.round(fontSize * 0.32);
+  const margin = Math.max(10, Math.round(shortSide * 0.025));
+
+  ctx.save();
+  ctx.font = `600 ${fontSize}px "IBM Plex Sans JP", "Inter", system-ui, sans-serif`;
+  ctx.textBaseline = 'middle';
+
+  const metrics = ctx.measureText(text);
+  const textWidth = metrics.width;
+  const pillWidth = textWidth + paddingH * 2;
+  const pillHeight = fontSize + paddingV * 2;
+  const radius = Math.round(pillHeight / 2);
+
+  let x = width - pillWidth - margin;
+  let y = height - pillHeight - margin;
+
+  const pos = watermark.position ?? 'bottom-right';
+  if (pos === 'bottom-left') {
+    x = margin;
+    y = height - pillHeight - margin;
+  } else if (pos === 'top-right') {
+    x = width - pillWidth - margin;
+    y = margin;
+  } else if (pos === 'top-left') {
+    x = margin;
+    y = margin;
+  } else if (pos === 'center') {
+    x = (width - pillWidth) / 2;
+    y = (height - pillHeight) / 2;
+  }
+
+  const opacity = Math.max(0.1, Math.min(1.0, watermark.opacity ?? 0.75));
+  ctx.globalAlpha = opacity;
+
+  // 半透明背景カプセル
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.68)';
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(x, y, pillWidth, pillHeight, radius);
+  } else {
+    ctx.rect(x, y, pillWidth, pillHeight);
+  }
+  ctx.fill();
+
+  // 枠線
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  // テキスト
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(text, x + paddingH, y + pillHeight / 2);
+
+  ctx.restore();
+}
+
+/**
+ * 簡易画像加工処理（クロップ・回転・反転・色調・モザイク・透かし）を実行し、新しいWebP Fileを返す
  * ブラウザ環境では OffscreenCanvas / Web Worker を活用してメインスレッドをブロックせずに処理
  */
 export async function processImageEdits(
@@ -109,6 +189,7 @@ export async function processImageEdits(
     flipHorizontal = false,
     adjustments = { brightness: 100, contrast: 100, saturation: 100 },
     mosaics = [],
+    watermark = null,
     quality = 0.85,
   } = options;
 
@@ -226,7 +307,18 @@ export async function processImageEdits(
       }
     }
 
-    // 4. WebP Blob にエクスポート
+    // 4. 透かし（ウォーターマーク）を合成
+    if (watermark && watermark.text && watermark.text.trim()) {
+      const finalCtx = finalCanvas.getContext('2d') as
+        | CanvasRenderingContext2D
+        | OffscreenCanvasRenderingContext2D
+        | null;
+      if (finalCtx) {
+        applyWatermarkToContext(finalCtx, finalCanvas.width, finalCanvas.height, watermark);
+      }
+    }
+
+    // 5. WebP Blob にエクスポート
     let blob: Blob;
     if ('convertToBlob' in finalCanvas && typeof finalCanvas.convertToBlob === 'function') {
       blob = await finalCanvas.convertToBlob({ type: 'image/webp', quality });

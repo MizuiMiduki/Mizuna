@@ -4424,4 +4424,142 @@ body.is-simple-mode .mizuna-setting-col {
   min-width: 110px;
 }
 
+/* =========================================
+   透かし（ウォーターマーク）関連スタイル
+   ========================================= */
+
+/* 1. 設定画面内の透かし入力 */
+.mizuna-watermark-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mizuna-watermark-input {
+  flex: 1;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--mizuna-radius-md, 12px);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 60%, transparent);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-size: 0.88rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.mizuna-watermark-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.mizuna-watermark-clear-btn {
+  height: 40px !important;
+  padding: 0 12px !important;
+  flex-shrink: 0;
+}
+
+/* 2. 画像加工モーダル内の透かしプレビューピル */
+.mizuna-watermark-preview-pill {
+  position: absolute;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  max-width: 85%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: all 0.15s ease-out;
+}
+
+.mizuna-watermark-preview-pill.is-bottom-right {
+  bottom: 12px;
+  right: 12px;
+}
+
+.mizuna-watermark-preview-pill.is-bottom-left {
+  bottom: 12px;
+  left: 12px;
+}
+
+.mizuna-watermark-preview-pill.is-top-right {
+  top: 12px;
+  right: 12px;
+}
+
+.mizuna-watermark-preview-pill.is-top-left {
+  top: 12px;
+  left: 12px;
+}
+
+.mizuna-watermark-preview-pill.is-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* 3. 画像加工モーダル内の透かし操作ツール */
+.mizuna-editor-watermark-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.mizuna-watermark-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mizuna-watermark-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.mizuna-watermark-input-group,
+.mizuna-watermark-pos-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mizuna-editor-text-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--mizuna-radius-md, 10px);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 60%, transparent);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-size: 0.82rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.mizuna-editor-text-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+
 

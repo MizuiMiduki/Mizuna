@@ -6,6 +6,7 @@ import { applyCustomCss, sanitizeCustomCss } from '../utils/customCss';
 
 export function SettingsView() {
   const {
+    currentUser,
     settings,
     updateSettings,
     isSyncingAccounts,
@@ -23,6 +24,20 @@ export function SettingsView() {
   const [customCssValue, setCustomCssValue] = createSignal(settings().custom_css ?? '');
   const [cssWarnings, setCssWarnings] = createSignal<string[]>([]);
   const [isCssDirty, setIsCssDirty] = createSignal(false);
+  const [watermarkValue, setWatermarkValue] = createSignal(settings().watermark_text ?? '');
+  const [isWatermarkDirty, setIsWatermarkDirty] = createSignal(false);
+
+  createEffect(() => {
+    if (!isWatermarkDirty()) {
+      setWatermarkValue(settings().watermark_text ?? '');
+    }
+  });
+
+  const defaultWatermarkPlaceholder = () => {
+    const user = currentUser();
+    if (!user) return '@username@instance';
+    return `@${user.username}@${user.address}`;
+  };
 
   createEffect(() => {
     // 外部から設定が更新された場合にシグナルと同期（編集中でない場合）
@@ -195,6 +210,48 @@ export function SettingsView() {
                   >
                     <span>ON</span>
                   </button>
+                </div>
+              </div>
+
+              <div class="mizuna-row-divider" />
+
+              {/* 画像の透かし文字 */}
+              <div class="mizuna-setting-col">
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">{t('settings.watermark_setting')}</div>
+                  <div class="mizuna-setting-desc">{t('settings.watermark_setting_desc')}</div>
+                </div>
+                <div class="mizuna-watermark-input-wrap">
+                  <input
+                    type="text"
+                    id="settings_watermark_text"
+                    class="mizuna-watermark-input"
+                    value={watermarkValue()}
+                    placeholder={defaultWatermarkPlaceholder()}
+                    onInput={(e) => {
+                      setIsWatermarkDirty(true);
+                      setWatermarkValue(e.currentTarget.value);
+                    }}
+                    onBlur={async () => {
+                      setIsWatermarkDirty(false);
+                      await updateSettings({ watermark_text: watermarkValue().trim() });
+                    }}
+                  />
+                  <Show when={watermarkValue()}>
+                    <button
+                      type="button"
+                      class="mizuna-btn mizuna-btn-tonal mizuna-watermark-clear-btn"
+                      title="リセット (デフォルトに戻す)"
+                      onClick={async () => {
+                        setWatermarkValue('');
+                        setIsWatermarkDirty(false);
+                        await updateSettings({ watermark_text: '' });
+                      }}
+                    >
+                      <i>clear</i>
+                      <span>リセット</span>
+                    </button>
+                  </Show>
                 </div>
               </div>
             </div>
