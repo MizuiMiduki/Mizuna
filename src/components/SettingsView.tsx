@@ -12,6 +12,7 @@ export function SettingsView() {
     syncAllAccounts,
     exportAccounts,
     hasPendingUpdate,
+    isCheckingUpdate,
     applyPendingUpdate,
     checkForUpdate,
     showToast,
@@ -497,10 +498,11 @@ export function SettingsView() {
                 <button
                   type="button"
                   class="mizuna-btn mizuna-btn-outline"
+                  disabled={isCheckingUpdate()}
                   onClick={checkForUpdate}
                 >
-                  <i>sync</i>
-                  <span>{t('settings.check_button')}</span>
+                  <i class={isCheckingUpdate() ? 'is-spinning' : ''}>sync</i>
+                  <span>{isCheckingUpdate() ? t('update.checking') : t('settings.check_button')}</span>
                 </button>
               </div>
             </div>

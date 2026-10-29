@@ -146,9 +146,10 @@ interface AppContextValue {
 
   // PWA アップデート制御
   hasPendingUpdate: Accessor<boolean>;
+  isCheckingUpdate: Accessor<boolean>;
   showUpdateBanner: Accessor<boolean>;
   dismissUpdateBanner: () => void;
-  promptUpdateDialog: () => void;
+  promptUpdateDialog: (worker?: ServiceWorker | null, forceDialog?: boolean) => void;
   applyPendingUpdate: () => void;
   checkForUpdate: () => Promise<void>;
 
@@ -242,6 +243,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   // PWA アップデート状態管理
   const [waitingWorker, setWaitingWorker] = createSignal<ServiceWorker | null>(null);
   const [hasPendingUpdate, setHasPendingUpdate] = createSignal(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = createSignal(false);
   const [showUpdateBanner, setShowUpdateBanner] = createSignal(false);
   let activeSwRegistration: ServiceWorkerRegistration | null = null;
 
@@ -249,12 +251,38 @@ export function AppProvider(props: { children: JSX.Element }) {
     setShowUpdateBanner(false);
   };
 
-  const promptUpdateDialog = () => {
-    const worker = waitingWorker();
-    if (!worker) return;
+  const promptUpdateDialog = (worker?: ServiceWorker | null, forceDialog = false) => {
+    const target = worker || waitingWorker();
+    if (!target) return;
 
-    // ヘッダー下の控えめバナーを再表示
+    // ヘッダー下の控えめバナーを表示
     setShowUpdateBanner(true);
+
+    // 手動更新確認時や明示的ダイアログ要求時はモーダルダイアログを表示
+    if (forceDialog) {
+      openDialog({
+        title: translate('update.found_title', undefined, settings().language as any),
+        icon: 'system_update',
+        tone: 'primary',
+        badgeText: 'UPDATE',
+        contentText: translate('update.found_desc', undefined, settings().language as any),
+        buttons: [
+          {
+            label: translate('update.later', undefined, settings().language as any),
+            variant: 'text',
+            onClick: () => closeDialog(),
+          },
+          {
+            label: translate('update.apply', undefined, settings().language as any),
+            variant: 'fill',
+            onClick: () => {
+              closeDialog();
+              applyPendingUpdate();
+            },
+          },
+        ],
+      });
+    }
   };
 
   const applyPendingUpdate = () => {
@@ -267,9 +295,17 @@ export function AppProvider(props: { children: JSX.Element }) {
       }
     }
 
-    const worker = waitingWorker();
+    const worker = waitingWorker() || activeSwRegistration?.waiting;
     if (worker) {
-      worker.postMessage({ type: 'SKIP_WAITING' });
+      try {
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      } catch (err) {
+        console.error('SKIP_WAITING postMessage error:', err);
+      }
+      // controllerchange が発火しなかった場合のフォールバックリロード
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } else {
       window.location.reload();
     }
@@ -277,26 +313,90 @@ export function AppProvider(props: { children: JSX.Element }) {
 
   const checkForUpdate = async () => {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker) {
-      showToast('お使いの環境はService Workerに対応していません', 'info');
+      showToast(translate('update.not_supported', undefined, settings().language as any), 'info');
       return;
     }
+    if (isCheckingUpdate()) return;
+
+    setIsCheckingUpdate(true);
+    showToast(translate('update.checking', undefined, settings().language as any), 'info');
+
     try {
       const reg = activeSwRegistration || (await navigator.serviceWorker.getRegistration());
-      if (reg) {
-        await reg.update();
-        if (reg.waiting) {
-          setWaitingWorker(reg.waiting);
-          setHasPendingUpdate(true);
-          promptUpdateDialog();
-        } else {
-          showToast('最新のバージョンを使用しています', 'info');
+      if (!reg) {
+        showToast(translate('update.not_registered', undefined, settings().language as any), 'info');
+        setIsCheckingUpdate(false);
+        return;
+      }
+      activeSwRegistration = reg;
+
+      // 既に待機中のワーカーがいる場合（ダウンロード完了済み）
+      if (reg.waiting) {
+        setWaitingWorker(reg.waiting);
+        setHasPendingUpdate(true);
+        promptUpdateDialog(reg.waiting, true);
+        setIsCheckingUpdate(false);
+        return;
+      }
+
+      // 新しい Service Worker のインストール完了を待つ Promise を生成
+      const waitInstallPromise = new Promise<'updated' | 'no-update'>((resolve) => {
+        let timeoutId: any;
+
+        const onStateChange = (worker: ServiceWorker) => {
+          if (worker.state === 'installed') {
+            clearTimeout(timeoutId);
+            setWaitingWorker(worker);
+            setHasPendingUpdate(true);
+            resolve('updated');
+          }
+        };
+
+        const onUpdateFound = () => {
+          const installing = reg.installing;
+          if (installing) {
+            installing.addEventListener('statechange', () => onStateChange(installing));
+          }
+        };
+
+        reg.addEventListener?.('updatefound', onUpdateFound, { once: true });
+
+        if (reg.installing) {
+          reg.installing.addEventListener?.('statechange', () => onStateChange(reg.installing!));
         }
+
+        // 3.5秒待って更新がない場合は最新と判断
+        timeoutId = setTimeout(() => {
+          try {
+            reg.removeEventListener?.('updatefound', onUpdateFound);
+          } catch {
+            // 無視
+          }
+          if (reg.waiting) {
+            setWaitingWorker(reg.waiting);
+            setHasPendingUpdate(true);
+            resolve('updated');
+          } else {
+            resolve('no-update');
+          }
+        }, 3500);
+      });
+
+      // Service Worker スクリプトのネットワークチェックを実行
+      await reg.update();
+
+      const result = await waitInstallPromise;
+      if (result === 'updated') {
+        const worker = reg.waiting || waitingWorker();
+        promptUpdateDialog(worker, true);
       } else {
-        showToast('Service Workerが登録されていません', 'info');
+        showToast(translate('update.up_to_date', undefined, settings().language as any), 'info');
       }
     } catch (err) {
       console.error('アップデート確認エラー:', err);
-      showToast('アップデートの確認に失敗しました', 'error');
+      showToast(translate('update.failed', undefined, settings().language as any), 'error');
+    } finally {
+      setIsCheckingUpdate(false);
     }
   };
 
@@ -1052,6 +1152,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     openDialog,
     closeDialog,
     hasPendingUpdate,
+    isCheckingUpdate,
     showUpdateBanner,
     dismissUpdateBanner,
     promptUpdateDialog,

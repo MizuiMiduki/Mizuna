@@ -59,6 +59,10 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toContain("'/offline.html'");
     expect(content).toContain("'/icon.png'");
 
+    // キャッシュ名のバージョンが package.json のバージョンと常に同期していること（更新忘れ防止）
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(rootDir, 'package.json'), 'utf-8'));
+    expect(content).toContain(`const CACHE_NAME = 'mizuna-cache-v${pkg.version}';`);
+
     // 自動での skipWaiting は呼ばない（ユーザーが選択するまで待機状態を維持）
     const installBlock = content.match(/addEventListener\(\s*['"]install['"][\s\S]*?\n\}\);/)?.[0] || '';
     expect(installBlock).not.toContain('self.skipWaiting()');
@@ -70,6 +74,13 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     // キャッシュ戦略 (request.mode === 'navigate')
     expect(content).toContain("mode === 'navigate'");
     expect(content).toContain('url.origin !== self.location.origin'); // 外部APIはキャッシュしない
+  });
+
+  it('vite.config.ts に Service Worker のバージョン自動同期プラグインが設定されていること', () => {
+    const viteConfigContent = fs.readFileSync(path.resolve(rootDir, 'vite.config.ts'), 'utf-8');
+    expect(viteConfigContent).toContain('syncSwVersionPlugin');
+    expect(viteConfigContent).toContain('mizuna-sync-sw-version');
+    expect(viteConfigContent).toContain('mizuna-cache-v');
   });
 
   it('index.html に Service Worker 登録スクリプトが含まれていること', () => {
