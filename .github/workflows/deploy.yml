@@ -170,13 +170,13 @@ jobs:
       - name: Install dependencies & Build
         env:
           DEPLOY_TARGET: ${{ inputs.deploy_target }}
-          VITE_GA_MEASUREMENT_ID: ${{ secrets.VITE_GA_MEASUREMENT_ID }}
+          GA_SECRET: ${{ secrets.VITE_GA_MEASUREMENT_ID }}
         run: |
           npm ci
           if [ "$DEPLOY_TARGET" = "prerelease" ]; then
             npm run build:canary
           else
-            npm run build
+            VITE_GA_MEASUREMENT_ID="$GA_SECRET" npm run build
           fi
 
       # ========================================================

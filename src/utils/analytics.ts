@@ -1,7 +1,11 @@
 import { mizuna_options } from '../config/mizunaOptions';
 import type { ViewType } from '../store/appStore';
 
-export const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
+// Google Analytics (GA4) は本番環境 (mode === 'production') かつ ID が存在する場合のみ有効化
+export const GA_MEASUREMENT_ID =
+  import.meta.env.MODE === 'production'
+    ? import.meta.env.VITE_GA_MEASUREMENT_ID
+    : undefined;
 
 let isInitialized = false;
 

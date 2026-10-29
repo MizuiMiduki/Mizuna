@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mizuna_options } from '../src/config/mizunaOptions';
 import {
   _resetAnalyticsForTesting,
+  GA_MEASUREMENT_ID,
   getViewMetadata,
   initAnalytics,
   trackPageView,
@@ -23,6 +24,13 @@ describe('analytics utility', () => {
     _resetAnalyticsForTesting();
     document.head.innerHTML = '';
     vi.restoreAllMocks();
+  });
+
+  describe('GA_MEASUREMENT_ID', () => {
+    it('テスト環境 (mode !== "production") では GA_MEASUREMENT_ID が undefined になること', () => {
+      // Vitest実行環境 (MODE === 'test') では本番環境ではないため undefined
+      expect(GA_MEASUREMENT_ID).toBeUndefined();
+    });
   });
 
   describe('getViewMetadata', () => {
