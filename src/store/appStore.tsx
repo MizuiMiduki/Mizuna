@@ -515,7 +515,6 @@ export function AppProvider(props: { children: JSX.Element }) {
           title: latestPost?.title || `Mizuna v${mizuna_options.mizuna_version} リリースノート`,
           url: latestPost?.link || 'https://github.com/MizuiMiduki/Mizuna/releases',
         },
-        showPrivacyPolicy: true,
         buttons: [
           {
             label: '確認してはじめる',

@@ -89,4 +89,43 @@ describe('PrivacyPolicyView & Dialog Privacy Link', () => {
     fireEvent.click(privacyBtn);
     expect(screen.getByTestId('current-view').textContent).toBe('privacy');
   });
+
+  it('DialogHost で showPrivacyPolicy が指定されていない場合はプライバシーポリシーリンクが表示されないこと', () => {
+    function TestHost() {
+      const { openDialog } = useApp();
+
+      return (
+        <div>
+          <button
+            type="button"
+            data-testid="trigger-dialog"
+            onClick={() => {
+              openDialog({
+                title: 'Mizuna がアップデートされました',
+                linkCard: {
+                  label: 'RELEASE NOTE',
+                  title: 'v3.11.0 リリースノート',
+                  url: 'https://example.com/release',
+                },
+                buttons: [{ label: '確認してはじめる' }],
+              });
+            }}
+          >
+            開く
+          </button>
+          <DialogHost />
+        </div>
+      );
+    }
+
+    render(() => (
+      <AppProvider>
+        <TestHost />
+      </AppProvider>
+    ));
+
+    fireEvent.click(screen.getByTestId('trigger-dialog'));
+    expect(screen.queryByRole('button', { name: /PRIVACY POLICY/ })).toBeNull();
+    expect(screen.getByText('RELEASE NOTE')).toBeInTheDocument();
+  });
 });
