@@ -1754,7 +1754,7 @@ body.dark .mizuna-setting-card.mizuna-setting-card-warning {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px 16px;
   padding: 15px 18px;
   flex-wrap: wrap;
 }
@@ -1846,8 +1846,14 @@ body.dark .mizuna-custom-css-warnings {
 }
 
 .mizuna-setting-info {
-  flex: 1;
-  min-width: 200px;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+@media (max-width: 520px) {
+  .mizuna-setting-info {
+    flex-basis: 100%;
+  }
 }
 
 .mizuna-setting-title {
@@ -1874,6 +1880,8 @@ body.dark .mizuna-custom-css-warnings {
   background: color-mix(in srgb, var(--surface-container-highest) 75%, transparent);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
   gap: 2px;
+  max-width: 100%;
+  flex-shrink: 0;
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap {
@@ -1889,6 +1897,7 @@ body.dark .mizuna-custom-css-warnings {
 .mizuna-seg-pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
   height: 32px !important;
   padding: 0 12px !important;
@@ -1901,6 +1910,8 @@ body.dark .mizuna-custom-css-warnings {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.18s ease;
+  white-space: nowrap !important;
+  flex-shrink: 0;
 }
 
 .mizuna-seg-pill i {
@@ -3590,7 +3601,12 @@ body.dark .mizuna-custom-css-warnings {
    ========================================= */
 body.ui-size-large,
 .mizuna-app-shell.ui-size-large {
-  zoom: 1.15;
+  zoom: 1.12;
+}
+
+body.ui-size-large .mizuna-app-shell,
+.mizuna-app-shell.ui-size-large {
+  padding-bottom: 140px !important;
 }
 
 body.ui-size-medium,
