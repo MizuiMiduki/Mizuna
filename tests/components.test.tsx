@@ -217,7 +217,7 @@ describe('UI Components', () => {
   });
 
   describe('AccountView', () => {
-    it('アカウントが2件以上ある場合に並べ替えモードを起動でき、矢印ボタンで並び順を変更できること', async () => {
+    it('アカウントが2件以上ある場合に並べ替えモードを起動でき、完了ボタンで終了できること', async () => {
       // 2つ目のアカウントを追加
       await db.account.add({
         token: 'tok_test_2',
@@ -243,22 +243,17 @@ describe('UI Components', () => {
       expect(reorderBtn).toBeInTheDocument();
       fireEvent.click(reorderBtn);
 
-      // 並べ替えバナーが表示されること
-      expect(screen.getByText(/矢印ボタンまたはドラッグでアカウントの表示順を変更できます/)).toBeInTheDocument();
+      // ドラッグハンドルが表示されること
+      const dragHandles = screen.getAllByTitle('ドラッグして並べ替え');
+      expect(dragHandles.length).toBeGreaterThanOrEqual(2);
 
-      // 移動ボタンが存在すること
-      const downButtons = screen.getAllByRole('button', { name: '下へ移動' });
-      expect(downButtons.length).toBeGreaterThanOrEqual(2);
-      expect(downButtons[0]).not.toBeDisabled();
-
-      // 先頭アカウントを「下へ移動」
-      fireEvent.click(downButtons[0]);
-
-      // 完了ボタンをクリック（ヘッダーまたはバナー）
+      // 完了ボタンはヘッダーに1つだけ存在すること
       const completeBtns = screen.getAllByRole('button', { name: /(完了|check)/ });
-      expect(completeBtns.length).toBeGreaterThanOrEqual(1);
+      expect(completeBtns.length).toBe(1);
+
+      // 完了ボタンをクリックして終了
       fireEvent.click(completeBtns[0]);
-      expect(screen.queryByText(/矢印ボタンまたはドラッグでアカウントの表示順を変更できます/)).not.toBeInTheDocument();
+      expect(screen.queryByTitle('ドラッグして並べ替え')).not.toBeInTheDocument();
     });
   });
 });
