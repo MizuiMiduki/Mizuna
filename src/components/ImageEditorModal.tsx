@@ -182,8 +182,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     };
     img.src = url;
 
+    // グローバルなポインタ移動・終了イベントを登録（スワイプ時の追従を完全保証）
+    const onGlobalMove = (e: PointerEvent) => handlePointerMove(e);
+    const onGlobalUp = () => handlePointerUp();
+
+    window.addEventListener('pointermove', onGlobalMove, { passive: false });
+    window.addEventListener('pointerup', onGlobalUp, { passive: false });
+    window.addEventListener('pointercancel', onGlobalUp, { passive: false });
+
     onCleanup(() => {
       URL.revokeObjectURL(url);
+      window.removeEventListener('pointermove', onGlobalMove);
+      window.removeEventListener('pointerup', onGlobalUp);
+      window.removeEventListener('pointercancel', onGlobalUp);
     });
   });
 
@@ -270,11 +281,23 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   };
 
   // 座標を元画像に対する相対座標 (0.0 - 1.0) に変換
-  const getNormalizedCoords = (e: MouseEvent | TouchEvent) => {
+  const getNormalizedCoords = (e: MouseEvent | TouchEvent | PointerEvent) => {
     if (!canvasRef) return { x: 0, y: 0 };
     const rect = canvasRef.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+    let clientX = 0;
+    let clientY = 0;
+
+    if ('touches' in e && e.touches && e.touches.length > 0) {
+      clientX = e.touches[0].clientX;
+      clientY = e.touches[0].clientY;
+    } else if ('changedTouches' in e && e.changedTouches && e.changedTouches.length > 0) {
+      clientX = e.changedTouches[0].clientX;
+      clientY = e.changedTouches[0].clientY;
+    } else if ('clientX' in e) {
+      clientX = (e as MouseEvent | PointerEvent).clientX;
+      clientY = (e as MouseEvent | PointerEvent).clientY;
+    }
+
     return {
       x: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)),
       y: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
@@ -317,9 +340,14 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   };
 
   // クロップ枠のドラッグ移動開始
-  const startCropMove = (e: MouseEvent | TouchEvent) => {
+  const startCropMove = (e: PointerEvent) => {
     if (activeTab() !== 'crop' || !cropBox()) return;
     e.stopPropagation();
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch (_) {}
+
     const coords = getNormalizedCoords(e);
     activeDrag = {
       type: 'crop-move',
@@ -330,9 +358,14 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   };
 
   // クロップ枠の角ドラッグリサイズ開始
-  const startCropResize = (e: MouseEvent | TouchEvent, handle: 'nw' | 'ne' | 'se' | 'sw') => {
+  const startCropResize = (e: PointerEvent, handle: 'nw' | 'ne' | 'se' | 'sw') => {
     if (activeTab() !== 'crop' || !cropBox()) return;
     e.stopPropagation();
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch (_) {}
+
     const coords = getNormalizedCoords(e);
     activeDrag = {
       type: 'crop-resize',
@@ -344,9 +377,14 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   };
 
   // モザイク枠のドラッグ移動開始
-  const startMosaicMove = (e: MouseEvent | TouchEvent, index: number) => {
+  const startMosaicMove = (e: PointerEvent, index: number) => {
     if (activeTab() !== 'mosaic' || !mosaics()[index]) return;
     e.stopPropagation();
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch (_) {}
+
     const coords = getNormalizedCoords(e);
     activeDrag = {
       type: 'mosaic-move',
@@ -358,9 +396,14 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   };
 
   // モザイク枠の角ドラッグリサイズ開始
-  const startMosaicResize = (e: MouseEvent | TouchEvent, index: number, handle: 'nw' | 'ne' | 'se' | 'sw') => {
+  const startMosaicResize = (e: PointerEvent, index: number, handle: 'nw' | 'ne' | 'se' | 'sw') => {
     if (activeTab() !== 'mosaic' || !mosaics()[index]) return;
     e.stopPropagation();
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch (_) {}
+
     const coords = getNormalizedCoords(e);
     activeDrag = {
       type: 'mosaic-resize',
@@ -372,23 +415,15 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     };
   };
 
-  // ステージ上での新規矩形ドラッグ開始
-  const handleStagePointerDown = (e: MouseEvent | TouchEvent) => {
+  // ステージ上での新規矩形ドラッグ（スワイプ範囲指定）開始
+  const handleStagePointerDown = (e: PointerEvent) => {
     if (activeTab() !== 'mosaic' && activeTab() !== 'crop') return;
     if (!canvasRef) return;
 
-    const rect = canvasRef.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
-
-    if (
-      clientX < rect.left ||
-      clientX > rect.right ||
-      clientY < rect.top ||
-      clientY > rect.bottom
-    ) {
-      return;
-    }
+    e.preventDefault();
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch (_) {}
 
     const coords = getNormalizedCoords(e);
     activeDrag = {
@@ -399,8 +434,11 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     setCurrentDragRect({ x: coords.x, y: coords.y, w: 0, h: 0 });
   };
 
-  const handlePointerMove = (e: MouseEvent | TouchEvent) => {
+  const handlePointerMove = (e: PointerEvent | MouseEvent | TouchEvent) => {
     if (!activeDrag || !canvasRef) return;
+    if ('cancelable' in e && e.cancelable) {
+      e.preventDefault();
+    }
 
     const coords = getNormalizedCoords(e);
 
@@ -555,10 +593,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     <Portal>
       <div
         class="mizuna-image-editor-portal"
-        onMouseMove={handlePointerMove}
-        onMouseUp={handlePointerUp}
-        onTouchMove={handlePointerMove}
-        onTouchEnd={handlePointerUp}
+        style={{ "touch-action": "none" }}
       >
         {/* ヘッダーバー */}
         <div class="mizuna-editor-topbar">
@@ -589,8 +624,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         <div
           ref={stageRef}
           class="mizuna-editor-stage"
-          onMouseDown={handleStagePointerDown}
-          onTouchStart={handleStagePointerDown}
+          onPointerDown={handleStagePointerDown}
         >
           <div class="mizuna-editor-canvas-wrap">
             <canvas
@@ -609,30 +643,25 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                     width: `${m.w * 100}%`,
                     height: `${m.h * 100}%`,
                   }}
-                  onMouseDown={(e) => startMosaicMove(e, index())}
-                  onTouchStart={(e) => startMosaicMove(e, index())}
+                  onPointerDown={(e) => startMosaicMove(e, index())}
                 >
                   <div class="mizuna-mosaic-grid-pattern" />
                   <Show when={activeTab() === 'mosaic'}>
                     <div
                       class="mizuna-box-handle handle-nw"
-                      onMouseDown={(e) => startMosaicResize(e, index(), 'nw')}
-                      onTouchStart={(e) => startMosaicResize(e, index(), 'nw')}
+                      onPointerDown={(e) => startMosaicResize(e, index(), 'nw')}
                     />
                     <div
                       class="mizuna-box-handle handle-ne"
-                      onMouseDown={(e) => startMosaicResize(e, index(), 'ne')}
-                      onTouchStart={(e) => startMosaicResize(e, index(), 'ne')}
+                      onPointerDown={(e) => startMosaicResize(e, index(), 'ne')}
                     />
                     <div
                       class="mizuna-box-handle handle-se"
-                      onMouseDown={(e) => startMosaicResize(e, index(), 'se')}
-                      onTouchStart={(e) => startMosaicResize(e, index(), 'se')}
+                      onPointerDown={(e) => startMosaicResize(e, index(), 'se')}
                     />
                     <div
                       class="mizuna-box-handle handle-sw"
-                      onMouseDown={(e) => startMosaicResize(e, index(), 'sw')}
-                      onTouchStart={(e) => startMosaicResize(e, index(), 'sw')}
+                      onPointerDown={(e) => startMosaicResize(e, index(), 'sw')}
                     />
                   </Show>
                 </div>
@@ -650,29 +679,24 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                     width: `${cb().w * 100}%`,
                     height: `${cb().h * 100}%`,
                   }}
-                  onMouseDown={startCropMove}
-                  onTouchStart={startCropMove}
+                  onPointerDown={startCropMove}
                 >
                   <div class="mizuna-crop-grid" />
                   <div
                     class="mizuna-box-handle handle-nw"
-                    onMouseDown={(e) => startCropResize(e, 'nw')}
-                    onTouchStart={(e) => startCropResize(e, 'nw')}
+                    onPointerDown={(e) => startCropResize(e, 'nw')}
                   />
                   <div
                     class="mizuna-box-handle handle-ne"
-                    onMouseDown={(e) => startCropResize(e, 'ne')}
-                    onTouchStart={(e) => startCropResize(e, 'ne')}
+                    onPointerDown={(e) => startCropResize(e, 'ne')}
                   />
                   <div
                     class="mizuna-box-handle handle-se"
-                    onMouseDown={(e) => startCropResize(e, 'se')}
-                    onTouchStart={(e) => startCropResize(e, 'se')}
+                    onPointerDown={(e) => startCropResize(e, 'se')}
                   />
-                  <div
+                    <div
                     class="mizuna-box-handle handle-sw"
-                    onMouseDown={(e) => startCropResize(e, 'sw')}
-                    onTouchStart={(e) => startCropResize(e, 'sw')}
+                    onPointerDown={(e) => startCropResize(e, 'sw')}
                   />
                 </div>
               )}
