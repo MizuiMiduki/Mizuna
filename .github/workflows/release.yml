@@ -1,6 +1,10 @@
 name: Create Release
 
 on:
+  push:
+    branches:
+      - main
+      - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
     inputs:
       release_type:
@@ -28,8 +32,19 @@ jobs:
       - name: Validate Branch and Release Type
         env:
           BRANCH: ${{ github.ref_name }}
-          RELEASE_TYPE: ${{ inputs.release_type }}
+          INPUT_RELEASE_TYPE: ${{ inputs.release_type }}
         run: |
+          # 手動実行時は入力値を採用、自動 push 時はブランチ名から自動判別
+          if [ -n "$INPUT_RELEASE_TYPE" ]; then
+            RELEASE_TYPE="$INPUT_RELEASE_TYPE"
+          else
+            if [ "$BRANCH" = "main" ]; then
+              RELEASE_TYPE="release"
+            else
+              RELEASE_TYPE="prerelease"
+            fi
+          fi
+
           echo "実行ブランチ: $BRANCH"
           echo "リリース種別: $RELEASE_TYPE"
 
@@ -43,6 +58,8 @@ jobs:
             exit 1
           fi
 
+          echo "RELEASE_TYPE=$RELEASE_TYPE" >> "$GITHUB_ENV"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -53,7 +70,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CUSTOM_VERSION: ${{ inputs.custom_version }}
-          RELEASE_TYPE: ${{ inputs.release_type }}
+          RELEASE_TYPE: ${{ env.RELEASE_TYPE }}
           REPO: ${{ github.repository }}
         run: |
           if [ -n "$CUSTOM_VERSION" ]; then
