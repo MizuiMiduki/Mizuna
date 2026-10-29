@@ -148,6 +148,30 @@ describe('UI Components', () => {
       expect(select.value).toBe('en_us');
     });
 
+    it('表示モード（標準 / シンプル）を切り替えられること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      const standardBtn = await screen.findByRole('button', { name: /(標準|Standard)/ });
+      const simpleBtn = await screen.findByRole('button', { name: /(シンプル|Simple)/ });
+
+      expect(standardBtn).toBeInTheDocument();
+      expect(simpleBtn).toBeInTheDocument();
+
+      // 初期状態は標準モードがアクティブ
+      expect(standardBtn.classList.contains('is-active')).toBe(true);
+      expect(simpleBtn.classList.contains('is-active')).toBe(false);
+
+      // シンプルモードに切り替え
+      fireEvent.click(simpleBtn);
+
+      const updated = await db.setting.get(1);
+      expect(updated?.ui_mode).toBe(2);
+    });
+
     it('カスタムCSSのテキストエリアに入力し、保存・クリアできること', async () => {
       render(() => (
         <AppProvider>

@@ -3564,3 +3564,250 @@ body.dark .mizuna-custom-css-warnings {
   margin-top: 16px;
 }
 
+/* =========================================
+   シンプル表示モード (Simple / Compact Mode)
+   ※ Vivaldi サイドバーや狭いウィンドウ向けの省スペース表示
+   - トップバー（ヘッダー）の非表示
+   - アイコンの小型化
+   - アカウントID・インスタンス名の非表示
+   - 全体のフォント・パディング・ボタンのコンパクト化
+   ========================================= */
+
+/* 1. ヘッダー (トップバー) の非表示 */
+body.is-simple-mode .mizuna-topbar,
+.mizuna-app-shell.is-simple-mode .mizuna-topbar {
+  display: none !important;
+}
+
+/* 2. メインコンテナの余白削減 */
+body.is-simple-mode .mizuna-main-container,
+.mizuna-app-shell.is-simple-mode .mizuna-main-container {
+  padding: 8px 10px 68px !important;
+  max-width: 620px;
+}
+
+/* 3. お知らせ・アップデートバナーの省スペース化 */
+body.is-simple-mode .mizuna-update-wrap,
+body.is-simple-mode .mizuna-news-wrap {
+  margin: 4px auto !important;
+}
+
+body.is-simple-mode .mizuna-update-card,
+body.is-simple-mode .mizuna-news-card {
+  padding: 6px 10px !important;
+  font-size: 0.78rem !important;
+  border-radius: var(--mizuna-radius-md, 8px) !important;
+}
+
+/* 4. コンポーザーカード */
+body.is-simple-mode .mizuna-studio-composer {
+  border-radius: var(--mizuna-radius-lg, 14px) !important;
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.is-simple-mode .mizuna-composer-header {
+  padding: 8px 10px !important;
+  gap: 8px !important;
+}
+
+/* 5. 投稿者チップ & アイコン小型化 & アカウントID非表示 */
+body.is-simple-mode .mizuna-author-chip {
+  padding: 3px 8px 3px 4px !important;
+  gap: 6px !important;
+  max-width: min(200px, 45vw) !important;
+}
+
+body.is-simple-mode .mizuna-author-avatar {
+  width: 22px !important;
+  height: 22px !important;
+  inline-size: 22px !important;
+  block-size: 22px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+}
+
+body.is-simple-mode .mizuna-author-name {
+  font-size: 0.78rem !important;
+}
+
+body.is-simple-mode .mizuna-author-instance {
+  display: none !important;
+}
+
+body.is-simple-mode .mizuna-author-chevron {
+  font-size: 16px !important;
+}
+
+/* 6. 公開範囲セレクター (アイコンのみで超スリム化) */
+body.is-simple-mode .mizuna-visibility-pills {
+  padding: 2px !important;
+  gap: 1px !important;
+}
+
+body.is-simple-mode .mizuna-vis-pill {
+  padding: 0 7px !important;
+  height: 26px !important;
+  line-height: 26px !important;
+}
+
+body.is-simple-mode .mizuna-vis-pill span {
+  display: none !important;
+}
+
+body.is-simple-mode .mizuna-vis-pill i {
+  font-size: 16px !important;
+}
+
+/* 7. CW エリア & メインテキストエリア */
+body.is-simple-mode .mizuna-cw-box {
+  padding: 6px 10px !important;
+  gap: 6px !important;
+}
+
+body.is-simple-mode .mizuna-cw-icon {
+  font-size: 17px !important;
+}
+
+body.is-simple-mode .mizuna-cw-textarea {
+  font-size: 0.85rem !important;
+  padding: 2px 0 !important;
+}
+
+body.is-simple-mode .mizuna-editor-body {
+  padding: 10px 12px 6px !important;
+}
+
+body.is-simple-mode .mizuna-main-textarea {
+  min-height: 96px !important;
+  font-size: 0.92rem !important;
+  line-height: 1.5 !important;
+}
+
+body.is-simple-mode .mizuna-editor-subrow {
+  margin-top: 4px !important;
+  min-height: 20px !important;
+}
+
+body.is-simple-mode .mizuna-suffix-badge {
+  font-size: 0.68rem !important;
+  padding: 2px 6px !important;
+}
+
+body.is-simple-mode .mizuna-editor-hint {
+  font-size: 0.68rem !important;
+}
+
+/* 8. メディアプレビュー */
+body.is-simple-mode .mizuna-media-gallery {
+  padding: 6px 10px !important;
+  gap: 6px !important;
+}
+
+body.is-simple-mode .mizuna-media-item {
+  width: 54px !important;
+  height: 54px !important;
+}
+
+/* 9. ツールバー & 送信ボタン */
+body.is-simple-mode .mizuna-composer-footer {
+  padding: 6px 10px !important;
+  gap: 6px !important;
+}
+
+body.is-simple-mode .mizuna-tool-group {
+  gap: 3px !important;
+}
+
+body.is-simple-mode .mizuna-tool-icon-btn,
+body.is-simple-mode .mizuna-cw-toggle-btn {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 7px !important;
+}
+
+body.is-simple-mode .mizuna-tool-icon-btn i,
+body.is-simple-mode .mizuna-cw-toggle-btn i {
+  font-size: 18px !important;
+}
+
+body.is-simple-mode .mizuna-cw-toggle-btn span {
+  font-size: 0.72rem !important;
+}
+
+body.is-simple-mode .mizuna-char-counter {
+  font-size: 0.76rem !important;
+}
+
+body.is-simple-mode .mizuna-progress-ring {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+body.is-simple-mode .mizuna-submit-btn {
+  height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 0.82rem !important;
+  gap: 5px !important;
+}
+
+body.is-simple-mode .mizuna-submit-btn i {
+  font-size: 18px !important;
+}
+
+/* 10. フッターナビゲーション (Dock) */
+body.is-simple-mode .mizuna-dock-wrapper {
+  bottom: 8px !important;
+}
+
+body.is-simple-mode .mizuna-floating-dock {
+  height: 42px !important;
+  padding: 2px 6px !important;
+  gap: 4px !important;
+}
+
+body.is-simple-mode .mizuna-dock-avatar-btn,
+body.is-simple-mode .mizuna-m3e-item {
+  height: 36px !important;
+  min-height: 36px !important;
+  block-size: 36px !important;
+  padding: 0 8px !important;
+}
+
+body.is-simple-mode .mizuna-dock-avatar {
+  width: 24px !important;
+  height: 24px !important;
+  inline-size: 24px !important;
+  block-size: 24px !important;
+  min-width: 24px !important;
+  min-height: 24px !important;
+}
+
+body.is-simple-mode .mizuna-m3e-label {
+  display: none !important;
+}
+
+body.is-simple-mode .mizuna-m3e-indicator i {
+  font-size: 19px !important;
+}
+
+body.is-simple-mode .mizuna-dock-divider {
+  height: 18px !important;
+}
+
+/* 11. 設定画面やその他の画面のコンパクト化 */
+body.is-simple-mode .mizuna-section-title {
+  font-size: 1.15rem !important;
+}
+
+body.is-simple-mode .mizuna-setting-card {
+  border-radius: 12px !important;
+}
+
+body.is-simple-mode .mizuna-setting-row {
+  padding: 10px 14px !important;
+}
+
+body.is-simple-mode .mizuna-setting-col {
+  padding: 10px 14px !important;
+}
+

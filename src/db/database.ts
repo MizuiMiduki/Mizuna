@@ -29,8 +29,8 @@ export interface SettingRecord {
   is_note_end_mizuna: boolean;
   /** 自分のアイコンを表示するか */
   is_visible_icon: boolean;
-  /** UIモード (初期値: 1) */
-  ui_mode: number;
+  /** UIモード (1: 通常, 2: シンプル) */
+  ui_mode: 1 | 2;
   /** ダークモード (1: 無効, 2: 端末設定, 3: 有効) */
   is_darkmode: 1 | 2 | 3;
   /** アイコンカラーを元にUIカラーを変更するか */
@@ -109,7 +109,7 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
       default_visibility: (settingData.default_visibility as 1 | 2 | 3) ?? DEFAULT_USER_SETTINGS.default_visibility,
       is_note_end_mizuna: settingData.is_note_end_mizuna ?? DEFAULT_USER_SETTINGS.is_note_end_mizuna,
       is_visible_icon: settingData.is_visible_icon ?? DEFAULT_USER_SETTINGS.is_visible_icon,
-      ui_mode: settingData.ui_mode ?? DEFAULT_USER_SETTINGS.ui_mode,
+      ui_mode: (settingData.ui_mode as 1 | 2) ?? DEFAULT_USER_SETTINGS.ui_mode,
       is_darkmode: (settingData.is_darkmode as 1 | 2 | 3) ?? DEFAULT_USER_SETTINGS.is_darkmode,
       is_pick_theme_color: settingData.is_pick_theme_color ?? DEFAULT_USER_SETTINGS.is_pick_theme_color,
       latest_theme_color: settingData.latest_theme_color ?? DEFAULT_USER_SETTINGS.latest_theme_color,

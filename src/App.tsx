@@ -16,7 +16,7 @@ import { AppProvider, useApp } from './store/appStore';
 import { initAnalytics, trackPageView } from './utils/analytics';
 
 function MainContent() {
-  const { isInitializing, currentView } = useApp();
+  const { isInitializing, currentView, settings } = useApp();
 
   onMount(() => {
     initAnalytics();
@@ -26,8 +26,15 @@ function MainContent() {
     trackPageView(currentView());
   });
 
+  createEffect(() => {
+    const isSimple = settings().ui_mode === 2;
+    if (typeof document !== 'undefined') {
+      document.body.classList.toggle('is-simple-mode', isSimple);
+    }
+  });
+
   return (
-    <div class="mizuna-app-shell">
+    <div class={`mizuna-app-shell ${settings().ui_mode === 2 ? 'is-simple-mode' : ''}`}>
       <Header />
 
       <main class="main_column mizuna-main-container">

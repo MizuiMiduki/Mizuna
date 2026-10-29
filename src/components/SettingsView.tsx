@@ -172,6 +172,40 @@ export function SettingsView() {
             <div class="mizuna-group-label">{t('settings.group_appearance')}</div>
 
             <div class="mizuna-setting-card">
+              {/* 表示モード (通常 / シンプル) */}
+              <div class="mizuna-setting-row">
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">{t('settings.ui_mode')}</div>
+                  <div class="mizuna-setting-desc">{t('settings.ui_mode_desc')}</div>
+                </div>
+                <div class="mizuna-seg-pills">
+                  <button
+                    type="button"
+                    id="ui_mode_standard"
+                    class={`mizuna-seg-pill ${
+                      settings().ui_mode !== 2 ? 'is-active' : ''
+                    }`}
+                    onClick={() => updateSettings({ ui_mode: 1 })}
+                  >
+                    <i>view_agenda</i>
+                    <span>{t('settings.ui_mode_standard')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    id="ui_mode_simple"
+                    class={`mizuna-seg-pill ${
+                      settings().ui_mode === 2 ? 'is-active' : ''
+                    }`}
+                    onClick={() => updateSettings({ ui_mode: 2 })}
+                  >
+                    <i>space_dashboard</i>
+                    <span>{t('settings.ui_mode_simple')}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="mizuna-row-divider" />
+
               {/* ダークモード */}
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">

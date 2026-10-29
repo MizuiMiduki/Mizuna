@@ -156,5 +156,19 @@ describe('appStore', () => {
       const styleEl = document.getElementById('mizuna-user-custom-css');
       expect(styleEl?.textContent).toContain('.custom-test { color: purple; }');
     });
+
+    it('updateSettings で ui_mode を変更したときにステートとDBに反映されること', async () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      expect(result.settings().ui_mode).toBe(1);
+
+      await result.updateSettings({ ui_mode: 2 });
+      expect(result.settings().ui_mode).toBe(2);
+
+      const saved = await db.setting.get(1);
+      expect(saved?.ui_mode).toBe(2);
+    });
   });
 });
