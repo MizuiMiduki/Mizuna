@@ -53,6 +53,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   const [watermarkText, setWatermarkText] = createSignal<string>(getInitialWatermarkText());
   const [watermarkPosition, setWatermarkPosition] = createSignal<WatermarkPosition>(getInitialPosition());
   const [watermarkOpacity, setWatermarkOpacity] = createSignal<number>(75);
+  const [watermarkScale, setWatermarkScale] = createSignal<number>(100); // 70% - 150%
 
   // クロップ座標 (元画像に対する比率 0.0 - 1.0)
   const [cropBox, setCropBox] = createSignal<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -65,10 +66,16 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   const [imgNaturalSize, setImgNaturalSize] = createSignal<{ w: number; h: number }>({ w: 0, h: 0 });
 
   // ドラッグ操作関連
+  type DragMode =
+    | { type: 'create'; startX: number; startY: number }
+    | { type: 'crop-move'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
+    | { type: 'crop-resize'; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
+    | { type: 'mosaic-move'; index: number; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
+    | { type: 'mosaic-resize'; index: number; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } };
+
   let stageRef: HTMLDivElement | undefined;
   let imageRef: HTMLImageElement | undefined;
-  let isDragging = false;
-  let dragStart = { x: 0, y: 0 };
+  let activeDrag: DragMode | null = null;
   const [currentDragRect, setCurrentDragRect] = createSignal<{ x: number; y: number; w: number; h: number } | null>(null);
 
   onMount(() => {
@@ -146,8 +153,111 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     setMosaics((prev) => prev.slice(0, -1));
   };
 
-  // ポインター/タッチでのモザイクおよびクロップ矩形ドラッグ描画
-  const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+  // 座標を元画像に対する相対座標 (0.0 - 1.0) に変換
+  const getNormalizedCoords = (e: MouseEvent | TouchEvent) => {
+    if (!imageRef) return { x: 0, y: 0 };
+    const rect = imageRef.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+    return {
+      x: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)),
+      y: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
+    };
+  };
+
+  // 矩形のリサイズ計算ヘルパー
+  const resizeRect = (
+    init: { x: number; y: number; w: number; h: number },
+    handle: 'nw' | 'ne' | 'se' | 'sw',
+    currentX: number,
+    currentY: number,
+    minSize = 0.04
+  ) => {
+    let x = init.x;
+    let y = init.y;
+    let x2 = init.x + init.w;
+    let y2 = init.y + init.h;
+
+    if (handle === 'nw') {
+      x = Math.max(0, Math.min(currentX, x2 - minSize));
+      y = Math.max(0, Math.min(currentY, y2 - minSize));
+    } else if (handle === 'ne') {
+      x2 = Math.min(1, Math.max(currentX, x + minSize));
+      y = Math.max(0, Math.min(currentY, y2 - minSize));
+    } else if (handle === 'se') {
+      x2 = Math.min(1, Math.max(currentX, x + minSize));
+      y2 = Math.min(1, Math.max(currentY, y + minSize));
+    } else if (handle === 'sw') {
+      x = Math.max(0, Math.min(currentX, x2 - minSize));
+      y2 = Math.min(1, Math.max(currentY, y + minSize));
+    }
+
+    return {
+      x,
+      y,
+      w: Math.max(minSize, x2 - x),
+      h: Math.max(minSize, y2 - y),
+    };
+  };
+
+  // クロップ枠のドラッグ移動開始
+  const startCropMove = (e: MouseEvent | TouchEvent) => {
+    if (activeTab() !== 'crop' || !cropBox()) return;
+    e.stopPropagation();
+    const coords = getNormalizedCoords(e);
+    activeDrag = {
+      type: 'crop-move',
+      startX: coords.x,
+      startY: coords.y,
+      initBox: { ...cropBox()! },
+    };
+  };
+
+  // クロップ枠の角ドラッグリサイズ開始
+  const startCropResize = (e: MouseEvent | TouchEvent, handle: 'nw' | 'ne' | 'se' | 'sw') => {
+    if (activeTab() !== 'crop' || !cropBox()) return;
+    e.stopPropagation();
+    const coords = getNormalizedCoords(e);
+    activeDrag = {
+      type: 'crop-resize',
+      handle,
+      startX: coords.x,
+      startY: coords.y,
+      initBox: { ...cropBox()! },
+    };
+  };
+
+  // モザイク枠のドラッグ移動開始
+  const startMosaicMove = (e: MouseEvent | TouchEvent, index: number) => {
+    if (activeTab() !== 'mosaic' || !mosaics()[index]) return;
+    e.stopPropagation();
+    const coords = getNormalizedCoords(e);
+    activeDrag = {
+      type: 'mosaic-move',
+      index,
+      startX: coords.x,
+      startY: coords.y,
+      initBox: { ...mosaics()[index] },
+    };
+  };
+
+  // モザイク枠の角ドラッグリサイズ開始
+  const startMosaicResize = (e: MouseEvent | TouchEvent, index: number, handle: 'nw' | 'ne' | 'se' | 'sw') => {
+    if (activeTab() !== 'mosaic' || !mosaics()[index]) return;
+    e.stopPropagation();
+    const coords = getNormalizedCoords(e);
+    activeDrag = {
+      type: 'mosaic-resize',
+      index,
+      handle,
+      startX: coords.x,
+      startY: coords.y,
+      initBox: { ...mosaics()[index] },
+    };
+  };
+
+  // ステージ上での新規矩形ドラッグ開始
+  const handleStagePointerDown = (e: MouseEvent | TouchEvent) => {
     if (activeTab() !== 'mosaic' && activeTab() !== 'crop') return;
     if (!imageRef) return;
 
@@ -164,54 +274,90 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       return;
     }
 
-    isDragging = true;
-    dragStart = {
-      x: (clientX - rect.left) / rect.width,
-      y: (clientY - rect.top) / rect.height,
+    const coords = getNormalizedCoords(e);
+    activeDrag = {
+      type: 'create',
+      startX: coords.x,
+      startY: coords.y,
     };
-    setCurrentDragRect({ x: dragStart.x, y: dragStart.y, w: 0, h: 0 });
+    setCurrentDragRect({ x: coords.x, y: coords.y, w: 0, h: 0 });
   };
 
   const handlePointerMove = (e: MouseEvent | TouchEvent) => {
-    if (!isDragging || !imageRef) return;
+    if (!activeDrag || !imageRef) return;
 
-    const rect = imageRef.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+    const coords = getNormalizedCoords(e);
 
-    const currentX = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    const currentY = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+    if (activeDrag.type === 'create') {
+      const x = Math.min(activeDrag.startX, coords.x);
+      const y = Math.min(activeDrag.startY, coords.y);
+      let w = Math.abs(coords.x - activeDrag.startX);
+      let h = Math.abs(coords.y - activeDrag.startY);
 
-    const x = Math.min(dragStart.x, currentX);
-    const y = Math.min(dragStart.y, currentY);
-    let w = Math.abs(currentX - dragStart.x);
-    let h = Math.abs(currentY - dragStart.y);
+      if (activeTab() === 'crop' && aspectRatio() !== 'free') {
+        let targetRatio = 1;
+        if (aspectRatio() === '1:1') targetRatio = 1;
+        if (aspectRatio() === '4:3') targetRatio = 4 / 3;
+        if (aspectRatio() === '16:9') targetRatio = 16 / 9;
 
-    if (activeTab() === 'crop' && aspectRatio() !== 'free') {
-      let targetRatio = 1;
-      if (aspectRatio() === '1:1') targetRatio = 1;
-      if (aspectRatio() === '4:3') targetRatio = 4 / 3;
-      if (aspectRatio() === '16:9') targetRatio = 16 / 9;
+        const imgR = imgNaturalSize().w / imgNaturalSize().h;
+        h = Math.min(1 - y, (w * imgR) / targetRatio);
+      }
 
-      const imgR = imgNaturalSize().w / imgNaturalSize().h;
-      h = (w * imgR) / targetRatio;
+      setCurrentDragRect({ x, y, w, h });
+    } else if (activeDrag.type === 'crop-move') {
+      const dx = coords.x - activeDrag.startX;
+      const dy = coords.y - activeDrag.startY;
+      const box = activeDrag.initBox;
+      const newX = Math.max(0, Math.min(1 - box.w, box.x + dx));
+      const newY = Math.max(0, Math.min(1 - box.h, box.y + dy));
+      setCropBox({ x: newX, y: newY, w: box.w, h: box.h });
+    } else if (activeDrag.type === 'crop-resize') {
+      const updated = resizeRect(activeDrag.initBox, activeDrag.handle, coords.x, coords.y);
+      if (aspectRatio() !== 'free') {
+        let targetRatio = 1;
+        if (aspectRatio() === '1:1') targetRatio = 1;
+        if (aspectRatio() === '4:3') targetRatio = 4 / 3;
+        if (aspectRatio() === '16:9') targetRatio = 16 / 9;
+        const imgR = imgNaturalSize().w / imgNaturalSize().h;
+        updated.h = Math.min(1 - updated.y, (updated.w * imgR) / targetRatio);
+      }
+      setCropBox(updated);
+    } else if (activeDrag.type === 'mosaic-move') {
+      const dx = coords.x - activeDrag.startX;
+      const dy = coords.y - activeDrag.startY;
+      const box = activeDrag.initBox;
+      const newX = Math.max(0, Math.min(1 - box.w, box.x + dx));
+      const newY = Math.max(0, Math.min(1 - box.h, box.y + dy));
+      const idx = activeDrag.index;
+      setMosaics((prev) =>
+        prev.map((item, i) => (i === idx ? { x: newX, y: newY, w: box.w, h: box.h } : item))
+      );
+    } else if (activeDrag.type === 'mosaic-resize') {
+      const updated = resizeRect(activeDrag.initBox, activeDrag.handle, coords.x, coords.y);
+      const idx = activeDrag.index;
+      setMosaics((prev) =>
+        prev.map((item, i) => (i === idx ? updated : item))
+      );
     }
-
-    setCurrentDragRect({ x, y, w, h });
   };
 
   const handlePointerUp = () => {
-    if (!isDragging) return;
-    isDragging = false;
-    const drag = currentDragRect();
-    setCurrentDragRect(null);
+    if (!activeDrag) return;
+    const current = activeDrag;
+    activeDrag = null;
 
-    if (!drag || drag.w < 0.03 || drag.h < 0.03) return;
+    if (current.type === 'create') {
+      const drag = currentDragRect();
+      setCurrentDragRect(null);
 
-    if (activeTab() === 'mosaic') {
-      setMosaics((prev) => [...prev, drag]);
-    } else if (activeTab() === 'crop') {
-      setCropBox(drag);
+      if (!drag || drag.w < 0.03 || drag.h < 0.03) return;
+
+      if (activeTab() === 'mosaic') {
+        setMosaics((prev) => [...prev, drag]);
+      } else if (activeTab() === 'crop') {
+        setCropBox(drag);
+      }
     }
   };
 
@@ -248,6 +394,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
               text: watermarkText().trim(),
               position: watermarkPosition(),
               opacity: watermarkOpacity() / 100,
+              scale: watermarkScale() / 100,
             }
           : null;
 
@@ -327,8 +474,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         <div
           ref={stageRef}
           class="mizuna-editor-stage"
-          onMouseDown={handlePointerDown}
-          onTouchStart={handlePointerDown}
+          onMouseDown={handleStagePointerDown}
+          onTouchStart={handleStagePointerDown}
         >
           <div class="mizuna-editor-canvas-wrap">
             <Show when={previewUrl()}>
@@ -344,17 +491,41 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
 
             {/* モザイク枠オーバーレイ表示 */}
             <For each={mosaics()}>
-              {(m) => (
+              {(m, index) => (
                 <div
-                  class="mizuna-mosaic-box"
+                  class={`mizuna-mosaic-box ${activeTab() === 'mosaic' ? 'is-editable' : ''}`}
                   style={{
                     left: `${m.x * 100}%`,
                     top: `${m.y * 100}%`,
                     width: `${m.w * 100}%`,
                     height: `${m.h * 100}%`,
                   }}
+                  onMouseDown={(e) => startMosaicMove(e, index())}
+                  onTouchStart={(e) => startMosaicMove(e, index())}
                 >
                   <div class="mizuna-mosaic-grid-pattern" />
+                  <Show when={activeTab() === 'mosaic'}>
+                    <div
+                      class="mizuna-box-handle handle-nw"
+                      onMouseDown={(e) => startMosaicResize(e, index(), 'nw')}
+                      onTouchStart={(e) => startMosaicResize(e, index(), 'nw')}
+                    />
+                    <div
+                      class="mizuna-box-handle handle-ne"
+                      onMouseDown={(e) => startMosaicResize(e, index(), 'ne')}
+                      onTouchStart={(e) => startMosaicResize(e, index(), 'ne')}
+                    />
+                    <div
+                      class="mizuna-box-handle handle-se"
+                      onMouseDown={(e) => startMosaicResize(e, index(), 'se')}
+                      onTouchStart={(e) => startMosaicResize(e, index(), 'se')}
+                    />
+                    <div
+                      class="mizuna-box-handle handle-sw"
+                      onMouseDown={(e) => startMosaicResize(e, index(), 'sw')}
+                      onTouchStart={(e) => startMosaicResize(e, index(), 'sw')}
+                    />
+                  </Show>
                 </div>
               )}
             </For>
@@ -370,8 +541,30 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                     width: `${cb().w * 100}%`,
                     height: `${cb().h * 100}%`,
                   }}
+                  onMouseDown={startCropMove}
+                  onTouchStart={startCropMove}
                 >
                   <div class="mizuna-crop-grid" />
+                  <div
+                    class="mizuna-box-handle handle-nw"
+                    onMouseDown={(e) => startCropResize(e, 'nw')}
+                    onTouchStart={(e) => startCropResize(e, 'nw')}
+                  />
+                  <div
+                    class="mizuna-box-handle handle-ne"
+                    onMouseDown={(e) => startCropResize(e, 'ne')}
+                    onTouchStart={(e) => startCropResize(e, 'ne')}
+                  />
+                  <div
+                    class="mizuna-box-handle handle-se"
+                    onMouseDown={(e) => startCropResize(e, 'se')}
+                    onTouchStart={(e) => startCropResize(e, 'se')}
+                  />
+                  <div
+                    class="mizuna-box-handle handle-sw"
+                    onMouseDown={(e) => startCropResize(e, 'sw')}
+                    onTouchStart={(e) => startCropResize(e, 'sw')}
+                  />
                 </div>
               )}
             </Show>
@@ -397,6 +590,17 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                 class={`mizuna-watermark-preview-pill is-${watermarkPosition()}`}
                 style={{
                   opacity: watermarkOpacity() / 100,
+                  transform: `scale(${watermarkScale() / 100})`,
+                  'transform-origin':
+                    watermarkPosition() === 'bottom-right'
+                      ? 'bottom right'
+                      : watermarkPosition() === 'bottom-left'
+                      ? 'bottom left'
+                      : watermarkPosition() === 'top-right'
+                      ? 'top right'
+                      : watermarkPosition() === 'top-left'
+                      ? 'top left'
+                      : 'center center',
                 }}
               >
                 <span>{watermarkText()}</span>
@@ -407,13 +611,13 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
           <Show when={activeTab() === 'mosaic'}>
             <div class="mizuna-editor-stage-hint">
               <i>touch_app</i>
-              <span>隠したい場所をドラッグしてモザイクをかけます</span>
+              <span>ドラッグで新規作成・枠をつまんでサイズや位置を変更できます</span>
             </div>
           </Show>
-          <Show when={activeTab() === 'crop' && aspectRatio() === 'free'}>
+          <Show when={activeTab() === 'crop'}>
             <div class="mizuna-editor-stage-hint">
               <i>crop</i>
-              <span>切り抜きたい範囲をドラッグで指定できます</span>
+              <span>ドラッグで新規指定・四隅のハンドルでサイズ変更できます</span>
             </div>
           </Show>
         </div>
@@ -674,6 +878,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                         class="mizuna-slider"
                       />
                       <span class="mizuna-adjust-value">{watermarkOpacity()}%</span>
+                    </div>
+
+                    <div class="mizuna-adjust-slider-row">
+                      <span class="mizuna-editor-sublabel">文字サイズ:</span>
+                      <input
+                        type="range"
+                        min="60"
+                        max="160"
+                        value={watermarkScale()}
+                        onInput={(e) => setWatermarkScale(Number(e.currentTarget.value))}
+                        class="mizuna-slider"
+                      />
+                      <span class="mizuna-adjust-value">{watermarkScale()}%</span>
                     </div>
                   </div>
                 </Show>

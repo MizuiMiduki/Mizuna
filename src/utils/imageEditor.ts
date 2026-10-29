@@ -25,6 +25,7 @@ export interface WatermarkOptions {
   text: string;
   position?: WatermarkPosition;
   opacity?: number; // 0.0 - 1.0 (default: 0.75)
+  scale?: number; // 0.5 - 2.0 (default: 1.0)
 }
 
 export interface ImageEditOptions {
@@ -117,10 +118,11 @@ export function applyWatermarkToContext(
 
   const text = watermark.text.trim();
   const shortSide = Math.min(width, height);
-  const fontSize = Math.max(13, Math.round(shortSide * 0.038));
+  const scale = Math.max(0.5, Math.min(2.0, watermark.scale ?? 1.0));
+  const fontSize = Math.max(12, Math.round(shortSide * 0.038 * scale));
   const paddingH = Math.round(fontSize * 0.55);
   const paddingV = Math.round(fontSize * 0.32);
-  const margin = Math.max(10, Math.round(shortSide * 0.025));
+  const margin = Math.max(8, Math.round(shortSide * 0.025 * scale));
 
   ctx.save();
   ctx.font = `600 ${fontSize}px "IBM Plex Sans JP", "Inter", system-ui, sans-serif`;
