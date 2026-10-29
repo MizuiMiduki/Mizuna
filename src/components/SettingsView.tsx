@@ -66,16 +66,48 @@ export function SettingsView() {
     }
   });
 
+  const [isClearingCache, setIsClearingCache] = createSignal(false);
+
   const handleClearCache = async () => {
-    if (typeof caches !== 'undefined') {
-      try {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      } catch (e) {
-        console.error('Cache delete error:', e);
+    if (isClearingCache()) return;
+    setIsClearingCache(true);
+
+    try {
+      // 1. Service Worker の登録をすべて解除 (Android 等のバックグラウンドプロセスを完全にリセット)
+      if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker) {
+        try {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((reg) => reg.unregister()));
+        } catch (swErr) {
+          console.warn('Service Worker unregister failed:', swErr);
+        }
       }
+
+      // 2. CacheStorage 内の全キャッシュを完全消去
+      if (typeof caches !== 'undefined') {
+        try {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        } catch (cacheErr) {
+          console.warn('CacheStorage delete failed:', cacheErr);
+        }
+      }
+
+      // 3. 一時セッションデータを消去 (※ アカウント情報等の IndexedDB は保持)
+      if (typeof sessionStorage !== 'undefined') {
+        try {
+          sessionStorage.clear();
+        } catch {}
+      }
+
+      // 4. ブラウザの HTTP キャッシュをバイパスして最新状態をサーバーからダイレクト再取得
+      const url = new URL(window.location.href);
+      url.searchParams.set('reload', Date.now().toString());
+      window.location.replace(url.toString());
+    } catch (e) {
+      console.error('Clear cache failed:', e);
+      window.location.reload();
     }
-    window.location.reload();
   };
 
   return (
@@ -447,14 +479,16 @@ export function SettingsView() {
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
                   <div class="mizuna-setting-title">{t('settings.clear_cache')}</div>
+                  <div class="mizuna-setting-desc">{t('settings.clear_cache_desc')}</div>
                 </div>
                 <button
                   type="button"
                   class="mizuna_clear_cache mizuna-btn mizuna-btn-outline"
                   onClick={handleClearCache}
+                  disabled={isClearingCache()}
                 >
-                  <i>refresh</i>
-                  <span>{t('settings.reload_button')}</span>
+                  <i class={isClearingCache() ? 'is-spinning' : ''}>refresh</i>
+                  <span>{isClearingCache() ? (t('settings.syncing') || 'クリア中...') : t('settings.reload_button')}</span>
                 </button>
               </div>
 

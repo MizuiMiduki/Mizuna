@@ -721,6 +721,12 @@ export function AppProvider(props: { children: JSX.Element }) {
       return;
     }
 
+    // キャッシュクリア等のリロードパラメータがあればURLをクリーンアップ
+    if (typeof window !== 'undefined' && window.location.search.includes('reload=')) {
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl || '/');
+    }
+
     const hasShareParams = captureWebShareTargetFromUrl();
     const savedView = getSavedView();
 
