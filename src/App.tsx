@@ -27,14 +27,27 @@ function MainContent() {
   });
 
   createEffect(() => {
-    const isSimple = settings().ui_mode === 2;
+    const mode = settings().ui_mode;
     if (typeof document !== 'undefined') {
-      document.body.classList.toggle('is-simple-mode', isSimple);
+      document.body.classList.toggle('is-simple-mode', mode === 2);
+      document.body.classList.toggle('ui-size-large', mode === 3);
+      document.body.classList.toggle('ui-size-medium', mode === 4);
+      document.body.classList.toggle('ui-size-small', mode === 5);
     }
   });
 
+  const appShellClasses = () => {
+    const mode = settings().ui_mode;
+    const classes = ['mizuna-app-shell'];
+    if (mode === 2) classes.push('is-simple-mode');
+    if (mode === 3) classes.push('ui-size-large');
+    if (mode === 4) classes.push('ui-size-medium');
+    if (mode === 5) classes.push('ui-size-small');
+    return classes.join(' ');
+  };
+
   return (
-    <div class={`mizuna-app-shell ${settings().ui_mode === 2 ? 'is-simple-mode' : ''}`}>
+    <div class={appShellClasses()}>
       <Header />
 
       <main class="main_column mizuna-main-container">

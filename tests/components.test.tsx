@@ -148,27 +148,37 @@ describe('UI Components', () => {
       expect(select.value).toBe('en_us');
     });
 
-    it('表示モード（標準 / シンプル）を切り替えられること', async () => {
+    it('表示サイズ（通常 / 大 / 中 / 小 / シンプル）を切り替えられること', async () => {
       render(() => (
         <AppProvider>
           <SettingsView />
         </AppProvider>
       ));
 
-      const standardBtn = await screen.findByRole('button', { name: /(標準|Standard)/ });
+      const normalBtn = await screen.findByRole('button', { name: /(通常|Normal|標準|Standard)/ });
+      const largeBtn = await screen.findByRole('button', { name: /(大|Large)/ });
+      const mediumBtn = await screen.findByRole('button', { name: /(中|Medium)/ });
+      const smallBtn = await screen.findByRole('button', { name: /(小|Small)/ });
       const simpleBtn = await screen.findByRole('button', { name: /(シンプル|Simple)/ });
 
-      expect(standardBtn).toBeInTheDocument();
+      expect(normalBtn).toBeInTheDocument();
+      expect(largeBtn).toBeInTheDocument();
+      expect(mediumBtn).toBeInTheDocument();
+      expect(smallBtn).toBeInTheDocument();
       expect(simpleBtn).toBeInTheDocument();
 
-      // 初期状態は標準モードがアクティブ
-      expect(standardBtn.classList.contains('is-active')).toBe(true);
-      expect(simpleBtn.classList.contains('is-active')).toBe(false);
+      // 初期状態は通常モードがアクティブ
+      expect(normalBtn.classList.contains('is-active')).toBe(true);
+      expect(largeBtn.classList.contains('is-active')).toBe(false);
+
+      // 大サイズに切り替え
+      fireEvent.click(largeBtn);
+      let updated = await db.setting.get(1);
+      expect(updated?.ui_mode).toBe(3);
 
       // シンプルモードに切り替え
       fireEvent.click(simpleBtn);
-
-      const updated = await db.setting.get(1);
+      updated = await db.setting.get(1);
       expect(updated?.ui_mode).toBe(2);
     });
 

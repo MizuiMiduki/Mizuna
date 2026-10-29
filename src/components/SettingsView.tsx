@@ -173,23 +173,56 @@ export function SettingsView() {
             <div class="mizuna-group-label">{t('settings.group_appearance')}</div>
 
             <div class="mizuna-setting-card">
-              {/* 表示モード (通常 / シンプル) */}
+              {/* 表示サイズ (通常 / 大 / 中 / 小 / シンプル) */}
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
                   <div class="mizuna-setting-title">{t('settings.ui_mode')}</div>
                   <div class="mizuna-setting-desc">{t('settings.ui_mode_desc')}</div>
                 </div>
-                <div class="mizuna-seg-pills">
+                <div class="mizuna-seg-pills mizuna-seg-pills-wrap">
                   <button
                     type="button"
-                    id="ui_mode_standard"
+                    id="ui_mode_normal"
                     class={`mizuna-seg-pill ${
-                      settings().ui_mode !== 2 ? 'is-active' : ''
+                      (settings().ui_mode ?? 1) === 1 ? 'is-active' : ''
                     }`}
                     onClick={() => updateSettings({ ui_mode: 1 })}
                   >
-                    <i>view_agenda</i>
-                    <span>{t('settings.ui_mode_standard')}</span>
+                    <i>aspect_ratio</i>
+                    <span>{t('settings.ui_mode_normal')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    id="ui_mode_large"
+                    class={`mizuna-seg-pill ${
+                      settings().ui_mode === 3 ? 'is-active' : ''
+                    }`}
+                    onClick={() => updateSettings({ ui_mode: 3 })}
+                  >
+                    <i>zoom_in</i>
+                    <span>{t('settings.ui_mode_large')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    id="ui_mode_medium"
+                    class={`mizuna-seg-pill ${
+                      settings().ui_mode === 4 ? 'is-active' : ''
+                    }`}
+                    onClick={() => updateSettings({ ui_mode: 4 })}
+                  >
+                    <i>text_fields</i>
+                    <span>{t('settings.ui_mode_medium')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    id="ui_mode_small"
+                    class={`mizuna-seg-pill ${
+                      settings().ui_mode === 5 ? 'is-active' : ''
+                    }`}
+                    onClick={() => updateSettings({ ui_mode: 5 })}
+                  >
+                    <i>zoom_out</i>
+                    <span>{t('settings.ui_mode_small')}</span>
                   </button>
                   <button
                     type="button"

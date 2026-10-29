@@ -1876,6 +1876,16 @@ body.dark .mizuna-custom-css-warnings {
   gap: 2px;
 }
 
+.mizuna-seg-pills.mizuna-seg-pills-wrap {
+  flex-wrap: wrap;
+  border-radius: var(--mizuna-radius-lg);
+  max-width: 100%;
+}
+
+.mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
+  padding: 0 10px !important;
+}
+
 .mizuna-seg-pill {
   display: inline-flex;
   align-items: center;
@@ -3573,6 +3583,24 @@ body.dark .mizuna-custom-css-warnings {
   display: flex;
   justify-content: center;
   margin-top: 16px;
+}
+
+/* =========================================
+   UI表示サイズ (大 / 中 / 小)
+   ========================================= */
+body.ui-size-large,
+.mizuna-app-shell.ui-size-large {
+  zoom: 1.15;
+}
+
+body.ui-size-medium,
+.mizuna-app-shell.ui-size-medium {
+  zoom: 0.9;
+}
+
+body.ui-size-small,
+.mizuna-app-shell.ui-size-small {
+  zoom: 0.8;
 }
 
 /* =========================================
