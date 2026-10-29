@@ -74,9 +74,57 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     | { type: 'mosaic-resize'; index: number; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } };
 
   let stageRef: HTMLDivElement | undefined;
-  let imageRef: HTMLImageElement | undefined;
+  let canvasRef: HTMLCanvasElement | undefined;
+  let sourceImage: HTMLImageElement | null = null;
   let activeDrag: DragMode | null = null;
   const [currentDragRect, setCurrentDragRect] = createSignal<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  // 回転・反転を反映した現在のステージ実寸（幅・高さ）
+  const currentStageSize = () => {
+    const rot = ((rotation() % 360) + 360) % 360;
+    const is90or270 = rot === 90 || rot === 270;
+    const { w, h } = imgNaturalSize();
+    if (w <= 0 || h <= 0) return { w: 1, h: 1 };
+    return is90or270 ? { w: h, h: w } : { w, h };
+  };
+
+  // プレビュー用 Canvas の再描画 (GPU オフライン描画)
+  const renderPreview = () => {
+    if (!canvasRef || !sourceImage) return;
+
+    const rot = ((rotation() % 360) + 360) % 360;
+    const is90or270 = rot === 90 || rot === 270;
+    const origW = sourceImage.naturalWidth;
+    const origH = sourceImage.naturalHeight;
+    if (origW <= 0 || origH <= 0) return;
+
+    // プレビュー用キャンバスサイズ（最大1400pxにスケールしてパフォーマンス確保）
+    const maxDim = 1400;
+    let scale = 1;
+    if (origW > maxDim || origH > maxDim) {
+      scale = maxDim / Math.max(origW, origH);
+    }
+
+    const sW = Math.round(origW * scale);
+    const sH = Math.round(origH * scale);
+    const targetW = is90or270 ? sH : sW;
+    const targetH = is90or270 ? sW : sH;
+
+    canvasRef.width = targetW;
+    canvasRef.height = targetH;
+
+    const ctx = canvasRef.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, targetW, targetH);
+    ctx.save();
+    ctx.filter = `brightness(${brightness()}%) contrast(${contrast()}%) saturate(${saturation()}%)`;
+    ctx.translate(targetW / 2, targetH / 2);
+    if (rot !== 0) ctx.rotate((rot * Math.PI) / 180);
+    if (flipX()) ctx.scale(-1, 1);
+    ctx.drawImage(sourceImage, -sW / 2, -sH / 2, sW, sH);
+    ctx.restore();
+  };
 
   onMount(() => {
     const url = URL.createObjectURL(props.file);
@@ -84,13 +132,25 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
 
     const img = new Image();
     img.onload = () => {
+      sourceImage = img;
       setImgNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+      renderPreview();
     };
     img.src = url;
 
     onCleanup(() => {
       URL.revokeObjectURL(url);
     });
+  });
+
+  // 編集パラメータ変更時にプレビューを自動再描画
+  createEffect(() => {
+    rotation();
+    flipX();
+    brightness();
+    contrast();
+    saturation();
+    renderPreview();
   });
 
   // クロップ比率変更時
@@ -101,8 +161,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       return;
     }
 
-    // 画像のアスペクト比に合わせて初期中央クロップを設定
-    const { w, h } = imgNaturalSize();
+    // 現在の回転状態に応じた縦横比で初期クロップを設定
+    const { w, h } = currentStageSize();
     if (w <= 0 || h <= 0) return;
 
     let targetRatio = 1;
@@ -130,12 +190,14 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     });
   };
 
-  // 回転操作
+  // 回転操作 (0°, 90°, 180°, 270° の順に正確に回転)
   const handleRotateLeft = () => {
     setRotation((prev) => (prev - 90 + 360) % 360);
+    setCropBox(null); // 回転時はクロップ枠をリセット
   };
   const handleRotateRight = () => {
     setRotation((prev) => (prev + 90) % 360);
+    setCropBox(null); // 回転時はクロップ枠をリセット
   };
   const handleToggleFlip = () => {
     setFlipX((prev) => !prev);
@@ -155,8 +217,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
 
   // 座標を元画像に対する相対座標 (0.0 - 1.0) に変換
   const getNormalizedCoords = (e: MouseEvent | TouchEvent) => {
-    if (!imageRef) return { x: 0, y: 0 };
-    const rect = imageRef.getBoundingClientRect();
+    if (!canvasRef) return { x: 0, y: 0 };
+    const rect = canvasRef.getBoundingClientRect();
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
     return {
@@ -259,9 +321,9 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   // ステージ上での新規矩形ドラッグ開始
   const handleStagePointerDown = (e: MouseEvent | TouchEvent) => {
     if (activeTab() !== 'mosaic' && activeTab() !== 'crop') return;
-    if (!imageRef) return;
+    if (!canvasRef) return;
 
-    const rect = imageRef.getBoundingClientRect();
+    const rect = canvasRef.getBoundingClientRect();
     const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
 
@@ -284,7 +346,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   };
 
   const handlePointerMove = (e: MouseEvent | TouchEvent) => {
-    if (!activeDrag || !imageRef) return;
+    if (!activeDrag || !canvasRef) return;
 
     const coords = getNormalizedCoords(e);
 
@@ -300,7 +362,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         if (aspectRatio() === '4:3') targetRatio = 4 / 3;
         if (aspectRatio() === '16:9') targetRatio = 16 / 9;
 
-        const imgR = imgNaturalSize().w / imgNaturalSize().h;
+        const imgR = currentStageSize().w / currentStageSize().h;
         h = Math.min(1 - y, (w * imgR) / targetRatio);
       }
 
@@ -319,7 +381,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         if (aspectRatio() === '1:1') targetRatio = 1;
         if (aspectRatio() === '4:3') targetRatio = 4 / 3;
         if (aspectRatio() === '16:9') targetRatio = 16 / 9;
-        const imgR = imgNaturalSize().w / imgNaturalSize().h;
+        const imgR = currentStageSize().w / currentStageSize().h;
         updated.h = Math.min(1 - updated.y, (updated.w * imgR) / targetRatio);
       }
       setCropBox(updated);
@@ -367,7 +429,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     setIsProcessing(true);
 
     try {
-      const { w, h } = imgNaturalSize();
+      const { w, h } = currentStageSize();
 
       let cropPixel: CropRect | null = null;
       const c = cropBox();
@@ -400,7 +462,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
 
       const options: ImageEditOptions = {
         crop: cropPixel,
-        rotate: rotation(),
+        rotate: ((rotation() % 360) + 360) % 360,
         flipHorizontal: flipX(),
         adjustments: {
           brightness: brightness(),
@@ -422,18 +484,6 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  // プレビューのCSSスタイル (GPU 60fps リアルタイム表示)
-  const previewImageStyle = () => {
-    const filters = `brightness(${brightness()}%) contrast(${contrast()}%) saturate(${saturation()}%)`;
-    const transform = `rotate(${rotation()}deg) scaleX(${flipX() ? -1 : 1})`;
-    return {
-      filter: filters,
-      transform: transform,
-      'transform-origin': 'center center',
-      transition: isDragging ? 'none' : 'transform 0.2s ease',
-    };
   };
 
   return (
@@ -478,16 +528,10 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
           onTouchStart={handleStagePointerDown}
         >
           <div class="mizuna-editor-canvas-wrap">
-            <Show when={previewUrl()}>
-              <img
-                ref={imageRef}
-                src={previewUrl()}
-                alt="編集プレビュー"
-                class="mizuna-editor-preview-img"
-                style={previewImageStyle()}
-                draggable={false}
-              />
-            </Show>
+            <canvas
+              ref={canvasRef}
+              class="mizuna-editor-preview-canvas"
+            />
 
             {/* モザイク枠オーバーレイ表示 */}
             <For each={mosaics()}>

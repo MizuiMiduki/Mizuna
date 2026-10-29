@@ -4141,7 +4141,8 @@ body.is-simple-mode .mizuna-setting-col {
   overflow: hidden;
 }
 
-.mizuna-editor-preview-img {
+.mizuna-editor-preview-img,
+.mizuna-editor-preview-canvas {
   display: block;
   max-width: min(100%, 82vw);
   max-height: min(48vh, 520px);
@@ -4153,7 +4154,8 @@ body.is-simple-mode .mizuna-setting-col {
 }
 
 @media (max-width: 640px) {
-  .mizuna-editor-preview-img {
+  .mizuna-editor-preview-img,
+  .mizuna-editor-preview-canvas {
     max-height: 38vh;
     max-width: 90vw;
   }
