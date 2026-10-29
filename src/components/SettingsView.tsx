@@ -445,13 +445,11 @@ export function SettingsView() {
             </div>
           </div>
 
-          {/* カスタムCSSグループ（サポート対象外・最下部に別枠で配置） */}
+          {/* カスタムCSSグループ（最下部に別枠で配置・警戒枠表示） */}
           <div class="mizuna-setting-group">
-            <div class="mizuna-group-label" style="display: flex; align-items: center; gap: 6px;">
-              <span>{t('settings.group_custom_css')}</span>
-            </div>
+            <div class="mizuna-group-label">{t('settings.group_custom_css')}</div>
 
-            <div class="mizuna-setting-card">
+            <div class="mizuna-setting-card mizuna-setting-card-warning">
               <div class="mizuna-setting-col">
                 <div class="mizuna-setting-info">
                   <div class="mizuna-setting-title">{t('settings.custom_css')}</div>

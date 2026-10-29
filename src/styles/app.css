@@ -1739,6 +1739,17 @@ body {
   overflow: hidden;
 }
 
+.mizuna-setting-card.mizuna-setting-card-warning {
+  border: 1px solid color-mix(in srgb, #f59e0b 65%, color-mix(in srgb, var(--outline-variant) 35%, transparent));
+  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.16);
+}
+
+:root[class~="dark"] .mizuna-setting-card.mizuna-setting-card-warning,
+body.dark .mizuna-setting-card.mizuna-setting-card-warning {
+  border-color: color-mix(in srgb, #f59e0b 70%, transparent);
+  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.22);
+}
+
 .mizuna-setting-row {
   display: flex;
   align-items: center;

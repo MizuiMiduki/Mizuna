@@ -134,6 +134,6 @@ export const ja = {
     check_update: '最新バージョンの確認',
     check_update_desc: 'PWA Service Worker のアップデートを確認します',
     check_button: '更新を確認',
-    group_custom_css: 'カスタムCSS（サポート対象外）',
+    group_custom_css: 'カスタムCSS',
   },
 } as const;

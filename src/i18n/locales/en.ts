@@ -134,6 +134,6 @@ export const en = {
     check_update: 'Check for Updates',
     check_update_desc: 'Check for PWA Service Worker updates',
     check_button: 'Check',
-    group_custom_css: 'Custom CSS (Unsupported)',
+    group_custom_css: 'Custom CSS',
   },
 } as const;
