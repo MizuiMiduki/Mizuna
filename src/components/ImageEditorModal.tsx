@@ -43,9 +43,15 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     return '';
   };
 
+  const getInitialPosition = (): WatermarkPosition => {
+    const pos = settings().watermark_position;
+    if (pos && pos !== 'none') return pos;
+    return 'bottom-right';
+  };
+
   const [watermarkEnabled, setWatermarkEnabled] = createSignal<boolean>(false);
   const [watermarkText, setWatermarkText] = createSignal<string>(getInitialWatermarkText());
-  const [watermarkPosition, setWatermarkPosition] = createSignal<WatermarkPosition>('bottom-right');
+  const [watermarkPosition, setWatermarkPosition] = createSignal<WatermarkPosition>(getInitialPosition());
   const [watermarkOpacity, setWatermarkOpacity] = createSignal<number>(75);
 
   // クロップ座標 (元画像に対する比率 0.0 - 1.0)

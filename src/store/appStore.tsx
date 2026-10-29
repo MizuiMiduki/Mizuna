@@ -1,4 +1,5 @@
 import { compressAndConvertToWebP, createThumbnailUrl } from '../utils/image';
+import { editImageOptimized } from '../utils/imageEditor';
 import gsap from 'gsap';
 import {
   createContext,
@@ -826,10 +827,52 @@ export function AppProvider(props: { children: JSX.Element }) {
       originalSize: file.size,
     }));
 
+    // 自動透かし付与の設定を確認
+    const autoPos = settings().watermark_position;
+    const shouldAutoWatermark = autoPos && autoPos !== 'none';
+    const user = currentUser();
+    const defaultUserText = user ? `@${user.username}@${user.address}` : '';
+    const watermarkText = settings().watermark_text?.trim() || defaultUserText;
+
     // サムネイル生成とWebP事前圧縮は、原寸デコードのピークメモリを抑えるため1枚ずつ直列に処理する
     newItems.forEach((item) => {
       attachProcessQueue = attachProcessQueue.then(async () => {
-        const thumbUrl = (await createThumbnailUrl(item.file)) ?? item.dataUrl; // 生成不可なら原寸にフォールバック
+        let activeFile = item.file;
+        let activeDataUrl = item.dataUrl;
+
+        // 設定で四隅の透かし付与が有効化されている場合、自動で透かしを合成
+        if (shouldAutoWatermark && watermarkText) {
+          try {
+            const watermarked = await editImageOptimized(activeFile, {
+              watermark: {
+                text: watermarkText,
+                position: autoPos,
+                opacity: 0.75,
+              },
+            });
+            const oldDataUrl = activeDataUrl;
+            activeDataUrl = URL.createObjectURL(watermarked);
+            activeFile = watermarked;
+
+            setAttachedImages((prev) =>
+              prev.map((img) =>
+                img.id === item.id
+                  ? {
+                      ...img,
+                      file: activeFile,
+                      dataUrl: activeDataUrl,
+                      originalSize: activeFile.size,
+                    }
+                  : img
+              )
+            );
+            if (oldDataUrl) URL.revokeObjectURL(oldDataUrl);
+          } catch (wmErr) {
+            console.warn('Auto watermark failed, proceeding with original file:', wmErr);
+          }
+        }
+
+        const thumbUrl = (await createThumbnailUrl(activeFile)) ?? activeDataUrl; // 生成不可なら原寸にフォールバック
         {
           let alive = false;
           setAttachedImages((prev) =>
@@ -839,10 +882,10 @@ export function AppProvider(props: { children: JSX.Element }) {
               return { ...img, thumbUrl };
             })
           );
-          if (!alive && thumbUrl !== item.dataUrl) URL.revokeObjectURL(thumbUrl);
+          if (!alive && thumbUrl !== activeDataUrl) URL.revokeObjectURL(thumbUrl);
         }
         try {
-          const compressed = await compressAndConvertToWebP(item.file, 0.75);
+          const compressed = await compressAndConvertToWebP(activeFile, 0.75);
           setAttachedImages((prev) =>
             prev.map((img) =>
               img.id === item.id

@@ -15,6 +15,8 @@ export interface AccountRecord {
   add_mizuna_versinon: string;
 }
 
+export type AutoWatermarkPosition = 'none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
 /**
  * ユーザー設定レコード
  * id: 1 のレコードが使用されます
@@ -47,6 +49,8 @@ export interface SettingRecord {
   custom_css?: string;
   /** 画像編集用のカスタム透かしテキスト (未設定時は @username@address) */
   watermark_text?: string;
+  /** 画像添付時の自動透かし位置 ('none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left') */
+  watermark_position?: AutoWatermarkPosition;
 }
 
 export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
@@ -65,6 +69,7 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
   account_order: [],
   custom_css: '',
   watermark_text: '',
+  watermark_position: 'none',
 };
 
 export class MizunaDatabase extends Dexie {
@@ -121,6 +126,7 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
       account_order: Array.isArray(settingData.account_order) ? settingData.account_order : [],
       custom_css: typeof settingData.custom_css === 'string' ? settingData.custom_css : DEFAULT_USER_SETTINGS.custom_css,
       watermark_text: typeof settingData.watermark_text === 'string' ? settingData.watermark_text : DEFAULT_USER_SETTINGS.watermark_text,
+      watermark_position: (settingData.watermark_position as AutoWatermarkPosition) ?? DEFAULT_USER_SETTINGS.watermark_position,
     };
   }
 

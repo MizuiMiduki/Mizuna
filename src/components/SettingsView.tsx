@@ -215,6 +215,53 @@ export function SettingsView() {
 
               <div class="mizuna-row-divider" />
 
+              {/* 画像への透かし付与 (四隅の自動付与位置) */}
+              <div class="mizuna-setting-row">
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">{t('settings.watermark_auto_position')}</div>
+                  <div class="mizuna-setting-desc">{t('settings.watermark_auto_position_desc')}</div>
+                </div>
+                <div class="mizuna-seg-pills mizuna-seg-pills-wrap">
+                  <button
+                    type="button"
+                    class={`mizuna-seg-pill ${(settings().watermark_position ?? 'none') === 'none' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ watermark_position: 'none' })}
+                  >
+                    <span>{t('settings.watermark_pos_none')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class={`mizuna-seg-pill ${settings().watermark_position === 'bottom-right' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ watermark_position: 'bottom-right' })}
+                  >
+                    <span>{t('settings.watermark_pos_bottom_right')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class={`mizuna-seg-pill ${settings().watermark_position === 'bottom-left' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ watermark_position: 'bottom-left' })}
+                  >
+                    <span>{t('settings.watermark_pos_bottom_left')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class={`mizuna-seg-pill ${settings().watermark_position === 'top-right' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ watermark_position: 'top-right' })}
+                  >
+                    <span>{t('settings.watermark_pos_top_right')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class={`mizuna-seg-pill ${settings().watermark_position === 'top-left' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ watermark_position: 'top-left' })}
+                  >
+                    <span>{t('settings.watermark_pos_top_left')}</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="mizuna-row-divider" />
+
               {/* 画像の透かし文字 */}
               <div class="mizuna-setting-col">
                 <div class="mizuna-setting-info">
