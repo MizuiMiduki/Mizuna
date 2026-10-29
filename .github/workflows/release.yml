@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'リリースの種類 (release: 正式リリース / prerelease: プレリリース)'
+        description: 'リリースの種類 (release: 正式リリース ※mainブランチのみ / prerelease: プレリリース ※mainブランチ以外)'
         required: true
         default: 'release'
         type: choice
@@ -25,6 +25,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Validate Branch and Release Type
+        env:
+          BRANCH: ${{ github.ref_name }}
+          RELEASE_TYPE: ${{ inputs.release_type }}
+        run: |
+          echo "実行ブランチ: $BRANCH"
+          echo "リリース種別: $RELEASE_TYPE"
+
+          if [ "$RELEASE_TYPE" = "prerelease" ] && [ "$BRANCH" = "main" ]; then
+            echo "::error::プレリリース (prerelease) は main ブランチでは実行できません。開発ブランチ（例: 3.12.0 等）から実行してください。"
+            exit 1
+          fi
+
+          if [ "$RELEASE_TYPE" = "release" ] && [ "$BRANCH" != "main" ]; then
+            echo "::error::正式リリース (release) は main ブランチ以外では実行できません。main ブランチから実行してください。（現在のブランチ: $BRANCH）"
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
