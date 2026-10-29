@@ -29,6 +29,12 @@ function MainContent() {
   createEffect(() => {
     const mode = settings().ui_mode;
     if (typeof document !== 'undefined') {
+      const root = document.documentElement;
+      root.classList.toggle('is-simple-mode', mode === 2);
+      root.classList.toggle('ui-size-large', mode === 3);
+      root.classList.toggle('ui-size-medium', mode === 4);
+      root.classList.toggle('ui-size-small', mode === 5);
+
       document.body.classList.toggle('is-simple-mode', mode === 2);
       document.body.classList.toggle('ui-size-large', mode === 3);
       document.body.classList.toggle('ui-size-medium', mode === 4);

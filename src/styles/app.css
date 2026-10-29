@@ -1225,6 +1225,20 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+@media (max-width: 480px) {
+  .mizuna-header-actions {
+    width: 100%;
+    gap: 6px;
+  }
+  .mizuna-header-actions .mizuna-btn {
+    flex: 1 1 auto;
+    padding: 0 10px !important;
+    font-size: 0.78rem !important;
+  }
 }
 
 .mizuna-delete-banner {
@@ -1759,6 +1773,13 @@ body.dark .mizuna-setting-card.mizuna-setting-card-warning {
   flex-wrap: wrap;
 }
 
+@media (max-width: 480px) {
+  .mizuna-setting-row,
+  .mizuna-setting-col {
+    padding: 14px 12px !important;
+  }
+}
+
 .mizuna-setting-col {
   display: flex;
   flex-direction: column;
@@ -1881,17 +1902,36 @@ body.dark .mizuna-custom-css-warnings {
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
   gap: 2px;
   max-width: 100%;
-  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+@media (max-width: 480px) {
+  /* 幅狭画面では横並びピルがカードを突き破らないよう、カード幅100%で均等にフィットさせる */
+  .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) {
+    width: 100%;
+    display: flex;
+  }
+  .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 4px !important;
+    gap: 3px;
+    font-size: 0.74rem;
+  }
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap {
+  display: flex;
   flex-wrap: wrap;
+  width: 100%;
   border-radius: var(--mizuna-radius-lg);
-  max-width: 100%;
+  gap: 4px;
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
-  padding: 0 10px !important;
+  flex: 1 1 auto;
+  min-width: 52px;
+  padding: 0 8px !important;
 }
 
 .mizuna-seg-pill {
@@ -3598,25 +3638,31 @@ body.dark .mizuna-custom-css-warnings {
 
 /* =========================================
    UI表示サイズ (大 / 中 / 小)
+   ※ zoom によるビューポート圧縮・はみ出しを防ぐため、
+      HTMLフォントサイズおよびUI要素のスケーリングで安全に拡大・縮小
    ========================================= */
-body.ui-size-large,
-.mizuna-app-shell.ui-size-large {
-  zoom: 1.12;
+html.ui-size-large {
+  font-size: 18px;
 }
 
+html.ui-size-large .mizuna-app-shell,
 body.ui-size-large .mizuna-app-shell,
 .mizuna-app-shell.ui-size-large {
   padding-bottom: 140px !important;
 }
 
-body.ui-size-medium,
-.mizuna-app-shell.ui-size-medium {
-  zoom: 0.9;
+html.ui-size-large .mizuna-seg-pill i,
+html.ui-size-large .mizuna-btn i,
+html.ui-size-large .mizuna-tool-chip i {
+  transform: scale(1.1);
 }
 
-body.ui-size-small,
-.mizuna-app-shell.ui-size-small {
-  zoom: 0.8;
+html.ui-size-medium {
+  font-size: 14.5px;
+}
+
+html.ui-size-small {
+  font-size: 13.5px;
 }
 
 /* =========================================
