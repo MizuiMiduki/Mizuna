@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { For, onMount } from 'solid-js';
+import { For, onSettled } from 'solid-js';
 import { mizuna_options, mizuna_share } from '../config/mizunaOptions';
 import { useApp } from '../store/appStore';
 
@@ -50,7 +50,7 @@ export function AboutView() {
   const { accounts, setCurrentView, showToast } = useApp();
   let containerRef: HTMLDivElement | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     if (containerRef) {
       gsap.fromTo(
         containerRef,

@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { createSignal, For, onMount, Show } from 'solid-js';
+import { createSignal, For, onSettled, Show } from 'solid-js';
 import { buildMiAuthUrl, checkServerExists } from '../services/misskeyApi';
 import { useApp } from '../store/appStore';
 
@@ -14,7 +14,7 @@ export function AddAccountView() {
   let containerRef: HTMLDivElement | undefined;
   let jsonInputRef: HTMLInputElement | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     if (containerRef) {
       gsap.fromTo(
         containerRef,

@@ -1,5 +1,6 @@
 import gsap from 'gsap';
-import { createSignal, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { createSignal, onCleanup, onSettled, Show } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 
 export interface HoldHoverTipProps {
   /** メインのTIPSテキストまたはJSX */
@@ -164,7 +165,7 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
     hideTip();
   };
 
-  onMount(() => {
+  onSettled(() => {
     anchorRef?.addEventListener('click', handleClickCapture, true);
   });
 

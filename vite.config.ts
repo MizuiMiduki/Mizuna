@@ -7,7 +7,7 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [
-      solidPlugin({ hot: false }),
+      solidPlugin({ refresh: false }),
       {
         name: 'mizuna-pwa-channel',
         transformIndexHtml(html) {
@@ -44,7 +44,7 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./tests/setupTests.ts'],
       server: {
         deps: {
-          inline: [/solid-js/],
+          inline: [/solid-js/, /@solidjs/],
         },
       },
     },

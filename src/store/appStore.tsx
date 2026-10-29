@@ -3,13 +3,12 @@ import gsap from 'gsap';
 import {
   createContext,
   createSignal,
-  onCleanup,
-  onMount,
+  onSettled,
   useContext,
   type Accessor,
-  type JSX,
   type Setter,
 } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 import { MIZUNA_VERSION, mizuna_options } from '../config/mizunaOptions';
 import {
   db,
@@ -397,21 +396,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   // 初回マウント時の初期化フロー
-  onMount(async () => {
-    // Canary / 本番のタイトル・PWAマニフェスト同期
-    document.title = `${mizuna_options.app_name} -ノート専用Misskeyクライアント`;
-    const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-    if (appleMeta) {
-      appleMeta.setAttribute('content', mizuna_options.app_name);
-    }
-    const manifestLink = document.getElementById('mizuna-manifest-link');
-    if (manifestLink) {
-      manifestLink.setAttribute(
-        'href',
-        mizuna_options.is_canary ? '/manifest-canary.json' : '/manifest.json'
-      );
-    }
-
+  onSettled(() => {
     // 省電力設定: GSAPティッカーの自動スリープを早め、バックグラウンド時は完全停止させる
     gsap.config({ autoSleep: 60, nullTargetWarn: false });
     const handleVisibilityChange = () => {
@@ -423,76 +408,94 @@ export function AppProvider(props: { children: JSX.Element }) {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    if (mizuna_options.maintenance) {
-      window.location.href = `${mizuna_options.mizuna_address}/maintenance.html`;
-      return;
-    }
+    // OSのカラースキーム変更を監視（端末設定モード時）
+    const mediaQuery =
+      typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)')
+        : null;
+    const handleSchemeChange = () => {
+      if (settings().is_darkmode === 2) {
+        applyThemeAndMode(settings(), currentUser()?.avatarurl, currentUser()?.address);
+      }
+    };
+    mediaQuery?.addEventListener?.('change', handleSchemeChange);
 
-    const hasShareParams = captureWebShareTargetFromUrl();
-    const savedView = getSavedView();
-
-    try {
-      const loadedSettings = await loadOrCreateSettings();
-      setSettings(loadedSettings);
-      setVisibility(visibilityNumToString(loadedSettings.default_visibility));
-      setEndMizuna(loadedSettings.is_note_end_mizuna);
-
-      // MiAuthのコールバックがあれば処理
-      const addedViaMiAuth = await handleMiAuthCallbackIfPresent();
-
-      // アカウント読み込み
-      await reloadAccounts();
-
-      if (accounts().length > 0) {
-        applyWebShareTargetToForm();
-        if (addedViaMiAuth || hasShareParams) {
-          setCurrentViewInternal('note');
-        } else if (savedView) {
-          setCurrentViewInternal(savedView);
-        } else {
-          setCurrentViewInternal('note');
-        }
-      } else {
-        if (savedView === 'shortcuts' || savedView === 'about') {
-          setCurrentViewInternal(savedView);
-        } else {
-          setCurrentViewInternal('add_account');
-        }
+    void (async () => {
+      // Canary / 本番のタイトル・PWAマニフェスト同期
+      document.title = `${mizuna_options.app_name} -ノート専用Misskeyクライアント`;
+      const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if (appleMeta) {
+        appleMeta.setAttribute('content', mizuna_options.app_name);
+      }
+      const manifestLink = document.getElementById('mizuna-manifest-link');
+      if (manifestLink) {
+        manifestLink.setAttribute(
+          'href',
+          mizuna_options.is_canary ? '/manifest-canary.json' : '/manifest.json'
+        );
       }
 
-      // リリースノート確認
-      await checkNewReleaseNote(loadedSettings);
-    } catch (err) {
-      console.error('Initialization failed:', err);
-      showToast('データベースの読み込みに失敗しました', 'error');
-    } finally {
-      setIsInitializing(false);
-    }
+      if (mizuna_options.maintenance) {
+        window.location.href = `${mizuna_options.mizuna_address}/maintenance.html`;
+        return;
+      }
 
-    // OSのカラースキーム変更を監視（端末設定モード時）
-    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleSchemeChange = () => {
-        if (settings().is_darkmode === 2) {
-          applyThemeAndMode(settings(), currentUser()?.avatarurl, currentUser()?.address);
-        }
-      };
-      mediaQuery.addEventListener?.('change', handleSchemeChange);
-      onCleanup(() => {
-        try {
-          mediaQuery.removeEventListener?.('change', handleSchemeChange);
-        } catch {
-          // テスト環境等のティアダウン時は無視
-        }
-        if (typeof document !== 'undefined') {
-          try {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-          } catch {
-            // 無視
+      const hasShareParams = captureWebShareTargetFromUrl();
+      const savedView = getSavedView();
+
+      try {
+        const loadedSettings = await loadOrCreateSettings();
+        setSettings(loadedSettings);
+        setVisibility(visibilityNumToString(loadedSettings.default_visibility));
+        setEndMizuna(loadedSettings.is_note_end_mizuna);
+
+        // MiAuthのコールバックがあれば処理
+        const addedViaMiAuth = await handleMiAuthCallbackIfPresent();
+
+        // アカウント読み込み
+        await reloadAccounts();
+
+        if (accounts().length > 0) {
+          applyWebShareTargetToForm();
+          if (addedViaMiAuth || hasShareParams) {
+            setCurrentViewInternal('note');
+          } else if (savedView) {
+            setCurrentViewInternal(savedView);
+          } else {
+            setCurrentViewInternal('note');
+          }
+        } else {
+          if (savedView === 'shortcuts' || savedView === 'about') {
+            setCurrentViewInternal(savedView);
+          } else {
+            setCurrentViewInternal('add_account');
           }
         }
-      });
-    }
+
+        // リリースノート確認
+        await checkNewReleaseNote(loadedSettings);
+      } catch (err) {
+        console.error('Initialization failed:', err);
+        showToast('データベースの読み込みに失敗しました', 'error');
+      } finally {
+        setIsInitializing(false);
+      }
+    })();
+
+    return () => {
+      try {
+        mediaQuery?.removeEventListener?.('change', handleSchemeChange);
+      } catch {
+        // テスト環境等のティアダウン時は無視
+      }
+      if (typeof document !== 'undefined') {
+        try {
+          document.removeEventListener('visibilitychange', handleVisibilityChange);
+        } catch {
+          // 無視
+        }
+      }
+    };
   });
 
   // 添付画像の追加（Base64変換ではなくゼロコピーの ObjectURL を使用してCPU・メモリ・バッテリー消費を削減）
@@ -819,7 +822,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     closeDialog,
   };
 
-  return <AppContext.Provider value={contextValue}>{props.children}</AppContext.Provider>;
+  return <AppContext value={contextValue}>{props.children}</AppContext>;
 }
 
 export function useApp(): AppContextValue {

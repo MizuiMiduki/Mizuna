@@ -7,21 +7,23 @@ export function DialogHost() {
   let modalRef: HTMLDivElement | undefined;
   let backdropRef: HTMLDivElement | undefined;
 
-  createEffect(() => {
-    const cfg = dialogConfig();
-    if (cfg && modalRef && backdropRef) {
-      gsap.fromTo(
-        backdropRef,
-        { opacity: 0 },
-        { opacity: 1, duration: 0.22, ease: 'power2.out' }
-      );
-      gsap.fromTo(
-        modalRef,
-        { opacity: 0, scale: 0.9, y: 18 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.3, ease: 'back.out(1.5)' }
-      );
+  createEffect(
+    () => dialogConfig(),
+    (cfg) => {
+      if (cfg && modalRef && backdropRef) {
+        gsap.fromTo(
+          backdropRef,
+          { opacity: 0 },
+          { opacity: 1, duration: 0.22, ease: 'power2.out' }
+        );
+        gsap.fromTo(
+          modalRef,
+          { opacity: 0, scale: 0.9, y: 18 },
+          { opacity: 1, scale: 1, y: 0, duration: 0.3, ease: 'back.out(1.5)' }
+        );
+      }
     }
-  });
+  );
 
   const handleAction = async (btn: DialogButton) => {
     if (modalRef && backdropRef) {

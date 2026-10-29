@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { For, onCleanup, onMount } from 'solid-js';
+import { For, onCleanup, onSettled } from 'solid-js';
 import { useApp, type ToastItem } from '../store/appStore';
 
 const TOAST_DURATION_SEC = 3.5;
@@ -29,7 +29,7 @@ function ToastCard(props: { item: ToastItem; onDismiss: (id: string) => void }) 
     }
   };
 
-  onMount(() => {
+  onSettled(() => {
     if (cardRef) {
       gsap.fromTo(
         cardRef,

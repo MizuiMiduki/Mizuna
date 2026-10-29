@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@solidjs/testing-library';
+import { flush } from 'solid-js';
 import {
   AppProvider,
   useApp,
@@ -38,12 +39,16 @@ describe('appStore', () => {
       });
 
       result.setCurrentView('about');
+      flush();
       expect(result.currentView()).toBe('about');
       result.setCurrentView('shortcuts');
+      flush();
       expect(result.currentView()).toBe('shortcuts');
       result.setCurrentView('announcements');
+      flush();
       expect(result.currentView()).toBe('announcements');
       result.setCurrentView('add_account');
+      flush();
       expect(result.currentView()).toBe('add_account');
     });
 
@@ -53,15 +58,19 @@ describe('appStore', () => {
       });
 
       result.setNoteText('テストノート本文');
+      flush();
       expect(result.noteText()).toBe('テストノート本文');
 
       result.setCwText('注釈');
+      flush();
       expect(result.cwText()).toBe('注釈');
 
       result.setVisibility('home');
+      flush();
       expect(result.visibility()).toBe('home');
 
       result.setEndMizuna(true);
+      flush();
       expect(result.endMizuna()).toBe(true);
     });
 
@@ -74,11 +83,13 @@ describe('appStore', () => {
       const fakeFile = new File([fakeBlob], 'test.png', { type: 'image/png' });
 
       await result.addAttachedFiles([fakeFile]);
+      flush();
       expect(result.attachedImages().length).toBe(1);
       expect(result.attachedImages()[0].name).toBe('test.png');
 
       const targetId = result.attachedImages()[0].id;
       result.removeAttachedImage(targetId);
+      flush();
       expect(result.attachedImages().length).toBe(0);
     });
 
@@ -88,12 +99,14 @@ describe('appStore', () => {
       });
 
       result.showToast('テストメッセージ', 'info', 'タイトル');
+      flush();
       expect(result.toasts().length).toBe(1);
       expect(result.toasts()[0].message).toBe('テストメッセージ');
       expect(result.toasts()[0].type).toBe('info');
 
       const toastId = result.toasts()[0].id;
       result.dismissToast(toastId);
+      flush();
       expect(result.toasts().length).toBe(0);
     });
 
@@ -107,11 +120,13 @@ describe('appStore', () => {
         contentText: 'よろしいですか？',
         buttons: [{ label: 'OK' }],
       });
+      flush();
 
       expect(result.dialogConfig()).not.toBeNull();
       expect(result.dialogConfig()?.title).toBe('確認ダイアログ');
 
       result.closeDialog();
+      flush();
       expect(result.dialogConfig()).toBeNull();
     });
   });
