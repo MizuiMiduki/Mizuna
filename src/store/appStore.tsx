@@ -126,6 +126,7 @@ interface AppContextValue {
   // アカウント・設定操作
   switchAccount: (accountId: number) => Promise<void>;
   deleteSelectedAccounts: (accountIds: number[]) => Promise<void>;
+  reorderAccounts: (newOrderedIds: number[]) => Promise<void>;
   updateSettings: (changes: Partial<SettingRecord>) => Promise<void>;
   isSyncingAccounts: Accessor<boolean>;
   syncAllAccounts: () => Promise<void>;
@@ -350,25 +351,40 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   /**
+   * アカウントの並び順 (account_order) に基づいてソート
+   */
+  const sortAccountsByOrder = (accountList: AccountRecord[], order: number[]): AccountRecord[] => {
+    if (!order || order.length === 0) return accountList;
+    const orderMap = new Map(order.map((id, index) => [id, index]));
+    return [...accountList].sort((a, b) => {
+      const orderA = a.id !== undefined && orderMap.has(a.id) ? orderMap.get(a.id)! : 999999;
+      const orderB = b.id !== undefined && orderMap.has(b.id) ? orderMap.get(b.id)! : 999999;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.id ?? 0) - (b.id ?? 0);
+    });
+  };
+
+  /**
    * アカウント一覧と選択中ユーザーをDBから再読み込み
    */
   const reloadAccounts = async () => {
     const allAccounts = await db.account.orderBy('id').toArray();
-    setAccounts(allAccounts);
+    const sortedAccounts = sortAccountsByOrder(allAccounts, settings().account_order ?? []);
+    setAccounts(sortedAccounts);
 
-    if (allAccounts.length === 0) {
+    if (sortedAccounts.length === 0) {
       setCurrentUser(null);
       await applyThemeAndMode(settings(), undefined);
       return;
     }
 
     const selectedId = settings().select_user;
-    const matched = allAccounts.find((a) => a.id === selectedId);
+    const matched = sortedAccounts.find((a) => a.id === selectedId);
     if (matched) {
       setCurrentUser(matched);
       await applyThemeAndMode(settings(), matched.avatarurl, matched.address);
     } else {
-      const firstAccount = allAccounts[0];
+      const firstAccount = sortedAccounts[0];
       if (firstAccount && firstAccount.id !== undefined) {
         await updateSettingDb({ select_user: firstAccount.id });
         setSettings((prev) => ({ ...prev, select_user: firstAccount.id! }));
@@ -779,6 +795,15 @@ export function AppProvider(props: { children: JSX.Element }) {
   const deleteSelectedAccounts = async (accountIds: number[]) => {
     if (accountIds.length === 0) return;
     await db.account.bulkDelete(accountIds);
+
+    // 並び順設定からも削除対象アカウントを除外
+    const currentOrder = settings().account_order ?? [];
+    if (currentOrder.length > 0) {
+      const nextOrder = currentOrder.filter((id) => !accountIds.includes(id));
+      await updateSettingDb({ account_order: nextOrder });
+      setSettings((prev) => ({ ...prev, account_order: nextOrder }));
+    }
+
     await reloadAccounts();
 
     if (accounts().length === 0) {
@@ -787,6 +812,11 @@ export function AppProvider(props: { children: JSX.Element }) {
     } else {
       showToast(`${accountIds.length}件のアカウントを削除しました`, 'success');
     }
+  };
+
+  const reorderAccounts = async (newOrderedIds: number[]) => {
+    await updateSettings({ account_order: newOrderedIds });
+    setAccounts((prev) => sortAccountsByOrder(prev, newOrderedIds));
   };
 
   const updateSettings = async (changes: Partial<SettingRecord>) => {
@@ -1001,6 +1031,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     clearNoteForm,
     switchAccount,
     deleteSelectedAccounts,
+    reorderAccounts,
     updateSettings,
     isSyncingAccounts,
     syncAllAccounts,

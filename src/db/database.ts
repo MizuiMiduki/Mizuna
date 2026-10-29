@@ -41,6 +41,8 @@ export interface SettingRecord {
   is_check_releasenote: string | null;
   /** 言語設定 */
   language: string;
+  /** アカウントの並び順 (アカウントID配列) */
+  account_order?: number[];
 }
 
 export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
@@ -56,6 +58,7 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
   get language() {
     return detectBrowserLanguage();
   },
+  account_order: [],
 };
 
 export class MizunaDatabase extends Dexie {
@@ -109,6 +112,7 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
       latest_theme_color: settingData.latest_theme_color ?? DEFAULT_USER_SETTINGS.latest_theme_color,
       is_check_releasenote: settingData.is_check_releasenote ?? DEFAULT_USER_SETTINGS.is_check_releasenote,
       language: settingData.language ?? detectBrowserLanguage(),
+      account_order: Array.isArray(settingData.account_order) ? settingData.account_order : [],
     };
   }
 

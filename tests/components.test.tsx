@@ -7,6 +7,7 @@ import { AboutView } from '../src/components/AboutView';
 import { ShortcutsView } from '../src/components/ShortcutsView';
 import { AnnouncementsView } from '../src/components/AnnouncementsView';
 import { HoldHoverTip } from '../src/components/HoldHoverTip';
+import { AccountView } from '../src/components/AccountView';
 import { SettingsView } from '../src/components/SettingsView';
 import { DialogHost } from '../src/components/DialogHost';
 import { SnackbarHost } from '../src/components/SnackbarHost';
@@ -145,6 +146,52 @@ describe('UI Components', () => {
 
       fireEvent.change(select, { target: { value: 'en_us' } });
       expect(select.value).toBe('en_us');
+    });
+  });
+
+  describe('AccountView', () => {
+    it('アカウントが2件以上ある場合に並べ替えモードを起動でき、矢印ボタンで並び順を変更できること', async () => {
+      // 2つ目のアカウントを追加
+      await db.account.add({
+        token: 'tok_test_2',
+        name: '第2アカウント',
+        username: 'test_user_2',
+        address: 'misskey.design',
+        avatarurl: 'https://example.com/avatar2.webp',
+        add_mizuna_versinon: '3.11.0',
+      });
+
+      render(() => (
+        <AppProvider>
+          <AccountView />
+        </AppProvider>
+      ));
+
+      // 最初のアカウントカードを確認
+      const cardsBefore = await screen.findAllByText(/(テストユーザー|第2アカウント)/);
+      expect(cardsBefore.length).toBeGreaterThanOrEqual(2);
+
+      // 並べ替えボタンをクリック
+      const reorderBtn = await screen.findByRole('button', { name: /(並べ替え|swap_vert)/ });
+      expect(reorderBtn).toBeInTheDocument();
+      fireEvent.click(reorderBtn);
+
+      // 並べ替えバナーが表示されること
+      expect(screen.getByText(/矢印ボタンまたはドラッグでアカウントの表示順を変更できます/)).toBeInTheDocument();
+
+      // 移動ボタンが存在すること
+      const downButtons = screen.getAllByRole('button', { name: '下へ移動' });
+      expect(downButtons.length).toBeGreaterThanOrEqual(2);
+      expect(downButtons[0]).not.toBeDisabled();
+
+      // 先頭アカウントを「下へ移動」
+      fireEvent.click(downButtons[0]);
+
+      // 完了ボタンをクリック（ヘッダーまたはバナー）
+      const completeBtns = screen.getAllByRole('button', { name: /(完了|check)/ });
+      expect(completeBtns.length).toBeGreaterThanOrEqual(1);
+      fireEvent.click(completeBtns[0]);
+      expect(screen.queryByText(/矢印ボタンまたはドラッグでアカウントの表示順を変更できます/)).not.toBeInTheDocument();
     });
   });
 });

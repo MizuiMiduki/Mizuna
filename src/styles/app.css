@@ -1241,6 +1241,31 @@ body {
   font-size: 0.86rem;
 }
 
+.mizuna-reorder-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  margin-bottom: 14px;
+  border-radius: var(--mizuna-radius-lg);
+  background: color-mix(in srgb, var(--primary-container) 65%, var(--surface));
+  color: var(--on-primary-container);
+  border: 1px solid color-mix(in srgb, var(--primary) 35%, transparent);
+  font-size: 0.86rem;
+}
+
+.mizuna-reorder-banner-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.mizuna-reorder-banner-text i {
+  font-size: 20px;
+}
+
 .mizuna-acc-grid {
   display: flex;
   flex-direction: column;
@@ -1384,6 +1409,82 @@ body {
   background: color-mix(in srgb, var(--surface-container-highest) 80%, transparent);
   color: var(--on-surface-variant);
   white-space: nowrap;
+}
+
+/* アカウント並べ替えスタイル */
+.mizuna-acc-card.is-reordering {
+  cursor: grab;
+}
+
+.mizuna-acc-card.is-reordering:active {
+  cursor: grabbing;
+}
+
+.mizuna-acc-card.is-dragging {
+  opacity: 0.4;
+  border-style: dashed;
+  border-color: var(--primary);
+  transform: scale(0.98);
+}
+
+.mizuna-acc-card.is-drag-over {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary);
+  transform: scale(1.01);
+}
+
+.mizuna-acc-reorder-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.mizuna-reorder-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: var(--mizuna-radius-pill) !important;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 70%, transparent) !important;
+  background: var(--surface) !important;
+  color: var(--on-surface);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mizuna-reorder-btn:hover:not(:disabled) {
+  border-color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface)) !important;
+  color: var(--primary);
+}
+
+.mizuna-reorder-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.mizuna-reorder-btn i {
+  font-size: 18px !important;
+}
+
+.mizuna-reorder-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 32px;
+  color: var(--on-surface-variant);
+  cursor: grab;
+  user-select: none;
+}
+
+.mizuna-reorder-drag-handle i {
+  font-size: 20px !important;
 }
 
 /* =========================================

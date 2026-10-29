@@ -10,13 +10,17 @@ export function AccountView() {
     settings,
     switchAccount,
     deleteSelectedAccounts,
+    reorderAccounts,
     setCurrentView,
     openDialog,
     showToast,
   } = useApp();
 
   const [isDeleteMode, setIsDeleteMode] = createSignal(false);
+  const [isReorderMode, setIsReorderMode] = createSignal(false);
   const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
+  const [draggedIndex, setDraggedIndex] = createSignal<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = createSignal<number | null>(null);
   let listRef: HTMLDivElement | undefined;
 
   onMount(() => {
@@ -34,7 +38,67 @@ export function AccountView() {
 
   const toggleDeleteMode = () => {
     setIsDeleteMode((prev) => !prev);
+    setIsReorderMode(false);
     setSelectedIds([]);
+  };
+
+  const toggleReorderMode = () => {
+    setIsReorderMode((prev) => !prev);
+    setIsDeleteMode(false);
+    setSelectedIds([]);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const moveAccount = async (fromIndex: number, toIndex: number) => {
+    const list = [...accounts()];
+    if (fromIndex < 0 || fromIndex >= list.length || toIndex < 0 || toIndex >= list.length) {
+      return;
+    }
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+
+    const newIds = list.map((a) => a.id).filter((id): id is number => id !== undefined);
+    await reorderAccounts(newIds);
+  };
+
+  const handleDragStart = (e: DragEvent, index: number) => {
+    if (!isReorderMode()) return;
+    setDraggedIndex(index);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(index));
+    }
+  };
+
+  const handleDragOver = (e: DragEvent, index: number) => {
+    if (!isReorderMode()) return;
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e: DragEvent, targetIndex: number) => {
+    if (!isReorderMode()) return;
+    e.preventDefault();
+    const sourceIndex = draggedIndex();
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    if (sourceIndex !== null && sourceIndex !== targetIndex) {
+      await moveAccount(sourceIndex, targetIndex);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const toggleSelectId = (id: number) => {
@@ -45,6 +109,9 @@ export function AccountView() {
 
   const handleCardClick = async (id: number | undefined) => {
     if (id === undefined) return;
+    if (isReorderMode()) {
+      return; // 並べ替えモード中はアカウント切り替えを防止
+    }
     if (isDeleteMode()) {
       toggleSelectId(id);
       return;
@@ -92,25 +159,60 @@ export function AccountView() {
         </div>
 
         <div class="mizuna-header-actions">
-          <button
-            type="button"
-            class={`mizuna-btn ${isDeleteMode() ? 'mizuna-btn-tonal' : 'mizuna-btn-outline'}`}
-            onClick={toggleDeleteMode}
-          >
-            <i>{isDeleteMode() ? 'close' : 'delete_outline'}</i>
-            <span>{isDeleteMode() ? 'キャンセル' : '選択削除'}</span>
-          </button>
+          <Show when={!isDeleteMode()}>
+            <button
+              type="button"
+              class={`mizuna-btn ${isReorderMode() ? 'mizuna-btn-primary' : 'mizuna-btn-outline'}`}
+              onClick={toggleReorderMode}
+              disabled={accounts().length <= 1}
+              title="アカウントの表示順を並べ替え"
+            >
+              <i>{isReorderMode() ? 'check' : 'swap_vert'}</i>
+              <span>{isReorderMode() ? '完了' : '並べ替え'}</span>
+            </button>
+          </Show>
 
-          <button
-            type="button"
-            class="add_account_floating_button mizuna-btn mizuna-btn-primary"
-            onClick={() => setCurrentView('add_account')}
-          >
-            <i>person_add</i>
-            <span>アカウント追加</span>
-          </button>
+          <Show when={!isReorderMode()}>
+            <button
+              type="button"
+              class={`mizuna-btn ${isDeleteMode() ? 'mizuna-btn-tonal' : 'mizuna-btn-outline'}`}
+              onClick={toggleDeleteMode}
+            >
+              <i>{isDeleteMode() ? 'close' : 'delete_outline'}</i>
+              <span>{isDeleteMode() ? 'キャンセル' : '選択削除'}</span>
+            </button>
+          </Show>
+
+          <Show when={!isDeleteMode() && !isReorderMode()}>
+            <button
+              type="button"
+              class="add_account_floating_button mizuna-btn mizuna-btn-primary"
+              onClick={() => setCurrentView('add_account')}
+            >
+              <i>person_add</i>
+              <span>アカウント追加</span>
+            </button>
+          </Show>
         </div>
       </div>
+
+      {/* 並べ替えモード時の案内バー */}
+      <Show when={isReorderMode()}>
+        <div class="mizuna-reorder-banner">
+          <div class="mizuna-reorder-banner-text">
+            <i>swap_vert</i>
+            <span>矢印ボタンまたはドラッグでアカウントの表示順を変更できます</span>
+          </div>
+          <button
+            type="button"
+            class="mizuna-btn mizuna-btn-primary"
+            onClick={toggleReorderMode}
+          >
+            <i>check</i>
+            <span>完了</span>
+          </button>
+        </div>
+      </Show>
 
       {/* 削除モード時のアクションバー */}
       <Show when={isDeleteMode()}>
@@ -133,17 +235,27 @@ export function AccountView() {
       {/* アカウントカードグリッド */}
       <div ref={listRef} class="account_display_area mizuna-acc-grid">
         <For each={accounts()}>
-          {(account) => {
+          {(account, index) => {
             const isActive = () => currentUser()?.id === account.id;
             const isChecked = () =>
               account.id !== undefined && selectedIds().includes(account.id);
+            const isDragging = () => draggedIndex() === index();
+            const isDragOver = () => dragOverIndex() === index();
 
             return (
               <div
                 id="account_card"
                 data-id={account.id}
+                draggable={isReorderMode()}
+                onDragStart={(e) => handleDragStart(e, index())}
+                onDragOver={(e) => handleDragOver(e, index())}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index())}
+                onDragEnd={handleDragEnd}
                 class={`mizuna-acc-card ${isActive() ? 'is-active' : ''} ${
                   isChecked() ? 'is-selected-delete' : ''
+                } ${isDragging() ? 'is-dragging' : ''} ${isDragOver() ? 'is-drag-over' : ''} ${
+                  isReorderMode() ? 'is-reordering' : ''
                 }`}
                 onClick={() => handleCardClick(account.id)}
               >
@@ -193,11 +305,44 @@ export function AccountView() {
                   </div>
                 </div>
 
-                <div class="mizuna-acc-meta">
-                  <span class="mizuna-ver-tag" title="追加時のMizunaバージョン">
-                    v{account.add_mizuna_versinon}
-                  </span>
-                </div>
+                <Show when={isReorderMode()}>
+                  <div
+                    class="mizuna-acc-reorder-controls"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      class="mizuna-reorder-btn"
+                      aria-label="上へ移動"
+                      title="上へ移動"
+                      disabled={index() === 0}
+                      onClick={() => moveAccount(index(), index() - 1)}
+                    >
+                      <i>arrow_upward</i>
+                    </button>
+                    <button
+                      type="button"
+                      class="mizuna-reorder-btn"
+                      aria-label="下へ移動"
+                      title="下へ移動"
+                      disabled={index() === accounts().length - 1}
+                      onClick={() => moveAccount(index(), index() + 1)}
+                    >
+                      <i>arrow_downward</i>
+                    </button>
+                    <span class="mizuna-reorder-drag-handle" title="ドラッグして並べ替え">
+                      <i>drag_indicator</i>
+                    </span>
+                  </div>
+                </Show>
+
+                <Show when={!isReorderMode()}>
+                  <div class="mizuna-acc-meta">
+                    <span class="mizuna-ver-tag" title="追加時のMizunaバージョン">
+                      v{account.add_mizuna_versinon}
+                    </span>
+                  </div>
+                </Show>
               </div>
             );
           }}
