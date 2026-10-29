@@ -1,10 +1,14 @@
 name: Create Release
 
 on:
+  push:
+    branches:
+      - main
+      - "[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'リリースの種類 (release: 正式リリース / prerelease: プレリリース)'
+        description: 'リリースの種類 (release: 正式リリース ※mainブランチのみ / prerelease: プレリリース ※mainブランチ以外)'
         required: true
         default: 'release'
         type: choice
@@ -25,6 +29,37 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Validate Branch and Release Type
+        env:
+          BRANCH: ${{ github.ref_name }}
+          INPUT_RELEASE_TYPE: ${{ inputs.release_type }}
+        run: |
+          # 手動実行時は入力値を採用、自動 push 時はブランチ名から自動判別
+          if [ -n "$INPUT_RELEASE_TYPE" ]; then
+            RELEASE_TYPE="$INPUT_RELEASE_TYPE"
+          else
+            if [ "$BRANCH" = "main" ]; then
+              RELEASE_TYPE="release"
+            else
+              RELEASE_TYPE="prerelease"
+            fi
+          fi
+
+          echo "実行ブランチ: $BRANCH"
+          echo "リリース種別: $RELEASE_TYPE"
+
+          if [ "$RELEASE_TYPE" = "prerelease" ] && [ "$BRANCH" = "main" ]; then
+            echo "::error::プレリリース (prerelease) は main ブランチでは実行できません。開発ブランチ（例: 3.12.0 等）から実行してください。"
+            exit 1
+          fi
+
+          if [ "$RELEASE_TYPE" = "release" ] && [ "$BRANCH" != "main" ]; then
+            echo "::error::正式リリース (release) は main ブランチ以外では実行できません。main ブランチから実行してください。（現在のブランチ: $BRANCH）"
+            exit 1
+          fi
+
+          echo "RELEASE_TYPE=$RELEASE_TYPE" >> "$GITHUB_ENV"
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -35,7 +70,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CUSTOM_VERSION: ${{ inputs.custom_version }}
-          RELEASE_TYPE: ${{ inputs.release_type }}
+          RELEASE_TYPE: ${{ env.RELEASE_TYPE }}
           REPO: ${{ github.repository }}
         run: |
           if [ -n "$CUSTOM_VERSION" ]; then
@@ -61,9 +96,17 @@ jobs:
             echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
             echo "release_title=Mizuna $TAG_NAME (Pre-release)" >> "$GITHUB_OUTPUT"
           else
+            # 正式リリースの場合は、同名タグが既に存在していたら再リリースを防止して安全にスキップ
+            if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+              echo "::notice::正式リリースタグ $TAG_NAME は既に存在するため、リリースの作成を安全にスキップします。"
+              echo "skip_release=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
             echo "release_title=Mizuna $TAG_NAME" >> "$GITHUB_OUTPUT"
           fi
+
+          echo "skip_release=false" >> "$GITHUB_OUTPUT"
 
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
           echo "version=$VER_NUM" >> "$GITHUB_OUTPUT"
@@ -103,6 +146,7 @@ jobs:
           git push -f origin "refs/tags/$TAG_NAME"
 
       - name: Create Git Tag and Publish GitHub Release
+        if: steps.meta.outputs.skip_release != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag_name }}
