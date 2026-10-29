@@ -21,6 +21,7 @@ import {
 } from '../db/database';
 import { checkMiAuthSession, fetchLatestAccountInfo, fetchLatestReleaseNote, MisskeyApiError } from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
+import { applyCustomCss } from '../utils/customCss';
 import { translate, type I18nKey } from '../i18n';
 
 export type ViewType =
@@ -626,6 +627,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     try {
       const loadedSettings = await loadOrCreateSettings();
       setSettings(loadedSettings);
+      applyCustomCss(loadedSettings.custom_css ?? '');
       setVisibility(visibilityNumToString(loadedSettings.default_visibility));
       setEndMizuna(loadedSettings.is_note_end_mizuna);
 
@@ -829,6 +831,11 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
     if (changes.is_note_end_mizuna !== undefined) {
       setEndMizuna(changes.is_note_end_mizuna);
+    }
+
+    // カスタムCSSが更新された場合は再適用
+    if (changes.custom_css !== undefined) {
+      applyCustomCss(changes.custom_css);
     }
 
     // テーマやアイコン表示に関する変更があれば再適用

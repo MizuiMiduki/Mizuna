@@ -1748,6 +1748,92 @@ body {
   flex-wrap: wrap;
 }
 
+.mizuna-setting-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 15px 18px;
+}
+
+.mizuna-custom-css-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.mizuna-custom-css-textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  padding: 12px 14px;
+  border-radius: var(--mizuna-radius-card, 12px);
+  background: color-mix(in srgb, var(--surface-container-highest) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 60%, transparent);
+  color: var(--on-surface);
+  resize: vertical;
+  min-height: 120px;
+  box-sizing: border-box;
+  tab-size: 2;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.mizuna-custom-css-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.mizuna-custom-css-warnings {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #b45309;
+}
+
+:root[class~="dark"] .mizuna-custom-css-warnings,
+body.dark .mizuna-custom-css-warnings {
+  color: #fcd34d;
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+}
+
+.mizuna-warning-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.mizuna-warning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mizuna-warning-item {
+  line-height: 1.35;
+}
+
+.mizuna-custom-css-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mizuna-custom-css-disclaimer {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--on-surface-variant);
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
 .mizuna-setting-info {
   flex: 1;
   min-width: 200px;

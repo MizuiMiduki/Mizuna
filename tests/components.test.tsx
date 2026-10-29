@@ -147,6 +147,39 @@ describe('UI Components', () => {
       fireEvent.change(select, { target: { value: 'en_us' } });
       expect(select.value).toBe('en_us');
     });
+
+    it('カスタムCSSのテキストエリアに入力し、保存・クリアできること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      const textarea = (await screen.findByRole('textbox', {
+        name: /(カスタムCSS|Custom CSS)/,
+      })) as HTMLTextAreaElement;
+      expect(textarea).toBeInTheDocument();
+
+      // CSS を入力
+      fireEvent.input(textarea, { target: { value: 'body { background: #123; }' } });
+      expect(textarea.value).toBe('body { background: #123; }');
+
+      // 保存ボタンをクリック
+      const saveBtn = screen.getByRole('button', { name: /(適用して保存|Save & Apply)/ });
+      expect(saveBtn).toBeInTheDocument();
+      fireEvent.click(saveBtn);
+
+      // スタイル要素が DOM に反映されていること
+      const styleEl = document.getElementById('mizuna-user-custom-css');
+      expect(styleEl).not.toBeNull();
+      expect(styleEl?.textContent).toContain('body { background: #123; }');
+
+      // クリアボタンをクリック
+      const clearBtn = screen.getByRole('button', { name: /(クリア|Clear)/ });
+      fireEvent.click(clearBtn);
+      expect(textarea.value).toBe('');
+      expect(styleEl?.textContent).toBe('');
+    });
   });
 
   describe('AccountView', () => {

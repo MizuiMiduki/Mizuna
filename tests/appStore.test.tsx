@@ -144,5 +144,17 @@ describe('appStore', () => {
       const setting = await db.setting.get(1);
       expect(setting?.account_order).toEqual([secondId, firstId]);
     });
+
+    it('updateSettings でカスタムCSSを変更したときにステートとDOMに反映されること', async () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      await result.updateSettings({ custom_css: '.custom-test { color: purple; }' });
+      expect(result.settings().custom_css).toBe('.custom-test { color: purple; }');
+
+      const styleEl = document.getElementById('mizuna-user-custom-css');
+      expect(styleEl?.textContent).toContain('.custom-test { color: purple; }');
+    });
   });
 });

@@ -43,6 +43,8 @@ export interface SettingRecord {
   language: string;
   /** アカウントの並び順 (アカウントID配列) */
   account_order?: number[];
+  /** ユーザー定義のカスタムCSS */
+  custom_css?: string;
 }
 
 export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
@@ -59,6 +61,7 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
     return detectBrowserLanguage();
   },
   account_order: [],
+  custom_css: '',
 };
 
 export class MizunaDatabase extends Dexie {
@@ -113,6 +116,7 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
       is_check_releasenote: settingData.is_check_releasenote ?? DEFAULT_USER_SETTINGS.is_check_releasenote,
       language: settingData.language ?? detectBrowserLanguage(),
       account_order: Array.isArray(settingData.account_order) ? settingData.account_order : [],
+      custom_css: typeof settingData.custom_css === 'string' ? settingData.custom_css : DEFAULT_USER_SETTINGS.custom_css,
     };
   }
 
