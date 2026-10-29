@@ -96,9 +96,17 @@ jobs:
             echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
             echo "release_title=Mizuna $TAG_NAME (Pre-release)" >> "$GITHUB_OUTPUT"
           else
+            # 正式リリースの場合は、同名タグが既に存在していたら再リリースを防止して安全にスキップ
+            if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+              echo "::notice::正式リリースタグ $TAG_NAME は既に存在するため、リリースの作成を安全にスキップします。"
+              echo "skip_release=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
             echo "release_title=Mizuna $TAG_NAME" >> "$GITHUB_OUTPUT"
           fi
+
+          echo "skip_release=false" >> "$GITHUB_OUTPUT"
 
           echo "tag_name=$TAG_NAME" >> "$GITHUB_OUTPUT"
           echo "version=$VER_NUM" >> "$GITHUB_OUTPUT"
@@ -138,6 +146,7 @@ jobs:
           git push -f origin "refs/tags/$TAG_NAME"
 
       - name: Create Git Tag and Publish GitHub Release
+        if: steps.meta.outputs.skip_release != 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag_name }}
