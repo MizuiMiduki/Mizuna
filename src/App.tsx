@@ -26,6 +26,22 @@ function MainContent() {
     trackPageView(currentView());
   });
 
+  // ページ遷移（currentView の切り替え）時にスクロール量を最上部 (0) にリセット
+  createEffect(() => {
+    currentView();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      });
+    }
+  });
+
   createEffect(() => {
     const mode = settings().ui_mode;
     if (typeof document !== 'undefined') {
