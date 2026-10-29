@@ -54,6 +54,8 @@ body {
   padding: 0;
   min-height: 100svh;
   width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
   font-family: "IBM Plex Sans JP", "Inter", system-ui, -apple-system, sans-serif;
   overscroll-behavior-y: none;
   touch-action: manipulation;
@@ -64,6 +66,9 @@ body {
 /* アプリ全体のシェル（アンビエント背景グラデーション付き） */
 .mizuna-app-shell {
   min-height: 100svh;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: clip;
   display: flex;
   flex-direction: column;
   padding-bottom: 108px;
@@ -751,6 +756,36 @@ body {
   font-size: 14px !important;
 }
 
+.mizuna-media-edit {
+  position: absolute;
+  top: 5px;
+  right: 33px;
+  width: 24px !important;
+  height: 24px !important;
+  min-width: 24px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: rgba(15, 20, 25, 0.75) !important;
+  backdrop-filter: blur(4px);
+  color: #fff !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+  transition: background-color 0.15s ease;
+}
+
+.mizuna-media-edit:hover {
+  background: var(--primary) !important;
+}
+
+.mizuna-media-edit i {
+  font-size: 14px !important;
+}
+
 .mizuna-media-footer {
   font-size: 0.74rem;
   color: var(--on-surface-variant);
@@ -1227,18 +1262,28 @@ body {
   gap: 8px;
   flex-wrap: wrap;
   max-width: 100%;
+  min-width: 0;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 540px) {
   .mizuna-header-actions {
     width: 100%;
-    gap: 6px;
+    gap: 8px 6px;
   }
   .mizuna-header-actions .mizuna-btn {
-    flex: 1 1 auto;
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
     padding: 0 10px !important;
     font-size: 0.78rem !important;
   }
+  .mizuna-header-actions .add_account_floating_button {
+    flex: 1 1 100%;
+  }
+}
+
+html.ui-size-large .mizuna-header-actions .mizuna-btn {
+  padding: 0 8px !important;
+  font-size: 0.76rem !important;
 }
 
 .mizuna-delete-banner {
@@ -1915,9 +1960,23 @@ body.dark .mizuna-custom-css-warnings {
     flex: 1 1 0;
     min-width: 0;
     padding: 0 4px !important;
-    gap: 3px;
-    font-size: 0.74rem;
+    gap: 2px;
+    font-size: 0.72rem;
   }
+  .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill i {
+    font-size: 15px !important;
+  }
+}
+
+html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill {
+  font-size: 0.68rem !important;
+  padding: 0 2px !important;
+  gap: 2px !important;
+}
+
+html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill i {
+  font-size: 14px !important;
+  transform: none !important;
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap {
@@ -1929,9 +1988,16 @@ body.dark .mizuna-custom-css-warnings {
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
-  flex: 1 1 auto;
-  min-width: 52px;
-  padding: 0 8px !important;
+  flex: 1 1 calc(25% - 4px);
+  min-width: 48px;
+  padding: 0 6px !important;
+}
+
+@media (max-width: 420px) {
+  .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
+    flex: 1 1 calc(33.333% - 4px);
+    font-size: 0.74rem;
+  }
 }
 
 .mizuna-seg-pill {
@@ -2385,17 +2451,21 @@ body.dark .mizuna-custom-css-warnings {
   bottom: 16px;
   left: 0;
   right: 0;
+  width: 100%;
+  max-width: 100vw;
   z-index: 90;
   display: flex;
   justify-content: center;
   padding: 0 12px;
   pointer-events: none;
+  box-sizing: border-box;
 }
 
 .mizuna-floating-dock {
   pointer-events: auto;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 6px 8px;
   border-radius: var(--mizuna-radius-pill);
@@ -2406,7 +2476,10 @@ body.dark .mizuna-custom-css-warnings {
   box-shadow:
     0 14px 36px -6px color-mix(in srgb, var(--primary) 14%, rgba(0, 0, 0, 0.16)),
     0 2px 10px rgba(0, 0, 0, 0.06);
-  max-width: min(680px, 100%);
+  max-width: calc(100vw - 24px);
+  width: max-content;
+  box-sizing: border-box;
+  flex-shrink: 0;
   user-select: none;
   -webkit-user-select: none;
 }
@@ -2499,6 +2572,7 @@ body.dark .mizuna-custom-css-warnings {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 /* 右側：Material 3 Expressive (M3e) 縦積みナビゲーションアイテム */
@@ -2508,8 +2582,22 @@ body.dark .mizuna-custom-css-warnings {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-width: 84px !important;
-  padding: 0 18px !important;
+  min-width: 72px !important;
+  max-width: 96px !important;
+  padding: 0 14px !important;
+  flex-shrink: 0;
+  box-sizing: border-box !important;
+}
+
+html.ui-size-large .mizuna-m3e-item {
+  min-width: 66px !important;
+  max-width: 86px !important;
+  padding: 0 10px !important;
+}
+
+html.ui-size-large .mizuna-floating-dock {
+  gap: 5px;
+  padding: 4px 6px;
 }
 
 .mizuna-m3e-indicator {
@@ -3967,4 +4055,373 @@ body.is-simple-mode .mizuna-setting-row {
 body.is-simple-mode .mizuna-setting-col {
   padding: 10px 14px !important;
 }
+
+/* =========================================
+   ローカル画像加工モーダル (ImageEditorModal)
+   ========================================= */
+.mizuna-img-editor-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.mizuna-img-editor-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.mizuna-img-editor-dialog {
+  position: relative;
+  z-index: 1;
+  width: 95vw;
+  max-width: 900px;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  color: var(--on-surface);
+  border-radius: var(--mizuna-radius-xl, 24px);
+  border: 1px solid color-mix(in srgb, var(--primary) 25%, color-mix(in srgb, var(--outline-variant) 60%, transparent));
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.mizuna-img-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+}
+
+.mizuna-img-editor-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mizuna-img-editor-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mizuna-img-editor-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mizuna-img-editor-body {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 720px) {
+  .mizuna-img-editor-body {
+    flex-direction: column;
+  }
+}
+
+.mizuna-img-editor-stage-wrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--surface-container-lowest) 70%, #000);
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mizuna-img-editor-stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+}
+
+.mizuna-editor-preview-img {
+  display: block;
+  max-width: min(100%, 560px);
+  max-height: min(52vh, 480px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  transition: transform 0.15s ease-out;
+}
+
+@media (max-width: 720px) {
+  .mizuna-editor-preview-img {
+    max-height: 38vh;
+  }
+}
+
+/* クロップ枠 */
+.mizuna-img-editor-crop-box {
+  position: absolute;
+  border: 2px solid var(--primary);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  cursor: move;
+  touch-action: none;
+}
+
+.mizuna-crop-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border: 2px solid var(--primary);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.mizuna-crop-handle-nw { top: -7px; left: -7px; cursor: nwse-resize; }
+.mizuna-crop-handle-ne { top: -7px; right: -7px; cursor: nesw-resize; }
+.mizuna-crop-handle-sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+.mizuna-crop-handle-se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+
+/* モザイク枠 */
+.mizuna-img-editor-mosaic-overlay {
+  position: absolute;
+  inset: 0;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.mizuna-img-editor-mosaic-rect {
+  position: absolute;
+  border: 1.5px dashed #f43f5e;
+  background: color-mix(in srgb, #f43f5e 20%, transparent);
+  box-sizing: border-box;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.mizuna-mosaic-badge {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  padding: 1px 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  background: #f43f5e;
+  color: #fff;
+  border-radius: 4px;
+}
+
+.mizuna-mosaic-del-btn {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: rgba(0, 0, 0, 0.7) !important;
+  color: #fff !important;
+  border: none !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mizuna-mosaic-del-btn i {
+  font-size: 13px !important;
+}
+
+/* 右側（下側）操作パネル */
+.mizuna-img-editor-controls {
+  width: 320px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-container-low);
+  border-left: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+}
+
+@media (max-width: 720px) {
+  .mizuna-img-editor-controls {
+    width: 100%;
+    border-left: none;
+    border-top: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  }
+}
+
+.mizuna-editor-tabs {
+  display: flex;
+  padding: 6px;
+  gap: 4px;
+  border-bottom: 1px solid color-mix(in srgb, var(--outline-variant) 35%, transparent);
+}
+
+.mizuna-editor-tab {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 34px !important;
+  padding: 0 8px !important;
+  border-radius: var(--mizuna-radius-pill) !important;
+  border: none !important;
+  background: transparent !important;
+  color: var(--on-surface-variant) !important;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mizuna-editor-tab i {
+  font-size: 16px !important;
+}
+
+.mizuna-editor-tab.is-active {
+  background: var(--surface) !important;
+  color: var(--primary) !important;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+}
+
+.mizuna-editor-panel {
+  flex: 1;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+.mizuna-editor-panel-title {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  margin-bottom: 2px;
+}
+
+.mizuna-editor-btn-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.mizuna-editor-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px !important;
+  padding: 0 12px !important;
+  border-radius: var(--mizuna-radius-md, 12px) !important;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 50%, transparent) !important;
+  background: var(--surface) !important;
+  color: var(--on-surface) !important;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mizuna-editor-action-btn:hover {
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+.mizuna-editor-action-btn.is-active {
+  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary) !important;
+}
+
+.mizuna-editor-slider-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mizuna-editor-slider-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mizuna-editor-slider-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  color: var(--on-surface-variant);
+}
+
+.mizuna-editor-slider {
+  width: 100%;
+  accent-color: var(--primary);
+  height: 6px;
+  cursor: pointer;
+}
+
+.mizuna-mosaic-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--mizuna-radius-md, 12px);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  font-size: 0.76rem;
+  color: var(--primary);
+  line-height: 1.4;
+}
+
+.mizuna-mosaic-hint i {
+  font-size: 20px !important;
+  flex-shrink: 0;
+}
+
+.mizuna-mosaic-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.mizuna-mosaic-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+
+.mizuna-img-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 20px;
+  border-top: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  background: var(--surface-container-lowest);
+}
+
+.mizuna-editor-save-btn {
+  min-width: 110px;
+}
+
 

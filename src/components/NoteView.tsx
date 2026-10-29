@@ -18,6 +18,7 @@ import {
 import { getDisplayAvatarUrl } from '../utils/image';
 import { comparisonVersion } from '../utils/version';
 import { HoldHoverTip } from './HoldHoverTip';
+import { ImageEditorModal } from './ImageEditorModal';
 
 export function NoteView() {
   const {
@@ -38,6 +39,7 @@ export function NoteView() {
     attachedImages,
     addAttachedFiles,
     removeAttachedImage,
+    updateAttachedImage,
     clearNoteForm,
     showToast,
     t,
@@ -47,6 +49,7 @@ export function NoteView() {
   const [isSending, setIsSending] = createSignal(false);
   const [sendingStatus, setSendingStatus] = createSignal('');
   const [previewModalImage, setPreviewModalImage] = createSignal<AttachedImageItem | null>(null);
+  const [editingImageItem, setEditingImageItem] = createSignal<AttachedImageItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = createSignal(false);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = createSignal(false);
 
@@ -274,6 +277,17 @@ export function NoteView() {
     setPreviewModalImage(null);
   };
 
+  const handleSaveEditedImage = (editedFile: File) => {
+    const item = editingImageItem();
+    if (!item) return;
+    updateAttachedImage(item.id, editedFile);
+    setEditingImageItem(null);
+    if (previewModalImage()?.id === item.id) {
+      setPreviewModalImage(null);
+    }
+    showToast('画像を加工しました', 'success');
+  };
+
   const handlePaste = (e: ClipboardEvent) => {
     const items = e.clipboardData?.files;
     if (items && items.length > 0) {
@@ -473,6 +487,17 @@ export function NoteView() {
                     <div class="mizuna-media-zoom-hint">
                       <i>zoom_in</i>
                     </div>
+                    <button
+                      type="button"
+                      class="mizuna-media-edit"
+                      title="画像を加工・編集"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingImageItem(item);
+                      }}
+                    >
+                      <i>tune</i>
+                    </button>
                     <button
                       type="button"
                       class="mizuna-media-remove"
@@ -806,6 +831,17 @@ export function NoteView() {
                 <div class="mizuna-lightbox-bottombar-inner">
                   <button
                     type="button"
+                    class="mizuna-btn mizuna-btn-tonal mizuna-lightbox-action-btn"
+                    onClick={() => {
+                      setEditingImageItem(imgItem());
+                      setPreviewModalImage(null);
+                    }}
+                  >
+                    <i>tune</i>
+                    <span>画像を加工する</span>
+                  </button>
+                  <button
+                    type="button"
                     id="deleteImageButton"
                     class="mizuna-btn mizuna-btn-danger mizuna-lightbox-action-btn"
                     onClick={handleDeletePreviewImage}
@@ -817,6 +853,17 @@ export function NoteView() {
               </div>
             </div>
           </Portal>
+        )}
+      </Show>
+
+      {/* 画像加工モーダル */}
+      <Show when={editingImageItem()}>
+        {(item) => (
+          <ImageEditorModal
+            file={item().file}
+            onClose={() => setEditingImageItem(null)}
+            onSave={handleSaveEditedImage}
+          />
         )}
       </Show>
     </div>

@@ -28,7 +28,7 @@ export function FooterNav() {
   return (
     <Show when={accounts().length > 0}>
       <div class="mizuna-dock-wrapper">
-        <footer class="mizuna-floating-dock">
+        <div class="mizuna-floating-dock" role="toolbar" aria-label="Main Navigation">
           {/* 左側：アカウントアイコンのみのボタン（長押し・長時間ホバーでTIPS表示） */}
           <HoldHoverTip
             label={currentUser()?.name ?? t('dock.accounts')}
@@ -61,7 +61,7 @@ export function FooterNav() {
           <div class="mizuna-dock-divider" />
 
           {/* 右側：Material 3 Expressive ナビゲーションアイテム（アイコン＋下部テキスト） */}
-          <nav class="mizuna-dock-nav">
+          <div class="mizuna-dock-nav" role="navigation">
             <HoldHoverTip label={t('dock.note')} sublabel={t('dock.note_sub')} placement="top">
               <button
                 type="button"
@@ -88,8 +88,8 @@ export function FooterNav() {
                 <span class="mizuna-m3e-label">{t('dock.settings')}</span>
               </button>
             </HoldHoverTip>
-          </nav>
-        </footer>
+          </div>
+        </div>
       </div>
     </Show>
   );

@@ -122,6 +122,7 @@ interface AppContextValue {
   attachedImages: Accessor<AttachedImageItem[]>;
   addAttachedFiles: (fileList: FileList | File[]) => void;
   removeAttachedImage: (id: string) => void;
+  updateAttachedImage: (id: string, file: File) => void;
   clearNoteForm: (showNotification?: boolean) => void;
 
   // アカウント・設定操作
@@ -873,6 +874,56 @@ export function AppProvider(props: { children: JSX.Element }) {
     });
   };
 
+  const updateAttachedImage = (id: string, updatedFile: File) => {
+    const current = attachedImages();
+    const target = current.find((item) => item.id === id);
+    if (!target) return;
+
+    revokeAttachedUrls(target);
+
+    const newDataUrl = URL.createObjectURL(updatedFile);
+    const updatedItem: AttachedImageItem = {
+      ...target,
+      name: updatedFile.name,
+      file: updatedFile,
+      dataUrl: newDataUrl,
+      thumbUrl: newDataUrl,
+      originalSize: updatedFile.size,
+      compressedFile: undefined,
+      compressedSize: undefined,
+    };
+
+    setAttachedImages((prev) =>
+      prev.map((item) => (item.id === id ? updatedItem : item))
+    );
+
+    attachProcessQueue = attachProcessQueue.then(async () => {
+      const thumbUrl = (await createThumbnailUrl(updatedFile)) ?? newDataUrl;
+      let alive = false;
+      setAttachedImages((prev) =>
+        prev.map((img) => {
+          if (img.id !== id) return img;
+          alive = true;
+          return { ...img, thumbUrl };
+        })
+      );
+      if (!alive && thumbUrl !== newDataUrl) URL.revokeObjectURL(thumbUrl);
+
+      try {
+        const compressed = await compressAndConvertToWebP(updatedFile, 0.75);
+        setAttachedImages((prev) =>
+          prev.map((img) =>
+            img.id === id
+              ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
+              : img
+          )
+        );
+      } catch (err) {
+        console.warn('Pre-compression failed for edited image:', err);
+      }
+    });
+  };
+
   const clearNoteForm = (showNotification = true) => {
     localStorage.removeItem('wst_title');
     localStorage.removeItem('wst_text');
@@ -1140,6 +1191,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     attachedImages,
     addAttachedFiles,
     removeAttachedImage,
+    updateAttachedImage,
     clearNoteForm,
     switchAccount,
     deleteSelectedAccounts,
