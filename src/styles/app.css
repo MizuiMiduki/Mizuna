@@ -1225,31 +1225,56 @@ body {
 .mizuna-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 6px;
+  flex-wrap: nowrap;
   max-width: 100%;
   min-width: 0;
+  width: auto;
 }
 
-@media (max-width: 540px) {
+@media (max-width: 640px) {
   .mizuna-header-actions {
     width: 100%;
-    gap: 8px 6px;
+    gap: 6px;
+    flex-wrap: nowrap;
   }
   .mizuna-header-actions .mizuna-btn {
-    flex: 1 1 calc(50% - 4px);
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 0 6px !important;
+    font-size: 0.74rem !important;
+    gap: 4px !important;
+    height: 38px !important;
+    white-space: nowrap !important;
+  }
+  .mizuna-header-actions .mizuna-btn i {
+    font-size: 16px !important;
+    flex-shrink: 0 !important;
+  }
+  .mizuna-header-actions .mizuna-btn span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     min-width: 0;
-    padding: 0 10px !important;
-    font-size: 0.78rem !important;
   }
   .mizuna-header-actions .add_account_floating_button {
-    flex: 1 1 100%;
+    flex: 1 1 0 !important;
   }
+}
+
+html.ui-size-large .mizuna-header-actions {
+  gap: 4px !important;
 }
 
 html.ui-size-large .mizuna-header-actions .mizuna-btn {
-  padding: 0 8px !important;
-  font-size: 0.76rem !important;
+  padding: 0 4px !important;
+  font-size: 0.70rem !important;
+  gap: 2px !important;
+}
+
+html.ui-size-large .mizuna-header-actions .mizuna-btn i {
+  font-size: 14px !important;
+  transform: none !important;
 }
 
 .mizuna-delete-banner {
@@ -1914,23 +1939,28 @@ body.dark .mizuna-custom-css-warnings {
   gap: 2px;
   max-width: 100%;
   box-sizing: border-box;
+  min-width: 0;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   /* 幅狭画面では横並びピルがカードを突き破らないよう、カード幅100%で均等にフィットさせる */
   .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) {
     width: 100%;
     display: flex;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
   }
   .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill {
     flex: 1 1 0;
     min-width: 0;
     padding: 0 4px !important;
-    gap: 2px;
+    gap: 3px;
     font-size: 0.72rem;
+    flex-shrink: 1;
   }
   .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill i {
-    font-size: 15px !important;
+    font-size: 14px !important;
   }
 }
 
@@ -1941,7 +1971,7 @@ html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills
 }
 
 html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill i {
-  font-size: 14px !important;
+  font-size: 13px !important;
   transform: none !important;
 }
 
@@ -1951,6 +1981,9 @@ html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills
   width: 100%;
   border-radius: var(--mizuna-radius-lg);
   gap: 4px;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
@@ -1966,13 +1999,24 @@ html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills
   }
 }
 
+html.ui-size-large .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
+  font-size: 0.70rem !important;
+  padding: 0 3px !important;
+  gap: 2px !important;
+}
+
+html.ui-size-large .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
+  font-size: 14px !important;
+  transform: none !important;
+}
+
 .mizuna-seg-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 5px;
   height: 32px !important;
-  padding: 0 12px !important;
+  padding: 0 10px !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
   border: none !important;
@@ -1983,11 +2027,20 @@ html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap !important;
-  flex-shrink: 0;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.mizuna-seg-pill span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .mizuna-seg-pill i {
   font-size: 16px !important;
+  flex-shrink: 0;
 }
 
 .mizuna-seg-pill.is-active {
