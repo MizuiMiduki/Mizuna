@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { For, onMount } from 'solid-js';
+import { For, onMount, Show } from 'solid-js';
 import { mizuna_options, mizuna_share } from '../config/mizunaOptions';
 import { useApp } from '../store/appStore';
 
@@ -47,7 +47,7 @@ const OSS_LICENSES = [
 ];
 
 export function AboutView() {
-  const { accounts, setCurrentView, showToast } = useApp();
+  const { accounts, setCurrentView, showToast, hasPendingUpdate, applyPendingUpdate } = useApp();
   let containerRef: HTMLDivElement | undefined;
 
   onMount(() => {
@@ -105,6 +105,19 @@ export function AboutView() {
               v{mizuna_options.mizuna_version}
             </span>
           </div>
+          <Show when={hasPendingUpdate()}>
+            <div style="margin-top: 8px;">
+              <button
+                type="button"
+                class="mizuna-btn mizuna-btn-tonal"
+                style="padding: 0 14px; height: 32px; font-size: 0.8rem; gap: 4px;"
+                onClick={applyPendingUpdate}
+              >
+                <i>system_update</i>
+                <span>最新版にアップデート</span>
+              </button>
+            </div>
+          </Show>
         </div>
         <button
           type="button"
@@ -145,9 +158,21 @@ export function AboutView() {
         </div>
         <div class="mizuna-row-divider" />
         <div class="mizuna-meta-row">
+          <span class="mizuna-meta-label">Privacy Policy</span>
+          <button
+            type="button"
+            class="mizuna-link-btn"
+            onClick={() => setCurrentView('privacy')}
+          >
+            <span>プライバシーポリシー</span>
+            <i>arrow_forward</i>
+          </button>
+        </div>
+        <div class="mizuna-row-divider" />
+        <div class="mizuna-meta-row">
           <span class="mizuna-meta-label">License / Copyright</span>
           <span class="mizuna-meta-val">
-            MIT License · (c) <span id="Copyright_year">{currentYear}</span> Mizui Miduki
+            MIT License · ©<span id="Copyright_year">{currentYear}</span> Mizui Miduki
           </span>
         </div>
         <div class="mizuna-row-divider" />

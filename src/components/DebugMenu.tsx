@@ -77,7 +77,7 @@ export function DebugMenu() {
       username: isLongName
         ? `very_long_username_account_test_example_${rand}`
         : `mizuna_dev_${rand}`,
-      address: isLongName ? 'very-long-instance-domain-example.misskey.io' : 'misskey.io',
+      address: isLongName ? 'very-long-instance-domain-example.example.com' : 'example.com',
       avatarurl: '/icon.png',
       add_mizuna_versinon: ver,
     });

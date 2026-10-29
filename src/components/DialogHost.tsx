@@ -3,7 +3,7 @@ import { createEffect, For, Show } from 'solid-js';
 import { useApp, type DialogButton } from '../store/appStore';
 
 export function DialogHost() {
-  const { dialogConfig, closeDialog } = useApp();
+  const { dialogConfig, closeDialog, setCurrentView } = useApp();
   let modalRef: HTMLDivElement | undefined;
   let backdropRef: HTMLDivElement | undefined;
 
@@ -105,6 +105,27 @@ export function DialogHost() {
                       <i class="mizuna-modal-linkcard-arrow">open_in_new</i>
                     </a>
                   )}
+                </Show>
+
+                {/* プライバシーポリシーリンク */}
+                <Show when={cfg().showPrivacyPolicy}>
+                  <button
+                    type="button"
+                    class="mizuna-modal-linkcard mizuna-modal-privacy-card"
+                    onClick={() => {
+                      closeDialog();
+                      setCurrentView('privacy');
+                    }}
+                  >
+                    <div class="mizuna-modal-linkcard-icon">
+                      <i>policy</i>
+                    </div>
+                    <div class="mizuna-modal-linkcard-meta">
+                      <span class="mizuna-modal-linkcard-label">PRIVACY POLICY</span>
+                      <span class="mizuna-modal-linkcard-title">プライバシーポリシー</span>
+                    </div>
+                    <i class="mizuna-modal-linkcard-arrow">arrow_forward</i>
+                  </button>
                 </Show>
               </div>
 

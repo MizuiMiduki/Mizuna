@@ -1,9 +1,20 @@
 import gsap from 'gsap';
-import { onMount } from 'solid-js';
+import { For, onMount, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
+import { SUPPORTED_LANGUAGES } from '../i18n';
 
 export function SettingsView() {
-  const { settings, updateSettings, isSyncingAccounts, syncAllAccounts, exportAccounts } = useApp();
+  const {
+    settings,
+    updateSettings,
+    isSyncingAccounts,
+    syncAllAccounts,
+    exportAccounts,
+    hasPendingUpdate,
+    applyPendingUpdate,
+    checkForUpdate,
+    t,
+  } = useApp();
   let panelRef: HTMLDivElement | undefined;
 
   onMount(() => {
@@ -16,7 +27,15 @@ export function SettingsView() {
     }
   });
 
-  const handleClearCache = () => {
+  const handleClearCache = async () => {
+    if (typeof caches !== 'undefined') {
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((k) => caches.delete(k)));
+      } catch (e) {
+        console.error('Cache delete error:', e);
+      }
+    }
     window.location.reload();
   };
 
@@ -24,7 +43,7 @@ export function SettingsView() {
     <div ref={panelRef} class="mizuna-settings-view">
       <div class="mizuna-section-header">
         <div>
-          <h2 class="mizuna-section-title">設定</h2>
+          <h2 class="mizuna-section-title">{t('settings.title')}</h2>
         </div>
       </div>
 
@@ -32,13 +51,13 @@ export function SettingsView() {
         <div class="cp_tabpanel tab1" id="first_tab">
           {/* 投稿設定グループ */}
           <div class="mizuna-setting-group">
-            <div class="mizuna-group-label">投稿のデフォルト設定</div>
+            <div class="mizuna-group-label">{t('settings.group_post')}</div>
 
             <div class="mizuna-setting-card">
               {/* デフォルト投稿範囲 */}
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">デフォルトの公開範囲</div>
+                  <div class="mizuna-setting-title">{t('settings.default_visibility')}</div>
                 </div>
                 <div class="mizuna-seg-pills">
                   <button
@@ -50,7 +69,7 @@ export function SettingsView() {
                     onClick={() => updateSettings({ default_visibility: 1 })}
                   >
                     <i>public</i>
-                    <span>パブリック</span>
+                    <span>{t('settings.visibility_public')}</span>
                   </button>
                   <button
                     type="button"
@@ -61,7 +80,7 @@ export function SettingsView() {
                     onClick={() => updateSettings({ default_visibility: 2 })}
                   >
                     <i>home</i>
-                    <span>ホーム</span>
+                    <span>{t('settings.visibility_home')}</span>
                   </button>
                   <button
                     type="button"
@@ -72,7 +91,7 @@ export function SettingsView() {
                     onClick={() => updateSettings({ default_visibility: 3 })}
                   >
                     <i>lock</i>
-                    <span>フォロワー</span>
+                    <span>{t('settings.visibility_followers')}</span>
                   </button>
                 </div>
               </div>
@@ -82,7 +101,7 @@ export function SettingsView() {
               {/* (from Mizuna) 付与 */}
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">末尾に『(from Mizuna)』を付与</div>
+                  <div class="mizuna-setting-title">{t('settings.append_mizuna')}</div>
                 </div>
                 <div class="mizuna-seg-pills">
                   <button
@@ -112,13 +131,13 @@ export function SettingsView() {
 
           {/* 外観・テーマ設定グループ */}
           <div class="mizuna-setting-group">
-            <div class="mizuna-group-label">外観・テーマ設定</div>
+            <div class="mizuna-group-label">{t('settings.group_appearance')}</div>
 
             <div class="mizuna-setting-card">
               {/* ダークモード */}
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">カラーモード</div>
+                  <div class="mizuna-setting-title">{t('settings.color_mode')}</div>
                 </div>
                 <div class="mizuna-seg-pills">
                   <button
@@ -130,7 +149,7 @@ export function SettingsView() {
                     onClick={() => updateSettings({ is_darkmode: 1 })}
                   >
                     <i>light_mode</i>
-                    <span>ライト</span>
+                    <span>{t('settings.color_light')}</span>
                   </button>
                   <button
                     type="button"
@@ -141,7 +160,7 @@ export function SettingsView() {
                     onClick={() => updateSettings({ is_darkmode: 2 })}
                   >
                     <i>brightness_auto</i>
-                    <span>自動</span>
+                    <span>{t('settings.color_auto')}</span>
                   </button>
                   <button
                     type="button"
@@ -152,7 +171,7 @@ export function SettingsView() {
                     onClick={() => updateSettings({ is_darkmode: 3 })}
                   >
                     <i>dark_mode</i>
-                    <span>ダーク</span>
+                    <span>{t('settings.color_dark')}</span>
                   </button>
                 </div>
               </div>
@@ -162,7 +181,7 @@ export function SettingsView() {
               {/* ダイナミックテーマカラー */}
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">アイコンからテーマカラーを抽出</div>
+                  <div class="mizuna-setting-title">{t('settings.pick_theme_color')}</div>
                 </div>
                 <div class="mizuna-seg-pills">
                   <button
@@ -193,7 +212,7 @@ export function SettingsView() {
               {/* アイコン非表示 */}
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">アイコン画像を非表示にする</div>
+                  <div class="mizuna-setting-title">{t('settings.hide_avatar')}</div>
                 </div>
                 <div class="mizuna-seg-pills">
                   <button
@@ -221,16 +240,73 @@ export function SettingsView() {
             </div>
           </div>
 
-          {/* データ・メンテナンスグループ */}
+          {/* 言語設定グループ */}
           <div class="mizuna-setting-group">
-            <div class="mizuna-group-label">アカウント同期 ＆ バックアップ</div>
+            <div class="mizuna-group-label">{t('settings.group_language')}</div>
 
             <div class="mizuna-setting-card">
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">全アカウント情報の同期</div>
+                  <div class="mizuna-setting-title">{t('settings.language')}</div>
+                  <div class="mizuna-setting-desc">{t('settings.language_desc')}</div>
+                </div>
+
+                <div class="mizuna-select-wrapper">
+                  <select
+                    id="settings_language"
+                    class="mizuna-select"
+                    value={settings().language}
+                    onChange={(e) => updateSettings({ language: e.currentTarget.value as any })}
+                    aria-label={t('settings.language')}
+                  >
+                    <For each={SUPPORTED_LANGUAGES}>
+                      {(lang) => (
+                        <option value={lang.code} selected={settings().language === lang.code}>
+                          {lang.label}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                  <i class="mizuna-select-arrow" aria-hidden="true">
+                    expand_more
+                  </i>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* データ・メンテナンスグループ */}
+          <div class="mizuna-setting-group">
+            <div class="mizuna-group-label">{t('settings.group_sync_backup')}</div>
+
+            <div class="mizuna-setting-card">
+              <Show when={hasPendingUpdate()}>
+                <div class="mizuna-setting-row" style="background: color-mix(in srgb, var(--primary) 12%, transparent); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);">
+                  <div class="mizuna-setting-info">
+                    <div class="mizuna-setting-title" style="color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                      <i style="font-size: 20px;">system_update</i>
+                      <span>{t('update.pending_title')}</span>
+                    </div>
+                    <div class="mizuna-setting-desc">
+                      {t('update.pending_desc')}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="mizuna-btn mizuna-btn-primary"
+                    onClick={applyPendingUpdate}
+                  >
+                    <i>restart_alt</i>
+                    <span>{t('update.apply_now')}</span>
+                  </button>
+                </div>
+              </Show>
+
+              <div class="mizuna-setting-row">
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">{t('settings.sync_all')}</div>
                   <div class="mizuna-setting-desc">
-                    登録済み全アカウントの最新プロフィール（名前・アイコン等）を取得します
+                    {t('settings.sync_all_desc')}
                   </div>
                 </div>
                 <button
@@ -240,7 +316,7 @@ export function SettingsView() {
                   onClick={syncAllAccounts}
                 >
                   <i class={isSyncingAccounts() ? 'is-spinning' : ''}>sync</i>
-                  <span>{isSyncingAccounts() ? '同期中...' : '全件同期'}</span>
+                  <span>{isSyncingAccounts() ? t('settings.syncing') : t('settings.sync_button')}</span>
                 </button>
               </div>
 
@@ -248,7 +324,7 @@ export function SettingsView() {
 
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">アカウントデータのエクスポート</div>
+                  <div class="mizuna-setting-title">{t('settings.export_data')}</div>
                 </div>
                 <button
                   type="button"
@@ -256,7 +332,7 @@ export function SettingsView() {
                   onClick={exportAccounts}
                 >
                   <i>download</i>
-                  <span>エクスポート</span>
+                  <span>{t('settings.export_button')}</span>
                 </button>
               </div>
 
@@ -264,7 +340,7 @@ export function SettingsView() {
 
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">アプリのキャッシュクリア</div>
+                  <div class="mizuna-setting-title">{t('settings.clear_cache')}</div>
                 </div>
                 <button
                   type="button"
@@ -272,7 +348,24 @@ export function SettingsView() {
                   onClick={handleClearCache}
                 >
                   <i>refresh</i>
-                  <span>再読み込み</span>
+                  <span>{t('settings.reload_button')}</span>
+                </button>
+              </div>
+
+              <div class="mizuna-row-divider" />
+
+              <div class="mizuna-setting-row">
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">{t('settings.check_update')}</div>
+                  <div class="mizuna-setting-desc">{t('settings.check_update_desc')}</div>
+                </div>
+                <button
+                  type="button"
+                  class="mizuna-btn mizuna-btn-outline"
+                  onClick={checkForUpdate}
+                >
+                  <i>sync</i>
+                  <span>{t('settings.check_button')}</span>
                 </button>
               </div>
             </div>

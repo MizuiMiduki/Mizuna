@@ -1,4 +1,4 @@
-import { compressAndConvertToWebP } from '../utils/image';
+import { compressAndConvertToWebP, createThumbnailUrl } from '../utils/image';
 import gsap from 'gsap';
 import {
   createContext,
@@ -19,13 +19,9 @@ import {
   type AccountRecord,
   type SettingRecord,
 } from '../db/database';
-import {
-  checkMiAuthSession,
-  fetchLatestAccountInfo,
-  fetchLatestReleaseNote,
-  MisskeyApiError,
-} from '../services/misskeyApi';
+import { checkMiAuthSession, fetchLatestAccountInfo, fetchLatestReleaseNote, MisskeyApiError } from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
+import { translate, type I18nKey } from '../i18n';
 
 export type ViewType =
   | 'note'
@@ -34,7 +30,8 @@ export type ViewType =
   | 'settings'
   | 'shortcuts'
   | 'about'
-  | 'announcements';
+  | 'announcements'
+  | 'privacy';
 export type VisibilityType = 'public' | 'home' | 'followers';
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -63,6 +60,8 @@ export interface DialogConfig {
     title: string;
     url: string;
   };
+  /** プライバシーポリシーへのリンクを表示するか */
+  showPrivacyPolicy?: boolean;
   buttons: DialogButton[];
 }
 
@@ -71,9 +70,19 @@ export interface AttachedImageItem {
   name: string;
   file: File;
   dataUrl: string;
+  /** 一覧表示用の縮小サムネイル (ObjectURL)。生成前は undefined */
+  thumbUrl?: string;
   compressedFile?: File;
   originalSize: number;
   compressedSize?: number;
+}
+
+// 添付画像のサムネイル生成・事前圧縮を直列化するキュー
+let attachProcessQueue: Promise<void> = Promise.resolve();
+
+function revokeAttachedUrls(item: AttachedImageItem): void {
+  if (item.dataUrl.startsWith('blob:')) URL.revokeObjectURL(item.dataUrl);
+  if (item.thumbUrl) URL.revokeObjectURL(item.thumbUrl);
 }
 
 export function visibilityNumToString(num: 1 | 2 | 3): VisibilityType {
@@ -117,6 +126,7 @@ interface AppContextValue {
   // アカウント・設定操作
   switchAccount: (accountId: number) => Promise<void>;
   deleteSelectedAccounts: (accountIds: number[]) => Promise<void>;
+  reorderAccounts: (newOrderedIds: number[]) => Promise<void>;
   updateSettings: (changes: Partial<SettingRecord>) => Promise<void>;
   isSyncingAccounts: Accessor<boolean>;
   syncAllAccounts: () => Promise<void>;
@@ -132,6 +142,17 @@ interface AppContextValue {
   dialogConfig: Accessor<DialogConfig | null>;
   openDialog: (config: DialogConfig) => void;
   closeDialog: () => void;
+
+  // PWA アップデート制御
+  hasPendingUpdate: Accessor<boolean>;
+  showUpdateBanner: Accessor<boolean>;
+  dismissUpdateBanner: () => void;
+  promptUpdateDialog: () => void;
+  applyPendingUpdate: () => void;
+  checkForUpdate: () => Promise<void>;
+
+  // 多言語対応 (i18n)
+  t: (key: I18nKey, params?: Record<string, string | number>) => string;
 }
 
 const AppContext = createContext<AppContextValue>();
@@ -212,13 +233,80 @@ export function AppProvider(props: { children: JSX.Element }) {
     setDialogConfig(null);
   };
 
+  // 多言語翻訳ヘルパー（Solid.js のリアクティビティと連動し、言語切替時に最小コストで即座に反映）
+  const t = (key: I18nKey, params?: Record<string, string | number>): string => {
+    return translate(key, params, settings().language);
+  };
+
+  // PWA アップデート状態管理
+  const [waitingWorker, setWaitingWorker] = createSignal<ServiceWorker | null>(null);
+  const [hasPendingUpdate, setHasPendingUpdate] = createSignal(false);
+  const [showUpdateBanner, setShowUpdateBanner] = createSignal(false);
+  let activeSwRegistration: ServiceWorkerRegistration | null = null;
+
+  const dismissUpdateBanner = () => {
+    setShowUpdateBanner(false);
+  };
+
+  const promptUpdateDialog = () => {
+    const worker = waitingWorker();
+    if (!worker) return;
+
+    // ヘッダー下の控えめバナーを再表示
+    setShowUpdateBanner(true);
+  };
+
+  const applyPendingUpdate = () => {
+    // アップデート適用直後フラグを保存（リロード後にリリースノートを自動表示するため）
+    if (typeof localStorage !== 'undefined') {
+      try {
+        localStorage.setItem('mizuna_show_release_notes_after_update', 'true');
+      } catch {
+        // 無視
+      }
+    }
+
+    const worker = waitingWorker();
+    if (worker) {
+      worker.postMessage({ type: 'SKIP_WAITING' });
+    } else {
+      window.location.reload();
+    }
+  };
+
+  const checkForUpdate = async () => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker) {
+      showToast('お使いの環境はService Workerに対応していません', 'info');
+      return;
+    }
+    try {
+      const reg = activeSwRegistration || (await navigator.serviceWorker.getRegistration());
+      if (reg) {
+        await reg.update();
+        if (reg.waiting) {
+          setWaitingWorker(reg.waiting);
+          setHasPendingUpdate(true);
+          promptUpdateDialog();
+        } else {
+          showToast('最新のバージョンを使用しています', 'info');
+        }
+      } else {
+        showToast('Service Workerが登録されていません', 'info');
+      }
+    } catch (err) {
+      console.error('アップデート確認エラー:', err);
+      showToast('アップデートの確認に失敗しました', 'error');
+    }
+  };
+
   const setCurrentView = (view: ViewType) => {
     if (
       accounts().length === 0 &&
       view !== 'add_account' &&
       view !== 'shortcuts' &&
       view !== 'about' &&
-      view !== 'announcements'
+      view !== 'announcements' &&
+      view !== 'privacy'
     ) {
       setCurrentViewInternal('add_account');
       return;
@@ -263,25 +351,40 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   /**
+   * アカウントの並び順 (account_order) に基づいてソート
+   */
+  const sortAccountsByOrder = (accountList: AccountRecord[], order: number[]): AccountRecord[] => {
+    if (!order || order.length === 0) return accountList;
+    const orderMap = new Map(order.map((id, index) => [id, index]));
+    return [...accountList].sort((a, b) => {
+      const orderA = a.id !== undefined && orderMap.has(a.id) ? orderMap.get(a.id)! : 999999;
+      const orderB = b.id !== undefined && orderMap.has(b.id) ? orderMap.get(b.id)! : 999999;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.id ?? 0) - (b.id ?? 0);
+    });
+  };
+
+  /**
    * アカウント一覧と選択中ユーザーをDBから再読み込み
    */
   const reloadAccounts = async () => {
     const allAccounts = await db.account.orderBy('id').toArray();
-    setAccounts(allAccounts);
+    const sortedAccounts = sortAccountsByOrder(allAccounts, settings().account_order ?? []);
+    setAccounts(sortedAccounts);
 
-    if (allAccounts.length === 0) {
+    if (sortedAccounts.length === 0) {
       setCurrentUser(null);
       await applyThemeAndMode(settings(), undefined);
       return;
     }
 
     const selectedId = settings().select_user;
-    const matched = allAccounts.find((a) => a.id === selectedId);
+    const matched = sortedAccounts.find((a) => a.id === selectedId);
     if (matched) {
       setCurrentUser(matched);
       await applyThemeAndMode(settings(), matched.avatarurl, matched.address);
     } else {
-      const firstAccount = allAccounts[0];
+      const firstAccount = sortedAccounts[0];
       if (firstAccount && firstAccount.id !== undefined) {
         await updateSettingDb({ select_user: firstAccount.id });
         setSettings((prev) => ({ ...prev, select_user: firstAccount.id! }));
@@ -352,47 +455,81 @@ export function AppProvider(props: { children: JSX.Element }) {
    * リリースノートの更新チェック
    */
   const checkNewReleaseNote = async (currentSettings: SettingRecord) => {
-    if (currentSettings.is_check_releasenote === null) {
-      await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
-      setSettings((prev) => ({ ...prev, is_check_releasenote: mizuna_options.mizuna_version }));
+    let forceShowAfterUpdate = false;
+    if (typeof localStorage !== 'undefined') {
+      try {
+        forceShowAfterUpdate = localStorage.getItem('mizuna_show_release_notes_after_update') === 'true';
+        if (forceShowAfterUpdate) {
+          localStorage.removeItem('mizuna_show_release_notes_after_update');
+        }
+      } catch {
+        // 無視
+      }
+    }
+
+    // 初回起動時のウェルカムポップアップ表示
+    if (currentSettings.is_check_releasenote === null && !forceShowAfterUpdate) {
+      openDialog({
+        title: `${mizuna_options.app_name} へようこそ`,
+        icon: 'celebration',
+        tone: 'primary',
+        badgeText: 'WELCOME',
+        contentText:
+          'Mizuna はノート投稿機能のみに特化し、通信量削減と快適な操作性に重点を置いた Misskey クライアントです。',
+        showPrivacyPolicy: true,
+        buttons: [
+          {
+            label: 'はじめる',
+            variant: 'fill',
+            onClick: async () => {
+              await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
+              setSettings((prev) => ({
+                ...prev,
+                is_check_releasenote: mizuna_options.mizuna_version,
+              }));
+              closeDialog();
+            },
+          },
+        ],
+      });
       return;
     }
 
-    if (mizuna_options.mizuna_version !== currentSettings.is_check_releasenote) {
+    // バージョン更新時、またはPWAアップデート適用直後の初回起動時にダイアログを確実に表示
+    if (forceShowAfterUpdate || mizuna_options.mizuna_version !== currentSettings.is_check_releasenote) {
+      let latestPost: { title: string; link: string } | null = null;
       try {
-        const latestPost = await fetchLatestReleaseNote();
-        if (latestPost) {
-          openDialog({
-            title: 'Mizuna がアップデートされました',
-            icon: 'celebration',
-            tone: 'primary',
-            badgeText: `VERSION ${mizuna_options.mizuna_version}`,
-            contentText: `いつもご利用ありがとうございます。Mizuna v${mizuna_options.mizuna_version} への更新が完了しました。新機能や改善点についてはリリースノートをご覧ください。`,
-            linkCard: {
-              label: 'RELEASE NOTE',
-              title: latestPost.title,
-              url: latestPost.link,
-            },
-            buttons: [
-              {
-                label: '確認してはじめる',
-                variant: 'fill',
-                onClick: async () => {
-                  await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
-                  setSettings((prev) => ({
-                    ...prev,
-                    is_check_releasenote: mizuna_options.mizuna_version,
-                  }));
-                },
-              },
-            ],
-          });
-        } else {
-          await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
-        }
+        latestPost = await fetchLatestReleaseNote();
       } catch (err) {
         console.error('リリースノートの取得に失敗しました:', err);
       }
+
+      openDialog({
+        title: 'Mizuna がアップデートされました',
+        icon: 'celebration',
+        tone: 'primary',
+        badgeText: `VERSION ${mizuna_options.mizuna_version}`,
+        contentText: `いつもご利用ありがとうございます。Mizuna v${mizuna_options.mizuna_version} への更新が完了しました。新機能や改善点についてはリリースノートをご覧ください。`,
+        linkCard: {
+          label: 'RELEASE NOTE',
+          title: latestPost?.title || `Mizuna v${mizuna_options.mizuna_version} リリースノート`,
+          url: latestPost?.link || 'https://github.com/MizuiMiduki/Mizuna/releases',
+        },
+        showPrivacyPolicy: true,
+        buttons: [
+          {
+            label: '確認してはじめる',
+            variant: 'fill',
+            onClick: async () => {
+              await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
+              setSettings((prev) => ({
+                ...prev,
+                is_check_releasenote: mizuna_options.mizuna_version,
+              }));
+            },
+          },
+        ],
+      });
     }
   };
 
@@ -422,6 +559,62 @@ export function AppProvider(props: { children: JSX.Element }) {
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // オンライン・オフライン検知
+    const handleOnline = () => {
+      showToast('インターネット接続が回復しました', 'success');
+    };
+    const handleOffline = () => {
+      showToast('ネットワークが切断されました（オフライン）', 'warning');
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Service Worker の登録とPWA更新待機監視
+    let handleControllerChange: (() => void) | null = null;
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker) {
+      let isRefreshing = false;
+      handleControllerChange = () => {
+        if (isRefreshing) return;
+        isRefreshing = true;
+        window.location.reload();
+      };
+      navigator.serviceWorker.addEventListener?.('controllerchange', handleControllerChange);
+
+      navigator.serviceWorker
+        .register?.('/sw.js')
+        ?.then((registration) => {
+          activeSwRegistration = registration;
+
+          // 前回の起動などで既に待機状態のワーカーがいる場合
+          if (registration.waiting && navigator.serviceWorker.controller) {
+            setWaitingWorker(registration.waiting);
+            setHasPendingUpdate(true);
+            promptUpdateDialog();
+          }
+
+          // 新しいService Workerのインストールを検知
+          registration.addEventListener?.('updatefound', () => {
+            const installingWorker = registration.installing;
+            if (!installingWorker) return;
+
+            installingWorker.addEventListener?.('statechange', () => {
+              if (
+                installingWorker.state === 'installed' &&
+                navigator.serviceWorker.controller
+              ) {
+                // 新しいバージョンがインストール完了＆待機状態（ユーザーの選択待ち）
+                setWaitingWorker(installingWorker);
+                setHasPendingUpdate(true);
+                promptUpdateDialog();
+              }
+            });
+          });
+        })
+        ?.catch((error) => {
+          console.error('Service Worker registration error:', error);
+        });
+    }
 
     if (mizuna_options.maintenance) {
       window.location.href = `${mizuna_options.mizuna_address}/maintenance.html`;
@@ -491,6 +684,17 @@ export function AppProvider(props: { children: JSX.Element }) {
             // 無視
           }
         }
+        if (typeof window !== 'undefined') {
+          try {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+            if ('serviceWorker' in navigator && navigator.serviceWorker?.removeEventListener && handleControllerChange) {
+              navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
+            }
+          } catch {
+            // 無視
+          }
+        }
       });
     }
   });
@@ -514,10 +718,23 @@ export function AppProvider(props: { children: JSX.Element }) {
       originalSize: file.size,
     }));
 
-    // バックグラウンドでWebPへ事前圧縮し、削減率と圧縮後サイズを記録
+    // サムネイル生成とWebP事前圧縮は、原寸デコードのピークメモリを抑えるため1枚ずつ直列に処理する
     newItems.forEach((item) => {
-      compressAndConvertToWebP(item.file, 0.75)
-        .then((compressed) => {
+      attachProcessQueue = attachProcessQueue.then(async () => {
+        const thumbUrl = (await createThumbnailUrl(item.file)) ?? item.dataUrl; // 生成不可なら原寸にフォールバック
+        {
+          let alive = false;
+          setAttachedImages((prev) =>
+            prev.map((img) => {
+              if (img.id !== item.id) return img;
+              alive = true;
+              return { ...img, thumbUrl };
+            })
+          );
+          if (!alive && thumbUrl !== item.dataUrl) URL.revokeObjectURL(thumbUrl);
+        }
+        try {
+          const compressed = await compressAndConvertToWebP(item.file, 0.75);
           setAttachedImages((prev) =>
             prev.map((img) =>
               img.id === item.id
@@ -525,14 +742,16 @@ export function AppProvider(props: { children: JSX.Element }) {
                 : img
             )
           );
-        })
-        .catch((err) => console.warn('Pre-compression failed:', err));
+        } catch (err) {
+          console.warn('Pre-compression failed:', err);
+        }
+      });
     });
 
     setAttachedImages((prev) => {
       const combined = [...prev, ...newItems];
       if (combined.length > 16) {
-        combined.slice(16).forEach((extra) => URL.revokeObjectURL(extra.dataUrl));
+        combined.slice(16).forEach(revokeAttachedUrls);
         return combined.slice(0, 16);
       }
       return combined;
@@ -542,9 +761,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   const removeAttachedImage = (id: string) => {
     setAttachedImages((prev) => {
       const target = prev.find((item) => item.id === id);
-      if (target && target.dataUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(target.dataUrl);
-      }
+      if (target) revokeAttachedUrls(target);
       return prev.filter((item) => item.id !== id);
     });
   };
@@ -556,11 +773,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     setCwText('');
     setNoteText('');
     setAttachedImages((prev) => {
-      prev.forEach((item) => {
-        if (item.dataUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(item.dataUrl);
-        }
-      });
+      prev.forEach(revokeAttachedUrls);
       return [];
     });
     if (showNotification) {
@@ -582,6 +795,15 @@ export function AppProvider(props: { children: JSX.Element }) {
   const deleteSelectedAccounts = async (accountIds: number[]) => {
     if (accountIds.length === 0) return;
     await db.account.bulkDelete(accountIds);
+
+    // 並び順設定からも削除対象アカウントを除外
+    const currentOrder = settings().account_order ?? [];
+    if (currentOrder.length > 0) {
+      const nextOrder = currentOrder.filter((id) => !accountIds.includes(id));
+      await updateSettingDb({ account_order: nextOrder });
+      setSettings((prev) => ({ ...prev, account_order: nextOrder }));
+    }
+
     await reloadAccounts();
 
     if (accounts().length === 0) {
@@ -590,6 +812,11 @@ export function AppProvider(props: { children: JSX.Element }) {
     } else {
       showToast(`${accountIds.length}件のアカウントを削除しました`, 'success');
     }
+  };
+
+  const reorderAccounts = async (newOrderedIds: number[]) => {
+    await updateSettings({ account_order: newOrderedIds });
+    setAccounts((prev) => sortAccountsByOrder(prev, newOrderedIds));
   };
 
   const updateSettings = async (changes: Partial<SettingRecord>) => {
@@ -804,6 +1031,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     clearNoteForm,
     switchAccount,
     deleteSelectedAccounts,
+    reorderAccounts,
     updateSettings,
     isSyncingAccounts,
     syncAllAccounts,
@@ -817,6 +1045,13 @@ export function AppProvider(props: { children: JSX.Element }) {
     dialogConfig,
     openDialog,
     closeDialog,
+    hasPendingUpdate,
+    showUpdateBanner,
+    dismissUpdateBanner,
+    promptUpdateDialog,
+    applyPendingUpdate,
+    checkForUpdate,
+    t,
   };
 
   return <AppContext.Provider value={contextValue}>{props.children}</AppContext.Provider>;

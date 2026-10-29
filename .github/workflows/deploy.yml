@@ -12,24 +12,26 @@ on:
           - release
           - prerelease
       scheduled_time:
-        description: 'デプロイ予約日時 (日本時間 JST。例: 02:00, 2026-10-23 02:00, +30m。空欄の場合は即時デプロイ)'
+        description: 'デプロイ予約日時 (日本時間 JST。形式: yyyy/mm/dd hh:mm、例: 2026/10/23 15:00, 15:00, +30m。空欄の場合は現在日時で即時デプロイ)'
         required: false
         default: ''
         type: string
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
-  deploy:
+  schedule:
+    name: Wait for Scheduled Time
     runs-on: ubuntu-latest
     timeout-minutes: 360
+    outputs:
+      is_relay: ${{ steps.schedule.outputs.is_relay }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       # FTP_SERVER(ドメイン)をシークレット登録していても、接続エラー時などに
       # 名前解決後のIPアドレスがログへ出力されるため、解決結果をマスクする
@@ -83,8 +85,65 @@ jobs:
             fi
           done
           echo "=========================================================="
-          echo "🚀 予約時刻に到達しました！デプロイ処理を開始します。"
+          echo "⏰ 待機時間が完了しました。"
           echo "=========================================================="
+
+      - name: Relay to Next Scheduled Run
+        if: steps.schedule.outputs.is_relay == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          REF: ${{ github.ref_name }}
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
+          TARGET_TIME: ${{ steps.schedule.outputs.target_jst_str }}
+        run: |
+          echo "=========================================================="
+          echo "🔄 予約時刻までまだ時間があるため、次のワークフローへ待機を引き継ぎます。"
+          echo "引き継ぎ日時 (JST): $TARGET_TIME"
+          echo "対象ブランチ: $REF"
+          echo "デプロイ対象: $DEPLOY_TARGET"
+          echo "=========================================================="
+          gh workflow run deploy.yml \
+            --repo "$REPO" \
+            --ref "$REF" \
+            -f deploy_target="$DEPLOY_TARGET" \
+            -f scheduled_time="$TARGET_TIME"
+          echo "✅ 次のワークフローを起動しました。本ワークフローは完了します。"
+
+  deploy:
+    name: Deploy Release
+    needs: schedule
+    if: needs.schedule.outputs.is_relay != 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # FTP_SERVER(ドメイン)をシークレット登録していても、接続エラー時などに
+      # 名前解決後のIPアドレスがログへ出力されるため、解決結果をマスクする
+      - name: Mask FTP Server IP Addresses
+        env:
+          FTP_SERVER: ${{ secrets.FTP_SERVER }}
+        run: |
+          # ftp:// 等のスキームやポート表記が付いていても、ホスト名のみを取り出す
+          HOST="${FTP_SERVER#*://}"
+          HOST="${HOST%%/*}"
+          HOST="${HOST%%:*}"
+          if [ -z "$HOST" ]; then
+            echo "::warning::FTP_SERVER が空のため IP マスクをスキップしました"
+            exit 0
+          fi
+          # IPv4 / IPv6 を含め、解決されるすべてのアドレスを登録する
+          for ADDR in $(getent ahosts "$HOST" | awk '{print $1}' | sort -u); do
+            echo "::add-mask::$ADDR"
+          done
+          # 直接IPが指定されている場合もマスクする
+          if echo "$HOST" | grep -Eq '^[0-9.]+$|^[0-9a-fA-F:]+$'; then
+            echo "::add-mask::$HOST"
+          fi
 
       - name: Resolve Latest Release Tag
         id: target_release
@@ -134,12 +193,13 @@ jobs:
       - name: Install dependencies & Build
         env:
           DEPLOY_TARGET: ${{ inputs.deploy_target }}
+          GA_SECRET: ${{ secrets.VITE_GA_MEASUREMENT_ID }}
         run: |
           npm ci
           if [ "$DEPLOY_TARGET" = "prerelease" ]; then
             npm run build:canary
           else
-            npm run build
+            VITE_GA_MEASUREMENT_ID="$GA_SECRET" npm run build
           fi
 
       # ========================================================

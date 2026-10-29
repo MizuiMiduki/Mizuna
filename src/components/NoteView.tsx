@@ -40,6 +40,7 @@ export function NoteView() {
     removeAttachedImage,
     clearNoteForm,
     showToast,
+    t,
   } = useApp();
 
   const [isInputFocused, setIsInputFocused] = createSignal(false);
@@ -111,7 +112,7 @@ export function NoteView() {
     if (isSending()) return;
     const user = currentUser();
     if (!user) {
-      showToast('アカウントが選択されていません', 'error');
+      showToast(t('note.no_account'), 'error');
       return;
     }
 
@@ -122,11 +123,11 @@ export function NoteView() {
     if (cwEnabled()) {
       const trimmedCw = rawCw.replace(/[\s\u3000]/g, '');
       if (trimmedCw.length === 0) {
-        showToast('なにか入力してください', 'warning', 'CWが空です');
+        showToast(t('note.empty_desc'), 'warning', t('note.cw_empty'));
         return;
       }
       if (trimmedCw.length > 100) {
-        showToast('100文字以内で入力してください', 'warning', 'CWが長すぎます');
+        showToast(t('note.cw_limit'), 'warning', t('note.cw_too_long'));
         return;
       }
     }
@@ -134,12 +135,12 @@ export function NoteView() {
     // ノート本文バリデーション
     const trimmedNote = rawNote.replace(/[\s\u3000]/g, '');
     if (trimmedNote.length === 0) {
-      showToast('なにか入力してください', 'warning', 'ノートが空です');
+      showToast(t('note.empty_desc'), 'warning', t('note.empty'));
       return;
     }
 
     if (noteLength() > maxCharCount()) {
-      showToast('文字数が多すぎます', 'warning');
+      showToast(t('note.too_long'), 'warning');
       return;
     }
 
@@ -166,7 +167,7 @@ export function NoteView() {
         );
       }
 
-      setSendingStatus('送信中...');
+      setSendingStatus(t('note.submitting'));
       await createMisskeyNote(
         user,
         rawNote,
@@ -176,14 +177,14 @@ export function NoteView() {
         fileIds
       );
 
-      showToast('ノートを送信しました！', 'success');
+      showToast(t('note.sent'), 'success');
       clearNoteForm(false);
       if (fileInputRef) {
         fileInputRef.value = '';
       }
     } catch (err) {
       console.error('Send note error:', err);
-      showToast('ノートできませんでした', 'error');
+      showToast(t('note.send_failed'), 'error');
     } finally {
       setIsSending(false);
       setSendingStatus('');
@@ -363,8 +364,8 @@ export function NoteView() {
           </button>
 
           {/* モダンなピル型公開範囲セレクター */}
-          <div class="mizuna-visibility-pills" role="radiogroup" aria-label="公開範囲">
-            <HoldHoverTip label="パブリック公開" sublabel="全ユーザーに公開 (Ctrl+Alt+P)" placement="bottom">
+          <div class="mizuna-visibility-pills" role="radiogroup" aria-label={t('settings.default_visibility')}>
+            <HoldHoverTip label={t('note.visibility_public')} sublabel="全ユーザーに公開 (Ctrl+Alt+P)" placement="bottom">
               <button
                 type="button"
                 id="visibility_public"
@@ -372,10 +373,10 @@ export function NoteView() {
                 onClick={(e) => selectVisibility('public', e.currentTarget)}
               >
                 <i>public</i>
-                <span>パブリック</span>
+                <span>{t('note.visibility_public')}</span>
               </button>
             </HoldHoverTip>
-            <HoldHoverTip label="ホーム公開" sublabel="ホームTLのみに表示 (Ctrl+Alt+H)" placement="bottom">
+            <HoldHoverTip label={t('note.visibility_home')} sublabel="ホームTLのみに表示 (Ctrl+Alt+H)" placement="bottom">
               <button
                 type="button"
                 id="visibility_home"
@@ -383,10 +384,10 @@ export function NoteView() {
                 onClick={(e) => selectVisibility('home', e.currentTarget)}
               >
                 <i>home</i>
-                <span>ホーム</span>
+                <span>{t('note.visibility_home')}</span>
               </button>
             </HoldHoverTip>
-            <HoldHoverTip label="フォロワー限定" sublabel="フォロワーのみに表示 (Ctrl+Alt+F)" placement="bottom">
+            <HoldHoverTip label={t('note.visibility_followers')} sublabel="フォロワーのみに表示 (Ctrl+Alt+F)" placement="bottom">
               <button
                 type="button"
                 id="visibility_followers"
@@ -394,7 +395,7 @@ export function NoteView() {
                 onClick={(e) => selectVisibility('followers', e.currentTarget)}
               >
                 <i>lock</i>
-                <span>フォロワー</span>
+                <span>{t('note.visibility_followers')}</span>
               </button>
             </HoldHoverTip>
           </div>
@@ -410,7 +411,7 @@ export function NoteView() {
                 class="cw_content mizuna-cw-textarea"
                 maxLength={100}
                 rows={1}
-                placeholder="閲覧注意の注釈 (CW) を入力..."
+                placeholder={t('note.cw_placeholder')}
                 value={cwText()}
                 onInput={(e) => setCwText(e.currentTarget.value)}
                 onFocus={() => setIsInputFocused(true)}
@@ -432,7 +433,7 @@ export function NoteView() {
             class="note_content mizuna-main-textarea"
             maxLength={3000}
             rows={6}
-            placeholder="いまどうしてる？"
+            placeholder={t('note.placeholder')}
             value={noteText()}
             onInput={(e) => setNoteText(e.currentTarget.value)}
             onFocus={() => setIsInputFocused(true)}
@@ -444,7 +445,7 @@ export function NoteView() {
             <div class="mizuna-editor-subrow">
               <span class="mizuna-suffix-badge">
                 <i>auto_awesome</i>
-                末尾に <b>(from Mizuna)</b> が自動付与されます
+                {t('note.suffix_notice')}
               </span>
             </div>
           </Show>
@@ -457,21 +458,25 @@ export function NoteView() {
               <For each={attachedImages()}>
                 {(item) => (
                   <div class="mizuna-media-item" onClick={() => handleOpenPreview(item)}>
-                    <img
-                      class="input_image_preview"
-                      src={item.dataUrl}
-                      alt={item.name}
-                      data-name={item.name}
-                      loading="lazy"
-                      decoding="async"
-                    />
+                    <Show when={item.thumbUrl}>
+                      {(thumb) => (
+                        <img
+                          class="input_image_preview"
+                          src={thumb()}
+                          alt={item.name}
+                          data-name={item.name}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      )}
+                    </Show>
                     <div class="mizuna-media-zoom-hint">
                       <i>zoom_in</i>
                     </div>
                     <button
                       type="button"
                       class="mizuna-media-remove"
-                      title="画像を削除"
+                      title={t('note.delete_image')}
                       onClick={(e) => {
                         e.stopPropagation();
                         removeAttachedImage(item.id);
@@ -511,7 +516,7 @@ export function NoteView() {
         <div class="mizuna-composer-footer">
           <div class="mizuna-tool-group">
             {/* CWトグル */}
-            <HoldHoverTip label="コンテンツワーニング (CW)" sublabel="閲覧注意の注釈を追加 (Ctrl+Alt+W)" placement="top">
+            <HoldHoverTip label={t('note.cw_tip')} sublabel={t('note.cw_tip_sub')} placement="top">
               <button
                 type="button"
                 id="cw"
@@ -524,7 +529,7 @@ export function NoteView() {
             </HoldHoverTip>
 
             {/* (from Mizuna) トグル */}
-            <HoldHoverTip label="Mizuna クレジット付与" sublabel="末尾に (from Mizuna) を追加 (Ctrl+Alt+M)" placement="top">
+            <HoldHoverTip label={t('note.mizuna_tip')} sublabel={t('note.mizuna_tip_sub')} placement="top">
               <button
                 type="button"
                 id="note_end_mizuna_checkbox"
@@ -537,7 +542,7 @@ export function NoteView() {
             </HoldHoverTip>
 
             {/* 画像選択ボタン */}
-            <HoldHoverTip label="画像を添付 (最大16枚)" sublabel="自動でWebPへ圧縮されます (Ctrl+Alt+V)" placement="top">
+            <HoldHoverTip label={t('note.attach_image_tip')} sublabel={t('note.attach_image_tip_sub')} placement="top">
               <button
                 type="button"
                 id="select_picture_button"
@@ -545,7 +550,7 @@ export function NoteView() {
                 onClick={() => fileInputRef?.click()}
               >
                 <i>image</i>
-                <span>画像</span>
+                <span>{t('note.attach_image_label')}</span>
                 <Show when={attachedImages().length > 0}>
                   <span class="mizuna-chip-count">{attachedImages().length}</span>
                 </Show>
@@ -553,7 +558,7 @@ export function NoteView() {
             </HoldHoverTip>
 
             {/* フォームクリアボタン */}
-            <HoldHoverTip label="フォームをクリア" sublabel="入力内容と添付画像をリセット (Ctrl+Alt+C)" placement="top">
+            <HoldHoverTip label={t('note.clear_form_tip')} sublabel={t('note.clear_form_tip_sub')} placement="top">
               <button
                 type="button"
                 id="form_clear_button"
@@ -562,7 +567,7 @@ export function NoteView() {
                   clearNoteForm(true);
                   if (fileInputRef) fileInputRef.value = '';
                 }}
-                aria-label="フォームをクリア"
+                aria-label={t('note.clear_form_tip')}
               >
                 <i>delete_sweep</i>
               </button>
@@ -616,11 +621,11 @@ export function NoteView() {
                 fallback={
                   <>
                     <progress class="circle small" />
-                    <span>{sendingStatus() || '送信中...'}</span>
+                    <span>{sendingStatus() || t('note.submitting')}</span>
                   </>
                 }
               >
-                <span>ノートする</span>
+                <span>{t('note.submit')}</span>
                 <i>send</i>
               </Show>
             </button>

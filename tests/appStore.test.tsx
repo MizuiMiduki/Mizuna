@@ -114,5 +114,35 @@ describe('appStore', () => {
       result.closeDialog();
       expect(result.dialogConfig()).toBeNull();
     });
+
+    it('アカウントの並べ替え (reorderAccounts) が正常に反映され保存されること', async () => {
+      const id2 = await db.account.add({
+        token: 'tok_test_2',
+        name: '第2ユーザー',
+        username: 'test_user_2',
+        address: 'misskey.io',
+        avatarurl: 'https://example.com/avatar2.webp',
+        add_mizuna_versinon: '3.11.0',
+      });
+
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      await result.reloadAccounts();
+      expect(result.accounts().length).toBe(2);
+
+      const [firstId, secondId] = result.accounts().map((a) => a.id!);
+      expect(firstId).not.toBe(secondId);
+
+      // 順序を反転
+      await result.reorderAccounts([secondId, firstId]);
+      expect(result.accounts()[0].id).toBe(secondId);
+      expect(result.accounts()[1].id).toBe(firstId);
+
+      // 設定テーブルに並び順が保存されていることを確認
+      const setting = await db.setting.get(1);
+      expect(setting?.account_order).toEqual([secondId, firstId]);
+    });
   });
 });

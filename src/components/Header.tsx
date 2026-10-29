@@ -6,7 +6,17 @@ import { useApp, type ViewType } from '../store/appStore';
 import { HoldHoverTip } from './HoldHoverTip';
 
 export function Header() {
-  const { openDialog, currentView, setCurrentView, accounts } = useApp();
+  const {
+    openDialog,
+    currentView,
+    setCurrentView,
+    accounts,
+    hasPendingUpdate,
+    showUpdateBanner,
+    applyPendingUpdate,
+    dismissUpdateBanner,
+    t,
+  } = useApp();
   const [showNews, setShowNews] = createSignal(Boolean(mizuna_options.news_banner_title));
   let topbarRef: HTMLElement | undefined;
   let newsRef: HTMLDivElement | undefined;
@@ -100,35 +110,35 @@ export function Header() {
           </div>
 
           <div class="mizuna-topbar-right">
-            <HoldHoverTip label="お知らせ" sublabel="更新情報・リリースノート" placement="bottom">
+            <HoldHoverTip label={t('header.announcements')} sublabel={t('header.announcements_sub')} placement="bottom">
               <button
                 type="button"
                 id="announcements_button"
                 class={`mizuna-topbar-btn ${currentView() === 'announcements' ? 'is-active' : ''}`}
                 onClick={() => toggleTopView('announcements')}
-                aria-label="お知らせ"
+                aria-label={t('header.announcements')}
               >
                 <i>notifications</i>
               </button>
             </HoldHoverTip>
 
-            <HoldHoverTip label="ショートカット一覧" sublabel="キーボードショートカット" placement="bottom">
+            <HoldHoverTip label={t('header.shortcuts')} sublabel={t('header.shortcuts_sub')} placement="bottom">
               <button
                 type="button"
                 class={`mizuna-topbar-btn ${currentView() === 'shortcuts' ? 'is-active' : ''}`}
                 onClick={() => toggleTopView('shortcuts')}
-                aria-label="ショートカット一覧"
+                aria-label={t('header.shortcuts')}
               >
                 <i>keyboard</i>
               </button>
             </HoldHoverTip>
 
-            <HoldHoverTip label="Mizunaについて" sublabel="アプリ情報・支援・ライセンス" placement="bottom">
+            <HoldHoverTip label={t('header.about')} sublabel={t('header.about_sub')} placement="bottom">
               <button
                 type="button"
                 class={`mizuna-topbar-btn ${currentView() === 'about' ? 'is-active' : ''}`}
                 onClick={() => toggleTopView('about')}
-                aria-label="Mizunaについて"
+                aria-label={t('header.about')}
               >
                 <i>info</i>
               </button>
@@ -136,6 +146,32 @@ export function Header() {
           </div>
         </div>
       </header>
+
+      {/* PWAアップデート控えめバナー */}
+      <Show when={hasPendingUpdate() && showUpdateBanner()}>
+        <div class="mizuna-update-wrap">
+          <div class="mizuna-update-card">
+            <span class="mizuna-update-badge">{t('update.badge')}</span>
+            <span class="mizuna-update-title">{t('update.available')}</span>
+            <button
+              type="button"
+              class="mizuna-update-btn-action"
+              onClick={applyPendingUpdate}
+            >
+              <i>refresh</i>
+              <span>{t('update.apply_now')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-icon-btn-sm"
+              onClick={dismissUpdateBanner}
+              aria-label={t('update.close_notice')}
+            >
+              <i>close</i>
+            </button>
+          </div>
+        </div>
+      </Show>
 
       {/* お知らせバナー */}
       <Show when={showNews()}>

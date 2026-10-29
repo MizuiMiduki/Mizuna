@@ -1,4 +1,4 @@
-import { Match, Show, Switch } from 'solid-js';
+import { createEffect, Match, onMount, Show, Switch } from 'solid-js';
 import { AboutView } from './components/AboutView';
 import { AccountView } from './components/AccountView';
 import { AddAccountView } from './components/AddAccountView';
@@ -8,13 +8,23 @@ import { DialogHost } from './components/DialogHost';
 import { FooterNav } from './components/FooterNav';
 import { Header } from './components/Header';
 import { NoteView } from './components/NoteView';
+import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { SettingsView } from './components/SettingsView';
 import { ShortcutsView } from './components/ShortcutsView';
 import { SnackbarHost } from './components/SnackbarHost';
 import { AppProvider, useApp } from './store/appStore';
+import { initAnalytics, trackPageView } from './utils/analytics';
 
 function MainContent() {
   const { isInitializing, currentView } = useApp();
+
+  onMount(() => {
+    initAnalytics();
+  });
+
+  createEffect(() => {
+    trackPageView(currentView());
+  });
 
   return (
     <div class="mizuna-app-shell">
@@ -50,6 +60,9 @@ function MainContent() {
             </Match>
             <Match when={currentView() === 'announcements'}>
               <AnnouncementsView />
+            </Match>
+            <Match when={currentView() === 'privacy'}>
+              <PrivacyPolicyView />
             </Match>
           </Switch>
         </Show>
