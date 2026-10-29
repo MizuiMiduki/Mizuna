@@ -489,17 +489,6 @@ export function NoteView() {
                     </div>
                     <button
                       type="button"
-                      class="mizuna-media-edit"
-                      title="画像を加工・編集"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingImageItem(item);
-                      }}
-                    >
-                      <i>tune</i>
-                    </button>
-                    <button
-                      type="button"
                       class="mizuna-media-remove"
                       title={t('note.delete_image')}
                       onClick={(e) => {

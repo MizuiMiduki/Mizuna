@@ -756,36 +756,6 @@ body {
   font-size: 14px !important;
 }
 
-.mizuna-media-edit {
-  position: absolute;
-  top: 5px;
-  right: 33px;
-  width: 24px !important;
-  height: 24px !important;
-  min-width: 24px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border-radius: 50% !important;
-  border: none !important;
-  background: rgba(15, 20, 25, 0.75) !important;
-  backdrop-filter: blur(4px);
-  color: #fff !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 2;
-  transition: background-color 0.15s ease;
-}
-
-.mizuna-media-edit:hover {
-  background: var(--primary) !important;
-}
-
-.mizuna-media-edit i {
-  font-size: 14px !important;
-}
-
 .mizuna-media-footer {
   font-size: 0.74rem;
   color: var(--on-surface-variant);
@@ -1209,21 +1179,24 @@ body {
 }
 
 .mizuna-lightbox-bottombar-inner {
-  max-width: 320px;
+  max-width: 440px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12px;
 }
 
 .mizuna-lightbox-action-btn {
-  width: 100%;
-  max-width: 260px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 200px;
   height: 44px !important;
-  font-size: 0.92rem !important;
+  font-size: 0.88rem !important;
   font-weight: 700 !important;
   border-radius: var(--mizuna-radius-pill) !important;
   justify-content: center !important;
+  white-space: nowrap !important;
 }
 
 /* =========================================
