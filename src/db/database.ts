@@ -47,10 +47,18 @@ export interface SettingRecord {
   account_order?: number[];
   /** ユーザー定義のカスタムCSS */
   custom_css?: string;
-  /** 画像編集用のカスタム透かしテキスト (未設定時は @username@address) */
+  /** 画像編集用のカスタム透かしテキスト (盗作防止用) */
   watermark_text?: string;
-  /** 画像添付時の自動透かし位置 ('none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left') */
+  /** 画像添付時の自動透かし位置 (旧設定互換用) */
   watermark_position?: AutoWatermarkPosition;
+  /** 盗作防止透かしの自動付与 (true / false) */
+  watermark_enabled?: boolean;
+  /** 盗作防止透かしのパターン ('diagonal' | 'grid' | 'center-huge') */
+  watermark_pattern?: 'diagonal' | 'grid' | 'center-huge';
+  /** 画像署名のカスタムテキスト (未設定時は @username@address) */
+  signature_text?: string;
+  /** 画像署名の自動付与位置 ('none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left') */
+  signature_position?: AutoWatermarkPosition;
 }
 
 export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
@@ -70,6 +78,10 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
   custom_css: '',
   watermark_text: '',
   watermark_position: 'none',
+  watermark_enabled: false,
+  watermark_pattern: 'diagonal',
+  signature_text: '',
+  signature_position: 'none',
 };
 
 export class MizunaDatabase extends Dexie {
@@ -127,6 +139,10 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
       custom_css: typeof settingData.custom_css === 'string' ? settingData.custom_css : DEFAULT_USER_SETTINGS.custom_css,
       watermark_text: typeof settingData.watermark_text === 'string' ? settingData.watermark_text : DEFAULT_USER_SETTINGS.watermark_text,
       watermark_position: (settingData.watermark_position as AutoWatermarkPosition) ?? DEFAULT_USER_SETTINGS.watermark_position,
+      watermark_enabled: typeof settingData.watermark_enabled === 'boolean' ? settingData.watermark_enabled : DEFAULT_USER_SETTINGS.watermark_enabled,
+      watermark_pattern: (settingData.watermark_pattern as 'diagonal' | 'grid' | 'center-huge') ?? DEFAULT_USER_SETTINGS.watermark_pattern,
+      signature_text: typeof settingData.signature_text === 'string' ? settingData.signature_text : (typeof settingData.watermark_text === 'string' ? settingData.watermark_text : DEFAULT_USER_SETTINGS.signature_text),
+      signature_position: (settingData.signature_position as AutoWatermarkPosition) ?? (settingData.watermark_position as AutoWatermarkPosition) ?? DEFAULT_USER_SETTINGS.signature_position,
     };
   }
 

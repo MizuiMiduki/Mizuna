@@ -19,13 +19,22 @@ export interface ImageAdjustments {
   saturation: number; // 100% が標準 (0 - 200)
 }
 
-export type WatermarkPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center';
+export type SignaturePosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center';
+
+export interface SignatureOptions {
+  text: string;
+  position?: SignaturePosition;
+  opacity?: number; // 0.1 - 1.0 (default: 0.85)
+  scale?: number;   // 0.5 - 2.0 (default: 1.0)
+}
+
+export type WatermarkPattern = 'diagonal' | 'grid' | 'center-huge';
 
 export interface WatermarkOptions {
   text: string;
-  position?: WatermarkPosition;
-  opacity?: number; // 0.0 - 1.0 (default: 0.75)
-  scale?: number; // 0.5 - 2.0 (default: 1.0)
+  pattern?: WatermarkPattern;
+  opacity?: number; // 0.05 - 0.7 (default: 0.22)
+  scale?: number;   // 0.5 - 2.0 (default: 1.0)
 }
 
 export interface ImageEditOptions {
@@ -34,6 +43,7 @@ export interface ImageEditOptions {
   flipHorizontal?: boolean;
   adjustments?: ImageAdjustments;
   mosaics?: MosaicRect[];
+  signature?: SignatureOptions | null;
   watermark?: WatermarkOptions | null;
   quality?: number; // 0.0 - 1.0 (default 0.85)
 }
@@ -106,19 +116,19 @@ export function applyMosaicsToContext(
 }
 
 /**
- * Canvasに対して透かし（ウォーターマーク）を描画する
+ * Canvasに対して署名（クレジット表記のカプセル）を描画する
  */
-export function applyWatermarkToContext(
+export function applySignatureToContext(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   width: number,
   height: number,
-  watermark?: WatermarkOptions | null
+  signature?: SignatureOptions | null
 ): void {
-  if (!watermark || !watermark.text || !watermark.text.trim()) return;
+  if (!signature || !signature.text || !signature.text.trim()) return;
 
-  const text = watermark.text.trim();
+  const text = signature.text.trim();
   const shortSide = Math.min(width, height);
-  const scale = Math.max(0.5, Math.min(2.0, watermark.scale ?? 1.0));
+  const scale = Math.max(0.5, Math.min(2.0, signature.scale ?? 1.0));
   const fontSize = Math.max(12, Math.round(shortSide * 0.038 * scale));
   const paddingH = Math.round(fontSize * 0.55);
   const paddingV = Math.round(fontSize * 0.32);
@@ -137,7 +147,7 @@ export function applyWatermarkToContext(
   let x = width - pillWidth - margin;
   let y = height - pillHeight - margin;
 
-  const pos = watermark.position ?? 'bottom-right';
+  const pos = signature.position ?? 'bottom-right';
   if (pos === 'bottom-left') {
     x = margin;
     y = height - pillHeight - margin;
@@ -152,11 +162,11 @@ export function applyWatermarkToContext(
     y = (height - pillHeight) / 2;
   }
 
-  const opacity = Math.max(0.1, Math.min(1.0, watermark.opacity ?? 0.75));
+  const opacity = Math.max(0.1, Math.min(1.0, signature.opacity ?? 0.85));
   ctx.globalAlpha = opacity;
 
   // 半透明背景カプセル
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.68)';
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
   ctx.beginPath();
   if (typeof ctx.roundRect === 'function') {
     ctx.roundRect(x, y, pillWidth, pillHeight, radius);
@@ -166,8 +176,8 @@ export function applyWatermarkToContext(
   ctx.fill();
 
   // 枠線
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+  ctx.lineWidth = Math.max(1, Math.round(fontSize * 0.06));
   ctx.stroke();
 
   // テキスト
@@ -176,6 +186,86 @@ export function applyWatermarkToContext(
 
   ctx.restore();
 }
+
+/**
+ * Canvasに対して盗作防止の透かし（ウォーターマークパターン）を描画する
+ */
+export function applyWatermarkPatternToContext(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  width: number,
+  height: number,
+  watermark?: WatermarkOptions | null
+): void {
+  if (!watermark || !watermark.text || !watermark.text.trim()) return;
+
+  const text = watermark.text.trim();
+  const shortSide = Math.min(width, height);
+  const pattern = watermark.pattern ?? 'diagonal';
+  const scale = Math.max(0.5, Math.min(2.0, watermark.scale ?? 1.0));
+  const opacity = Math.max(0.04, Math.min(0.8, watermark.opacity ?? 0.22));
+
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.fillStyle = '#ffffff';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'center';
+
+  if (pattern === 'center-huge') {
+    // 中央に大きくドンと斜め配置
+    const fontSize = Math.max(22, Math.round(shortSide * 0.12 * scale));
+    ctx.font = `800 ${fontSize}px "IBM Plex Sans JP", "Inter", system-ui, sans-serif`;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.45)';
+    ctx.shadowBlur = 4;
+    ctx.translate(width / 2, height / 2);
+    ctx.rotate((-25 * Math.PI) / 180);
+    ctx.fillText(text, 0, 0);
+  } else if (pattern === 'diagonal') {
+    // 全面に斜めリピート（盗作防止ウォーターマーク）
+    const fontSize = Math.max(13, Math.round(shortSide * 0.045 * scale));
+    ctx.font = `700 ${fontSize}px "IBM Plex Sans JP", "Inter", system-ui, sans-serif`;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 3;
+
+    const metrics = ctx.measureText(text);
+    const textLen = Math.max(metrics.width + 60, fontSize * 6);
+    const stepY = fontSize * 4.2;
+    const stepX = textLen * 1.15;
+
+    ctx.translate(width / 2, height / 2);
+    ctx.rotate((-30 * Math.PI) / 180);
+
+    const diag = Math.sqrt(width * width + height * height);
+    const halfDiag = diag / 2;
+
+    for (let y = -halfDiag; y <= halfDiag; y += stepY) {
+      const offsetX = Math.round(y / stepY) % 2 === 0 ? 0 : stepX / 2;
+      for (let x = -halfDiag - stepX; x <= halfDiag + stepX; x += stepX) {
+        ctx.fillText(text, x + offsetX, y);
+      }
+    }
+  } else {
+    // 'grid' 水平・垂直の格子リピート
+    const fontSize = Math.max(12, Math.round(shortSide * 0.04 * scale));
+    ctx.font = `700 ${fontSize}px "IBM Plex Sans JP", "Inter", system-ui, sans-serif`;
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+    ctx.shadowBlur = 3;
+
+    const metrics = ctx.measureText(text);
+    const stepX = Math.max(metrics.width + 50, fontSize * 6);
+    const stepY = fontSize * 4.5;
+
+    for (let y = stepY / 2; y < height; y += stepY) {
+      for (let x = stepX / 2; x < width; x += stepX) {
+        ctx.fillText(text, x, y);
+      }
+    }
+  }
+
+  ctx.restore();
+}
+
+/** 後方互換用 alias */
+export const applyWatermarkToContext = applySignatureToContext;
 
 /**
  * 簡易画像加工処理（クロップ・回転・反転・色調・モザイク・透かし）を実行し、新しいWebP Fileを返す
@@ -191,6 +281,7 @@ export async function processImageEdits(
     flipHorizontal = false,
     adjustments = { brightness: 100, contrast: 100, saturation: 100 },
     mosaics = [],
+    signature = null,
     watermark = null,
     quality = 0.85,
   } = options;
@@ -309,14 +400,18 @@ export async function processImageEdits(
       }
     }
 
-    // 4. 透かし（ウォーターマーク）を合成
-    if (watermark && watermark.text && watermark.text.trim()) {
-      const finalCtx = finalCanvas.getContext('2d') as
-        | CanvasRenderingContext2D
-        | OffscreenCanvasRenderingContext2D
-        | null;
-      if (finalCtx) {
-        applyWatermarkToContext(finalCtx, finalCanvas.width, finalCanvas.height, watermark);
+    // 4. 盗作防止透かしおよび署名を合成
+    const finalCtx = finalCanvas.getContext('2d') as
+      | CanvasRenderingContext2D
+      | OffscreenCanvasRenderingContext2D
+      | null;
+
+    if (finalCtx) {
+      if (watermark && watermark.text && watermark.text.trim()) {
+        applyWatermarkPatternToContext(finalCtx, finalCanvas.width, finalCanvas.height, watermark);
+      }
+      if (signature && signature.text && signature.text.trim()) {
+        applySignatureToContext(finalCtx, finalCanvas.width, finalCanvas.height, signature);
       }
     }
 

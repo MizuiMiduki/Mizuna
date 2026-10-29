@@ -24,8 +24,16 @@ export function SettingsView() {
   const [customCssValue, setCustomCssValue] = createSignal(settings().custom_css ?? '');
   const [cssWarnings, setCssWarnings] = createSignal<string[]>([]);
   const [isCssDirty, setIsCssDirty] = createSignal(false);
+  const [signatureValue, setSignatureValue] = createSignal(settings().signature_text ?? '');
+  const [isSignatureDirty, setIsSignatureDirty] = createSignal(false);
   const [watermarkValue, setWatermarkValue] = createSignal(settings().watermark_text ?? '');
   const [isWatermarkDirty, setIsWatermarkDirty] = createSignal(false);
+
+  createEffect(() => {
+    if (!isSignatureDirty()) {
+      setSignatureValue(settings().signature_text ?? '');
+    }
+  });
 
   createEffect(() => {
     if (!isWatermarkDirty()) {
@@ -33,10 +41,16 @@ export function SettingsView() {
     }
   });
 
-  const defaultWatermarkPlaceholder = () => {
+  const defaultSignaturePlaceholder = () => {
     const user = currentUser();
     if (!user) return '@username@instance';
     return `@${user.username}@${user.address}`;
+  };
+
+  const defaultWatermarkPlaceholder = () => {
+    const user = currentUser();
+    if (!user) return 'DO NOT REPOST';
+    return `DO NOT REPOST / @${user.username}`;
   };
 
   createEffect(() => {
@@ -215,55 +229,149 @@ export function SettingsView() {
 
               <div class="mizuna-row-divider" />
 
-              {/* 画像への透かし付与 (四隅の自動付与位置) */}
+              {/* 画像への署名（クレジット）付与 */}
               <div class="mizuna-setting-row">
                 <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">{t('settings.watermark_auto_position')}</div>
-                  <div class="mizuna-setting-desc">{t('settings.watermark_auto_position_desc')}</div>
+                  <div class="mizuna-setting-title">{t('settings.signature_auto_position')}</div>
+                  <div class="mizuna-setting-desc">{t('settings.signature_auto_position_desc')}</div>
                 </div>
                 <div class="mizuna-seg-pills mizuna-seg-pills-wrap">
                   <button
                     type="button"
-                    class={`mizuna-seg-pill ${(settings().watermark_position ?? 'none') === 'none' ? 'is-active' : ''}`}
-                    onClick={() => updateSettings({ watermark_position: 'none' })}
+                    class={`mizuna-seg-pill ${(settings().signature_position ?? 'none') === 'none' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ signature_position: 'none' })}
                   >
-                    <span>{t('settings.watermark_pos_none')}</span>
+                    <span>{t('settings.signature_pos_none')}</span>
                   </button>
                   <button
                     type="button"
-                    class={`mizuna-seg-pill ${settings().watermark_position === 'bottom-right' ? 'is-active' : ''}`}
-                    onClick={() => updateSettings({ watermark_position: 'bottom-right' })}
+                    class={`mizuna-seg-pill ${settings().signature_position === 'bottom-right' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ signature_position: 'bottom-right' })}
                   >
-                    <span>{t('settings.watermark_pos_bottom_right')}</span>
+                    <span>{t('settings.signature_pos_bottom_right')}</span>
                   </button>
                   <button
                     type="button"
-                    class={`mizuna-seg-pill ${settings().watermark_position === 'bottom-left' ? 'is-active' : ''}`}
-                    onClick={() => updateSettings({ watermark_position: 'bottom-left' })}
+                    class={`mizuna-seg-pill ${settings().signature_position === 'bottom-left' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ signature_position: 'bottom-left' })}
                   >
-                    <span>{t('settings.watermark_pos_bottom_left')}</span>
+                    <span>{t('settings.signature_pos_bottom_left')}</span>
                   </button>
                   <button
                     type="button"
-                    class={`mizuna-seg-pill ${settings().watermark_position === 'top-right' ? 'is-active' : ''}`}
-                    onClick={() => updateSettings({ watermark_position: 'top-right' })}
+                    class={`mizuna-seg-pill ${settings().signature_position === 'top-right' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ signature_position: 'top-right' })}
                   >
-                    <span>{t('settings.watermark_pos_top_right')}</span>
+                    <span>{t('settings.signature_pos_top_right')}</span>
                   </button>
                   <button
                     type="button"
-                    class={`mizuna-seg-pill ${settings().watermark_position === 'top-left' ? 'is-active' : ''}`}
-                    onClick={() => updateSettings({ watermark_position: 'top-left' })}
+                    class={`mizuna-seg-pill ${settings().signature_position === 'top-left' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ signature_position: 'top-left' })}
                   >
-                    <span>{t('settings.watermark_pos_top_left')}</span>
+                    <span>{t('settings.signature_pos_top_left')}</span>
                   </button>
+                </div>
+              </div>
+
+              {/* 画像の署名文字 */}
+              <div class="mizuna-setting-col" style={{ "margin-top": "12px" }}>
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">{t('settings.signature_setting')}</div>
+                  <div class="mizuna-setting-desc">{t('settings.signature_setting_desc')}</div>
+                </div>
+                <div class="mizuna-watermark-input-wrap">
+                  <input
+                    type="text"
+                    id="settings_signature_text"
+                    class="mizuna-watermark-input"
+                    value={signatureValue()}
+                    placeholder={defaultSignaturePlaceholder()}
+                    onInput={(e) => {
+                      setIsSignatureDirty(true);
+                      setSignatureValue(e.currentTarget.value);
+                    }}
+                    onBlur={async () => {
+                      setIsSignatureDirty(false);
+                      await updateSettings({ signature_text: signatureValue().trim() });
+                    }}
+                  />
+                  <Show when={signatureValue()}>
+                    <button
+                      type="button"
+                      class="mizuna-btn mizuna-btn-tonal mizuna-watermark-clear-btn"
+                      title="リセット (デフォルトに戻す)"
+                      onClick={async () => {
+                        setSignatureValue('');
+                        setIsSignatureDirty(false);
+                        await updateSettings({ signature_text: '' });
+                      }}
+                    >
+                      <i>clear</i>
+                      <span>リセット</span>
+                    </button>
+                  </Show>
                 </div>
               </div>
 
               <div class="mizuna-row-divider" />
 
-              {/* 画像の透かし文字 */}
-              <div class="mizuna-setting-col">
+              {/* 盗作防止透かしの自動付与 (ON/OFF) */}
+              <div class="mizuna-setting-row">
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">{t('settings.watermark_auto_enabled')}</div>
+                  <div class="mizuna-setting-desc">{t('settings.watermark_auto_enabled_desc')}</div>
+                </div>
+                <div class="mizuna-seg-pills">
+                  <button
+                    type="button"
+                    class={`mizuna-seg-pill ${!settings().watermark_enabled ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ watermark_enabled: false })}
+                  >
+                    <span>OFF</span>
+                  </button>
+                  <button
+                    type="button"
+                    class={`mizuna-seg-pill ${settings().watermark_enabled ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ watermark_enabled: true })}
+                  >
+                    <span>ON</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 盗作防止透かしパターン */}
+              <div class="mizuna-setting-row" style={{ "margin-top": "12px" }}>
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">{t('settings.watermark_pattern_setting')}</div>
+                </div>
+                <div class="mizuna-seg-pills">
+                  <button
+                    type="button"
+                    class={`mizuna-seg-pill ${(settings().watermark_pattern ?? 'diagonal') === 'diagonal' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ watermark_pattern: 'diagonal' })}
+                  >
+                    <span>{t('settings.watermark_pattern_diagonal')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class={`mizuna-seg-pill ${settings().watermark_pattern === 'grid' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ watermark_pattern: 'grid' })}
+                  >
+                    <span>{t('settings.watermark_pattern_grid')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    class={`mizuna-seg-pill ${settings().watermark_pattern === 'center-huge' ? 'is-active' : ''}`}
+                    onClick={() => updateSettings({ watermark_pattern: 'center-huge' })}
+                  >
+                    <span>{t('settings.watermark_pattern_center_huge')}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 盗作防止透かし文字 */}
+              <div class="mizuna-setting-col" style={{ "margin-top": "12px" }}>
                 <div class="mizuna-setting-info">
                   <div class="mizuna-setting-title">{t('settings.watermark_setting')}</div>
                   <div class="mizuna-setting-desc">{t('settings.watermark_setting_desc')}</div>

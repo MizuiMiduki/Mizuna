@@ -827,12 +827,16 @@ export function AppProvider(props: { children: JSX.Element }) {
       originalSize: file.size,
     }));
 
-    // 自動透かし付与の設定を確認
-    const autoPos = settings().watermark_position;
-    const shouldAutoWatermark = autoPos && autoPos !== 'none';
+    // 自動署名・透かし付与の設定を確認
+    const sigPos = settings().signature_position ?? settings().watermark_position;
+    const shouldAutoSignature = sigPos && sigPos !== 'none';
     const user = currentUser();
     const defaultUserText = user ? `@${user.username}@${user.address}` : '';
-    const watermarkText = settings().watermark_text?.trim() || defaultUserText;
+    const signatureText = settings().signature_text?.trim() || settings().watermark_text?.trim() || defaultUserText;
+
+    const shouldAutoWatermark = settings().watermark_enabled === true;
+    const watermarkText = settings().watermark_text?.trim() || defaultUserText || 'DO NOT REPOST';
+    const watermarkPattern = settings().watermark_pattern ?? 'diagonal';
 
     // サムネイル生成とWebP事前圧縮は、原寸デコードのピークメモリを抑えるため1枚ずつ直列に処理する
     newItems.forEach((item) => {
@@ -840,19 +844,24 @@ export function AppProvider(props: { children: JSX.Element }) {
         let activeFile = item.file;
         let activeDataUrl = item.dataUrl;
 
-        // 設定で四隅の透かし付与が有効化されている場合、自動で透かしを合成
-        if (shouldAutoWatermark && watermarkText) {
+        // 設定で署名または透かし付与が有効化されている場合、自動で合成
+        if ((shouldAutoSignature && signatureText) || (shouldAutoWatermark && watermarkText)) {
           try {
-            const watermarked = await editImageOptimized(activeFile, {
-              watermark: {
+            const processed = await editImageOptimized(activeFile, {
+              signature: shouldAutoSignature && signatureText ? {
+                text: signatureText,
+                position: sigPos,
+                opacity: 0.85,
+              } : null,
+              watermark: shouldAutoWatermark && watermarkText ? {
                 text: watermarkText,
-                position: autoPos,
-                opacity: 0.75,
-              },
+                pattern: watermarkPattern,
+                opacity: 0.22,
+              } : null,
             });
             const oldDataUrl = activeDataUrl;
-            activeDataUrl = URL.createObjectURL(watermarked);
-            activeFile = watermarked;
+            activeDataUrl = URL.createObjectURL(processed);
+            activeFile = processed;
 
             setAttachedImages((prev) =>
               prev.map((img) =>

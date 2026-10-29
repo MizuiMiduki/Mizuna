@@ -5,8 +5,12 @@ import {
   MosaicRect,
   ImageAdjustments,
   ImageEditOptions,
+  SignatureOptions,
+  SignaturePosition,
   WatermarkOptions,
-  WatermarkPosition,
+  WatermarkPattern,
+  applySignatureToContext,
+  applyWatermarkPatternToContext,
   editImageOptimized,
 } from '../utils/imageEditor';
 import { useApp } from '../store/appStore';
@@ -17,7 +21,7 @@ export interface ImageEditorModalProps {
   onClose: () => void;
 }
 
-type TabType = 'crop' | 'rotate' | 'adjust' | 'mosaic' | 'watermark';
+type TabType = 'crop' | 'rotate' | 'adjust' | 'mosaic' | 'watermark' | 'signature';
 type AspectRatioType = 'free' | '1:1' | '4:3' | '16:9';
 
 export function ImageEditorModal(props: ImageEditorModalProps) {
@@ -34,26 +38,46 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   const [saturation, setSaturation] = createSignal<number>(100);
   const [aspectRatio, setAspectRatio] = createSignal<AspectRatioType>('free');
 
-  // 透かしステート (初期値は設定値、未設定なら現在のアカウント情報)
+  // 1. 盗作防止透かしステート (画像全面パターン)
   const getInitialWatermarkText = () => {
     const custom = settings().watermark_text?.trim();
+    if (custom) return custom;
+    const user = currentUser();
+    if (user) return `@${user.username}@${user.address}`;
+    return 'DO NOT REPOST';
+  };
+
+  const [watermarkEnabled, setWatermarkEnabled] = createSignal<boolean>(settings().watermark_enabled ?? false);
+  const [watermarkText, setWatermarkText] = createSignal<string>(getInitialWatermarkText());
+  const [watermarkPattern, setWatermarkPattern] = createSignal<WatermarkPattern>(settings().watermark_pattern ?? 'diagonal');
+  const [watermarkOpacity, setWatermarkOpacity] = createSignal<number>(22);
+  const [watermarkScale, setWatermarkScale] = createSignal<number>(100);
+
+  // 2. 署名ステート (四隅クレジット表記)
+  const getInitialSignatureText = () => {
+    const custom = settings().signature_text?.trim() || settings().watermark_text?.trim();
     if (custom) return custom;
     const user = currentUser();
     if (user) return `@${user.username}@${user.address}`;
     return '';
   };
 
-  const getInitialPosition = (): WatermarkPosition => {
-    const pos = settings().watermark_position;
+  const getInitialSignaturePosition = (): SignaturePosition => {
+    const pos = settings().signature_position ?? settings().watermark_position;
     if (pos && pos !== 'none') return pos;
     return 'bottom-right';
   };
 
-  const [watermarkEnabled, setWatermarkEnabled] = createSignal<boolean>(false);
-  const [watermarkText, setWatermarkText] = createSignal<string>(getInitialWatermarkText());
-  const [watermarkPosition, setWatermarkPosition] = createSignal<WatermarkPosition>(getInitialPosition());
-  const [watermarkOpacity, setWatermarkOpacity] = createSignal<number>(75);
-  const [watermarkScale, setWatermarkScale] = createSignal<number>(100); // 70% - 150%
+  const [signatureEnabled, setSignatureEnabled] = createSignal<boolean>(
+    (settings().signature_position && settings().signature_position !== 'none') ||
+    (settings().watermark_position && settings().watermark_position !== 'none')
+      ? true
+      : false
+  );
+  const [signatureText, setSignatureText] = createSignal<string>(getInitialSignatureText());
+  const [signaturePosition, setSignaturePosition] = createSignal<SignaturePosition>(getInitialSignaturePosition());
+  const [signatureOpacity, setSignatureOpacity] = createSignal<number>(85);
+  const [signatureScale, setSignatureScale] = createSignal<number>(100);
 
   // クロップ座標 (元画像に対する比率 0.0 - 1.0)
   const [cropBox, setCropBox] = createSignal<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -124,6 +148,26 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     if (flipX()) ctx.scale(-1, 1);
     ctx.drawImage(sourceImage, -sW / 2, -sH / 2, sW, sH);
     ctx.restore();
+
+    // プレビューにも盗作防止透かしを実寸比率でそのまま描画
+    if (watermarkEnabled() && watermarkText().trim()) {
+      applyWatermarkPatternToContext(ctx, targetW, targetH, {
+        text: watermarkText().trim(),
+        pattern: watermarkPattern(),
+        opacity: watermarkOpacity() / 100,
+        scale: watermarkScale() / 100,
+      });
+    }
+
+    // プレビューにも署名を実寸比率でそのまま描画
+    if (signatureEnabled() && signatureText().trim()) {
+      applySignatureToContext(ctx, targetW, targetH, {
+        text: signatureText().trim(),
+        position: signaturePosition(),
+        opacity: signatureOpacity() / 100,
+        scale: signatureScale() / 100,
+      });
+    }
   };
 
   onMount(() => {
@@ -150,6 +194,16 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     brightness();
     contrast();
     saturation();
+    watermarkEnabled();
+    watermarkText();
+    watermarkPattern();
+    watermarkOpacity();
+    watermarkScale();
+    signatureEnabled();
+    signatureText();
+    signaturePosition();
+    signatureOpacity();
+    signatureScale();
     renderPreview();
   });
 
@@ -454,9 +508,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         watermarkEnabled() && watermarkText().trim()
           ? {
               text: watermarkText().trim(),
-              position: watermarkPosition(),
+              pattern: watermarkPattern(),
               opacity: watermarkOpacity() / 100,
               scale: watermarkScale() / 100,
+            }
+          : null;
+
+      const signatureOption: SignatureOptions | null =
+        signatureEnabled() && signatureText().trim()
+          ? {
+              text: signatureText().trim(),
+              position: signaturePosition(),
+              opacity: signatureOpacity() / 100,
+              scale: signatureScale() / 100,
             }
           : null;
 
@@ -471,6 +535,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         },
         mosaics: mosaicPixels,
         watermark: watermarkOption,
+        signature: signatureOption,
         quality: 0.85,
       };
 
@@ -626,29 +691,6 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                   }}
                 />
               )}
-            </Show>
-
-            {/* 透かしリアルタイムプレビュー */}
-            <Show when={watermarkEnabled() && watermarkText().trim()}>
-              <div
-                class={`mizuna-watermark-preview-pill is-${watermarkPosition()}`}
-                style={{
-                  opacity: watermarkOpacity() / 100,
-                  transform: `scale(${watermarkScale() / 100})`,
-                  'transform-origin':
-                    watermarkPosition() === 'bottom-right'
-                      ? 'bottom right'
-                      : watermarkPosition() === 'bottom-left'
-                      ? 'bottom left'
-                      : watermarkPosition() === 'top-right'
-                      ? 'top right'
-                      : watermarkPosition() === 'top-left'
-                      ? 'top left'
-                      : 'center center',
-                }}
-              >
-                <span>{watermarkText()}</span>
-              </div>
             </Show>
           </div>
 
@@ -834,11 +876,11 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
               </div>
             </Show>
 
-            {/* 5. 透かしタブ */}
+            {/* 5. 盗作防止透かしタブ */}
             <Show when={activeTab() === 'watermark'}>
               <div class="mizuna-editor-watermark-tools">
                 <div class="mizuna-watermark-header">
-                  <span class="mizuna-editor-sublabel">透かしを合成:</span>
+                  <span class="mizuna-editor-sublabel">盗作防止透かし:</span>
                   <div class="mizuna-seg-pills">
                     <button
                       type="button"
@@ -860,53 +902,42 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                 <Show when={watermarkEnabled()}>
                   <div class="mizuna-watermark-options">
                     <div class="mizuna-watermark-input-group">
-                      <span class="mizuna-editor-sublabel">テキスト:</span>
+                      <span class="mizuna-editor-sublabel">透かし文字:</span>
                       <input
                         type="text"
                         class="mizuna-editor-text-input"
                         value={watermarkText()}
-                        placeholder="@username@instance"
+                        placeholder="DO NOT REPOST / @username"
                         onInput={(e) => setWatermarkText(e.currentTarget.value)}
                       />
                     </div>
 
                     <div class="mizuna-watermark-pos-group">
-                      <span class="mizuna-editor-sublabel">位置:</span>
+                      <span class="mizuna-editor-sublabel">パターン:</span>
                       <div class="mizuna-seg-pills mizuna-seg-pills-wrap">
                         <button
                           type="button"
-                          class={`mizuna-seg-pill ${watermarkPosition() === 'bottom-right' ? 'is-active' : ''}`}
-                          onClick={() => setWatermarkPosition('bottom-right')}
+                          class={`mizuna-seg-pill ${watermarkPattern() === 'diagonal' ? 'is-active' : ''}`}
+                          onClick={() => setWatermarkPattern('diagonal')}
                         >
-                          <span>右下</span>
+                          <i>rotate_right</i>
+                          <span>斜めリピート</span>
                         </button>
                         <button
                           type="button"
-                          class={`mizuna-seg-pill ${watermarkPosition() === 'bottom-left' ? 'is-active' : ''}`}
-                          onClick={() => setWatermarkPosition('bottom-left')}
+                          class={`mizuna-seg-pill ${watermarkPattern() === 'grid' ? 'is-active' : ''}`}
+                          onClick={() => setWatermarkPattern('grid')}
                         >
-                          <span>左下</span>
+                          <i>grid_view</i>
+                          <span>格子</span>
                         </button>
                         <button
                           type="button"
-                          class={`mizuna-seg-pill ${watermarkPosition() === 'top-right' ? 'is-active' : ''}`}
-                          onClick={() => setWatermarkPosition('top-right')}
+                          class={`mizuna-seg-pill ${watermarkPattern() === 'center-huge' ? 'is-active' : ''}`}
+                          onClick={() => setWatermarkPattern('center-huge')}
                         >
-                          <span>右上</span>
-                        </button>
-                        <button
-                          type="button"
-                          class={`mizuna-seg-pill ${watermarkPosition() === 'top-left' ? 'is-active' : ''}`}
-                          onClick={() => setWatermarkPosition('top-left')}
-                        >
-                          <span>左上</span>
-                        </button>
-                        <button
-                          type="button"
-                          class={`mizuna-seg-pill ${watermarkPosition() === 'center' ? 'is-active' : ''}`}
-                          onClick={() => setWatermarkPosition('center')}
-                        >
-                          <span>中央</span>
+                          <i>filter_center_focus</i>
+                          <span>中央大</span>
                         </button>
                       </div>
                     </div>
@@ -915,8 +946,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                       <span class="mizuna-editor-sublabel">不透明度:</span>
                       <input
                         type="range"
-                        min="20"
-                        max="100"
+                        min="5"
+                        max="60"
                         value={watermarkOpacity()}
                         onInput={(e) => setWatermarkOpacity(Number(e.currentTarget.value))}
                         class="mizuna-slider"
@@ -935,6 +966,113 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                         class="mizuna-slider"
                       />
                       <span class="mizuna-adjust-value">{watermarkScale()}%</span>
+                    </div>
+                  </div>
+                </Show>
+              </div>
+            </Show>
+
+            {/* 6. 署名タブ (四隅クレジット表記) */}
+            <Show when={activeTab() === 'signature'}>
+              <div class="mizuna-editor-watermark-tools">
+                <div class="mizuna-watermark-header">
+                  <span class="mizuna-editor-sublabel">署名（クレジット）:</span>
+                  <div class="mizuna-seg-pills">
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${!signatureEnabled() ? 'is-active' : ''}`}
+                      onClick={() => setSignatureEnabled(false)}
+                    >
+                      <span>OFF</span>
+                    </button>
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${signatureEnabled() ? 'is-active' : ''}`}
+                      onClick={() => setSignatureEnabled(true)}
+                    >
+                      <span>ON</span>
+                    </button>
+                  </div>
+                </div>
+
+                <Show when={signatureEnabled()}>
+                  <div class="mizuna-watermark-options">
+                    <div class="mizuna-watermark-input-group">
+                      <span class="mizuna-editor-sublabel">署名テキスト:</span>
+                      <input
+                        type="text"
+                        class="mizuna-editor-text-input"
+                        value={signatureText()}
+                        placeholder="@username@instance"
+                        onInput={(e) => setSignatureText(e.currentTarget.value)}
+                      />
+                    </div>
+
+                    <div class="mizuna-watermark-pos-group">
+                      <span class="mizuna-editor-sublabel">配置位置:</span>
+                      <div class="mizuna-seg-pills mizuna-seg-pills-wrap">
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${signaturePosition() === 'bottom-right' ? 'is-active' : ''}`}
+                          onClick={() => setSignaturePosition('bottom-right')}
+                        >
+                          <span>右下</span>
+                        </button>
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${signaturePosition() === 'bottom-left' ? 'is-active' : ''}`}
+                          onClick={() => setSignaturePosition('bottom-left')}
+                        >
+                          <span>左下</span>
+                        </button>
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${signaturePosition() === 'top-right' ? 'is-active' : ''}`}
+                          onClick={() => setSignaturePosition('top-right')}
+                        >
+                          <span>右上</span>
+                        </button>
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${signaturePosition() === 'top-left' ? 'is-active' : ''}`}
+                          onClick={() => setSignaturePosition('top-left')}
+                        >
+                          <span>左上</span>
+                        </button>
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${signaturePosition() === 'center' ? 'is-active' : ''}`}
+                          onClick={() => setSignaturePosition('center')}
+                        >
+                          <span>中央</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    <div class="mizuna-adjust-slider-row">
+                      <span class="mizuna-editor-sublabel">不透明度:</span>
+                      <input
+                        type="range"
+                        min="20"
+                        max="100"
+                        value={signatureOpacity()}
+                        onInput={(e) => setSignatureOpacity(Number(e.currentTarget.value))}
+                        class="mizuna-slider"
+                      />
+                      <span class="mizuna-adjust-value">{signatureOpacity()}%</span>
+                    </div>
+
+                    <div class="mizuna-adjust-slider-row">
+                      <span class="mizuna-editor-sublabel">大きさ:</span>
+                      <input
+                        type="range"
+                        min="60"
+                        max="160"
+                        value={signatureScale()}
+                        onInput={(e) => setSignatureScale(Number(e.currentTarget.value))}
+                        class="mizuna-slider"
+                      />
+                      <span class="mizuna-adjust-value">{signatureScale()}%</span>
                     </div>
                   </div>
                 </Show>
@@ -986,8 +1124,21 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                 }
               }}
             >
-              <i>branding_watermark</i>
+              <i>pattern</i>
               <span>透かし</span>
+            </button>
+            <button
+              type="button"
+              class={`mizuna-editor-tab-btn ${activeTab() === 'signature' ? 'is-active' : ''}`}
+              onClick={() => {
+                setActiveTab('signature');
+                if (!signatureEnabled() && signatureText()) {
+                  setSignatureEnabled(true);
+                }
+              }}
+            >
+              <i>branding_watermark</i>
+              <span>署名</span>
             </button>
           </div>
         </div>

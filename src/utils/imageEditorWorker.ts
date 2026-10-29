@@ -1,6 +1,7 @@
 import {
   applyMosaicsToContext,
-  applyWatermarkToContext,
+  applySignatureToContext,
+  applyWatermarkPatternToContext,
   ImageEditOptions,
 } from './imageEditor';
 
@@ -87,12 +88,15 @@ self.onmessage = async (e: MessageEvent<WorkerEditRequest>) => {
       }
     }
 
-    // 透かし（ウォーターマーク）
-    const { watermark = null } = options;
-    if (watermark && watermark.text && watermark.text.trim()) {
-      const finalCtx = finalCanvas.getContext('2d');
-      if (finalCtx) {
-        applyWatermarkToContext(finalCtx, finalCanvas.width, finalCanvas.height, watermark);
+    // 盗作防止透かしおよび署名
+    const { watermark = null, signature = null } = options;
+    const finalCtx = finalCanvas.getContext('2d');
+    if (finalCtx) {
+      if (watermark && watermark.text && watermark.text.trim()) {
+        applyWatermarkPatternToContext(finalCtx, finalCanvas.width, finalCanvas.height, watermark);
+      }
+      if (signature && signature.text && signature.text.trim()) {
+        applySignatureToContext(finalCtx, finalCanvas.width, finalCanvas.height, signature);
       }
     }
 
