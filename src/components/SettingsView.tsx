@@ -310,69 +310,6 @@ export function SettingsView() {
                   </button>
                 </div>
               </div>
-
-              <div class="mizuna-row-divider" />
-
-              {/* カスタムCSS */}
-              <div class="mizuna-setting-col">
-                <div class="mizuna-setting-info">
-                  <div class="mizuna-setting-title">{t('settings.custom_css')}</div>
-                  <div class="mizuna-setting-desc">{t('settings.custom_css_desc')}</div>
-                </div>
-
-                <div class="mizuna-custom-css-wrapper">
-                  <textarea
-                    id="settings_custom_css"
-                    class="mizuna-custom-css-textarea"
-                    placeholder={t('settings.custom_css_placeholder')}
-                    value={customCssValue()}
-                    onInput={(e) => {
-                      setCustomCssValue(e.currentTarget.value);
-                      setIsCssDirty(true);
-                    }}
-                    rows={6}
-                    spellcheck={false}
-                    aria-label={t('settings.custom_css')}
-                  />
-
-                  <Show when={cssWarnings().length > 0}>
-                    <div class="mizuna-custom-css-warnings">
-                      <i class="mizuna-warning-icon">warning</i>
-                      <div class="mizuna-warning-list">
-                        <For each={cssWarnings()}>
-                          {(w) => <div class="mizuna-warning-item">{w}</div>}
-                        </For>
-                      </div>
-                    </div>
-                  </Show>
-
-                  <div class="mizuna-custom-css-actions">
-                    <button
-                      type="button"
-                      id="save_custom_css"
-                      class="mizuna-btn mizuna-btn-primary"
-                      onClick={handleSaveCustomCss}
-                    >
-                      <i>save</i>
-                      <span>{t('settings.custom_css_save')}</span>
-                    </button>
-                    <button
-                      type="button"
-                      id="clear_custom_css"
-                      class="mizuna-btn mizuna-btn-outline"
-                      onClick={handleClearCustomCss}
-                      disabled={!customCssValue() && !settings().custom_css}
-                    >
-                      <i>delete</i>
-                      <span>{t('settings.custom_css_clear')}</span>
-                    </button>
-                  </div>
-
-                  <div class="mizuna-custom-css-disclaimer">
-                    {t('settings.custom_css_disclaimer')}
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -504,6 +441,75 @@ export function SettingsView() {
                   <i class={isCheckingUpdate() ? 'is-spinning' : ''}>sync</i>
                   <span>{isCheckingUpdate() ? t('update.checking') : t('settings.check_button')}</span>
                 </button>
+              </div>
+            </div>
+          </div>
+
+          {/* カスタムCSSグループ（サポート対象外・最下部に別枠で配置） */}
+          <div class="mizuna-setting-group">
+            <div class="mizuna-group-label" style="display: flex; align-items: center; gap: 6px;">
+              <span>{t('settings.group_custom_css')}</span>
+            </div>
+
+            <div class="mizuna-setting-card">
+              <div class="mizuna-setting-col">
+                <div class="mizuna-setting-info">
+                  <div class="mizuna-setting-title">{t('settings.custom_css')}</div>
+                  <div class="mizuna-setting-desc">{t('settings.custom_css_desc')}</div>
+                </div>
+
+                <div class="mizuna-custom-css-wrapper">
+                  <textarea
+                    id="settings_custom_css"
+                    class="mizuna-custom-css-textarea"
+                    placeholder={t('settings.custom_css_placeholder')}
+                    value={customCssValue()}
+                    onInput={(e) => {
+                      setCustomCssValue(e.currentTarget.value);
+                      setIsCssDirty(true);
+                    }}
+                    rows={6}
+                    spellcheck={false}
+                    aria-label={t('settings.custom_css')}
+                  />
+
+                  <Show when={cssWarnings().length > 0}>
+                    <div class="mizuna-custom-css-warnings">
+                      <i class="mizuna-warning-icon">warning</i>
+                      <div class="mizuna-warning-list">
+                        <For each={cssWarnings()}>
+                          {(w) => <div class="mizuna-warning-item">{w}</div>}
+                        </For>
+                      </div>
+                    </div>
+                  </Show>
+
+                  <div class="mizuna-custom-css-actions">
+                    <button
+                      type="button"
+                      id="save_custom_css"
+                      class="mizuna-btn mizuna-btn-primary"
+                      onClick={handleSaveCustomCss}
+                    >
+                      <i>save</i>
+                      <span>{t('settings.custom_css_save')}</span>
+                    </button>
+                    <button
+                      type="button"
+                      id="clear_custom_css"
+                      class="mizuna-btn mizuna-btn-outline"
+                      onClick={handleClearCustomCss}
+                      disabled={!customCssValue() && !settings().custom_css}
+                    >
+                      <i>delete</i>
+                      <span>{t('settings.custom_css_clear')}</span>
+                    </button>
+                  </div>
+
+                  <div class="mizuna-custom-css-disclaimer">
+                    {t('settings.custom_css_disclaimer')}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
