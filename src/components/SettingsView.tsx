@@ -1,12 +1,12 @@
 import gsap from 'gsap';
-import { onMount } from 'solid-js';
+import { onSettled } from 'solid-js';
 import { useApp } from '../store/appStore';
 
 export function SettingsView() {
   const { settings, updateSettings, isSyncingAccounts, syncAllAccounts, exportAccounts } = useApp();
   let panelRef: HTMLDivElement | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     if (panelRef) {
       gsap.fromTo(
         panelRef,

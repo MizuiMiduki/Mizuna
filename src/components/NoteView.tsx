@@ -1,12 +1,11 @@
-import { Portal } from 'solid-js/web';
+import { Portal } from '@solidjs/web';
 import gsap from 'gsap';
 import {
   createEffect,
   createMemo,
   createSignal,
   For,
-  onCleanup,
-  onMount,
+  onSettled,
   Show,
 } from 'solid-js';
 import { createMisskeyNote, uploadImagesToDrive } from '../services/misskeyApi';
@@ -94,17 +93,19 @@ export function NoteView() {
   });
 
   // CWエリア開閉のGSAPアニメーション
-  createEffect(() => {
-    const open = cwEnabled();
-    if (!cwSectionRef) return;
-    if (open) {
-      gsap.fromTo(
-        cwSectionRef,
-        { height: 0, opacity: 0, y: -6 },
-        { height: 'auto', opacity: 1, y: 0, duration: 0.28, ease: 'power3.out' }
-      );
+  createEffect(
+    () => cwEnabled(),
+    (open) => {
+      if (!cwSectionRef) return;
+      if (open) {
+        gsap.fromTo(
+          cwSectionRef,
+          { height: 0, opacity: 0, y: -6 },
+          { height: 'auto', opacity: 1, y: 0, duration: 0.28, ease: 'power3.out' }
+        );
+      }
     }
-  });
+  );
 
   // ノート送信処理
   const handleSendNote = async () => {
@@ -191,7 +192,7 @@ export function NoteView() {
   };
 
   // キーボードショートカット (Ctrl + Alt + Key)
-  onMount(() => {
+  onSettled(() => {
     if (viewContainerRef) {
       gsap.fromTo(
         viewContainerRef,
@@ -250,7 +251,7 @@ export function NoteView() {
     };
 
     document.addEventListener('keydown', handleKeyDown);
-    onCleanup(() => document.removeEventListener('keydown', handleKeyDown));
+    return () => document.removeEventListener('keydown', handleKeyDown);
   });
 
   const handleOpenPreview = (item: AttachedImageItem) => {
@@ -408,7 +409,7 @@ export function NoteView() {
               <textarea
                 ref={cwInputRef}
                 class="cw_content mizuna-cw-textarea"
-                maxLength={100}
+                maxlength={100}
                 rows={1}
                 placeholder="閲覧注意の注釈 (CW) を入力..."
                 value={cwText()}
@@ -430,7 +431,7 @@ export function NoteView() {
           <textarea
             ref={noteInputRef}
             class="note_content mizuna-main-textarea"
-            maxLength={3000}
+            maxlength={3000}
             rows={6}
             placeholder="いまどうしてる？"
             value={noteText()}

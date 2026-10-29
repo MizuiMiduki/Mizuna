@@ -1,6 +1,6 @@
 import gsap from 'gsap';
 import PullToRefresh from 'pulltorefreshjs';
-import { createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { createSignal, onSettled, Show } from 'solid-js';
 import { mizuna_options } from '../config/mizunaOptions';
 import { useApp, type ViewType } from '../store/appStore';
 import { HoldHoverTip } from './HoldHoverTip';
@@ -19,7 +19,7 @@ export function Header() {
     }
   };
 
-  onMount(() => {
+  onSettled(() => {
     if (newsRef && showNews()) {
       gsap.fromTo(
         newsRef,
@@ -48,9 +48,9 @@ export function Header() {
       });
     }
 
-    onCleanup(() => {
+    return () => {
       PullToRefresh.destroyAll();
-    });
+    };
   });
 
   const handleCloseNews = (e: MouseEvent) => {

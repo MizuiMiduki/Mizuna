@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { createSignal, For, onMount, Show } from 'solid-js';
+import { createSignal, For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import {
   fetchAnnouncements,
@@ -41,7 +41,7 @@ export function AnnouncementsView() {
     }
   };
 
-  onMount(() => {
+  onSettled(() => {
     if (containerRef) {
       gsap.fromTo(
         containerRef,

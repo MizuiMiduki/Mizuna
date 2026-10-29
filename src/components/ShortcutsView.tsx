@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { For, onMount, Show } from 'solid-js';
+import { For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 
 interface ShortcutItem {
@@ -24,7 +24,7 @@ export function ShortcutsView() {
   const { accounts, setCurrentView } = useApp();
   let containerRef: HTMLDivElement | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     if (containerRef) {
       gsap.fromTo(
         containerRef,

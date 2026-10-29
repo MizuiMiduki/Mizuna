@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { createSignal, For, onMount, Show } from 'solid-js';
+import { createSignal, For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 
@@ -19,7 +19,7 @@ export function AccountView() {
   const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
   let listRef: HTMLDivElement | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     if (listRef) {
       const cards = listRef.querySelectorAll('.mizuna-acc-card');
       if (cards.length > 0) {

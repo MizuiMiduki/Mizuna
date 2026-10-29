@@ -2,7 +2,7 @@
 import 'beercss/dist/cdn/beer.min.css';
 import 'beercss';
 import 'material-dynamic-colors';
-import { render } from 'solid-js/web';
+import { render } from '@solidjs/web';
 import App from './App';
 import './styles/app.css';
 
