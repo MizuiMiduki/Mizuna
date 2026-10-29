@@ -7,6 +7,7 @@ import { AboutView } from '../src/components/AboutView';
 import { ShortcutsView } from '../src/components/ShortcutsView';
 import { AnnouncementsView } from '../src/components/AnnouncementsView';
 import { HoldHoverTip } from '../src/components/HoldHoverTip';
+import { SettingsView } from '../src/components/SettingsView';
 import { DialogHost } from '../src/components/DialogHost';
 import { SnackbarHost } from '../src/components/SnackbarHost';
 import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
@@ -121,6 +122,29 @@ describe('UI Components', () => {
       ));
 
       expect(container).toBeDefined();
+    });
+  });
+
+  describe('SettingsView', () => {
+    it('言語設定がプルダウンメニュー（select）として描画され、言語を切り替えられること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      const select = (await screen.findByRole('combobox', { name: /(表示言語|Display Language)/ })) as HTMLSelectElement;
+      expect(select).toBeInTheDocument();
+      expect(select.tagName.toLowerCase()).toBe('select');
+
+      const options = select.querySelectorAll('option');
+      expect(options.length).toBeGreaterThanOrEqual(2);
+
+      fireEvent.change(select, { target: { value: 'ja_jp' } });
+      expect(select.value).toBe('ja_jp');
+
+      fireEvent.change(select, { target: { value: 'en_us' } });
+      expect(select.value).toBe('en_us');
     });
   });
 });

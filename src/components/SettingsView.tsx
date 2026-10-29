@@ -251,21 +251,25 @@ export function SettingsView() {
                   <div class="mizuna-setting-desc">{t('settings.language_desc')}</div>
                 </div>
 
-                <div class="mizuna-seg-pills">
-                  <For each={SUPPORTED_LANGUAGES}>
-                    {(lang) => (
-                      <button
-                        type="button"
-                        id={`language_${lang.code}`}
-                        class={`mizuna-seg-pill ${
-                          settings().language === lang.code ? 'is-active' : ''
-                        }`}
-                        onClick={() => updateSettings({ language: lang.code })}
-                      >
-                        <span>{lang.label}</span>
-                      </button>
-                    )}
-                  </For>
+                <div class="mizuna-select-wrapper">
+                  <select
+                    id="settings_language"
+                    class="mizuna-select"
+                    value={settings().language}
+                    onChange={(e) => updateSettings({ language: e.currentTarget.value as any })}
+                    aria-label={t('settings.language')}
+                  >
+                    <For each={SUPPORTED_LANGUAGES}>
+                      {(lang) => (
+                        <option value={lang.code} selected={settings().language === lang.code}>
+                          {lang.label}
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                  <i class="mizuna-select-arrow" aria-hidden="true">
+                    expand_more
+                  </i>
                 </div>
               </div>
             </div>

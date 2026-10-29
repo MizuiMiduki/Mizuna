@@ -1705,6 +1705,70 @@ body {
   box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
+/* プルダウンメニュー (.mizuna-select-wrapper & .mizuna-select) */
+.mizuna-select-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.mizuna-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  font-family: inherit;
+  height: 38px;
+  min-width: 140px;
+  padding: 0 36px 0 14px;
+  border-radius: var(--mizuna-radius-pill);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  background: color-mix(in srgb, var(--surface-container-highest) 75%, transparent);
+  color: var(--on-surface);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.18s ease;
+}
+
+.mizuna-select:hover {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--surface-container-highest));
+}
+
+.mizuna-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.mizuna-select option {
+  background: var(--surface-container-high, #fff);
+  color: var(--on-surface, #000);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 6px 10px;
+}
+
+.mizuna-select-arrow {
+  position: absolute;
+  right: 12px;
+  pointer-events: none;
+  font-size: 20px !important;
+  color: var(--on-surface-variant);
+  user-select: none;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.18s ease;
+}
+
+.mizuna-select-wrapper:hover .mizuna-select-arrow,
+.mizuna-select-wrapper:focus-within .mizuna-select-arrow {
+  color: var(--primary);
+}
+
 /* ショートカット一覧 Bento グリッド */
 .mizuna-shortcut-bento {
   display: grid;
