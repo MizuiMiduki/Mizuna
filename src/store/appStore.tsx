@@ -30,7 +30,8 @@ export type ViewType =
   | 'settings'
   | 'shortcuts'
   | 'about'
-  | 'announcements';
+  | 'announcements'
+  | 'privacy';
 export type VisibilityType = 'public' | 'home' | 'followers';
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -59,6 +60,8 @@ export interface DialogConfig {
     title: string;
     url: string;
   };
+  /** プライバシーポリシーへのリンクを表示するか */
+  showPrivacyPolicy?: boolean;
   buttons: DialogButton[];
 }
 
@@ -301,7 +304,8 @@ export function AppProvider(props: { children: JSX.Element }) {
       view !== 'add_account' &&
       view !== 'shortcuts' &&
       view !== 'about' &&
-      view !== 'announcements'
+      view !== 'announcements' &&
+      view !== 'privacy'
     ) {
       setCurrentViewInternal('add_account');
       return;
@@ -447,9 +451,31 @@ export function AppProvider(props: { children: JSX.Element }) {
       }
     }
 
+    // 初回起動時のウェルカムポップアップ表示
     if (currentSettings.is_check_releasenote === null && !forceShowAfterUpdate) {
-      await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
-      setSettings((prev) => ({ ...prev, is_check_releasenote: mizuna_options.mizuna_version }));
+      openDialog({
+        title: `${mizuna_options.app_name} へようこそ`,
+        icon: 'celebration',
+        tone: 'primary',
+        badgeText: 'WELCOME',
+        contentText:
+          'Mizuna はノート投稿機能のみに特化し、通信量削減と快適な操作性に重点を置いた Misskey クライアントです。',
+        showPrivacyPolicy: true,
+        buttons: [
+          {
+            label: 'はじめる',
+            variant: 'fill',
+            onClick: async () => {
+              await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
+              setSettings((prev) => ({
+                ...prev,
+                is_check_releasenote: mizuna_options.mizuna_version,
+              }));
+              closeDialog();
+            },
+          },
+        ],
+      });
       return;
     }
 
@@ -473,6 +499,7 @@ export function AppProvider(props: { children: JSX.Element }) {
           title: latestPost?.title || `Mizuna v${mizuna_options.mizuna_version} リリースノート`,
           url: latestPost?.link || 'https://github.com/MizuiMiduki/Mizuna/releases',
         },
+        showPrivacyPolicy: true,
         buttons: [
           {
             label: '確認してはじめる',

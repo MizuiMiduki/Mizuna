@@ -23,6 +23,8 @@ export function getViewMetadata(view: ViewType): { path: string; title: string }
       return { path: '/about', title: `Mizunaについて | ${appName}` };
     case 'announcements':
       return { path: '/announcements', title: `お知らせ | ${appName}` };
+    case 'privacy':
+      return { path: '/privacy', title: `プライバシーポリシー | ${appName}` };
     case 'note':
     default:
       return { path: '/', title: `${appName} -ノート専用Misskeyクライアント` };

@@ -158,6 +158,18 @@ export function AboutView() {
         </div>
         <div class="mizuna-row-divider" />
         <div class="mizuna-meta-row">
+          <span class="mizuna-meta-label">Privacy Policy</span>
+          <button
+            type="button"
+            class="mizuna-link-btn"
+            onClick={() => setCurrentView('privacy')}
+          >
+            <span>プライバシーポリシー</span>
+            <i>arrow_forward</i>
+          </button>
+        </div>
+        <div class="mizuna-row-divider" />
+        <div class="mizuna-meta-row">
           <span class="mizuna-meta-label">License / Copyright</span>
           <span class="mizuna-meta-val">
             MIT License · ©<span id="Copyright_year">{currentYear}</span> Mizui Miduki

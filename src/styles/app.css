@@ -3214,3 +3214,102 @@ body {
     -webkit-backdrop-filter: none !important;
   }
 }
+
+/* =========================================
+   プライバシーポリシー画面 & モーダルリンク
+   ========================================= */
+.mizuna-modal-privacy-card {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  background: color-mix(in srgb, var(--primary) 4%, transparent);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.mizuna-modal-privacy-card:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border-color: color-mix(in srgb, var(--primary) 38%, transparent);
+}
+
+.mizuna-link-btn {
+  background: transparent;
+  border: none;
+  color: var(--primary);
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--mizuna-radius-sm);
+  transition: all 0.18s ease;
+}
+
+.mizuna-link-btn:hover {
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  text-decoration: underline;
+}
+
+.mizuna-link-btn i {
+  font-size: 16px !important;
+}
+
+.mizuna-privacy-view {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+}
+
+.mizuna-privacy-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.mizuna-privacy-card {
+  padding: 18px 20px;
+}
+
+.mizuna-privacy-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0 0 10px 0;
+}
+
+.mizuna-privacy-text {
+  font-size: 0.88rem;
+  line-height: 1.65;
+  color: var(--on-surface-variant);
+  margin: 0 0 10px 0;
+}
+
+.mizuna-privacy-text:last-child {
+  margin-bottom: 0;
+}
+
+.mizuna-privacy-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--primary);
+  text-decoration: underline;
+  font-weight: 600;
+  margin: 0 4px;
+}
+
+.mizuna-privacy-link i {
+  font-size: 14px !important;
+}
+
+.mizuna-privacy-footer-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+

@@ -8,6 +8,7 @@ import { DialogHost } from './components/DialogHost';
 import { FooterNav } from './components/FooterNav';
 import { Header } from './components/Header';
 import { NoteView } from './components/NoteView';
+import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { SettingsView } from './components/SettingsView';
 import { ShortcutsView } from './components/ShortcutsView';
 import { SnackbarHost } from './components/SnackbarHost';
@@ -59,6 +60,9 @@ function MainContent() {
             </Match>
             <Match when={currentView() === 'announcements'}>
               <AnnouncementsView />
+            </Match>
+            <Match when={currentView() === 'privacy'}>
+              <PrivacyPolicyView />
             </Match>
           </Switch>
         </Show>

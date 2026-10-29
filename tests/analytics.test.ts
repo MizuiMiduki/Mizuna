@@ -35,6 +35,7 @@ describe('analytics utility', () => {
         'shortcuts',
         'about',
         'announcements',
+        'privacy',
       ];
 
       for (const view of views) {
