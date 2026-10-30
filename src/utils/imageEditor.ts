@@ -264,8 +264,82 @@ export function applyWatermarkPatternToContext(
   ctx.restore();
 }
 
-/** 後方互換用 alias */
-export const applyWatermarkToContext = applySignatureToContext;
+/**
+ * OffscreenCanvas または通常の HTMLCanvasElement とその 2D Context を生成する
+ */
+export function createCanvas2D(
+  width: number,
+  height: number
+): {
+  canvas: HTMLCanvasElement | OffscreenCanvas;
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
+} {
+  const w = Math.max(1, Math.round(width));
+  const h = Math.max(1, Math.round(height));
+
+  let canvas: HTMLCanvasElement | OffscreenCanvas;
+  let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
+
+  if (typeof OffscreenCanvas !== 'undefined') {
+    canvas = new OffscreenCanvas(w, h);
+    ctx = canvas.getContext('2d');
+  } else if (typeof document !== 'undefined') {
+    canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    ctx = canvas.getContext('2d');
+  } else {
+    throw new Error('Canvas is not supported in this environment');
+  }
+
+  if (!ctx) {
+    throw new Error('Failed to create 2D canvas context');
+  }
+
+  return { canvas, ctx };
+}
+
+/**
+ * Canvas から WebP 形式の Blob をエクスポートする
+ */
+export async function exportCanvasToWebPBlob(
+  canvas: HTMLCanvasElement | OffscreenCanvas,
+  quality: number = 0.85
+): Promise<Blob> {
+  if ('convertToBlob' in canvas && typeof canvas.convertToBlob === 'function') {
+    return canvas.convertToBlob({ type: 'image/webp', quality });
+  }
+  if ('toBlob' in canvas && typeof canvas.toBlob === 'function') {
+    return new Promise<Blob>((resolve, reject) => {
+      (canvas as HTMLCanvasElement).toBlob(
+        (b) => {
+          if (b) resolve(b);
+          else reject(new Error('Canvas export failed'));
+        },
+        'image/webp',
+        quality
+      );
+    });
+  }
+  throw new Error('Canvas blob export unsupported in this environment');
+}
+
+/** 後方互換用 alias (署名または透かしを描画) */
+export function applyWatermarkToContext(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  width: number,
+  height: number,
+  options?: (SignatureOptions & Partial<WatermarkOptions>) | (WatermarkOptions & Partial<SignatureOptions>) | null
+): void {
+  if (!options) return;
+  if ('position' in options && options.position) {
+    applySignatureToContext(ctx, width, height, options as SignatureOptions);
+  } else if ('pattern' in options && options.pattern) {
+    applyWatermarkPatternToContext(ctx, width, height, options as WatermarkOptions);
+  } else {
+    applySignatureToContext(ctx, width, height, options as SignatureOptions);
+  }
+}
 
 /**
  * 簡易画像加工処理（クロップ・回転・反転・色調・モザイク・透かし）を実行し、新しいWebP Fileを返す
@@ -323,25 +397,9 @@ export async function processImageEdits(
     // 2. 中間キャンバスで回転・反転・色調・モザイクを適用
     const isRotated90or270 = rotate === 90 || rotate === 270;
     const stageWidth = isRotated90or270 ? sourceHeight : sourceWidth;
-    const stageHeight = isRotated90or270 ? sourceWidth : stageWidth === sourceHeight ? sourceWidth : sourceHeight;
+    const stageHeight = isRotated90or270 ? sourceWidth : sourceHeight;
 
-    // OffscreenCanvas または標準 Canvas を作成
-    let canvas: HTMLCanvasElement | OffscreenCanvas;
-    let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
-
-    if (typeof OffscreenCanvas !== 'undefined') {
-      canvas = new OffscreenCanvas(stageWidth, stageHeight);
-      ctx = canvas.getContext('2d');
-    } else {
-      canvas = document.createElement('canvas');
-      canvas.width = stageWidth;
-      canvas.height = stageHeight;
-      ctx = canvas.getContext('2d');
-    }
-
-    if (!ctx) {
-      throw new Error('Failed to create 2D canvas context');
-    }
+    const { canvas, ctx } = createCanvas2D(stageWidth, stageHeight);
 
     // 色調調整フィルター (GPUアクセラレーション)
     const { brightness = 100, contrast = 100, saturation = 100 } = adjustments;
@@ -381,23 +439,9 @@ export async function processImageEdits(
       const cw = Math.max(1, Math.min(stageWidth - cx, Math.round(crop.width)));
       const ch = Math.max(1, Math.min(stageHeight - cy, Math.round(crop.height)));
 
-      let cropCanvas: HTMLCanvasElement | OffscreenCanvas;
-      let cropCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
-
-      if (typeof OffscreenCanvas !== 'undefined') {
-        cropCanvas = new OffscreenCanvas(cw, ch);
-        cropCtx = cropCanvas.getContext('2d');
-      } else {
-        cropCanvas = document.createElement('canvas');
-        cropCanvas.width = cw;
-        cropCanvas.height = ch;
-        cropCtx = cropCanvas.getContext('2d');
-      }
-
-      if (cropCtx) {
-        cropCtx.drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
-        finalCanvas = cropCanvas;
-      }
+      const { canvas: cropCanvas, ctx: cropCtx } = createCanvas2D(cw, ch);
+      cropCtx.drawImage(canvas, cx, cy, cw, ch, 0, 0, cw, ch);
+      finalCanvas = cropCanvas;
     }
 
     // 4. 盗作防止透かしおよび署名を合成
@@ -416,23 +460,7 @@ export async function processImageEdits(
     }
 
     // 5. WebP Blob にエクスポート
-    let blob: Blob;
-    if ('convertToBlob' in finalCanvas && typeof finalCanvas.convertToBlob === 'function') {
-      blob = await finalCanvas.convertToBlob({ type: 'image/webp', quality });
-    } else if ('toBlob' in finalCanvas && typeof finalCanvas.toBlob === 'function') {
-      blob = await new Promise<Blob>((resolve, reject) => {
-        (finalCanvas as HTMLCanvasElement).toBlob(
-          (b) => {
-            if (b) resolve(b);
-            else reject(new Error('Canvas export failed'));
-          },
-          'image/webp',
-          quality
-        );
-      });
-    } else {
-      throw new Error('Canvas blob export unsupported in this environment');
-    }
+    const blob = await exportCanvasToWebPBlob(finalCanvas, quality);
 
     // ファイル名生成 (元の拡張子にかかわらず .webp 化)
     const baseName = file.name.replace(/\.[^/.]+$/, '');

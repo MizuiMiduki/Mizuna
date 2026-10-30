@@ -1,8 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   applyMosaicsToContext,
+  applySignatureToContext,
+  applyWatermarkPatternToContext,
   applyWatermarkToContext,
+  createCanvas2D,
   MosaicRect,
+  SignatureOptions,
   WatermarkOptions,
 } from '../src/utils/imageEditor';
 
@@ -49,7 +53,7 @@ describe('imageEditor utility', () => {
     expect(mockCtx.getImageData).not.toHaveBeenCalled();
   });
 
-  it('applyWatermarkToContext がテキストを正しく描画すること', () => {
+  it('applySignatureToContext が署名を正しく描画すること', () => {
     const mockCtx = {
       save: vi.fn(),
       restore: vi.fn(),
@@ -61,13 +65,13 @@ describe('imageEditor utility', () => {
       fillText: vi.fn(),
     } as unknown as CanvasRenderingContext2D;
 
-    const watermark: WatermarkOptions = {
+    const signature: SignatureOptions = {
       text: '@Mizui_Miduki@misskey.io',
       position: 'bottom-right',
       opacity: 0.8,
     };
 
-    applyWatermarkToContext(mockCtx, 800, 600, watermark);
+    applySignatureToContext(mockCtx, 800, 600, signature);
 
     expect(mockCtx.save).toHaveBeenCalled();
     expect(mockCtx.measureText).toHaveBeenCalledWith('@Mizui_Miduki@misskey.io');
@@ -75,18 +79,74 @@ describe('imageEditor utility', () => {
     expect(mockCtx.restore).toHaveBeenCalled();
   });
 
-  it('空文字や未指定の透かしでは描画が行われないこと', () => {
+  it('applyWatermarkPatternToContext が全面透かしパターンを正しく描画すること', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      measureText: vi.fn((text: string) => ({ width: text.length * 10 })),
+      translate: vi.fn(),
+      rotate: vi.fn(),
+      fillText: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    const watermark: WatermarkOptions = {
+      text: 'DO NOT REPOST',
+      pattern: 'diagonal',
+      opacity: 0.2,
+    };
+
+    applyWatermarkPatternToContext(mockCtx, 800, 600, watermark);
+
+    expect(mockCtx.save).toHaveBeenCalled();
+    expect(mockCtx.measureText).toHaveBeenCalledWith('DO NOT REPOST');
+    expect(mockCtx.fillText).toHaveBeenCalled();
+    expect(mockCtx.restore).toHaveBeenCalled();
+  });
+
+  it('applyWatermarkToContext (後方互換関数) が正常に動作すること', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      measureText: vi.fn((text: string) => ({ width: text.length * 10 })),
+      beginPath: vi.fn(),
+      roundRect: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      fillText: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    applyWatermarkToContext(mockCtx, 800, 600, {
+      text: '@User@example.com',
+      position: 'bottom-left',
+    });
+
+    expect(mockCtx.save).toHaveBeenCalled();
+    expect(mockCtx.fillText).toHaveBeenCalled();
+  });
+
+  it('空文字や未指定の署名・透かしでは描画が行われないこと', () => {
     const mockCtx = {
       save: vi.fn(),
       restore: vi.fn(),
       fillText: vi.fn(),
     } as unknown as CanvasRenderingContext2D;
 
-    applyWatermarkToContext(mockCtx, 800, 600, { text: '   ' });
+    applySignatureToContext(mockCtx, 800, 600, { text: '   ' });
     expect(mockCtx.save).not.toHaveBeenCalled();
     expect(mockCtx.fillText).not.toHaveBeenCalled();
 
-    applyWatermarkToContext(mockCtx, 800, 600, null);
+    applySignatureToContext(mockCtx, 800, 600, null);
     expect(mockCtx.save).not.toHaveBeenCalled();
+
+    applyWatermarkPatternToContext(mockCtx, 800, 600, null);
+    expect(mockCtx.save).not.toHaveBeenCalled();
+  });
+
+  it('createCanvas2D で Canvas が正常に生成できること', () => {
+    const { canvas, ctx } = createCanvas2D(100, 200);
+    expect(canvas).toBeDefined();
+    expect(ctx).toBeDefined();
+    expect(canvas.width).toBe(100);
+    expect(canvas.height).toBe(200);
   });
 });

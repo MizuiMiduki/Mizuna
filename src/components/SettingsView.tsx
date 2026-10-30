@@ -3,6 +3,7 @@ import { createEffect, createSignal, For, onMount, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { SUPPORTED_LANGUAGES } from '../i18n';
 import { applyCustomCss, sanitizeCustomCss } from '../utils/customCss';
+import { safeSessionStorage } from '../utils/storage';
 
 export function SettingsView() {
   const {
@@ -123,11 +124,7 @@ export function SettingsView() {
       }
 
       // 3. 一時セッションデータを消去 (※ アカウント情報等の IndexedDB は保持)
-      if (typeof sessionStorage !== 'undefined') {
-        try {
-          sessionStorage.clear();
-        } catch {}
-      }
+      safeSessionStorage.clear();
 
       // 4. ブラウザの HTTP キャッシュをバイパスして最新状態をサーバーからダイレクト再取得
       const url = new URL(window.location.href);

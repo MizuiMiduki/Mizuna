@@ -24,6 +24,13 @@ import { checkMiAuthSession, fetchLatestAccountInfo, fetchLatestReleaseNote, Mis
 import { applyThemeAndMode } from '../utils/theme';
 import { applyCustomCss } from '../utils/customCss';
 import { translate, type I18nKey } from '../i18n';
+import { safeLocalStorage, safeSessionStorage } from '../utils/storage';
+import {
+  captureWebShareTargetFromUrl,
+  getWebShareTargetStorage,
+  clearWebShareTargetStorage,
+  combineNoteWithShareData,
+} from '../utils/webShare';
 
 export type ViewType =
   | 'note'
@@ -173,23 +180,15 @@ const VALID_VIEWS: ViewType[] = [
 ];
 
 function getSavedView(): ViewType | null {
-  try {
-    const saved = sessionStorage.getItem(VIEW_STORAGE_KEY) as ViewType | null;
-    if (saved && VALID_VIEWS.includes(saved)) {
-      return saved;
-    }
-  } catch {
-    // sessionStorage 無効時は無視
+  const saved = safeSessionStorage.getItem(VIEW_STORAGE_KEY) as ViewType | null;
+  if (saved && VALID_VIEWS.includes(saved)) {
+    return saved;
   }
   return null;
 }
 
 function saveViewToSession(view: ViewType): void {
-  try {
-    sessionStorage.setItem(VIEW_STORAGE_KEY, view);
-  } catch {
-    // sessionStorage 無効時は無視
-  }
+  safeSessionStorage.setItem(VIEW_STORAGE_KEY, view);
 }
 
 export function AppProvider(props: { children: JSX.Element }) {
@@ -289,13 +288,7 @@ export function AppProvider(props: { children: JSX.Element }) {
 
   const applyPendingUpdate = () => {
     // アップデート適用直後フラグを保存（リロード後にリリースノートを自動表示するため）
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('mizuna_show_release_notes_after_update', 'true');
-      } catch {
-        // 無視
-      }
-    }
+    safeLocalStorage.setItem('mizuna_show_release_notes_after_update', 'true');
 
     const worker = waitingWorker() || activeSwRegistration?.waiting;
     if (worker) {
@@ -418,38 +411,12 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   /**
-   * Web Share Target パラメータをURLおよびlocalStorageから読み込む
+   * Web Share Target から渡された共有データをフォームに反映する
    */
-  const captureWebShareTargetFromUrl = (): boolean => {
-    const params = new URL(document.location.href).searchParams;
-    const wstTitle = params.get('title');
-    const wstText = params.get('text');
-    const wstUrl = params.get('url');
-
-    if (wstTitle || wstText || wstUrl) {
-      localStorage.removeItem('wst_title');
-      localStorage.removeItem('wst_text');
-      localStorage.removeItem('wst_url');
-
-      if (wstTitle) localStorage.setItem('wst_title', wstTitle);
-      if (wstText) localStorage.setItem('wst_text', wstText);
-      if (wstUrl) localStorage.setItem('wst_url', wstUrl);
-      return true;
-    }
-    return false;
-  };
-
   const applyWebShareTargetToForm = () => {
-    const title = localStorage.getItem('wst_title');
-    const text = localStorage.getItem('wst_text');
-    const url = localStorage.getItem('wst_url');
-
-    if (title !== null || text !== null || url !== null) {
-      let combined = noteText() || '';
-      if (title) combined += (combined ? '\n' : '') + title;
-      if (text) combined += (combined ? '\n' : '') + text;
-      if (url) combined += (combined ? '\n' : '') + url;
-      setNoteText(combined);
+    const data = getWebShareTargetStorage();
+    if (data) {
+      setNoteText(combineNoteWithShareData(noteText(), data));
     }
   };
 
@@ -511,7 +478,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
 
     const sessionId = new URLSearchParams(search).get('session');
-    const address = localStorage.getItem('add_server_address');
+    const address = safeLocalStorage.getItem('add_server_address');
 
     if (!sessionId || !address) {
       window.history.replaceState({}, document.title, '/');
@@ -542,7 +509,7 @@ export function AppProvider(props: { children: JSX.Element }) {
         setSettings((prev) => ({ ...prev, select_user: newId }));
       }
 
-      localStorage.removeItem('add_server_address');
+      safeLocalStorage.removeItem('add_server_address');
       window.history.replaceState({}, document.title, '/');
       showToast('アカウントを追加しました！', 'success');
       return true;
@@ -558,16 +525,9 @@ export function AppProvider(props: { children: JSX.Element }) {
    * リリースノートの更新チェック
    */
   const checkNewReleaseNote = async (currentSettings: SettingRecord) => {
-    let forceShowAfterUpdate = false;
-    if (typeof localStorage !== 'undefined') {
-      try {
-        forceShowAfterUpdate = localStorage.getItem('mizuna_show_release_notes_after_update') === 'true';
-        if (forceShowAfterUpdate) {
-          localStorage.removeItem('mizuna_show_release_notes_after_update');
-        }
-      } catch {
-        // 無視
-      }
+    let forceShowAfterUpdate = safeLocalStorage.getItem('mizuna_show_release_notes_after_update') === 'true';
+    if (forceShowAfterUpdate) {
+      safeLocalStorage.removeItem('mizuna_show_release_notes_after_update');
     }
 
     // 初回起動時のウェルカムポップアップ表示
@@ -977,9 +937,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   const clearNoteForm = (showNotification = true) => {
-    localStorage.removeItem('wst_title');
-    localStorage.removeItem('wst_text');
-    localStorage.removeItem('wst_url');
+    clearWebShareTargetStorage();
     setCwText('');
     setNoteText('');
     setAttachedImages((prev) => {
