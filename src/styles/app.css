@@ -2131,7 +2131,7 @@ body.dark .mizuna-custom-css-warnings {
 }
 
 .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -2145,7 +2145,7 @@ body.dark .mizuna-custom-css-warnings {
     min-width: 0;
   }
   .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill {
-    flex: 1 1 0;
+    flex: 1 1 auto;
     min-width: 0;
     padding: 0 4px !important;
     gap: 3px;
@@ -2169,8 +2169,8 @@ html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: nowrap;
   align-items: stretch;
   height: auto;
   min-height: calc(var(--mizuna-seg-track-h) + 4px);
@@ -2186,36 +2186,46 @@ html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
-  width: 100%;
+  flex: 1 1 auto;
+  width: auto;
   min-width: 0;
   height: var(--mizuna-seg-pill-h) !important;
   padding: 0 4px !important;
   font-size: var(--mizuna-seg-pill-font);
-  gap: 3px;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  gap: 2px;
   white-space: nowrap;
+}
+
+/* 文字数に応じたプロポーショナル配分：1文字（大・中・小）はコンパクトにし、文字数の多い（シンプル）に余裕を配分 */
+.mizuna-seg-pills.mizuna-seg-pills-wrap #ui_mode_simple {
+  flex: 1.45 1 auto;
+}
+
+.mizuna-seg-pills.mizuna-seg-pills-wrap #ui_mode_large,
+.mizuna-seg-pills.mizuna-seg-pills-wrap #ui_mode_medium,
+.mizuna-seg-pills.mizuna-seg-pills-wrap #ui_mode_small {
+  flex: 0.85 1 auto;
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill span {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
+  flex-shrink: 0;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
-  font-size: var(--mizuna-seg-pill-icon) !important;
+  font-size: clamp(12px, 3.2vw, 15px) !important;
   flex-shrink: 0;
 }
 
-@media (max-width: 380px) {
+@media (max-width: 480px) {
   .mizuna-seg-pills.mizuna-seg-pills-wrap {
     gap: 2px;
     padding: 2px;
   }
   .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
-    padding: 0 2px !important;
+    padding: 0 3px !important;
     gap: 2px;
     font-size: 0.72rem !important;
   }
@@ -2225,13 +2235,13 @@ html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills
 }
 
 html.ui-size-large .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
-  font-size: 0.70rem !important;
+  font-size: 0.71rem !important;
   padding: 0 2px !important;
   gap: 2px !important;
 }
 
 html.ui-size-large .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
-  font-size: 14px !important;
+  font-size: 13px !important;
   transform: none !important;
 }
 
