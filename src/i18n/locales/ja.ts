@@ -93,7 +93,12 @@ export const ja = {
   },
   settings: {
     title: '設定',
+    search_placeholder: '設定を検索...',
+    search_no_results: '一致する設定項目が見つかりませんでした',
+    search_clear: '検索をクリア',
     group_post: '投稿のデフォルト設定',
+    group_signature: '画像署名（クレジット）設定',
+    group_watermark: '盗作防止透かし設定',
     default_visibility: 'デフォルトの公開範囲',
     visibility_public: 'パブリック',
     visibility_home: 'ホーム',

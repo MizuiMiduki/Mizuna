@@ -2056,12 +2056,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             <button
               type="button"
               class={`mizuna-editor-tab-btn ${activeTab() === 'watermark' ? 'is-active' : ''}`}
-              onClick={() => {
-                setActiveTab('watermark');
-                if (!watermarkEnabled() && watermarkText()) {
-                  setWatermarkEnabled(true);
-                }
-              }}
+              onClick={() => setActiveTab('watermark')}
             >
               <i>pattern</i>
               <span>透かし</span>
@@ -2069,12 +2064,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             <button
               type="button"
               class={`mizuna-editor-tab-btn ${activeTab() === 'signature' ? 'is-active' : ''}`}
-              onClick={() => {
-                setActiveTab('signature');
-                if (!signatureEnabled() && signatureText()) {
-                  setSignatureEnabled(true);
-                }
-              }}
+              onClick={() => setActiveTab('signature')}
             >
               <i>branding_watermark</i>
               <span>署名</span>

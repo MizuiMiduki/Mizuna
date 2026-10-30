@@ -216,6 +216,42 @@ describe('UI Components', () => {
       expect(textarea.value).toBe('');
       expect(styleEl?.textContent).toBe('');
     });
+
+    it('設定の検索ボックスに入力すると項目がリアルタイムに絞り込まれ、該当なし時はクリアボタンが表示されること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      const searchInput = (await screen.findByRole('textbox', {
+        name: /(設定を検索|Search settings)/,
+      })) as HTMLInputElement;
+      expect(searchInput).toBeInTheDocument();
+
+      // 初期状態では複数のグループが表示されている
+      expect(screen.getByText(/(投稿のデフォルト設定|Default Post Settings)/)).toBeInTheDocument();
+      expect(screen.getAllByText(/(カスタムCSS|Custom CSS)/).length).toBeGreaterThan(0);
+
+      // 「透かし」で絞り込み
+      fireEvent.input(searchInput, { target: { value: '透かし' } });
+      expect(screen.getAllByText(/(盗作防止透かし|Watermark)/).length).toBeGreaterThan(0);
+      // カスタムCSSグループは非表示になる
+      expect(screen.queryAllByText(/(カスタムCSS|Custom CSS)/).length).toBe(0);
+
+      // 一致しないキーワードを入力
+      fireEvent.input(searchInput, { target: { value: 'nonexistent_setting_query_12345' } });
+      // 空状態メッセージと検索クリアボタンが表示される
+      expect(await screen.findByText(/(一致する設定が見つかりません|No matching settings found)/)).toBeInTheDocument();
+      const clearButtons = screen.getAllByRole('button', { name: /(検索をクリア|Clear search)/i });
+      expect(clearButtons.length).toBeGreaterThan(0);
+
+      // クリアボタンをクリックしてリセット
+      fireEvent.click(clearButtons[0]);
+      expect(searchInput.value).toBe('');
+      expect(screen.getByText(/(投稿のデフォルト設定|Default Post Settings)/)).toBeInTheDocument();
+      expect(screen.getAllByText(/(カスタムCSS|Custom CSS)/).length).toBeGreaterThan(0);
+    });
   });
 
   describe('AccountView', () => {

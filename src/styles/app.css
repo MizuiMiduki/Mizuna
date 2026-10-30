@@ -7,6 +7,29 @@
   --mizuna-radius-lg: 18px;
   --mizuna-radius-md: 14px;
   --mizuna-radius-pill: 9999px;
+
+  /* UI表示サイズ基準変数 (通常モード: 1.0x) */
+  --mizuna-btn-h: 38px;
+  --mizuna-btn-pad: 0 16px;
+  --mizuna-btn-font: 0.84rem;
+  --mizuna-btn-icon: 18px;
+
+  --mizuna-send-btn-h: 42px;
+  --mizuna-send-btn-pad: 0 22px;
+  --mizuna-send-btn-font: 0.90rem;
+
+  --mizuna-seg-track-h: 38px;
+  --mizuna-seg-pill-h: 32px;
+  --mizuna-seg-pill-pad: 0 10px;
+  --mizuna-seg-pill-font: 0.78rem;
+  --mizuna-seg-pill-icon: 16px;
+
+  --mizuna-chip-h: 36px;
+  --mizuna-chip-pad: 0 13px;
+  --mizuna-chip-font: 0.80rem;
+  --mizuna-chip-icon: 17px;
+
+  --mizuna-input-h: 38px;
 }
 
 * {
@@ -525,45 +548,61 @@ body {
 .mizuna-visibility-pills {
   display: inline-flex;
   align-items: center;
+  height: var(--mizuna-seg-track-h);
   padding: 3px;
   border-radius: var(--mizuna-radius-pill);
-  background: color-mix(in srgb, var(--surface-container-highest) 75%, transparent);
+  background: color-mix(in srgb, var(--surface-container-highest) 70%, transparent);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
-  gap: 2px;
+  gap: 3px;
   flex-shrink: 0;
   margin-left: auto;
+  box-sizing: border-box;
 }
 
 .mizuna-vis-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 32px !important;
-  padding: 0 12px !important;
+  height: var(--mizuna-seg-pill-h) !important;
+  padding: var(--mizuna-seg-pill-pad) !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
-  border: none !important;
-  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 38%, transparent) !important;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
   color: var(--on-surface-variant);
-  font-size: 0.78rem;
+  font-size: var(--mizuna-seg-pill-font);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .mizuna-vis-pill i {
-  font-size: 16px !important;
+  font-size: var(--mizuna-seg-pill-icon) !important;
 }
 
 .mizuna-vis-pill:hover:not(.is-active) {
   color: var(--on-surface);
-  background: color-mix(in srgb, var(--on-surface) 6%, transparent);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border-color: color-mix(in srgb, var(--outline-variant) 75%, transparent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.mizuna-vis-pill:active:not(.is-active) {
+  transform: scale(0.97);
 }
 
 .mizuna-vis-pill.is-active {
   background: var(--primary) !important;
   color: var(--on-primary) !important;
+  border: 1px solid var(--primary) !important;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 35%, transparent);
+  font-weight: 700;
+}
+
+.mizuna-vis-pill.is-active i {
+  color: var(--on-primary) !important;
 }
 
 /* CW（閲覧注意）入力欄 */
@@ -779,21 +818,22 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 36px !important;
-  padding: 0 13px !important;
+  height: var(--mizuna-chip-h) !important;
+  padding: var(--mizuna-chip-pad) !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
   border: 1px solid color-mix(in srgb, var(--outline-variant) 65%, transparent) !important;
   background: color-mix(in srgb, var(--surface) 75%, transparent);
   color: var(--on-surface-variant);
-  font-size: 0.8rem;
+  font-size: var(--mizuna-chip-font);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.18s ease;
+  box-sizing: border-box;
 }
 
 .mizuna-tool-chip i {
-  font-size: 17px !important;
+  font-size: var(--mizuna-chip-icon) !important;
 }
 
 .mizuna-tool-chip:hover {
@@ -817,9 +857,9 @@ body {
 }
 
 .mizuna-tool-icon-btn {
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px !important;
+  width: var(--mizuna-chip-h) !important;
+  height: var(--mizuna-chip-h) !important;
+  min-width: var(--mizuna-chip-h) !important;
   padding: 0 !important;
   margin: 0 !important;
   border-radius: 50% !important;
@@ -908,18 +948,19 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 42px !important;
-  padding: 0 22px !important;
+  height: var(--mizuna-send-btn-h) !important;
+  padding: var(--mizuna-send-btn-pad) !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
   border: none !important;
   background: var(--primary) !important;
   color: var(--on-primary) !important;
-  font-size: 0.9rem;
+  font-size: var(--mizuna-send-btn-font);
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 38%, transparent);
   transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  box-sizing: border-box;
 }
 
 .mizuna-send-btn:hover:not(:disabled) {
@@ -944,19 +985,20 @@ body {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  height: 38px !important;
-  padding: 0 16px !important;
+  height: var(--mizuna-btn-h) !important;
+  padding: var(--mizuna-btn-pad) !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
-  font-size: 0.84rem;
+  font-size: var(--mizuna-btn-font);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .mizuna-btn i {
-  font-size: 18px !important;
+  font-size: var(--mizuna-btn-icon) !important;
 }
 
 .mizuna-btn-primary {
@@ -1769,6 +1811,103 @@ html.ui-size-large .mizuna-header-actions .mizuna-btn i {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
+/* 設定画面の検索バー */
+.mizuna-settings-search-wrap {
+  margin-bottom: 20px;
+}
+
+.mizuna-settings-search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--mizuna-btn-h, 38px);
+  background: color-mix(in srgb, var(--surface-container-highest) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 50%, transparent);
+  border-radius: var(--mizuna-radius-pill);
+  padding: 0 14px;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.mizuna-settings-search-bar:focus-within {
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.mizuna-settings-search-bar .mizuna-search-icon {
+  font-size: 19px !important;
+  color: var(--on-surface-variant);
+  flex-shrink: 0;
+}
+
+.mizuna-settings-search-input {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
+  color: var(--on-surface);
+  font-size: var(--mizuna-btn-font, 0.84rem);
+  font-family: inherit;
+  outline: none !important;
+  padding: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+.mizuna-settings-search-input::placeholder {
+  color: var(--on-surface-variant);
+  opacity: 0.7;
+}
+
+.mizuna-search-clear-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.mizuna-search-clear-btn:hover {
+  background: color-mix(in srgb, var(--on-surface) 10%, transparent);
+  color: var(--on-surface);
+}
+
+.mizuna-search-clear-btn i {
+  font-size: 16px !important;
+}
+
+.mizuna-settings-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 16px;
+  text-align: center;
+  color: var(--on-surface-variant);
+}
+
+.mizuna-settings-empty i {
+  font-size: 46px !important;
+  color: var(--on-surface-variant);
+  opacity: 0.5;
+}
+
+.mizuna-settings-empty p {
+  font-size: 0.92rem;
+  margin: 0;
+  font-weight: 600;
+}
+
 .mizuna-setting-group {
   margin-bottom: 22px;
 }
@@ -1937,17 +2076,19 @@ body.dark .mizuna-custom-css-warnings {
 }
 
 .mizuna-row-divider {
-  height: 1px;
-  background: color-mix(in srgb, var(--outline-variant) 45%, transparent);
-  margin: 0 18px;
+  display: none;
+}
+
+.mizuna-setting-card > div + div {
+  border-top: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
 }
 
 /* 設定行内の単体アクションボタン（同期・エクスポート・キャッシュクリア・アプデ確認など） */
 .mizuna-setting-row > .mizuna-btn {
-  height: 38px !important;
-  min-width: 140px;
-  padding: 0 16px !important;
-  font-size: 0.82rem !important;
+  height: var(--mizuna-btn-h) !important;
+  min-width: clamp(100px, 22vw, 140px);
+  padding: var(--mizuna-btn-pad) !important;
+  font-size: var(--mizuna-btn-font) !important;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
@@ -1959,26 +2100,25 @@ body.dark .mizuna-custom-css-warnings {
 }
 
 .mizuna-setting-row > .mizuna-btn i {
-  font-size: 17px !important;
+  font-size: var(--mizuna-btn-icon) !important;
   flex-shrink: 0;
 }
 
 @media (max-width: 480px) {
   .mizuna-setting-row > .mizuna-btn {
-    min-width: 120px;
-    padding: 0 10px !important;
-    font-size: 0.78rem !important;
+    min-width: 100px;
+    padding: 0 8px !important;
   }
 }
 
 .mizuna-seg-pills {
   display: inline-flex;
-  height: 38px;
+  height: var(--mizuna-seg-track-h);
   padding: 3px;
   border-radius: var(--mizuna-radius-pill);
-  background: color-mix(in srgb, var(--surface-container-highest) 75%, transparent);
+  background: color-mix(in srgb, var(--surface-container-highest) 70%, transparent);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
-  gap: 2px;
+  gap: 3px;
   max-width: 100%;
   box-sizing: border-box;
   min-width: 0;
@@ -1987,12 +2127,12 @@ body.dark .mizuna-custom-css-warnings {
 
 /* OFF/ON などの通常セグメントピル：最小幅を揃えて各選択肢を均等配置 */
 .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) {
-  min-width: 140px;
+  min-width: clamp(110px, 25vw, 140px);
 }
 
 .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill {
   flex: 1 1 0;
-  min-width: 50px;
+  min-width: 0;
 }
 
 @media (max-width: 600px) {
@@ -2018,45 +2158,75 @@ body.dark .mizuna-custom-css-warnings {
 }
 
 html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill {
-  font-size: 0.68rem !important;
-  padding: 0 2px !important;
+  font-size: 0.70rem !important;
+  padding: 0 4px !important;
   gap: 2px !important;
 }
 
 html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill i {
-  font-size: 13px !important;
+  font-size: 14px !important;
   transform: none !important;
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
   height: auto;
-  min-height: 38px;
+  min-height: calc(var(--mizuna-seg-track-h) + 4px);
   width: 100%;
-  border-radius: var(--mizuna-radius-lg);
-  gap: 4px;
+  border-radius: var(--mizuna-radius-pill);
+  padding: 3px;
+  gap: 3px;
   max-width: 100%;
   box-sizing: border-box;
   min-width: 0;
+  background: color-mix(in srgb, var(--surface-container-highest) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
-  flex: 1 1 calc(25% - 4px);
-  min-width: 48px;
-  padding: 0 6px !important;
+  width: 100%;
+  min-width: 0;
+  height: var(--mizuna-seg-pill-h) !important;
+  padding: 0 4px !important;
+  font-size: var(--mizuna-seg-pill-font);
+  gap: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-@media (max-width: 420px) {
+.mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
+  font-size: var(--mizuna-seg-pill-icon) !important;
+  flex-shrink: 0;
+}
+
+@media (max-width: 380px) {
+  .mizuna-seg-pills.mizuna-seg-pills-wrap {
+    gap: 2px;
+    padding: 2px;
+  }
   .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
-    flex: 1 1 calc(33.333% - 4px);
-    font-size: 0.74rem;
+    padding: 0 2px !important;
+    gap: 2px;
+    font-size: 0.72rem !important;
+  }
+  .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
+    font-size: 13px !important;
   }
 }
 
 html.ui-size-large .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
   font-size: 0.70rem !important;
-  padding: 0 3px !important;
+  padding: 0 2px !important;
   gap: 2px !important;
 }
 
@@ -2070,20 +2240,21 @@ html.ui-size-large .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  height: 32px !important;
-  padding: 0 10px !important;
+  height: var(--mizuna-seg-pill-h) !important;
+  padding: var(--mizuna-seg-pill-pad) !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
-  border: none !important;
-  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 38%, transparent) !important;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
   color: var(--on-surface-variant);
-  font-size: 0.78rem;
+  font-size: var(--mizuna-seg-pill-font);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
   white-space: nowrap !important;
   min-width: 0;
   box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .mizuna-seg-pill span {
@@ -2094,14 +2265,32 @@ html.ui-size-large .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
 }
 
 .mizuna-seg-pill i {
-  font-size: 16px !important;
+  font-size: var(--mizuna-seg-pill-icon) !important;
   flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.mizuna-seg-pill:hover:not(.is-active) {
+  color: var(--on-surface);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border-color: color-mix(in srgb, var(--outline-variant) 75%, transparent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.mizuna-seg-pill:active:not(.is-active) {
+  transform: scale(0.97);
 }
 
 .mizuna-seg-pill.is-active {
   background: var(--primary) !important;
   color: var(--on-primary) !important;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent);
+  border: 1px solid var(--primary) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 35%, transparent) !important;
+  font-weight: 700;
+}
+
+.mizuna-seg-pill.is-active i {
+  color: var(--on-primary) !important;
 }
 
 /* プルダウンメニュー (.mizuna-select-wrapper & .mizuna-select) */
@@ -3799,12 +3988,33 @@ html.ui-size-large .mizuna-floating-dock {
 }
 
 /* =========================================
-   UI表示サイズ (大 / 中 / 小)
-   ※ zoom によるビューポート圧縮・はみ出しを防ぐため、
-      HTMLフォントサイズおよびUI要素のスケーリングで安全に拡大・縮小
+   UI表示サイズ (大 / 中 / 小 / シンプル)
+   ※ HTMLフォントサイズおよびUI要素（ボタン・入力・アイコン・余白）を
+      レイアウト崩れを起こさず安全・快適にスケーリング
    ========================================= */
 html.ui-size-large {
-  font-size: 18px;
+  font-size: 17.5px;
+  --mizuna-btn-h: 42px;
+  --mizuna-btn-pad: 0 16px;
+  --mizuna-btn-font: 0.86rem;
+  --mizuna-btn-icon: 20px;
+
+  --mizuna-send-btn-h: 46px;
+  --mizuna-send-btn-pad: 0 24px;
+  --mizuna-send-btn-font: 0.94rem;
+
+  --mizuna-seg-track-h: 42px;
+  --mizuna-seg-pill-h: 36px;
+  --mizuna-seg-pill-pad: 0 9px;
+  --mizuna-seg-pill-font: 0.78rem;
+  --mizuna-seg-pill-icon: 17px;
+
+  --mizuna-chip-h: 40px;
+  --mizuna-chip-pad: 0 14px;
+  --mizuna-chip-font: 0.82rem;
+  --mizuna-chip-icon: 18px;
+
+  --mizuna-input-h: 42px;
 }
 
 html.ui-size-large .mizuna-app-shell,
@@ -3813,18 +4023,79 @@ body.ui-size-large .mizuna-app-shell,
   padding-bottom: 140px !important;
 }
 
-html.ui-size-large .mizuna-seg-pill i,
-html.ui-size-large .mizuna-btn i,
-html.ui-size-large .mizuna-tool-chip i {
-  transform: scale(1.1);
-}
-
 html.ui-size-medium {
   font-size: 14.5px;
+  --mizuna-btn-h: 35px;
+  --mizuna-btn-pad: 0 14px;
+  --mizuna-btn-font: 0.82rem;
+  --mizuna-btn-icon: 17px;
+
+  --mizuna-send-btn-h: 38px;
+  --mizuna-send-btn-pad: 0 18px;
+  --mizuna-send-btn-font: 0.86rem;
+
+  --mizuna-seg-track-h: 35px;
+  --mizuna-seg-pill-h: 29px;
+  --mizuna-seg-pill-pad: 0 8px;
+  --mizuna-seg-pill-font: 0.76rem;
+  --mizuna-seg-pill-icon: 15px;
+
+  --mizuna-chip-h: 33px;
+  --mizuna-chip-pad: 0 11px;
+  --mizuna-chip-font: 0.78rem;
+  --mizuna-chip-icon: 16px;
+
+  --mizuna-input-h: 35px;
 }
 
 html.ui-size-small {
   font-size: 13.5px;
+  --mizuna-btn-h: 32px;
+  --mizuna-btn-pad: 0 12px;
+  --mizuna-btn-font: 0.80rem;
+  --mizuna-btn-icon: 15px;
+
+  --mizuna-send-btn-h: 35px;
+  --mizuna-send-btn-pad: 0 15px;
+  --mizuna-send-btn-font: 0.82rem;
+
+  --mizuna-seg-track-h: 32px;
+  --mizuna-seg-pill-h: 26px;
+  --mizuna-seg-pill-pad: 0 7px;
+  --mizuna-seg-pill-font: 0.74rem;
+  --mizuna-seg-pill-icon: 14px;
+
+  --mizuna-chip-h: 30px;
+  --mizuna-chip-pad: 0 9px;
+  --mizuna-chip-font: 0.76rem;
+  --mizuna-chip-icon: 15px;
+
+  --mizuna-input-h: 32px;
+}
+
+html.is-simple-mode,
+body.is-simple-mode {
+  --mizuna-btn-h: 30px;
+  --mizuna-btn-pad: 0 10px;
+  --mizuna-btn-font: 0.78rem;
+  --mizuna-btn-icon: 15px;
+
+  --mizuna-send-btn-h: 34px;
+  --mizuna-send-btn-pad: 0 14px;
+  --mizuna-send-btn-font: 0.82rem;
+
+  --mizuna-seg-track-h: 30px;
+  --mizuna-seg-pill-h: 25px;
+  --mizuna-seg-pill-pad: 0 6px;
+  --mizuna-seg-pill-font: 0.72rem;
+  --mizuna-seg-pill-icon: 14px;
+
+  --mizuna-chip-h: 28px;
+  --mizuna-chip-pad: 0 8px;
+  --mizuna-chip-font: 0.74rem;
+  --mizuna-chip-icon: 14px;
+
+  --mizuna-input-h: 30px;
 }
 
 /* =========================================
@@ -4813,7 +5084,7 @@ body.is-simple-mode .mizuna-setting-col {
 
 .mizuna-watermark-input {
   flex: 1;
-  height: 38px;
+  height: var(--mizuna-input-h);
   padding: 0 14px;
   border-radius: var(--mizuna-radius-md, 12px);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 60%, transparent);
@@ -4832,10 +5103,10 @@ body.is-simple-mode .mizuna-setting-col {
 }
 
 .mizuna-watermark-clear-btn {
-  height: 38px !important;
+  height: var(--mizuna-btn-h) !important;
   min-width: 90px;
-  padding: 0 14px !important;
-  font-size: 0.82rem !important;
+  padding: var(--mizuna-btn-pad) !important;
+  font-size: var(--mizuna-btn-font) !important;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;

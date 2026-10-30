@@ -93,7 +93,12 @@ export const en = {
   },
   settings: {
     title: 'Settings',
+    search_placeholder: 'Search settings...',
+    search_no_results: 'No matching settings found',
+    search_clear: 'Clear search',
     group_post: 'Default Post Settings',
+    group_signature: 'Image Signature & Credit',
+    group_watermark: 'Anti-Theft Watermark',
     default_visibility: 'Default Post Visibility',
     visibility_public: 'Public',
     visibility_home: 'Home',
