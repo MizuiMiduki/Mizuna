@@ -7,6 +7,29 @@
   --mizuna-radius-lg: 18px;
   --mizuna-radius-md: 14px;
   --mizuna-radius-pill: 9999px;
+
+  /* UI表示サイズ基準変数 (通常モード: 1.0x) */
+  --mizuna-btn-h: 38px;
+  --mizuna-btn-pad: 0 16px;
+  --mizuna-btn-font: 0.84rem;
+  --mizuna-btn-icon: 18px;
+
+  --mizuna-send-btn-h: 42px;
+  --mizuna-send-btn-pad: 0 22px;
+  --mizuna-send-btn-font: 0.90rem;
+
+  --mizuna-seg-track-h: 38px;
+  --mizuna-seg-pill-h: 32px;
+  --mizuna-seg-pill-pad: 0 10px;
+  --mizuna-seg-pill-font: 0.78rem;
+  --mizuna-seg-pill-icon: 16px;
+
+  --mizuna-chip-h: 36px;
+  --mizuna-chip-pad: 0 13px;
+  --mizuna-chip-font: 0.80rem;
+  --mizuna-chip-icon: 17px;
+
+  --mizuna-input-h: 38px;
 }
 
 * {
@@ -55,8 +78,6 @@ body {
   min-height: 100svh;
   width: 100%;
   font-family: "IBM Plex Sans JP", "Inter", system-ui, -apple-system, sans-serif;
-  overscroll-behavior-y: none;
-  touch-action: manipulation;
   background-color: var(--surface);
   color: var(--on-surface);
 }
@@ -527,45 +548,61 @@ body {
 .mizuna-visibility-pills {
   display: inline-flex;
   align-items: center;
+  height: var(--mizuna-seg-track-h);
   padding: 3px;
   border-radius: var(--mizuna-radius-pill);
-  background: color-mix(in srgb, var(--surface-container-highest) 75%, transparent);
+  background: color-mix(in srgb, var(--surface-container-highest) 70%, transparent);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
-  gap: 2px;
+  gap: 3px;
   flex-shrink: 0;
   margin-left: auto;
+  box-sizing: border-box;
 }
 
 .mizuna-vis-pill {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 32px !important;
-  padding: 0 12px !important;
+  height: var(--mizuna-seg-pill-h) !important;
+  padding: var(--mizuna-seg-pill-pad) !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
-  border: none !important;
-  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 38%, transparent) !important;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
   color: var(--on-surface-variant);
-  font-size: 0.78rem;
+  font-size: var(--mizuna-seg-pill-font);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
 .mizuna-vis-pill i {
-  font-size: 16px !important;
+  font-size: var(--mizuna-seg-pill-icon) !important;
 }
 
 .mizuna-vis-pill:hover:not(.is-active) {
   color: var(--on-surface);
-  background: color-mix(in srgb, var(--on-surface) 6%, transparent);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border-color: color-mix(in srgb, var(--outline-variant) 75%, transparent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.mizuna-vis-pill:active:not(.is-active) {
+  transform: scale(0.97);
 }
 
 .mizuna-vis-pill.is-active {
   background: var(--primary) !important;
   color: var(--on-primary) !important;
+  border: 1px solid var(--primary) !important;
   box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 35%, transparent);
+  font-weight: 700;
+}
+
+.mizuna-vis-pill.is-active i {
+  color: var(--on-primary) !important;
 }
 
 /* CW（閲覧注意）入力欄 */
@@ -781,21 +818,22 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 36px !important;
-  padding: 0 13px !important;
+  height: var(--mizuna-chip-h) !important;
+  padding: var(--mizuna-chip-pad) !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
   border: 1px solid color-mix(in srgb, var(--outline-variant) 65%, transparent) !important;
   background: color-mix(in srgb, var(--surface) 75%, transparent);
   color: var(--on-surface-variant);
-  font-size: 0.8rem;
+  font-size: var(--mizuna-chip-font);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.18s ease;
+  box-sizing: border-box;
 }
 
 .mizuna-tool-chip i {
-  font-size: 17px !important;
+  font-size: var(--mizuna-chip-icon) !important;
 }
 
 .mizuna-tool-chip:hover {
@@ -819,9 +857,9 @@ body {
 }
 
 .mizuna-tool-icon-btn {
-  width: 36px !important;
-  height: 36px !important;
-  min-width: 36px !important;
+  width: var(--mizuna-chip-h) !important;
+  height: var(--mizuna-chip-h) !important;
+  min-width: var(--mizuna-chip-h) !important;
   padding: 0 !important;
   margin: 0 !important;
   border-radius: 50% !important;
@@ -910,18 +948,19 @@ body {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  height: 42px !important;
-  padding: 0 22px !important;
+  height: var(--mizuna-send-btn-h) !important;
+  padding: var(--mizuna-send-btn-pad) !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
   border: none !important;
   background: var(--primary) !important;
   color: var(--on-primary) !important;
-  font-size: 0.9rem;
+  font-size: var(--mizuna-send-btn-font);
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 38%, transparent);
   transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  box-sizing: border-box;
 }
 
 .mizuna-send-btn:hover:not(:disabled) {
@@ -946,19 +985,20 @@ body {
   align-items: center;
   justify-content: center;
   gap: 7px;
-  height: 38px !important;
-  padding: 0 16px !important;
+  height: var(--mizuna-btn-h) !important;
+  padding: var(--mizuna-btn-pad) !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
-  font-size: 0.84rem;
+  font-size: var(--mizuna-btn-font);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.18s ease;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .mizuna-btn i {
-  font-size: 18px !important;
+  font-size: var(--mizuna-btn-icon) !important;
 }
 
 .mizuna-btn-primary {
@@ -1174,21 +1214,24 @@ body {
 }
 
 .mizuna-lightbox-bottombar-inner {
-  max-width: 320px;
+  max-width: 440px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 12px;
 }
 
 .mizuna-lightbox-action-btn {
-  width: 100%;
-  max-width: 260px;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 200px;
   height: 44px !important;
-  font-size: 0.92rem !important;
+  font-size: 0.88rem !important;
   font-weight: 700 !important;
   border-radius: var(--mizuna-radius-pill) !important;
   justify-content: center !important;
+  white-space: nowrap !important;
 }
 
 /* =========================================
@@ -1224,7 +1267,41 @@ body {
 .mizuna-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: nowrap;
+  max-width: 100%;
+  min-width: 0;
+  width: auto;
+}
+
+@media (max-width: 640px) {
+  .mizuna-header-actions {
+    width: 100%;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .mizuna-header-actions .mizuna-btn {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    padding: 0 6px !important;
+    font-size: 0.74rem !important;
+    gap: 4px !important;
+    height: 38px !important;
+    white-space: nowrap !important;
+  }
+  .mizuna-header-actions .mizuna-btn i {
+    font-size: 16px !important;
+    flex-shrink: 0 !important;
+  }
+  .mizuna-header-actions .mizuna-btn span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .mizuna-header-actions .add_account_floating_button {
+    flex: 1 1 0 !important;
+  }
 }
 
 .mizuna-delete-banner {
@@ -1719,6 +1796,103 @@ body {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
 
+/* 設定画面の検索バー */
+.mizuna-settings-search-wrap {
+  margin-bottom: 20px;
+}
+
+.mizuna-settings-search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--mizuna-btn-h, 38px);
+  background: color-mix(in srgb, var(--surface-container-highest) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 50%, transparent);
+  border-radius: var(--mizuna-radius-pill);
+  padding: 0 14px;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.mizuna-settings-search-bar:focus-within {
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+
+.mizuna-settings-search-bar .mizuna-search-icon {
+  font-size: 19px !important;
+  color: var(--on-surface-variant);
+  flex-shrink: 0;
+}
+
+.mizuna-settings-search-input {
+  flex: 1;
+  border: none !important;
+  background: transparent !important;
+  color: var(--on-surface);
+  font-size: var(--mizuna-btn-font, 0.84rem);
+  font-family: inherit;
+  outline: none !important;
+  padding: 0;
+  min-width: 0;
+  height: 100%;
+}
+
+.mizuna-settings-search-input::placeholder {
+  color: var(--on-surface-variant);
+  opacity: 0.7;
+}
+
+.mizuna-search-clear-btn {
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.mizuna-search-clear-btn:hover {
+  background: color-mix(in srgb, var(--on-surface) 10%, transparent);
+  color: var(--on-surface);
+}
+
+.mizuna-search-clear-btn i {
+  font-size: 16px !important;
+}
+
+.mizuna-settings-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 56px 16px;
+  text-align: center;
+  color: var(--on-surface-variant);
+}
+
+.mizuna-settings-empty i {
+  font-size: 46px !important;
+  color: var(--on-surface-variant);
+  opacity: 0.5;
+}
+
+.mizuna-settings-empty p {
+  font-size: 0.92rem;
+  margin: 0;
+  font-weight: 600;
+}
+
 .mizuna-setting-group {
   margin-bottom: 22px;
 }
@@ -1739,18 +1913,140 @@ body {
   overflow: hidden;
 }
 
+.mizuna-setting-card.mizuna-setting-card-warning {
+  border: 1px solid color-mix(in srgb, #f59e0b 65%, color-mix(in srgb, var(--outline-variant) 35%, transparent));
+  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.16);
+}
+
+:root[class~="dark"] .mizuna-setting-card.mizuna-setting-card-warning,
+body.dark .mizuna-setting-card.mizuna-setting-card-warning {
+  border-color: color-mix(in srgb, #f59e0b 70%, transparent);
+  box-shadow: 0 4px 16px -4px rgba(245, 158, 11, 0.22);
+}
+
 .mizuna-setting-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 12px 16px;
   padding: 15px 18px;
   flex-wrap: wrap;
 }
 
+@media (max-width: 480px) {
+  .mizuna-setting-row,
+  .mizuna-setting-col {
+    padding: 14px 12px !important;
+  }
+}
+
+.mizuna-setting-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 15px 18px;
+}
+
+.mizuna-custom-css-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.mizuna-custom-css-textarea {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  padding: 12px 14px;
+  border-radius: var(--mizuna-radius-card, 12px);
+  background: color-mix(in srgb, var(--surface-container-highest) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 60%, transparent);
+  color: var(--on-surface);
+  resize: vertical;
+  min-height: 120px;
+  box-sizing: border-box;
+  tab-size: 2;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.mizuna-custom-css-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+.mizuna-custom-css-warnings {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  background: color-mix(in srgb, #f59e0b 12%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 35%, transparent);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #b45309;
+}
+
+:root[class~="dark"] .mizuna-custom-css-warnings,
+body.dark .mizuna-custom-css-warnings {
+  color: #fcd34d;
+  background: color-mix(in srgb, #f59e0b 18%, transparent);
+}
+
+.mizuna-warning-icon {
+  font-size: 1.1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.mizuna-warning-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mizuna-warning-item {
+  line-height: 1.35;
+}
+
+.mizuna-custom-css-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mizuna-custom-css-actions .mizuna-btn {
+  height: 38px !important;
+  min-width: 110px;
+  padding: 0 16px !important;
+  font-size: 0.82rem !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+.mizuna-custom-css-disclaimer {
+  font-size: 0.76rem;
+  line-height: 1.45;
+  color: var(--on-surface-variant);
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
 .mizuna-setting-info {
-  flex: 1;
-  min-width: 200px;
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+@media (max-width: 520px) {
+  .mizuna-setting-info {
+    flex-basis: 100%;
+  }
 }
 
 .mizuna-setting-title {
@@ -1765,45 +2061,209 @@ body {
 }
 
 .mizuna-row-divider {
-  height: 1px;
-  background: color-mix(in srgb, var(--outline-variant) 45%, transparent);
-  margin: 0 18px;
+  display: none;
+}
+
+.mizuna-setting-card > div + div {
+  border-top: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+}
+
+/* 設定行内の単体アクションボタン（同期・エクスポート・キャッシュクリア・アプデ確認など） */
+.mizuna-setting-row > .mizuna-btn {
+  height: var(--mizuna-btn-h) !important;
+  min-width: clamp(100px, 22vw, 140px);
+  padding: var(--mizuna-btn-pad) !important;
+  font-size: var(--mizuna-btn-font) !important;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  white-space: nowrap !important;
+}
+
+.mizuna-setting-row > .mizuna-btn i {
+  font-size: var(--mizuna-btn-icon) !important;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .mizuna-setting-row > .mizuna-btn {
+    min-width: 100px;
+    padding: 0 8px !important;
+  }
 }
 
 .mizuna-seg-pills {
   display: inline-flex;
+  height: var(--mizuna-seg-track-h);
   padding: 3px;
   border-radius: var(--mizuna-radius-pill);
-  background: color-mix(in srgb, var(--surface-container-highest) 75%, transparent);
+  background: color-mix(in srgb, var(--surface-container-highest) 70%, transparent);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  gap: 3px;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  align-items: center;
+}
+
+/* OFF/ON などの通常セグメントピル：最小幅を揃えて各選択肢を均等配置 */
+.mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) {
+  min-width: clamp(110px, 25vw, 140px);
+}
+
+.mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 600px) {
+  /* 幅狭画面では横並びピルがカードを突き破らないよう、カード幅100%で均等にフィットさせる */
+  .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) {
+    width: 100%;
+    display: flex;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+  }
+  .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 4px !important;
+    gap: 3px;
+    font-size: 0.72rem;
+    flex-shrink: 1;
+  }
+  .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill i {
+    font-size: 14px !important;
+  }
+}
+
+.mizuna-seg-pills.mizuna-seg-pills-wrap {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  height: auto;
+  min-height: calc(var(--mizuna-seg-track-h) + 4px);
+  width: 100%;
+  border-radius: var(--mizuna-radius-pill);
+  padding: 3px;
+  gap: 3px;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  background: color-mix(in srgb, var(--surface-container-highest) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+}
+
+.mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+  height: var(--mizuna-seg-pill-h) !important;
+  padding: 0 4px !important;
+  font-size: var(--mizuna-seg-pill-font);
   gap: 2px;
+  white-space: nowrap;
+}
+
+/* 文字数に応じたプロポーショナル配分：1文字（大・中・小）はコンパクトにし、文字数の多い（シンプル）に余裕を配分 */
+.mizuna-seg-pills.mizuna-seg-pills-wrap #ui_mode_simple {
+  flex: 1.45 1 auto;
+}
+
+.mizuna-seg-pills.mizuna-seg-pills-wrap #ui_mode_large,
+.mizuna-seg-pills.mizuna-seg-pills-wrap #ui_mode_medium,
+.mizuna-seg-pills.mizuna-seg-pills-wrap #ui_mode_small {
+  flex: 0.85 1 auto;
+}
+
+.mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill span {
+  white-space: nowrap;
+  flex-shrink: 0;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
+  font-size: clamp(12px, 3.2vw, 15px) !important;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .mizuna-seg-pills.mizuna-seg-pills-wrap {
+    gap: 2px;
+    padding: 2px;
+  }
+  .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
+    padding: 0 3px !important;
+    gap: 2px;
+    font-size: 0.72rem !important;
+  }
+  .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
+    font-size: 13px !important;
+  }
 }
 
 .mizuna-seg-pill {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 5px;
-  height: 32px !important;
-  padding: 0 12px !important;
+  height: var(--mizuna-seg-pill-h) !important;
+  padding: var(--mizuna-seg-pill-pad) !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
-  border: none !important;
-  background: transparent;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 38%, transparent) !important;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
   color: var(--on-surface-variant);
-  font-size: 0.78rem;
+  font-size: var(--mizuna-seg-pill-font);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  white-space: nowrap !important;
+  min-width: 0;
+  box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.mizuna-seg-pill span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .mizuna-seg-pill i {
-  font-size: 16px !important;
+  font-size: var(--mizuna-seg-pill-icon) !important;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.mizuna-seg-pill:hover:not(.is-active) {
+  color: var(--on-surface);
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border-color: color-mix(in srgb, var(--outline-variant) 75%, transparent) !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.mizuna-seg-pill:active:not(.is-active) {
+  transform: scale(0.97);
 }
 
 .mizuna-seg-pill.is-active {
   background: var(--primary) !important;
   color: var(--on-primary) !important;
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 30%, transparent);
+  border: 1px solid var(--primary) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--primary) 35%, transparent) !important;
+  font-weight: 700;
+}
+
+.mizuna-seg-pill.is-active i {
+  color: var(--on-primary) !important;
 }
 
 /* プルダウンメニュー (.mizuna-select-wrapper & .mizuna-select) */
@@ -2227,19 +2687,24 @@ body {
   bottom: 16px;
   left: 0;
   right: 0;
+  width: 100%;
+  max-width: 100vw;
   z-index: 90;
   display: flex;
   justify-content: center;
   padding: 0 12px;
   pointer-events: none;
+  box-sizing: border-box;
 }
 
 .mizuna-floating-dock {
+  position: relative;
   pointer-events: auto;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 6px 8px;
+  padding: 6px 10px;
   border-radius: var(--mizuna-radius-pill);
   background: color-mix(in srgb, var(--primary) 3.5%, color-mix(in srgb, var(--surface-container-high) 94%, transparent));
   backdrop-filter: blur(14px);
@@ -2248,18 +2713,46 @@ body {
   box-shadow:
     0 14px 36px -6px color-mix(in srgb, var(--primary) 14%, rgba(0, 0, 0, 0.16)),
     0 2px 10px rgba(0, 0, 0, 0.06);
-  max-width: min(680px, 100%);
+  max-width: calc(100vw - 24px);
+  width: max-content;
+  box-sizing: border-box;
+  flex-shrink: 0;
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* スライドするアクティブインジケーター（ピルハイライト） */
+.mizuna-dock-active-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--mizuna-radius-pill);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 48%, transparent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 14%, transparent);
+  pointer-events: none;
+  z-index: 0;
+  box-sizing: border-box;
+  transform-origin: center center;
+  will-change: transform, width, height, opacity;
+}
+
+.mizuna-dock-active-pill.is-animated {
+  transition:
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease-out;
 }
 
 /* フッター内全ボタン共通：BeerCSSのデフォルト角丸エフェクト(::before/::after)を完全無効化し、すべて統一ピル形状に揃える */
 .mizuna-dock-avatar-btn,
 .mizuna-m3e-item {
   position: relative;
-  height: 54px !important;
-  min-height: 54px !important;
-  block-size: 54px !important;
+  z-index: 1;
+  height: 56px !important;
+  min-height: 56px !important;
+  block-size: 56px !important;
   margin: 0 !important;
   border-radius: var(--mizuna-radius-pill) !important;
   border: 1px solid transparent !important;
@@ -2269,12 +2762,14 @@ body {
   outline: none !important;
   cursor: pointer;
   text-transform: none;
-  transform: translateZ(0);
-  will-change: transform, background-color, border-color;
   transition:
-    background-color 0.15s ease-out,
-    border-color 0.15s ease-out,
-    color 0.15s ease-out;
+    color 0.2s ease-out,
+    transform 0.1s ease-out;
+}
+
+.mizuna-dock-avatar-btn:active,
+.mizuna-m3e-item:active {
+  transform: scale(0.94);
 }
 
 .mizuna-dock-avatar-btn::before,
@@ -2285,19 +2780,19 @@ body {
   content: none !important;
 }
 
-/* ホバー時・選択時（アクティブ）の背景と縁取りを全アイテムで完全統一 */
+/* ホバー時（非アクティブ時のみ背景を軽く表示） */
 .mizuna-dock-avatar-btn:hover:not(.is-active),
 .mizuna-m3e-item:hover:not(.is-active) {
-  background: color-mix(in srgb, var(--on-surface) 7%, transparent) !important;
+  background: color-mix(in srgb, var(--on-surface) 6%, transparent) !important;
   color: var(--on-surface) !important;
 }
 
 .mizuna-dock-avatar-btn.is-active,
 .mizuna-m3e-item.is-active {
-  background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
-  border-color: color-mix(in srgb, var(--primary) 48%, transparent) !important;
   color: var(--primary) !important;
-  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 14%, transparent) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 /* 左側：ユーザーアイコンボタン（高さ54pxの統一カプセル内に40pxアイコンを配置し、右側のアイコン＋文字の高さと揃える） */
@@ -2341,6 +2836,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 /* 右側：Material 3 Expressive (M3e) 縦積みナビゲーションアイテム */
@@ -2350,8 +2846,11 @@ body {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-width: 84px !important;
-  padding: 0 18px !important;
+  min-width: 72px !important;
+  max-width: 96px !important;
+  padding: 0 14px !important;
+  flex-shrink: 0;
+  box-sizing: border-box !important;
 }
 
 .mizuna-m3e-indicator {
@@ -2366,25 +2865,69 @@ body {
 
 .mizuna-m3e-indicator i {
   font-size: 24px !important;
-  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  font-variation-settings: 'FILL' 0, 'wght' 500;
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 0.2s ease,
+    font-variation-settings 0.25s ease;
 }
 
 .mizuna-m3e-item.is-active .mizuna-m3e-indicator i {
   font-variation-settings: 'FILL' 1, 'wght' 600;
   color: var(--primary);
+  transform: scale(1.06);
 }
 
 .mizuna-m3e-label {
   font-size: 0.73rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.1;
   letter-spacing: 0.01em;
   color: inherit;
+  transition: color 0.2s ease;
 }
 
 .mizuna-m3e-item.is-active .mizuna-m3e-label {
   color: var(--primary);
-  font-weight: 800;
+}
+
+/* 表示サイズ「大」時のボトムドック拡大 */
+html.ui-size-large .mizuna-floating-dock {
+  padding: 8px 12px !important;
+  gap: 10px !important;
+}
+
+html.ui-size-large .mizuna-dock-avatar-btn,
+html.ui-size-large .mizuna-m3e-item {
+  height: 62px !important;
+  min-height: 62px !important;
+  block-size: 62px !important;
+}
+
+html.ui-size-large .mizuna-dock-avatar-btn {
+  width: 62px !important;
+  min-width: 62px !important;
+  inline-size: 62px !important;
+}
+
+html.ui-size-large .mizuna-dock-avatar {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+}
+
+html.ui-size-large .mizuna-m3e-item {
+  min-width: 80px !important;
+  padding: 0 16px !important;
+}
+
+html.ui-size-large .mizuna-m3e-indicator i {
+  font-size: 26px !important;
+}
+
+html.ui-size-large .mizuna-m3e-label {
+  font-size: 0.80rem !important;
 }
 
 /* =========================================
@@ -3477,4 +4020,1252 @@ body {
   justify-content: center;
   margin-top: 16px;
 }
+
+/* =========================================
+   UI表示サイズ (大 / 中 / 小 / シンプル)
+   ※ HTMLフォントサイズおよびUI要素（ボタン・入力・アイコン・余白）を
+      レイアウト崩れを起こさず安全・快適にスケーリング
+   ========================================= */
+html.ui-size-large {
+  font-size: 18px;
+  --mizuna-btn-h: 44px;
+  --mizuna-btn-pad: 0 18px;
+  --mizuna-btn-font: 0.90rem;
+  --mizuna-btn-icon: 20px;
+
+  --mizuna-send-btn-h: 48px;
+  --mizuna-send-btn-pad: 0 24px;
+  --mizuna-send-btn-font: 0.96rem;
+
+  --mizuna-seg-track-h: 44px;
+  --mizuna-seg-pill-h: 38px;
+  --mizuna-seg-pill-pad: 0 12px;
+  --mizuna-seg-pill-font: 0.84rem;
+  --mizuna-seg-pill-icon: 18px;
+
+  --mizuna-chip-h: 42px;
+  --mizuna-chip-pad: 0 15px;
+  --mizuna-chip-font: 0.86rem;
+  --mizuna-chip-icon: 19px;
+
+  --mizuna-input-h: 44px;
+}
+
+html.ui-size-large .mizuna-app-shell,
+body.ui-size-large .mizuna-app-shell,
+.mizuna-app-shell.ui-size-large {
+  padding-bottom: 140px !important;
+}
+
+html.ui-size-medium {
+  font-size: 14.5px;
+  --mizuna-btn-h: 35px;
+  --mizuna-btn-pad: 0 14px;
+  --mizuna-btn-font: 0.82rem;
+  --mizuna-btn-icon: 17px;
+
+  --mizuna-send-btn-h: 38px;
+  --mizuna-send-btn-pad: 0 18px;
+  --mizuna-send-btn-font: 0.86rem;
+
+  --mizuna-seg-track-h: 35px;
+  --mizuna-seg-pill-h: 29px;
+  --mizuna-seg-pill-pad: 0 8px;
+  --mizuna-seg-pill-font: 0.76rem;
+  --mizuna-seg-pill-icon: 15px;
+
+  --mizuna-chip-h: 33px;
+  --mizuna-chip-pad: 0 11px;
+  --mizuna-chip-font: 0.78rem;
+  --mizuna-chip-icon: 16px;
+
+  --mizuna-input-h: 35px;
+}
+
+html.ui-size-small {
+  font-size: 13.5px;
+  --mizuna-btn-h: 32px;
+  --mizuna-btn-pad: 0 12px;
+  --mizuna-btn-font: 0.80rem;
+  --mizuna-btn-icon: 15px;
+
+  --mizuna-send-btn-h: 35px;
+  --mizuna-send-btn-pad: 0 15px;
+  --mizuna-send-btn-font: 0.82rem;
+
+  --mizuna-seg-track-h: 32px;
+  --mizuna-seg-pill-h: 26px;
+  --mizuna-seg-pill-pad: 0 7px;
+  --mizuna-seg-pill-font: 0.74rem;
+  --mizuna-seg-pill-icon: 14px;
+
+  --mizuna-chip-h: 30px;
+  --mizuna-chip-pad: 0 9px;
+  --mizuna-chip-font: 0.76rem;
+  --mizuna-chip-icon: 15px;
+
+  --mizuna-input-h: 32px;
+}
+
+html.is-simple-mode,
+body.is-simple-mode {
+  --mizuna-btn-h: 30px;
+  --mizuna-btn-pad: 0 10px;
+  --mizuna-btn-font: 0.78rem;
+  --mizuna-btn-icon: 15px;
+
+  --mizuna-send-btn-h: 34px;
+  --mizuna-send-btn-pad: 0 14px;
+  --mizuna-send-btn-font: 0.82rem;
+
+  --mizuna-seg-track-h: 30px;
+  --mizuna-seg-pill-h: 25px;
+  --mizuna-seg-pill-pad: 0 6px;
+  --mizuna-seg-pill-font: 0.72rem;
+  --mizuna-seg-pill-icon: 14px;
+
+  --mizuna-chip-h: 28px;
+  --mizuna-chip-pad: 0 8px;
+  --mizuna-chip-font: 0.74rem;
+  --mizuna-chip-icon: 14px;
+
+  --mizuna-input-h: 30px;
+}
+
+/* =========================================
+   シンプル表示モード (Simple / Compact Mode)
+   ※ Vivaldi サイドバーや狭いウィンドウ向けの省スペース表示
+   - トップバー（ヘッダー）の非表示
+   - アイコンの小型化
+   - アカウントID・インスタンス名の非表示
+   - 全体のフォント・パディング・ボタンのコンパクト化
+   ========================================= */
+
+/* 1. ヘッダー (トップバー) の非表示 */
+body.is-simple-mode .mizuna-topbar,
+.mizuna-app-shell.is-simple-mode .mizuna-topbar {
+  display: none !important;
+}
+
+/* 2. メインコンテナの余白削減 */
+body.is-simple-mode .mizuna-main-container,
+.mizuna-app-shell.is-simple-mode .mizuna-main-container {
+  padding: 8px 10px 68px !important;
+  max-width: 620px;
+}
+
+/* 3. お知らせ・アップデートバナーの省スペース化 */
+body.is-simple-mode .mizuna-update-wrap,
+body.is-simple-mode .mizuna-news-wrap {
+  margin: 4px auto !important;
+}
+
+body.is-simple-mode .mizuna-update-card,
+body.is-simple-mode .mizuna-news-card {
+  padding: 6px 10px !important;
+  font-size: 0.78rem !important;
+  border-radius: var(--mizuna-radius-md, 8px) !important;
+}
+
+/* 4. コンポーザーカード */
+body.is-simple-mode .mizuna-studio-composer {
+  border-radius: var(--mizuna-radius-lg, 14px) !important;
+  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.08) !important;
+}
+
+body.is-simple-mode .mizuna-composer-header {
+  padding: 8px 10px !important;
+  gap: 8px !important;
+}
+
+/* 5. 投稿者チップ & アイコン小型化 & アカウントID非表示 */
+body.is-simple-mode .mizuna-author-chip {
+  padding: 3px 8px 3px 4px !important;
+  gap: 6px !important;
+  max-width: min(200px, 45vw) !important;
+}
+
+body.is-simple-mode .mizuna-author-avatar {
+  width: 22px !important;
+  height: 22px !important;
+  inline-size: 22px !important;
+  block-size: 22px !important;
+  min-width: 22px !important;
+  min-height: 22px !important;
+}
+
+body.is-simple-mode .mizuna-author-name {
+  font-size: 0.78rem !important;
+}
+
+body.is-simple-mode .mizuna-author-instance {
+  display: none !important;
+}
+
+body.is-simple-mode .mizuna-author-chevron {
+  font-size: 16px !important;
+}
+
+/* 6. 公開範囲セレクター (アイコンのみで超スリム化) */
+body.is-simple-mode .mizuna-visibility-pills {
+  padding: 2px !important;
+  gap: 1px !important;
+}
+
+body.is-simple-mode .mizuna-vis-pill {
+  padding: 0 7px !important;
+  height: 26px !important;
+  line-height: 26px !important;
+}
+
+body.is-simple-mode .mizuna-vis-pill span {
+  display: none !important;
+}
+
+body.is-simple-mode .mizuna-vis-pill i {
+  font-size: 16px !important;
+}
+
+/* 7. CW エリア & メインテキストエリア */
+body.is-simple-mode .mizuna-cw-box {
+  padding: 6px 10px !important;
+  gap: 6px !important;
+}
+
+body.is-simple-mode .mizuna-cw-icon {
+  font-size: 17px !important;
+}
+
+body.is-simple-mode .mizuna-cw-textarea {
+  font-size: 0.85rem !important;
+  padding: 2px 0 !important;
+}
+
+body.is-simple-mode .mizuna-editor-body {
+  padding: 10px 12px 6px !important;
+}
+
+body.is-simple-mode .mizuna-main-textarea {
+  min-height: 96px !important;
+  font-size: 0.92rem !important;
+  line-height: 1.5 !important;
+}
+
+body.is-simple-mode .mizuna-editor-subrow {
+  margin-top: 4px !important;
+  min-height: 20px !important;
+}
+
+body.is-simple-mode .mizuna-suffix-badge {
+  font-size: 0.68rem !important;
+  padding: 2px 6px !important;
+}
+
+body.is-simple-mode .mizuna-editor-hint {
+  font-size: 0.68rem !important;
+}
+
+/* 8. メディアプレビュー */
+body.is-simple-mode .mizuna-media-gallery {
+  padding: 6px 10px !important;
+  gap: 6px !important;
+}
+
+body.is-simple-mode .mizuna-media-item {
+  width: 54px !important;
+  height: 54px !important;
+}
+
+/* 9. ツールバー & 送信ボタン */
+body.is-simple-mode .mizuna-composer-footer {
+  padding: 6px 10px !important;
+  gap: 6px !important;
+}
+
+body.is-simple-mode .mizuna-tool-group {
+  gap: 3px !important;
+}
+
+body.is-simple-mode .mizuna-tool-icon-btn,
+body.is-simple-mode .mizuna-cw-toggle-btn {
+  height: 32px !important;
+  min-height: 32px !important;
+  padding: 0 7px !important;
+}
+
+body.is-simple-mode .mizuna-tool-icon-btn i,
+body.is-simple-mode .mizuna-cw-toggle-btn i {
+  font-size: 18px !important;
+}
+
+body.is-simple-mode .mizuna-cw-toggle-btn span {
+  font-size: 0.72rem !important;
+}
+
+body.is-simple-mode .mizuna-char-counter {
+  font-size: 0.76rem !important;
+}
+
+body.is-simple-mode .mizuna-progress-ring {
+  width: 22px !important;
+  height: 22px !important;
+}
+
+body.is-simple-mode .mizuna-submit-btn {
+  height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 0.82rem !important;
+  gap: 5px !important;
+}
+
+body.is-simple-mode .mizuna-submit-btn i {
+  font-size: 18px !important;
+}
+
+/* 10. フッターナビゲーション (Dock) */
+body.is-simple-mode .mizuna-dock-wrapper {
+  bottom: 12px !important;
+}
+
+body.is-simple-mode .mizuna-floating-dock {
+  height: auto !important;
+  min-height: unset !important;
+  padding: 6px 8px !important;
+  gap: 6px !important;
+  border-radius: var(--mizuna-radius-pill, 9999px) !important;
+}
+
+/* アバターボタン & ナビゲーションアイテムを押しやすいピル（46px × 46px）に拡大 */
+body.is-simple-mode .mizuna-dock-avatar-btn,
+body.is-simple-mode .mizuna-m3e-item {
+  width: 46px !important;
+  min-width: 46px !important;
+  max-width: 46px !important;
+  inline-size: 46px !important;
+  height: 46px !important;
+  min-height: 46px !important;
+  max-height: 46px !important;
+  block-size: 46px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: var(--mizuna-radius-pill, 9999px) !important;
+  box-sizing: border-box !important;
+}
+
+/* アバター画像のサイズ（32px）とセンタリング */
+body.is-simple-mode .mizuna-dock-avatar-btn > .mizuna-dock-avatar,
+body.is-simple-mode .mizuna-dock-avatar {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+  inline-size: 32px !important;
+  block-size: 32px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  display: block !important;
+  vertical-align: middle !important;
+}
+
+/* 区切り線の高さを垂直中央揃え */
+body.is-simple-mode .mizuna-dock-divider {
+  width: 1px !important;
+  height: 24px !important;
+  margin: 0 2px !important;
+  align-self: center !important;
+}
+
+body.is-simple-mode .mizuna-dock-nav {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+/* ナビアイテムのインジケーター（アイコンコンテナ）のセンタリング */
+body.is-simple-mode .mizuna-m3e-indicator {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1 !important;
+}
+
+/* アイコンフォントのセンタリング＆サイズ（24pxで大きく押しやすく） */
+body.is-simple-mode .mizuna-m3e-indicator i {
+  font-size: 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+  line-height: 24px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  vertical-align: middle !important;
+}
+
+body.is-simple-mode .mizuna-m3e-label {
+  display: none !important;
+}
+
+/* 11. 設定画面やその他の画面のコンパクト化 */
+body.is-simple-mode .mizuna-section-title {
+  font-size: 1.15rem !important;
+}
+
+body.is-simple-mode .mizuna-setting-card {
+  border-radius: 12px !important;
+}
+
+body.is-simple-mode .mizuna-setting-row {
+  padding: 10px 14px !important;
+}
+
+body.is-simple-mode .mizuna-setting-col {
+  padding: 10px 14px !important;
+}
+
+/* =========================================
+   ローカル画像加工モーダル (ImageEditorModal)
+   ========================================= */
+.mizuna-image-editor-portal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: #f8fafc;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* トップバー */
+.mizuna-editor-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(15, 23, 42, 0.85);
+  flex-shrink: 0;
+}
+
+.mizuna-editor-title {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.mizuna-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mizuna-editor-topbar .mizuna-btn {
+  height: 36px !important;
+  padding: 0 14px !important;
+  font-size: 0.82rem !important;
+}
+
+/* ステージエリア */
+.mizuna-editor-stage {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 16px;
+  touch-action: none;
+  background: radial-gradient(circle at center, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.95) 100%);
+}
+
+.mizuna-editor-canvas-wrap {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 100%;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mizuna-editor-preview-img,
+.mizuna-editor-preview-canvas {
+  display: block;
+  max-width: min(100%, 82vw);
+  max-height: min(48vh, 520px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+@media (max-width: 640px) {
+  .mizuna-editor-preview-img,
+  .mizuna-editor-preview-canvas {
+    max-height: 38vh;
+    max-width: 90vw;
+  }
+}
+
+/* クロップ枠 & グリッド */
+.mizuna-crop-box {
+  position: absolute;
+  border: 2px solid var(--primary, #38bdf8);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.55);
+  box-sizing: border-box;
+  cursor: move;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.mizuna-crop-grid {
+  width: 100%;
+  height: 100%;
+  background: 
+    linear-gradient(to right, transparent 33%, rgba(255,255,255,0.25) 33%, rgba(255,255,255,0.25) 34%, transparent 34%, transparent 66%, rgba(255,255,255,0.25) 66%, rgba(255,255,255,0.25) 67%, transparent 67%),
+    linear-gradient(to bottom, transparent 33%, rgba(255,255,255,0.25) 33%, rgba(255,255,255,0.25) 34%, transparent 34%, transparent 66%, rgba(255,255,255,0.25) 66%, rgba(255,255,255,0.25) 67%, transparent 67%);
+  pointer-events: none;
+}
+
+/* モザイク枠 */
+.mizuna-mosaic-box {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.mizuna-mosaic-box.is-editable {
+  cursor: move;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* すりガラスモザイク枠 */
+.mizuna-mosaic-box.is-blur {
+  border: 1.5px dashed var(--primary, #38bdf8);
+  background: color-mix(in srgb, var(--primary, #38bdf8) 15%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ブロックモザイク枠 */
+.mizuna-mosaic-box.is-pixelate {
+  border: 1.5px dashed #f43f5e;
+  overflow: hidden;
+}
+
+.mizuna-mosaic-pixel-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.mizuna-mosaic-box.is-pixelate .mizuna-mosaic-grid-pattern {
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* クロップ・モザイクの四隅リサイズハンドル */
+.mizuna-box-handle {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #ffffff;
+  border: 2px solid var(--primary, #38bdf8);
+  border-radius: 50%;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  touch-action: none;
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* タッチデバイスでもタップしやすいようヒットエリアを拡張 */
+.mizuna-box-handle::after {
+  content: '';
+  position: absolute;
+  inset: -12px;
+}
+
+.mizuna-box-handle.handle-nw {
+  top: -7px;
+  left: -7px;
+  cursor: nwse-resize;
+}
+
+.mizuna-box-handle.handle-ne {
+  top: -7px;
+  right: -7px;
+  cursor: nesw-resize;
+}
+
+.mizuna-box-handle.handle-se {
+  bottom: -7px;
+  right: -7px;
+  cursor: nwse-resize;
+}
+
+.mizuna-box-handle.handle-sw {
+  bottom: -7px;
+  left: -7px;
+  cursor: nesw-resize;
+}
+
+.mizuna-mosaic-box.is-pixelate .mizuna-box-handle {
+  border-color: #f43f5e;
+}
+
+.mizuna-mosaic-box.is-blur .mizuna-box-handle {
+  border-color: var(--primary, #38bdf8);
+}
+
+/* ドラッグ中のプレビュー枠 */
+.mizuna-drag-preview-box {
+  position: absolute;
+  border: 2px dashed #38bdf8;
+  background: rgba(56, 189, 248, 0.18);
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.mizuna-drag-preview-box.is-mosaic {
+  border-color: #f43f5e;
+  background: rgba(244, 63, 94, 0.22);
+}
+
+.mizuna-drag-preview-box.is-pixelate {
+  border-color: #f43f5e;
+  overflow: hidden;
+}
+
+.mizuna-drag-preview-box.is-blur {
+  border-color: var(--primary, #38bdf8);
+  background: color-mix(in srgb, var(--primary, #38bdf8) 22%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.mizuna-editor-stage-hint {
+  position: absolute;
+  bottom: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  background: rgba(0, 0, 0, 0.7);
+  color: #e2e8f0;
+  font-size: 0.76rem;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.mizuna-editor-stage-hint i {
+  font-size: 16px !important;
+}
+
+/* コントロールパネル */
+.mizuna-editor-panel {
+  display: flex;
+  flex-direction: column;
+  background: rgba(30, 41, 59, 0.96);
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+  max-height: 48vh;
+}
+
+.mizuna-editor-tab-content {
+  padding: 14px 16px;
+  min-height: 96px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow-y: auto;
+}
+
+.mizuna-editor-sublabel {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+/* 1. トリミングツール */
+.mizuna-editor-crop-tools {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* 2. 回転・反転ツール */
+.mizuna-editor-rotate-tools {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.mizuna-editor-rotate-tools .mizuna-btn {
+  height: 38px !important;
+  font-size: 0.8rem !important;
+}
+
+/* 3. 色調補正ツール */
+.mizuna-editor-adjust-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.mizuna-adjust-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.mizuna-adjust-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 72px;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  flex-shrink: 0;
+}
+
+.mizuna-adjust-label i {
+  font-size: 17px !important;
+}
+
+.mizuna-slider {
+  flex: 1;
+  accent-color: var(--primary, #38bdf8);
+  height: 6px;
+  cursor: pointer;
+}
+
+.mizuna-adjust-value {
+  width: 46px;
+  text-align: right;
+  font-size: 0.8rem;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+/* 4. モザイクツール */
+.mizuna-editor-mosaic-tools {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mizuna-mosaic-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mizuna-mosaic-type-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mizuna-mosaic-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mizuna-mosaic-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* 文字入れ（テキストオーバーレイ） */
+.mizuna-text-overlay {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  user-select: none;
+  -webkit-user-select: none;
+  white-space: nowrap;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 5;
+  line-height: 1.2;
+}
+
+.mizuna-text-overlay.is-interactive {
+  pointer-events: auto;
+  cursor: move;
+  touch-action: none;
+}
+
+.mizuna-text-overlay.style-fill-stroke {
+  text-shadow:
+    -2px -2px 0 rgba(0, 0, 0, 0.9),
+    2px -2px 0 rgba(0, 0, 0, 0.9),
+    -2px 2px 0 rgba(0, 0, 0, 0.9),
+    2px 2px 0 rgba(0, 0, 0, 0.9),
+    0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.mizuna-text-overlay.style-badge {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 10px;
+  border-radius: 6px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.mizuna-text-overlay.style-fill {
+  text-shadow: 1px 2px 4px rgba(0, 0, 0, 0.65);
+}
+
+.mizuna-text-overlay.is-selected {
+  outline: 2px dashed var(--primary, #38bdf8);
+  outline-offset: 4px;
+}
+
+.mizuna-text-overlay .is-placeholder {
+  opacity: 0.75;
+  font-style: italic;
+}
+
+.mizuna-text-delete-badge {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #f43f5e;
+  color: #ffffff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  padding: 0;
+}
+
+.mizuna-text-delete-badge i {
+  font-size: 14px;
+}
+
+/* 文字入れツールパネル */
+.mizuna-editor-text-tools {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mizuna-text-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mizuna-text-hint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.mizuna-text-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.mizuna-text-row-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mizuna-text-input {
+  flex: 1;
+  height: 34px;
+  padding: 0 10px;
+  background: rgba(30, 41, 59, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 0.85rem;
+  outline: none;
+}
+
+.mizuna-text-input:focus {
+  border-color: var(--primary, #38bdf8);
+}
+
+.mizuna-icon-only-btn {
+  width: 34px !important;
+  height: 34px !important;
+  padding: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+}
+
+.mizuna-text-row-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.mizuna-color-palette {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mizuna-color-dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.mizuna-color-dot:hover {
+  transform: scale(1.15);
+}
+
+.mizuna-color-dot.is-active {
+  border-color: #38bdf8;
+  transform: scale(1.2);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4);
+}
+
+.mizuna-text-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 140px;
+  max-width: 200px;
+}
+
+/* ペン描画オーバーレイキャンバス */
+.mizuna-editor-drawing-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.mizuna-editor-drawing-canvas.is-interactive {
+  pointer-events: auto;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* ペン描画ツールパネル */
+.mizuna-editor-pen-tools {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mizuna-pen-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mizuna-pen-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mizuna-pen-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mizuna-eraser-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+/* 下部機能切り替えタブバー */
+.mizuna-editor-tabs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.96);
+  padding: 6px 4px calc(8px + env(safe-area-inset-bottom, 0px));
+  min-height: calc(56px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  flex-shrink: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  gap: 2px;
+}
+
+.mizuna-editor-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.mizuna-editor-tab-btn {
+  flex: 1 1 0;
+  min-width: 44px;
+  max-width: 68px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 2px;
+  border: none !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.mizuna-editor-tab-btn span {
+  white-space: nowrap;
+  text-overflow: clip;
+  line-height: 1.1;
+  font-size: 0.66rem;
+  display: block;
+}
+
+.mizuna-editor-tab-btn i {
+  font-size: 20px !important;
+  line-height: 1;
+}
+
+.mizuna-editor-tab-btn.is-active {
+  color: var(--primary, #38bdf8) !important;
+  background: rgba(56, 189, 248, 0.14) !important;
+}
+
+/* =========================================
+   透かし（ウォーターマーク）関連スタイル
+   ========================================= */
+
+/* 1. 設定画面内の透かし入力 */
+.mizuna-watermark-input-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.mizuna-watermark-input {
+  flex: 1;
+  height: var(--mizuna-input-h);
+  padding: 0 14px;
+  border-radius: var(--mizuna-radius-md, 12px);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 60%, transparent);
+  background: var(--surface);
+  color: var(--on-surface);
+  font-size: 0.86rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+
+.mizuna-watermark-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.mizuna-watermark-clear-btn {
+  height: var(--mizuna-btn-h) !important;
+  min-width: 90px;
+  padding: var(--mizuna-btn-pad) !important;
+  font-size: var(--mizuna-btn-font) !important;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  box-sizing: border-box;
+}
+
+/* 2. 画像加工モーダル内の透かしプレビューピル */
+.mizuna-watermark-preview-pill {
+  position: absolute;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  max-width: 85%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  transition: all 0.15s ease-out;
+}
+
+.mizuna-watermark-preview-pill.is-bottom-right {
+  bottom: 12px;
+  right: 12px;
+}
+
+.mizuna-watermark-preview-pill.is-bottom-left {
+  bottom: 12px;
+  left: 12px;
+}
+
+.mizuna-watermark-preview-pill.is-top-right {
+  top: 12px;
+  right: 12px;
+}
+
+.mizuna-watermark-preview-pill.is-top-left {
+  top: 12px;
+  left: 12px;
+}
+
+.mizuna-watermark-preview-pill.is-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* 3. 画像加工モーダル内の透かし操作ツール */
+.mizuna-editor-watermark-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 440px;
+}
+
+.mizuna-watermark-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mizuna-watermark-options {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.mizuna-watermark-input-group,
+.mizuna-watermark-pos-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mizuna-editor-text-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: var(--mizuna-radius-md, 10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(15, 23, 42, 0.6);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.mizuna-editor-text-input:focus {
+  border-color: var(--primary, #38bdf8);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+
+
 

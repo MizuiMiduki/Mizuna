@@ -1,5 +1,5 @@
 // Mizuna Service Worker - App Cache & Controlled Update
-const CACHE_NAME = 'mizuna-cache-v3.11.0';
+const CACHE_NAME = 'mizuna-cache-v3.12.0';
 const OFFLINE_URL = '/offline.html';
 
 // 事前キャッシュするコアアセット
@@ -27,6 +27,13 @@ self.addEventListener('install', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+  }
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((names) => {
+        return Promise.all(names.map((n) => caches.delete(n)));
+      })
+    );
   }
 });
 

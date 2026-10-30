@@ -9,6 +9,8 @@ import { AnnouncementsView } from '../src/components/AnnouncementsView';
 import { HoldHoverTip } from '../src/components/HoldHoverTip';
 import { AccountView } from '../src/components/AccountView';
 import { SettingsView } from '../src/components/SettingsView';
+import { NoteView } from '../src/components/NoteView';
+import { useApp } from '../src/store/appStore';
 import { DialogHost } from '../src/components/DialogHost';
 import { SnackbarHost } from '../src/components/SnackbarHost';
 import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
@@ -147,10 +149,113 @@ describe('UI Components', () => {
       fireEvent.change(select, { target: { value: 'en_us' } });
       expect(select.value).toBe('en_us');
     });
+
+    it('表示サイズ（通常 / 大 / 中 / 小 / シンプル）を切り替えられること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      const normalBtn = await screen.findByRole('button', { name: /(通常|Normal|標準|Standard)/ });
+      const largeBtn = await screen.findByRole('button', { name: /(大|Large)/ });
+      const mediumBtn = await screen.findByRole('button', { name: /(中|Medium)/ });
+      const smallBtn = await screen.findByRole('button', { name: /(小|Small)/ });
+      const simpleBtn = await screen.findByRole('button', { name: /(シンプル|Simple)/ });
+
+      expect(normalBtn).toBeInTheDocument();
+      expect(largeBtn).toBeInTheDocument();
+      expect(mediumBtn).toBeInTheDocument();
+      expect(smallBtn).toBeInTheDocument();
+      expect(simpleBtn).toBeInTheDocument();
+
+      // 初期状態は通常モードがアクティブ
+      expect(normalBtn.classList.contains('is-active')).toBe(true);
+      expect(largeBtn.classList.contains('is-active')).toBe(false);
+
+      // 大サイズに切り替え
+      fireEvent.click(largeBtn);
+      let updated = await db.setting.get(1);
+      expect(updated?.ui_mode).toBe(3);
+
+      // シンプルモードに切り替え
+      fireEvent.click(simpleBtn);
+      updated = await db.setting.get(1);
+      expect(updated?.ui_mode).toBe(2);
+    });
+
+    it('カスタムCSSのテキストエリアに入力し、保存・クリアできること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      const textarea = (await screen.findByRole('textbox', {
+        name: /(カスタムCSS|Custom CSS)/,
+      })) as HTMLTextAreaElement;
+      expect(textarea).toBeInTheDocument();
+
+      // CSS を入力
+      fireEvent.input(textarea, { target: { value: 'body { background: #123; }' } });
+      expect(textarea.value).toBe('body { background: #123; }');
+
+      // 保存ボタンをクリック
+      const saveBtn = screen.getByRole('button', { name: /(適用して保存|Save & Apply)/ });
+      expect(saveBtn).toBeInTheDocument();
+      fireEvent.click(saveBtn);
+
+      // スタイル要素が DOM に反映されていること
+      const styleEl = document.getElementById('mizuna-user-custom-css');
+      expect(styleEl).not.toBeNull();
+      expect(styleEl?.textContent).toContain('body { background: #123; }');
+
+      // クリアボタンをクリック
+      const clearBtn = screen.getByRole('button', { name: /(クリア|Clear)/ });
+      fireEvent.click(clearBtn);
+      expect(textarea.value).toBe('');
+      expect(styleEl?.textContent).toBe('');
+    });
+
+    it('設定の検索ボックスに入力すると項目がリアルタイムに絞り込まれ、該当なし時はクリアボタンが表示されること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      const searchInput = (await screen.findByRole('textbox', {
+        name: /(設定を検索|Search settings)/,
+      })) as HTMLInputElement;
+      expect(searchInput).toBeInTheDocument();
+
+      // 初期状態では複数のグループが表示されている
+      expect(screen.getByText(/(投稿のデフォルト設定|Default Post Settings)/)).toBeInTheDocument();
+      expect(screen.getAllByText(/(カスタムCSS|Custom CSS)/).length).toBeGreaterThan(0);
+
+      // 「透かし」で絞り込み
+      fireEvent.input(searchInput, { target: { value: '透かし' } });
+      expect(screen.getAllByText(/(画像透かし|Watermark)/).length).toBeGreaterThan(0);
+      // カスタムCSSグループは非表示になる
+      expect(screen.queryAllByText(/(カスタムCSS|Custom CSS)/).length).toBe(0);
+
+      // 一致しないキーワードを入力
+      fireEvent.input(searchInput, { target: { value: 'nonexistent_setting_query_12345' } });
+      // 空状態メッセージと検索クリアボタンが表示される
+      expect(await screen.findByText(/(一致する設定が見つかりません|No matching settings found)/)).toBeInTheDocument();
+      const clearButtons = screen.getAllByRole('button', { name: /(検索をクリア|Clear search)/i });
+      expect(clearButtons.length).toBeGreaterThan(0);
+
+      // クリアボタンをクリックしてリセット
+      fireEvent.click(clearButtons[0]);
+      expect(searchInput.value).toBe('');
+      expect(screen.getByText(/(投稿のデフォルト設定|Default Post Settings)/)).toBeInTheDocument();
+      expect(screen.getAllByText(/(カスタムCSS|Custom CSS)/).length).toBeGreaterThan(0);
+    });
   });
 
   describe('AccountView', () => {
-    it('アカウントが2件以上ある場合に並べ替えモードを起動でき、矢印ボタンで並び順を変更できること', async () => {
+    it('アカウントが2件以上ある場合に並べ替えモードを起動でき、完了ボタンで終了できること', async () => {
       // 2つ目のアカウントを追加
       await db.account.add({
         token: 'tok_test_2',
@@ -176,22 +281,145 @@ describe('UI Components', () => {
       expect(reorderBtn).toBeInTheDocument();
       fireEvent.click(reorderBtn);
 
-      // 並べ替えバナーが表示されること
-      expect(screen.getByText(/矢印ボタンまたはドラッグでアカウントの表示順を変更できます/)).toBeInTheDocument();
+      // ドラッグハンドルが表示されること
+      const dragHandles = screen.getAllByTitle('ドラッグして並べ替え');
+      expect(dragHandles.length).toBeGreaterThanOrEqual(2);
 
-      // 移動ボタンが存在すること
-      const downButtons = screen.getAllByRole('button', { name: '下へ移動' });
-      expect(downButtons.length).toBeGreaterThanOrEqual(2);
-      expect(downButtons[0]).not.toBeDisabled();
-
-      // 先頭アカウントを「下へ移動」
-      fireEvent.click(downButtons[0]);
-
-      // 完了ボタンをクリック（ヘッダーまたはバナー）
+      // 完了ボタンはヘッダーに1つだけ存在すること
       const completeBtns = screen.getAllByRole('button', { name: /(完了|check)/ });
-      expect(completeBtns.length).toBeGreaterThanOrEqual(1);
+      expect(completeBtns.length).toBe(1);
+
+      // 完了ボタンをクリックして終了
       fireEvent.click(completeBtns[0]);
-      expect(screen.queryByText(/矢印ボタンまたはドラッグでアカウントの表示順を変更できます/)).not.toBeInTheDocument();
+      expect(screen.queryByTitle('ドラッグして並べ替え')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('NoteView - 画像プレビューと圧縮表示のリアルタイム更新', () => {
+    it('プレビューモーダルを開いた後、WebP圧縮完了時にリアルタイムで表示が更新されること', async () => {
+      function TestWrapper() {
+        const { addAttachedFiles } = useApp();
+
+        return (
+          <>
+            <button
+              data-testid="add-file-btn"
+              onClick={() => {
+                const fakeFile = new File(['test-image-content-bytes'], 'test.png', {
+                  type: 'image/png',
+                });
+                addAttachedFiles([fakeFile]);
+              }}
+            >
+              Add
+            </button>
+            <NoteView />
+          </>
+        );
+      }
+
+      render(() => (
+        <AppProvider>
+          <TestWrapper />
+        </AppProvider>
+      ));
+
+      // 画像を追加
+      const addBtn = screen.getByTestId('add-file-btn');
+      fireEvent.click(addBtn);
+
+      // サムネイルが表示されるのを待つ
+      const thumb = await screen.findByAltText('test.png');
+      expect(thumb).toBeInTheDocument();
+
+      // サムネイルの親要素（.mizuna-media-item）をクリックしてプレビューを開く
+      const mediaItem = thumb.closest('.mizuna-media-item');
+      expect(mediaItem).not.toBeNull();
+      fireEvent.click(mediaItem!);
+
+      // プレビューモーダル（ライトボックス）が開く
+      const modalImg = await screen.findByDisplayValue ? document.getElementById('modalImage') : document.getElementById('modalImage');
+      expect(document.getElementById('imageModal')).toBeInTheDocument();
+
+      // 圧縮完了時に、リアルタイムで "KB (WebP)" と削減率が表示されること
+      const webpMeta = await screen.findByText(/KB \(WebP\)/, {}, { timeout: 3000 });
+      expect(webpMeta).toBeInTheDocument();
+      expect(screen.queryByText('WebP圧縮中...')).not.toBeInTheDocument();
+    });
+
+    it('加工済み画像の場合、プレビューモーダルに「加工をリセット」が表示され元画像に戻せること', async () => {
+      let appHook: ReturnType<typeof useApp> | null = null;
+      function TestWrapper() {
+        appHook = useApp();
+        return (
+          <>
+            <button
+              data-testid="add-file-btn"
+              onClick={() => {
+                const fakeFile = new File(['test-bytes'], 'edit_test.png', {
+                  type: 'image/png',
+                });
+                appHook?.addAttachedFiles([fakeFile]);
+              }}
+            >
+              Add
+            </button>
+            <NoteView />
+          </>
+        );
+      }
+
+      render(() => (
+        <AppProvider>
+          <TestWrapper />
+        </AppProvider>
+      ));
+
+      // 画像を追加
+      fireEvent.click(screen.getByTestId('add-file-btn'));
+      const thumb = await screen.findByAltText('edit_test.png');
+      expect(thumb).toBeInTheDocument();
+
+      // 手動で editState と加工済みファイルを設定
+      const imgItem = appHook!.attachedImages()[0];
+      const editedFile = new File(['edited-bytes'], 'edited.webp', { type: 'image/webp' });
+      appHook!.updateAttachedImage(imgItem.id, editedFile, {
+        rotation: 90,
+        flipX: false,
+        brightness: 100,
+        contrast: 100,
+        saturation: 100,
+        aspectRatio: 'free',
+        cropBox: null,
+        mosaics: [],
+        watermarkEnabled: false,
+        watermarkText: '',
+        watermarkPattern: 'diagonal',
+        watermarkOpacity: 22,
+        watermarkScale: 100,
+        signatureEnabled: false,
+        signatureText: '',
+        signaturePosition: 'bottom-right',
+        signatureOpacity: 85,
+        signatureScale: 100,
+      });
+
+      // 最新のサムネイル要素を再取得してクリック
+      const updatedThumb = await screen.findByAltText('edited.webp');
+      const mediaItem = updatedThumb.closest('.mizuna-media-item');
+      expect(mediaItem).not.toBeNull();
+      fireEvent.click(mediaItem!);
+
+      // 「加工をリセット」ボタンが表示されていること
+      const resetBtn = await screen.findByRole('button', { name: /(加工をリセット|元画像に戻す)/ });
+      expect(resetBtn).toBeInTheDocument();
+
+      // リセットをクリック
+      fireEvent.click(resetBtn);
+
+      // リセット後は editState が消え、「加工をリセット」ボタンも消えること
+      expect(screen.queryByRole('button', { name: /(加工をリセット|元画像に戻す)/ })).not.toBeInTheDocument();
+      expect(appHook!.attachedImages()[0].editState).toBeUndefined();
     });
   });
 });

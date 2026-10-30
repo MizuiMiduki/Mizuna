@@ -16,8 +16,10 @@ import {
   type VisibilityType,
 } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
+import { type ImageEditState } from '../utils/imageEditor';
 import { comparisonVersion } from '../utils/version';
 import { HoldHoverTip } from './HoldHoverTip';
+import { ImageEditorModal } from './ImageEditorModal';
 
 export function NoteView() {
   const {
@@ -38,17 +40,54 @@ export function NoteView() {
     attachedImages,
     addAttachedFiles,
     removeAttachedImage,
+    updateAttachedImage,
+    revertAttachedImage,
     clearNoteForm,
     showToast,
+    pushModalBackHandler,
     t,
   } = useApp();
 
   const [isInputFocused, setIsInputFocused] = createSignal(false);
   const [isSending, setIsSending] = createSignal(false);
   const [sendingStatus, setSendingStatus] = createSignal('');
-  const [previewModalImage, setPreviewModalImage] = createSignal<AttachedImageItem | null>(null);
+  const [previewModalImageId, setPreviewModalImageId] = createSignal<string | null>(null);
+  const previewModalImage = createMemo(() => {
+    const id = previewModalImageId();
+    if (!id) return null;
+    return attachedImages().find((img) => img.id === id) ?? null;
+  });
+  const [editingImageItem, setEditingImageItem] = createSignal<AttachedImageItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = createSignal(false);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = createSignal(false);
+
+  // Androidの戻るボタン対応：画像加工モーダル・プレビュー・アカウントピッカーを戻る操作で安全に閉じる
+  createEffect(() => {
+    if (editingImageItem()) {
+      const unregister = pushModalBackHandler(() => {
+        setEditingImageItem(null);
+      });
+      onCleanup(unregister);
+    }
+  });
+
+  createEffect(() => {
+    if (previewModalImageId()) {
+      const unregister = pushModalBackHandler(() => {
+        setPreviewModalImageId(null);
+      });
+      onCleanup(unregister);
+    }
+  });
+
+  createEffect(() => {
+    if (isAccountPickerOpen()) {
+      const unregister = pushModalBackHandler(() => {
+        setIsAccountPickerOpen(false);
+      });
+      onCleanup(unregister);
+    }
+  });
 
   let viewContainerRef: HTMLDivElement | undefined;
   let cwSectionRef: HTMLDivElement | undefined;
@@ -255,7 +294,7 @@ export function NoteView() {
   });
 
   const handleOpenPreview = (item: AttachedImageItem) => {
-    setPreviewModalImage(item);
+    setPreviewModalImageId(item.id);
     setTimeout(() => {
       if (modalContentRef) {
         gsap.fromTo(
@@ -271,7 +310,20 @@ export function NoteView() {
     const target = previewModalImage();
     if (!target) return;
     removeAttachedImage(target.id);
-    setPreviewModalImage(null);
+    setPreviewModalImageId(null);
+  };
+
+  const handleSaveEditedImage = (id: string, editedFile: File, editState: ImageEditState) => {
+    updateAttachedImage(id, editedFile, editState);
+    setEditingImageItem(null);
+    if (previewModalImageId() === id) {
+      setPreviewModalImageId(null);
+    }
+  };
+
+  const handleResetImage = (id: string) => {
+    revertAttachedImage(id);
+    showToast('加工をリセットして元画像に戻しました', 'info');
   };
 
   const handlePaste = (e: ClipboardEvent) => {
@@ -733,7 +785,7 @@ export function NoteView() {
             <div
               id="imageModal"
               class="mizuna-lightbox"
-              onClick={() => setPreviewModalImage(null)}
+              onClick={() => setPreviewModalImageId(null)}
             >
               {/* トップバー: ファイル情報・WebP削減率 & 閉じるボタン */}
               <div class="mizuna-lightbox-topbar" onClick={(e) => e.stopPropagation()}>
@@ -776,7 +828,7 @@ export function NoteView() {
                   <button
                     type="button"
                     class="circle mizuna-lightbox-close-icon-btn"
-                    onClick={() => setPreviewModalImage(null)}
+                    onClick={() => setPreviewModalImageId(null)}
                     aria-label="閉じる"
                   >
                     <i>close</i>
@@ -787,7 +839,7 @@ export function NoteView() {
               {/* メイン画像ステージ */}
               <div
                 class="mizuna-lightbox-stage"
-                onClick={() => setPreviewModalImage(null)}
+                onClick={() => setPreviewModalImageId(null)}
               >
                 <img
                   ref={modalContentRef}
@@ -806,6 +858,27 @@ export function NoteView() {
                 <div class="mizuna-lightbox-bottombar-inner">
                   <button
                     type="button"
+                    class="mizuna-btn mizuna-btn-tonal mizuna-lightbox-action-btn"
+                    onClick={() => {
+                      setEditingImageItem(imgItem());
+                      setPreviewModalImageId(null);
+                    }}
+                  >
+                    <i>tune</i>
+                    <span>画像を加工する</span>
+                  </button>
+                  <Show when={imgItem().editState}>
+                    <button
+                      type="button"
+                      class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
+                      onClick={() => handleResetImage(imgItem().id)}
+                    >
+                      <i>restart_alt</i>
+                      <span>加工をリセット</span>
+                    </button>
+                  </Show>
+                  <button
+                    type="button"
                     id="deleteImageButton"
                     class="mizuna-btn mizuna-btn-danger mizuna-lightbox-action-btn"
                     onClick={handleDeletePreviewImage}
@@ -817,6 +890,20 @@ export function NoteView() {
               </div>
             </div>
           </Portal>
+        )}
+      </Show>
+
+      {/* 画像加工モーダル */}
+      <Show when={editingImageItem()}>
+        {(item) => (
+          <ImageEditorModal
+            file={item().rawFile || item().file}
+            initialState={item().editState}
+            onClose={() => setEditingImageItem(null)}
+            onSave={(updatedFile, editState) =>
+              handleSaveEditedImage(item().id, updatedFile, editState)
+            }
+          />
         )}
       </Show>
     </div>

@@ -16,7 +16,7 @@ import { AppProvider, useApp } from './store/appStore';
 import { initAnalytics, trackPageView } from './utils/analytics';
 
 function MainContent() {
-  const { isInitializing, currentView } = useApp();
+  const { isInitializing, currentView, settings } = useApp();
 
   onMount(() => {
     initAnalytics();
@@ -26,8 +26,50 @@ function MainContent() {
     trackPageView(currentView());
   });
 
+  // ページ遷移（currentView の切り替え）時にスクロール量を最上部 (0) にリセット
+  createEffect(() => {
+    currentView();
+    if (typeof window !== 'undefined') {
+      window.scrollTo(0, 0);
+      if (document.documentElement) document.documentElement.scrollTop = 0;
+      if (document.body) document.body.scrollTop = 0;
+
+      requestAnimationFrame(() => {
+        window.scrollTo(0, 0);
+        if (document.documentElement) document.documentElement.scrollTop = 0;
+        if (document.body) document.body.scrollTop = 0;
+      });
+    }
+  });
+
+  createEffect(() => {
+    const mode = settings().ui_mode;
+    if (typeof document !== 'undefined') {
+      const root = document.documentElement;
+      root.classList.toggle('is-simple-mode', mode === 2);
+      root.classList.toggle('ui-size-large', mode === 3);
+      root.classList.toggle('ui-size-medium', mode === 4);
+      root.classList.toggle('ui-size-small', mode === 5);
+
+      document.body.classList.toggle('is-simple-mode', mode === 2);
+      document.body.classList.toggle('ui-size-large', mode === 3);
+      document.body.classList.toggle('ui-size-medium', mode === 4);
+      document.body.classList.toggle('ui-size-small', mode === 5);
+    }
+  });
+
+  const appShellClasses = () => {
+    const mode = settings().ui_mode;
+    const classes = ['mizuna-app-shell'];
+    if (mode === 2) classes.push('is-simple-mode');
+    if (mode === 3) classes.push('ui-size-large');
+    if (mode === 4) classes.push('ui-size-medium');
+    if (mode === 5) classes.push('ui-size-small');
+    return classes.join(' ');
+  };
+
   return (
-    <div class="mizuna-app-shell">
+    <div class={appShellClasses()}>
       <Header />
 
       <main class="main_column mizuna-main-container">

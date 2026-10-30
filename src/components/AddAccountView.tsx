@@ -2,6 +2,7 @@ import gsap from 'gsap';
 import { createSignal, For, onMount, Show } from 'solid-js';
 import { buildMiAuthUrl, checkServerExists } from '../services/misskeyApi';
 import { useApp } from '../store/appStore';
+import { safeLocalStorage } from '../utils/storage';
 
 const SUGGESTED_SERVERS = ['misskey.io', 'misskey.systems'];
 
@@ -61,7 +62,7 @@ export function AddAccountView() {
         sessionId = `${Date.now()}-${performance.now().toString(36)}`;
       }
 
-      localStorage.setItem('add_server_address', cleanAddress);
+      safeLocalStorage.setItem('add_server_address', cleanAddress);
       const miauthUrl = buildMiAuthUrl(cleanAddress, sessionId);
       location.assign(miauthUrl);
     } catch (err) {

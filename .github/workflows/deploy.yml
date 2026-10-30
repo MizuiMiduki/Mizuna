@@ -24,6 +24,7 @@ permissions:
 jobs:
   schedule:
     name: Wait for Scheduled Time
+    if: inputs.scheduled_time != ''
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -31,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # FTP_SERVER(ドメイン)をシークレット登録していても、接続エラー時などに
       # 名前解決後のIPアドレスがログへ出力されるため、解決結果をマスクする
@@ -113,12 +114,15 @@ jobs:
   deploy:
     name: Deploy Release
     needs: schedule
-    if: needs.schedule.outputs.is_relay != 'true'
+    if: |
+      always() &&
+      (needs.schedule.result == 'success' || needs.schedule.result == 'skipped') &&
+      needs.schedule.outputs.is_relay != 'true'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -185,9 +189,9 @@ jobs:
           git checkout "$TARGET_TAG"
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Install dependencies & Build

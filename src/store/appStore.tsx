@@ -1,4 +1,5 @@
 import { compressAndConvertToWebP, createThumbnailUrl } from '../utils/image';
+import { editImageOptimized, type ImageEditState, type SignaturePosition } from '../utils/imageEditor';
 import gsap from 'gsap';
 import {
   createContext,
@@ -21,7 +22,15 @@ import {
 } from '../db/database';
 import { checkMiAuthSession, fetchLatestAccountInfo, fetchLatestReleaseNote, MisskeyApiError } from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
+import { applyCustomCss } from '../utils/customCss';
 import { translate, type I18nKey } from '../i18n';
+import { safeLocalStorage, safeSessionStorage } from '../utils/storage';
+import {
+  captureWebShareTargetFromUrl,
+  getWebShareTargetStorage,
+  clearWebShareTargetStorage,
+  combineNoteWithShareData,
+} from '../utils/webShare';
 
 export type ViewType =
   | 'note'
@@ -69,12 +78,16 @@ export interface AttachedImageItem {
   id: string;
   name: string;
   file: File;
+  /** 初回アップロード時の未加工元画像ファイル（非破壊・何度でも再編集できるように保持） */
+  rawFile: File;
   dataUrl: string;
   /** 一覧表示用の縮小サムネイル (ObjectURL)。生成前は undefined */
   thumbUrl?: string;
   compressedFile?: File;
   originalSize: number;
   compressedSize?: number;
+  /** 編集モーダルで適用された加工ステート（再編集時に復元して継続編集が可能） */
+  editState?: ImageEditState;
 }
 
 // 添付画像のサムネイル生成・事前圧縮を直列化するキュー
@@ -121,6 +134,8 @@ interface AppContextValue {
   attachedImages: Accessor<AttachedImageItem[]>;
   addAttachedFiles: (fileList: FileList | File[]) => void;
   removeAttachedImage: (id: string) => void;
+  updateAttachedImage: (id: string, file: File, editState?: ImageEditState) => void;
+  revertAttachedImage: (id: string) => void;
   clearNoteForm: (showNotification?: boolean) => void;
 
   // アカウント・設定操作
@@ -142,12 +157,14 @@ interface AppContextValue {
   dialogConfig: Accessor<DialogConfig | null>;
   openDialog: (config: DialogConfig) => void;
   closeDialog: () => void;
+  pushModalBackHandler: (handler: () => void) => () => void;
 
   // PWA アップデート制御
   hasPendingUpdate: Accessor<boolean>;
+  isCheckingUpdate: Accessor<boolean>;
   showUpdateBanner: Accessor<boolean>;
   dismissUpdateBanner: () => void;
-  promptUpdateDialog: () => void;
+  promptUpdateDialog: (worker?: ServiceWorker | null, forceDialog?: boolean) => void;
   applyPendingUpdate: () => void;
   checkForUpdate: () => Promise<void>;
 
@@ -169,23 +186,15 @@ const VALID_VIEWS: ViewType[] = [
 ];
 
 function getSavedView(): ViewType | null {
-  try {
-    const saved = sessionStorage.getItem(VIEW_STORAGE_KEY) as ViewType | null;
-    if (saved && VALID_VIEWS.includes(saved)) {
-      return saved;
-    }
-  } catch {
-    // sessionStorage 無効時は無視
+  const saved = safeSessionStorage.getItem(VIEW_STORAGE_KEY) as ViewType | null;
+  if (saved && VALID_VIEWS.includes(saved)) {
+    return saved;
   }
   return null;
 }
 
 function saveViewToSession(view: ViewType): void {
-  try {
-    sessionStorage.setItem(VIEW_STORAGE_KEY, view);
-  } catch {
-    // sessionStorage 無効時は無視
-  }
+  safeSessionStorage.setItem(VIEW_STORAGE_KEY, view);
 }
 
 export function AppProvider(props: { children: JSX.Element }) {
@@ -225,12 +234,67 @@ export function AppProvider(props: { children: JSX.Element }) {
     setToasts((prev) => prev.filter((item) => item.id !== id));
   };
 
+  // ----------------------------------------------------
+  // Android / ブラウザの戻るボタン (PopState) ハンドリング
+  // ----------------------------------------------------
+  const modalBackHandlers: Array<() => void> = [];
+  let isPopStateActive = false;
+  let ignoreNextPopState = false;
+  let isDialogPoppedByPopState = false;
+  let lastBackPressTime = 0;
+
+  const pushModalBackHandler = (handler: () => void): () => void => {
+    if (typeof window === 'undefined') return () => {};
+
+    let isPoppedByPopState = false;
+
+    const wrappedHandler = () => {
+      isPoppedByPopState = true;
+      handler();
+    };
+
+    modalBackHandlers.push(wrappedHandler);
+    try {
+      window.history.pushState({ isModal: true }, '');
+    } catch (e) {
+      // ignore
+    }
+
+    let cleaned = false;
+    return () => {
+      if (cleaned) return;
+      cleaned = true;
+      const idx = modalBackHandlers.indexOf(wrappedHandler);
+      if (idx !== -1) {
+        modalBackHandlers.splice(idx, 1);
+      }
+      // Androidの戻るボタン(popstate)で既に閉じられた場合はブラウザ履歴が既に戻っているためback()不要
+      // UIの閉じるボタンや背景タップで閉じられた場合のみ、pushされた履歴エントリを巻き戻す
+      if (!isPoppedByPopState && typeof window !== 'undefined' && window.history.state?.isModal) {
+        ignoreNextPopState = true;
+        window.history.back();
+      }
+    };
+  };
+
   const openDialog = (config: DialogConfig) => {
+    isDialogPoppedByPopState = false;
     setDialogConfig(config);
+    if (typeof window !== 'undefined') {
+      try {
+        window.history.pushState({ isDialog: true }, '');
+      } catch (e) {
+        // ignore
+      }
+    }
   };
 
   const closeDialog = () => {
     setDialogConfig(null);
+    if (!isDialogPoppedByPopState && typeof window !== 'undefined' && window.history.state?.isDialog) {
+      ignoreNextPopState = true;
+      window.history.back();
+    }
   };
 
   // 多言語翻訳ヘルパー（Solid.js のリアクティビティと連動し、言語切替時に最小コストで即座に反映）
@@ -241,6 +305,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   // PWA アップデート状態管理
   const [waitingWorker, setWaitingWorker] = createSignal<ServiceWorker | null>(null);
   const [hasPendingUpdate, setHasPendingUpdate] = createSignal(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = createSignal(false);
   const [showUpdateBanner, setShowUpdateBanner] = createSignal(false);
   let activeSwRegistration: ServiceWorkerRegistration | null = null;
 
@@ -248,27 +313,55 @@ export function AppProvider(props: { children: JSX.Element }) {
     setShowUpdateBanner(false);
   };
 
-  const promptUpdateDialog = () => {
-    const worker = waitingWorker();
-    if (!worker) return;
+  const promptUpdateDialog = (worker?: ServiceWorker | null, forceDialog = false) => {
+    const target = worker || waitingWorker();
+    if (!target) return;
 
-    // ヘッダー下の控えめバナーを再表示
+    // ヘッダー下の控えめバナーを表示
     setShowUpdateBanner(true);
+
+    // 手動更新確認時や明示的ダイアログ要求時はモーダルダイアログを表示
+    if (forceDialog) {
+      openDialog({
+        title: translate('update.found_title', undefined, settings().language as any),
+        icon: 'system_update',
+        tone: 'primary',
+        badgeText: 'UPDATE',
+        contentText: translate('update.found_desc', undefined, settings().language as any),
+        buttons: [
+          {
+            label: translate('update.later', undefined, settings().language as any),
+            variant: 'text',
+            onClick: () => closeDialog(),
+          },
+          {
+            label: translate('update.apply', undefined, settings().language as any),
+            variant: 'fill',
+            onClick: () => {
+              closeDialog();
+              applyPendingUpdate();
+            },
+          },
+        ],
+      });
+    }
   };
 
   const applyPendingUpdate = () => {
     // アップデート適用直後フラグを保存（リロード後にリリースノートを自動表示するため）
-    if (typeof localStorage !== 'undefined') {
-      try {
-        localStorage.setItem('mizuna_show_release_notes_after_update', 'true');
-      } catch {
-        // 無視
-      }
-    }
+    safeLocalStorage.setItem('mizuna_show_release_notes_after_update', 'true');
 
-    const worker = waitingWorker();
+    const worker = waitingWorker() || activeSwRegistration?.waiting;
     if (worker) {
-      worker.postMessage({ type: 'SKIP_WAITING' });
+      try {
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      } catch (err) {
+        console.error('SKIP_WAITING postMessage error:', err);
+      }
+      // controllerchange が発火しなかった場合のフォールバックリロード
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
     } else {
       window.location.reload();
     }
@@ -276,77 +369,123 @@ export function AppProvider(props: { children: JSX.Element }) {
 
   const checkForUpdate = async () => {
     if (typeof navigator === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker) {
-      showToast('お使いの環境はService Workerに対応していません', 'info');
+      showToast(translate('update.not_supported', undefined, settings().language as any), 'info');
       return;
     }
+    if (isCheckingUpdate()) return;
+
+    setIsCheckingUpdate(true);
+    showToast(translate('update.checking', undefined, settings().language as any), 'info');
+
     try {
       const reg = activeSwRegistration || (await navigator.serviceWorker.getRegistration());
-      if (reg) {
-        await reg.update();
-        if (reg.waiting) {
-          setWaitingWorker(reg.waiting);
-          setHasPendingUpdate(true);
-          promptUpdateDialog();
-        } else {
-          showToast('最新のバージョンを使用しています', 'info');
+      if (!reg) {
+        showToast(translate('update.not_registered', undefined, settings().language as any), 'info');
+        setIsCheckingUpdate(false);
+        return;
+      }
+      activeSwRegistration = reg;
+
+      // 既に待機中のワーカーがいる場合（ダウンロード完了済み）
+      if (reg.waiting) {
+        setWaitingWorker(reg.waiting);
+        setHasPendingUpdate(true);
+        promptUpdateDialog(reg.waiting, true);
+        setIsCheckingUpdate(false);
+        return;
+      }
+
+      // 新しい Service Worker のインストール完了を待つ Promise を生成
+      const waitInstallPromise = new Promise<'updated' | 'no-update'>((resolve) => {
+        let timeoutId: any;
+
+        const onStateChange = (worker: ServiceWorker) => {
+          if (worker.state === 'installed') {
+            clearTimeout(timeoutId);
+            setWaitingWorker(worker);
+            setHasPendingUpdate(true);
+            resolve('updated');
+          }
+        };
+
+        const onUpdateFound = () => {
+          const installing = reg.installing;
+          if (installing) {
+            installing.addEventListener('statechange', () => onStateChange(installing));
+          }
+        };
+
+        reg.addEventListener?.('updatefound', onUpdateFound, { once: true });
+
+        if (reg.installing) {
+          reg.installing.addEventListener?.('statechange', () => onStateChange(reg.installing!));
         }
+
+        // 3.5秒待って更新がない場合は最新と判断
+        timeoutId = setTimeout(() => {
+          try {
+            reg.removeEventListener?.('updatefound', onUpdateFound);
+          } catch {
+            // 無視
+          }
+          if (reg.waiting) {
+            setWaitingWorker(reg.waiting);
+            setHasPendingUpdate(true);
+            resolve('updated');
+          } else {
+            resolve('no-update');
+          }
+        }, 3500);
+      });
+
+      // Service Worker スクリプトのネットワークチェックを実行
+      await reg.update();
+
+      const result = await waitInstallPromise;
+      if (result === 'updated') {
+        const worker = reg.waiting || waitingWorker();
+        promptUpdateDialog(worker, true);
       } else {
-        showToast('Service Workerが登録されていません', 'info');
+        showToast(translate('update.up_to_date', undefined, settings().language as any), 'info');
       }
     } catch (err) {
       console.error('アップデート確認エラー:', err);
-      showToast('アップデートの確認に失敗しました', 'error');
+      showToast(translate('update.failed', undefined, settings().language as any), 'error');
+    } finally {
+      setIsCheckingUpdate(false);
     }
   };
 
   const setCurrentView = (view: ViewType) => {
-    if (
+    const target =
       accounts().length === 0 &&
       view !== 'add_account' &&
       view !== 'shortcuts' &&
       view !== 'about' &&
       view !== 'announcements' &&
       view !== 'privacy'
-    ) {
-      setCurrentViewInternal('add_account');
-      return;
+        ? 'add_account'
+        : view;
+
+    if (target === currentView()) return;
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.history.pushState({ view: target }, '');
+      } catch (e) {
+        // ignore
+      }
     }
-    setCurrentViewInternal(view);
+    setCurrentViewInternal(target);
   };
 
   /**
-   * Web Share Target パラメータをURLおよびlocalStorageから読み込む
+   * Web Share Target から渡された共有データをフォームに反映する
    */
-  const captureWebShareTargetFromUrl = (): boolean => {
-    const params = new URL(document.location.href).searchParams;
-    const wstTitle = params.get('title');
-    const wstText = params.get('text');
-    const wstUrl = params.get('url');
-
-    if (wstTitle || wstText || wstUrl) {
-      localStorage.removeItem('wst_title');
-      localStorage.removeItem('wst_text');
-      localStorage.removeItem('wst_url');
-
-      if (wstTitle) localStorage.setItem('wst_title', wstTitle);
-      if (wstText) localStorage.setItem('wst_text', wstText);
-      if (wstUrl) localStorage.setItem('wst_url', wstUrl);
-      return true;
-    }
-    return false;
-  };
-
   const applyWebShareTargetToForm = () => {
-    const title = localStorage.getItem('wst_title');
-    const text = localStorage.getItem('wst_text');
-    const url = localStorage.getItem('wst_url');
-
-    if (title !== null || text !== null || url !== null) {
-      let combined = noteText() || '';
-      if (title) combined += (combined ? '\n' : '') + title;
-      if (text) combined += (combined ? '\n' : '') + text;
-      if (url) combined += (combined ? '\n' : '') + url;
-      setNoteText(combined);
+    const data = getWebShareTargetStorage();
+    if (data) {
+      setNoteText(combineNoteWithShareData(noteText(), data));
     }
   };
 
@@ -408,7 +547,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
 
     const sessionId = new URLSearchParams(search).get('session');
-    const address = localStorage.getItem('add_server_address');
+    const address = safeLocalStorage.getItem('add_server_address');
 
     if (!sessionId || !address) {
       window.history.replaceState({}, document.title, '/');
@@ -439,7 +578,7 @@ export function AppProvider(props: { children: JSX.Element }) {
         setSettings((prev) => ({ ...prev, select_user: newId }));
       }
 
-      localStorage.removeItem('add_server_address');
+      safeLocalStorage.removeItem('add_server_address');
       window.history.replaceState({}, document.title, '/');
       showToast('アカウントを追加しました！', 'success');
       return true;
@@ -455,16 +594,9 @@ export function AppProvider(props: { children: JSX.Element }) {
    * リリースノートの更新チェック
    */
   const checkNewReleaseNote = async (currentSettings: SettingRecord) => {
-    let forceShowAfterUpdate = false;
-    if (typeof localStorage !== 'undefined') {
-      try {
-        forceShowAfterUpdate = localStorage.getItem('mizuna_show_release_notes_after_update') === 'true';
-        if (forceShowAfterUpdate) {
-          localStorage.removeItem('mizuna_show_release_notes_after_update');
-        }
-      } catch {
-        // 無視
-      }
+    let forceShowAfterUpdate = safeLocalStorage.getItem('mizuna_show_release_notes_after_update') === 'true';
+    if (forceShowAfterUpdate) {
+      safeLocalStorage.removeItem('mizuna_show_release_notes_after_update');
     }
 
     // 初回起動時のウェルカムポップアップ表示
@@ -620,12 +752,85 @@ export function AppProvider(props: { children: JSX.Element }) {
       return;
     }
 
+    // キャッシュクリア等のリロードパラメータがあればURLをクリーンアップ
+    if (typeof window !== 'undefined' && window.location.search.includes('reload=')) {
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl || '/');
+    }
+
+    // Android / ブラウザの戻る操作 (PopState) をハンドリング
+    if (typeof window !== 'undefined') {
+      try {
+        window.history.replaceState({ view: currentView(), isRoot: true }, '');
+      } catch (e) {
+        // ignore
+      }
+
+      const handlePopState = (e: PopStateEvent) => {
+        // UI操作（閉じるボタンや背景タップ）によってプログラムで history.back() された時は何もしない
+        if (ignoreNextPopState) {
+          ignoreNextPopState = false;
+          return;
+        }
+
+        isPopStateActive = true;
+        try {
+          // 1. 最優先：ダイアログが開いている場合はダイアログを閉じる
+          if (dialogConfig()) {
+            isDialogPoppedByPopState = true;
+            setDialogConfig(null);
+            return;
+          }
+
+          // 2. モーダル（画像編集、画像プレビュー等）が開いている場合は最新のものを閉じる
+          if (modalBackHandlers.length > 0) {
+            const handler = modalBackHandlers.pop();
+            if (handler) {
+              handler();
+              return;
+            }
+          }
+
+          // 3. サブ画面（設定、アカウント、お知らせ等）にいる場合はホーム画面（アカウント未登録時はadd_account）に戻る
+          const homeTarget: ViewType = accounts().length > 0 ? 'note' : 'add_account';
+          if (currentView() !== homeTarget) {
+            setCurrentViewInternal(homeTarget);
+            return;
+          }
+
+          // 4. ホーム画面（note）にいる場合：誤終了防止（二度押しで終了）
+          const now = Date.now();
+          if (now - lastBackPressTime < 2000) {
+            return;
+          }
+
+          lastBackPressTime = now;
+          showToast(t('common.exit_confirm') || 'もう一度「戻る」を押すと終了します', 'info');
+          try {
+            window.history.pushState({ view: 'note', isRoot: true }, '');
+          } catch (e) {
+            // ignore
+          }
+        } finally {
+          setTimeout(() => {
+            isPopStateActive = false;
+          }, 50);
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      onCleanup(() => {
+        window.removeEventListener('popstate', handlePopState);
+      });
+    }
+
     const hasShareParams = captureWebShareTargetFromUrl();
     const savedView = getSavedView();
 
     try {
       const loadedSettings = await loadOrCreateSettings();
       setSettings(loadedSettings);
+      applyCustomCss(loadedSettings.custom_css ?? '');
       setVisibility(visibilityNumToString(loadedSettings.default_visibility));
       setEndMizuna(loadedSettings.is_note_end_mizuna);
 
@@ -713,14 +918,88 @@ export function AppProvider(props: { children: JSX.Element }) {
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name: file.name,
       file,
+      rawFile: file,
       dataUrl: URL.createObjectURL(file),
       originalSize: file.size,
     }));
 
+    // 自動署名・透かし付与の設定を確認
+    const sigPos = settings().signature_position ?? settings().watermark_position;
+    const shouldAutoSignature = sigPos && sigPos !== 'none';
+    const user = currentUser();
+    const defaultUserText = user ? `@${user.username}@${user.address}` : '';
+    const signatureText = settings().signature_text?.trim() || settings().watermark_text?.trim() || defaultUserText;
+
+    const shouldAutoWatermark = settings().watermark_enabled === true;
+    const watermarkText = settings().watermark_text?.trim() || defaultUserText || '@username@instance';
+    const watermarkPattern = settings().watermark_pattern ?? 'diagonal';
+
     // サムネイル生成とWebP事前圧縮は、原寸デコードのピークメモリを抑えるため1枚ずつ直列に処理する
     newItems.forEach((item) => {
       attachProcessQueue = attachProcessQueue.then(async () => {
-        const thumbUrl = (await createThumbnailUrl(item.file)) ?? item.dataUrl; // 生成不可なら原寸にフォールバック
+        let activeFile = item.file;
+        let activeDataUrl = item.dataUrl;
+
+        // 設定で署名または透かし付与が有効化されている場合、自動で合成
+        if ((shouldAutoSignature && signatureText) || (shouldAutoWatermark && watermarkText)) {
+          try {
+            const processed = await editImageOptimized(activeFile, {
+              signature: shouldAutoSignature && signatureText ? {
+                text: signatureText,
+                position: sigPos,
+                opacity: 0.85,
+              } : null,
+              watermark: shouldAutoWatermark && watermarkText ? {
+                text: watermarkText,
+                pattern: watermarkPattern,
+                opacity: 0.22,
+              } : null,
+            });
+            const oldDataUrl = activeDataUrl;
+            activeDataUrl = URL.createObjectURL(processed);
+            activeFile = processed;
+
+            setAttachedImages((prev) =>
+              prev.map((img) =>
+                img.id === item.id
+                  ? {
+                      ...img,
+                      file: activeFile,
+                      dataUrl: activeDataUrl,
+                      originalSize: activeFile.size,
+                      editState: {
+                        rotation: 0,
+                        flipX: false,
+                        brightness: 100,
+                        contrast: 100,
+                        saturation: 100,
+                        aspectRatio: 'free',
+                        cropBox: null,
+                        mosaics: [],
+                        texts: [],
+                        drawings: [],
+                        watermarkEnabled: Boolean(shouldAutoWatermark && watermarkText),
+                        watermarkText: watermarkText,
+                        watermarkPattern: watermarkPattern,
+                        watermarkOpacity: 22,
+                        watermarkScale: 100,
+                        signatureEnabled: Boolean(shouldAutoSignature && signatureText),
+                        signatureText: signatureText,
+                        signaturePosition: (sigPos as SignaturePosition) || 'bottom-right',
+                        signatureOpacity: 85,
+                        signatureScale: 100,
+                      },
+                    }
+                  : img
+              )
+            );
+            if (oldDataUrl) URL.revokeObjectURL(oldDataUrl);
+          } catch (wmErr) {
+            console.warn('Auto watermark failed, proceeding with original file:', wmErr);
+          }
+        }
+
+        const thumbUrl = (await createThumbnailUrl(activeFile)) ?? activeDataUrl; // 生成不可なら原寸にフォールバック
         {
           let alive = false;
           setAttachedImages((prev) =>
@@ -730,10 +1009,10 @@ export function AppProvider(props: { children: JSX.Element }) {
               return { ...img, thumbUrl };
             })
           );
-          if (!alive && thumbUrl !== item.dataUrl) URL.revokeObjectURL(thumbUrl);
+          if (!alive && thumbUrl !== activeDataUrl) URL.revokeObjectURL(thumbUrl);
         }
         try {
-          const compressed = await compressAndConvertToWebP(item.file, 0.75);
+          const compressed = await compressAndConvertToWebP(activeFile, 0.75);
           setAttachedImages((prev) =>
             prev.map((img) =>
               img.id === item.id
@@ -765,10 +1044,110 @@ export function AppProvider(props: { children: JSX.Element }) {
     });
   };
 
+  const updateAttachedImage = (id: string, updatedFile: File, editState?: ImageEditState) => {
+    const current = attachedImages();
+    const target = current.find((item) => item.id === id);
+    if (!target) return;
+
+    revokeAttachedUrls(target);
+
+    const newDataUrl = URL.createObjectURL(updatedFile);
+    const updatedItem: AttachedImageItem = {
+      ...target,
+      name: updatedFile.name,
+      file: updatedFile,
+      dataUrl: newDataUrl,
+      thumbUrl: newDataUrl,
+      originalSize: updatedFile.size,
+      compressedFile: undefined,
+      compressedSize: undefined,
+      editState: editState ?? target.editState,
+    };
+
+    setAttachedImages((prev) =>
+      prev.map((item) => (item.id === id ? updatedItem : item))
+    );
+
+    attachProcessQueue = attachProcessQueue.then(async () => {
+      const thumbUrl = (await createThumbnailUrl(updatedFile)) ?? newDataUrl;
+      let alive = false;
+      setAttachedImages((prev) =>
+        prev.map((img) => {
+          if (img.id !== id) return img;
+          alive = true;
+          return { ...img, thumbUrl };
+        })
+      );
+      if (!alive && thumbUrl !== newDataUrl) URL.revokeObjectURL(thumbUrl);
+
+      try {
+        const compressed = await compressAndConvertToWebP(updatedFile, 0.75);
+        setAttachedImages((prev) =>
+          prev.map((img) =>
+            img.id === id
+              ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
+              : img
+          )
+        );
+      } catch (err) {
+        console.warn('Pre-compression failed for edited image:', err);
+      }
+    });
+  };
+
+  const revertAttachedImage = (id: string) => {
+    const current = attachedImages();
+    const target = current.find((item) => item.id === id);
+    if (!target) return;
+
+    revokeAttachedUrls(target);
+
+    const newDataUrl = URL.createObjectURL(target.rawFile);
+    const revertedItem: AttachedImageItem = {
+      ...target,
+      name: target.rawFile.name,
+      file: target.rawFile,
+      dataUrl: newDataUrl,
+      thumbUrl: newDataUrl,
+      originalSize: target.rawFile.size,
+      compressedFile: undefined,
+      compressedSize: undefined,
+      editState: undefined,
+    };
+
+    setAttachedImages((prev) =>
+      prev.map((item) => (item.id === id ? revertedItem : item))
+    );
+
+    attachProcessQueue = attachProcessQueue.then(async () => {
+      const thumbUrl = (await createThumbnailUrl(target.rawFile)) ?? newDataUrl;
+      let alive = false;
+      setAttachedImages((prev) =>
+        prev.map((img) => {
+          if (img.id !== id) return img;
+          alive = true;
+          return { ...img, thumbUrl };
+        })
+      );
+      if (!alive && thumbUrl !== newDataUrl) URL.revokeObjectURL(thumbUrl);
+
+      try {
+        const compressed = await compressAndConvertToWebP(target.rawFile, 0.75);
+        setAttachedImages((prev) =>
+          prev.map((img) =>
+            img.id === id
+              ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
+              : img
+          )
+        );
+      } catch (err) {
+        console.warn('Pre-compression failed for reverted image:', err);
+      }
+    });
+  };
+
   const clearNoteForm = (showNotification = true) => {
-    localStorage.removeItem('wst_title');
-    localStorage.removeItem('wst_text');
-    localStorage.removeItem('wst_url');
+    clearWebShareTargetStorage();
     setCwText('');
     setNoteText('');
     setAttachedImages((prev) => {
@@ -829,6 +1208,11 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
     if (changes.is_note_end_mizuna !== undefined) {
       setEndMizuna(changes.is_note_end_mizuna);
+    }
+
+    // カスタムCSSが更新された場合は再適用
+    if (changes.custom_css !== undefined) {
+      applyCustomCss(changes.custom_css);
     }
 
     // テーマやアイコン表示に関する変更があれば再適用
@@ -1027,6 +1411,8 @@ export function AppProvider(props: { children: JSX.Element }) {
     attachedImages,
     addAttachedFiles,
     removeAttachedImage,
+    updateAttachedImage,
+    revertAttachedImage,
     clearNoteForm,
     switchAccount,
     deleteSelectedAccounts,
@@ -1044,7 +1430,9 @@ export function AppProvider(props: { children: JSX.Element }) {
     dialogConfig,
     openDialog,
     closeDialog,
+    pushModalBackHandler,
     hasPendingUpdate,
+    isCheckingUpdate,
     showUpdateBanner,
     dismissUpdateBanner,
     promptUpdateDialog,

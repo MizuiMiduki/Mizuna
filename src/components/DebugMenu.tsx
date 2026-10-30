@@ -4,6 +4,8 @@ import { MIZUNA_VERSION, mizuna_options } from '../config/mizunaOptions';
 import { db, DEFAULT_USER_SETTINGS, updateSettingDb } from '../db/database';
 import { fetchLatestReleaseNote } from '../services/misskeyApi';
 import { useApp, type ViewType } from '../store/appStore';
+import { safeLocalStorage } from '../utils/storage';
+import { WST_TITLE_KEY, WST_TEXT_KEY, WST_URL_KEY } from '../utils/webShare';
 
 const PRESET_COLORS = [
   { label: 'Sky', hex: '#2b8cbe' },
@@ -99,9 +101,9 @@ export function DebugMenu() {
     const title = `Mizuna ${MIZUNA_VERSION} リリース記事`;
     const text = 'Solid.js + GSAP + BeerCSS でモダンに生まれ変わりました！';
     const url = 'https://mizuna.blossomsarchive.com/';
-    localStorage.setItem('wst_title', title);
-    localStorage.setItem('wst_text', text);
-    localStorage.setItem('wst_url', url);
+    safeLocalStorage.setItem(WST_TITLE_KEY, title);
+    safeLocalStorage.setItem(WST_TEXT_KEY, text);
+    safeLocalStorage.setItem(WST_URL_KEY, url);
     setNoteText(`${title}\n${text}\n${url}`);
     setCwEnabled(true);
     setCwText('Web Share Target テスト');

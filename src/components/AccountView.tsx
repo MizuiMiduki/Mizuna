@@ -196,24 +196,6 @@ export function AccountView() {
         </div>
       </div>
 
-      {/* 並べ替えモード時の案内バー */}
-      <Show when={isReorderMode()}>
-        <div class="mizuna-reorder-banner">
-          <div class="mizuna-reorder-banner-text">
-            <i>swap_vert</i>
-            <span>矢印ボタンまたはドラッグでアカウントの表示順を変更できます</span>
-          </div>
-          <button
-            type="button"
-            class="mizuna-btn mizuna-btn-primary"
-            onClick={toggleReorderMode}
-          >
-            <i>check</i>
-            <span>完了</span>
-          </button>
-        </div>
-      </Show>
-
       {/* 削除モード時のアクションバー */}
       <Show when={isDeleteMode()}>
         <div class="mizuna-delete-banner">
@@ -310,26 +292,6 @@ export function AccountView() {
                     class="mizuna-acc-reorder-controls"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <button
-                      type="button"
-                      class="mizuna-reorder-btn"
-                      aria-label="上へ移動"
-                      title="上へ移動"
-                      disabled={index() === 0}
-                      onClick={() => moveAccount(index(), index() - 1)}
-                    >
-                      <i>arrow_upward</i>
-                    </button>
-                    <button
-                      type="button"
-                      class="mizuna-reorder-btn"
-                      aria-label="下へ移動"
-                      title="下へ移動"
-                      disabled={index() === accounts().length - 1}
-                      onClick={() => moveAccount(index(), index() + 1)}
-                    >
-                      <i>arrow_downward</i>
-                    </button>
                     <span class="mizuna-reorder-drag-handle" title="ドラッグして並べ替え">
                       <i>drag_indicator</i>
                     </span>

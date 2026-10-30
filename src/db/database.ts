@@ -15,6 +15,8 @@ export interface AccountRecord {
   add_mizuna_versinon: string;
 }
 
+export type AutoWatermarkPosition = 'none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
 /**
  * ユーザー設定レコード
  * id: 1 のレコードが使用されます
@@ -29,8 +31,8 @@ export interface SettingRecord {
   is_note_end_mizuna: boolean;
   /** 自分のアイコンを表示するか */
   is_visible_icon: boolean;
-  /** UIモード (初期値: 1) */
-  ui_mode: number;
+  /** UIモード (1: 通常, 2: シンプル, 3: 大, 4: 中, 5: 小) */
+  ui_mode: 1 | 2 | 3 | 4 | 5;
   /** ダークモード (1: 無効, 2: 端末設定, 3: 有効) */
   is_darkmode: 1 | 2 | 3;
   /** アイコンカラーを元にUIカラーを変更するか */
@@ -43,6 +45,20 @@ export interface SettingRecord {
   language: string;
   /** アカウントの並び順 (アカウントID配列) */
   account_order?: number[];
+  /** ユーザー定義のカスタムCSS */
+  custom_css?: string;
+  /** 画像編集用のカスタム透かしテキスト (盗作防止用) */
+  watermark_text?: string;
+  /** 画像添付時の自動透かし位置 (旧設定互換用) */
+  watermark_position?: AutoWatermarkPosition;
+  /** 盗作防止透かしの自動付与 (true / false) */
+  watermark_enabled?: boolean;
+  /** 盗作防止透かしのパターン ('diagonal' | 'grid' | 'center-huge') */
+  watermark_pattern?: 'diagonal' | 'grid' | 'center-huge';
+  /** 画像署名のカスタムテキスト (未設定時は @username@address) */
+  signature_text?: string;
+  /** 画像署名の自動付与位置 ('none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left') */
+  signature_position?: AutoWatermarkPosition;
 }
 
 export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
@@ -59,6 +75,13 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
     return detectBrowserLanguage();
   },
   account_order: [],
+  custom_css: '',
+  watermark_text: '',
+  watermark_position: 'none',
+  watermark_enabled: false,
+  watermark_pattern: 'diagonal',
+  signature_text: '',
+  signature_position: 'none',
 };
 
 export class MizunaDatabase extends Dexie {
@@ -106,13 +129,20 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
       default_visibility: (settingData.default_visibility as 1 | 2 | 3) ?? DEFAULT_USER_SETTINGS.default_visibility,
       is_note_end_mizuna: settingData.is_note_end_mizuna ?? DEFAULT_USER_SETTINGS.is_note_end_mizuna,
       is_visible_icon: settingData.is_visible_icon ?? DEFAULT_USER_SETTINGS.is_visible_icon,
-      ui_mode: settingData.ui_mode ?? DEFAULT_USER_SETTINGS.ui_mode,
+      ui_mode: (settingData.ui_mode as 1 | 2 | 3 | 4 | 5) ?? DEFAULT_USER_SETTINGS.ui_mode,
       is_darkmode: (settingData.is_darkmode as 1 | 2 | 3) ?? DEFAULT_USER_SETTINGS.is_darkmode,
       is_pick_theme_color: settingData.is_pick_theme_color ?? DEFAULT_USER_SETTINGS.is_pick_theme_color,
       latest_theme_color: settingData.latest_theme_color ?? DEFAULT_USER_SETTINGS.latest_theme_color,
       is_check_releasenote: settingData.is_check_releasenote ?? DEFAULT_USER_SETTINGS.is_check_releasenote,
       language: settingData.language ?? detectBrowserLanguage(),
       account_order: Array.isArray(settingData.account_order) ? settingData.account_order : [],
+      custom_css: typeof settingData.custom_css === 'string' ? settingData.custom_css : DEFAULT_USER_SETTINGS.custom_css,
+      watermark_text: typeof settingData.watermark_text === 'string' ? settingData.watermark_text : DEFAULT_USER_SETTINGS.watermark_text,
+      watermark_position: (settingData.watermark_position as AutoWatermarkPosition) ?? DEFAULT_USER_SETTINGS.watermark_position,
+      watermark_enabled: typeof settingData.watermark_enabled === 'boolean' ? settingData.watermark_enabled : DEFAULT_USER_SETTINGS.watermark_enabled,
+      watermark_pattern: (settingData.watermark_pattern as 'diagonal' | 'grid' | 'center-huge') ?? DEFAULT_USER_SETTINGS.watermark_pattern,
+      signature_text: typeof settingData.signature_text === 'string' ? settingData.signature_text : (typeof settingData.watermark_text === 'string' ? settingData.watermark_text : DEFAULT_USER_SETTINGS.signature_text),
+      signature_position: (settingData.signature_position as AutoWatermarkPosition) ?? (settingData.watermark_position as AutoWatermarkPosition) ?? DEFAULT_USER_SETTINGS.signature_position,
     };
   }
 

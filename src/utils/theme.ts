@@ -2,6 +2,7 @@ import 'beercss';
 import 'material-dynamic-colors';
 import { type SettingRecord, updateSettingDb } from '../db/database';
 import { normalizeMisskeyAvatarUrl } from './image';
+import { safeLocalStorage } from './storage';
 
 const DEFAULT_MIZUNA_HEX = '#2b8cbe';
 const PALETTE_CACHE_STORAGE_KEY = 'mizuna_avatar_palette_cache_v1';
@@ -22,7 +23,7 @@ function getCachedPalette(avatarUrl: string): ExtractedPalette | null {
   if (inMem) return inMem;
 
   try {
-    const raw = localStorage.getItem(PALETTE_CACHE_STORAGE_KEY);
+    const raw = safeLocalStorage.getItem(PALETTE_CACHE_STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Record<string, ExtractedPalette>;
     const hit = parsed[avatarUrl];
@@ -39,7 +40,7 @@ function getCachedPalette(avatarUrl: string): ExtractedPalette | null {
 function setCachedPalette(avatarUrl: string, palette: ExtractedPalette): void {
   memoryPaletteCache.set(avatarUrl, palette);
   try {
-    const raw = localStorage.getItem(PALETTE_CACHE_STORAGE_KEY);
+    const raw = safeLocalStorage.getItem(PALETTE_CACHE_STORAGE_KEY);
     const parsed: Record<string, ExtractedPalette> = raw ? JSON.parse(raw) : {};
     // 最大30件まで保持して肥大化を防止
     const keys = Object.keys(parsed);
@@ -47,7 +48,7 @@ function setCachedPalette(avatarUrl: string, palette: ExtractedPalette): void {
       delete parsed[keys[0]];
     }
     parsed[avatarUrl] = palette;
-    localStorage.setItem(PALETTE_CACHE_STORAGE_KEY, JSON.stringify(parsed));
+    safeLocalStorage.setItem(PALETTE_CACHE_STORAGE_KEY, JSON.stringify(parsed));
   } catch {
     // ストレージ書き込み失敗時は無視
   }

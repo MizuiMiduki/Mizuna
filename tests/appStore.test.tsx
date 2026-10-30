@@ -76,10 +76,64 @@ describe('appStore', () => {
       await result.addAttachedFiles([fakeFile]);
       expect(result.attachedImages().length).toBe(1);
       expect(result.attachedImages()[0].name).toBe('test.png');
+      expect(result.attachedImages()[0].rawFile).toBe(fakeFile);
 
       const targetId = result.attachedImages()[0].id;
       result.removeAttachedImage(targetId);
       expect(result.attachedImages().length).toBe(0);
+    });
+
+    it('添付画像の非破壊編集と元画像へのリセット (updateAttachedImage / revertAttachedImage) ができること', async () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      const originalFile = new File(['orig-bytes'], 'original.png', { type: 'image/png' });
+      result.addAttachedFiles([originalFile]);
+      expect(result.attachedImages().length).toBe(1);
+
+      const imgItem = result.attachedImages()[0];
+      expect(imgItem.rawFile).toBe(originalFile);
+      expect(imgItem.file).toBe(originalFile);
+      expect(imgItem.editState).toBeUndefined();
+
+      // 画像を編集
+      const editedFile = new File(['edited-bytes'], 'original_edited.webp', { type: 'image/webp' });
+      const dummyEditState = {
+        rotation: 90,
+        flipX: true,
+        brightness: 110,
+        contrast: 100,
+        saturation: 100,
+        aspectRatio: '1:1' as const,
+        cropBox: { x: 0.1, y: 0.1, w: 0.8, h: 0.8 },
+        mosaics: [],
+        watermarkEnabled: false,
+        watermarkText: '',
+        watermarkPattern: 'diagonal' as const,
+        watermarkOpacity: 22,
+        watermarkScale: 100,
+        signatureEnabled: false,
+        signatureText: '',
+        signaturePosition: 'bottom-right' as const,
+        signatureOpacity: 85,
+        signatureScale: 100,
+      };
+
+      result.updateAttachedImage(imgItem.id, editedFile, dummyEditState);
+
+      const updated = result.attachedImages()[0];
+      expect(updated.file).toBe(editedFile);
+      expect(updated.rawFile).toBe(originalFile); // 元画像が安全に保持されている
+      expect(updated.editState).toEqual(dummyEditState); // 編集設定が保持されている
+
+      // 加工をリセットして元画像に戻す
+      result.revertAttachedImage(imgItem.id);
+
+      const reverted = result.attachedImages()[0];
+      expect(reverted.file).toBe(originalFile); // 元画像に戻る
+      expect(reverted.rawFile).toBe(originalFile);
+      expect(reverted.editState).toBeUndefined();
     });
 
     it('トーストの表示と手動クローズができること', () => {
@@ -143,6 +197,92 @@ describe('appStore', () => {
       // 設定テーブルに並び順が保存されていることを確認
       const setting = await db.setting.get(1);
       expect(setting?.account_order).toEqual([secondId, firstId]);
+    });
+
+    it('updateSettings でカスタムCSSを変更したときにステートとDOMに反映されること', async () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      await result.updateSettings({ custom_css: '.custom-test { color: purple; }' });
+      expect(result.settings().custom_css).toBe('.custom-test { color: purple; }');
+
+      const styleEl = document.getElementById('mizuna-user-custom-css');
+      expect(styleEl?.textContent).toContain('.custom-test { color: purple; }');
+    });
+
+    it('updateSettings で ui_mode を変更したときにステートとDBに反映されること', async () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      expect(result.settings().ui_mode).toBe(1);
+
+      await result.updateSettings({ ui_mode: 2 });
+      expect(result.settings().ui_mode).toBe(2);
+
+      const saved = await db.setting.get(1);
+      expect(saved?.ui_mode).toBe(2);
+    });
+
+    it('Androidの戻る操作 (popstate) でサブ画面からnote画面へ戻り、モーダルが開いている時はモーダルを閉じること', async () => {
+      // テスト用アカウントを追加
+      await db.account.add({
+        token: 'tok_back_test',
+        name: '戻るテストユーザー',
+        username: 'back_user',
+        address: 'misskey.test',
+        avatarurl: '',
+        add_mizuna_versinon: '3.12.0',
+      });
+
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      // アカウントの非同期読み込みを待機
+      await result.reloadAccounts();
+      result.forceSetCurrentView('note');
+
+      // 設定画面へ遷移
+      result.setCurrentView('about');
+      expect(result.currentView()).toBe('about');
+
+      // Android の戻るボタン（popstate）が押された場合 -> note 画面に戻る
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      expect(result.currentView()).toBe('note');
+
+      // モーダルハンドラーの登録（画像編集等）
+      let modalClosed = false;
+      const unregister = result.pushModalBackHandler(() => {
+        modalClosed = true;
+      });
+
+      // モーダルが開いている時に戻るボタン（popstate）が押された場合 -> モーダルが閉じる
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      expect(modalClosed).toBe(true);
+      expect(result.currentView()).toBe('note');
+
+      // ホーム画面で1回目の戻るが押された場合 -> 二度押し防止トーストが表示される
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      const exitConfirmMsg = result.t('common.exit_confirm');
+      expect(result.toasts().some((t) => t.message === exitConfirmMsg)).toBe(true);
+
+      unregister();
+
+      // UIの閉じるボタンなどでモーダルを閉じた場合、直後の popstate でトーストが出ないこと
+      const initialToastCount = result.toasts().length;
+      let uiModalClosed = false;
+      const unregisterUiModal = result.pushModalBackHandler(() => {
+        uiModalClosed = true;
+      });
+      // UIの×ボタンを押して閉じる操作をシミュレート
+      unregisterUiModal();
+      // ブラウザが history.back() 起因で発火する popstate をシミュレート
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      // トーストが増えていないこと
+      expect(result.toasts().length).toBe(initialToastCount);
+      expect(uiModalClosed).toBe(false);
     });
   });
 });
