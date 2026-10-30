@@ -93,7 +93,7 @@ export interface ImageEditState {
   cropBox: { x: number; y: number; w: number; h: number } | null;
   mosaics: { x: number; y: number; w: number; h: number; type?: MosaicType }[];
   mosaicType?: MosaicType;
-  texts: ImageTextItem[];
+  texts?: ImageTextItem[];
   drawings?: DrawingStroke[];
   watermarkEnabled: boolean;
   watermarkText: string;
