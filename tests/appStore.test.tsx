@@ -76,10 +76,64 @@ describe('appStore', () => {
       await result.addAttachedFiles([fakeFile]);
       expect(result.attachedImages().length).toBe(1);
       expect(result.attachedImages()[0].name).toBe('test.png');
+      expect(result.attachedImages()[0].rawFile).toBe(fakeFile);
 
       const targetId = result.attachedImages()[0].id;
       result.removeAttachedImage(targetId);
       expect(result.attachedImages().length).toBe(0);
+    });
+
+    it('添付画像の非破壊編集と元画像へのリセット (updateAttachedImage / revertAttachedImage) ができること', async () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      const originalFile = new File(['orig-bytes'], 'original.png', { type: 'image/png' });
+      result.addAttachedFiles([originalFile]);
+      expect(result.attachedImages().length).toBe(1);
+
+      const imgItem = result.attachedImages()[0];
+      expect(imgItem.rawFile).toBe(originalFile);
+      expect(imgItem.file).toBe(originalFile);
+      expect(imgItem.editState).toBeUndefined();
+
+      // 画像を編集
+      const editedFile = new File(['edited-bytes'], 'original_edited.webp', { type: 'image/webp' });
+      const dummyEditState = {
+        rotation: 90,
+        flipX: true,
+        brightness: 110,
+        contrast: 100,
+        saturation: 100,
+        aspectRatio: '1:1' as const,
+        cropBox: { x: 0.1, y: 0.1, w: 0.8, h: 0.8 },
+        mosaics: [],
+        watermarkEnabled: false,
+        watermarkText: '',
+        watermarkPattern: 'diagonal' as const,
+        watermarkOpacity: 22,
+        watermarkScale: 100,
+        signatureEnabled: false,
+        signatureText: '',
+        signaturePosition: 'bottom-right' as const,
+        signatureOpacity: 85,
+        signatureScale: 100,
+      };
+
+      result.updateAttachedImage(imgItem.id, editedFile, dummyEditState);
+
+      const updated = result.attachedImages()[0];
+      expect(updated.file).toBe(editedFile);
+      expect(updated.rawFile).toBe(originalFile); // 元画像が安全に保持されている
+      expect(updated.editState).toEqual(dummyEditState); // 編集設定が保持されている
+
+      // 加工をリセットして元画像に戻す
+      result.revertAttachedImage(imgItem.id);
+
+      const reverted = result.attachedImages()[0];
+      expect(reverted.file).toBe(originalFile); // 元画像に戻る
+      expect(reverted.rawFile).toBe(originalFile);
+      expect(reverted.editState).toBeUndefined();
     });
 
     it('トーストの表示と手動クローズができること', () => {

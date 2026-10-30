@@ -309,5 +309,80 @@ describe('UI Components', () => {
       expect(webpMeta).toBeInTheDocument();
       expect(screen.queryByText('WebP圧縮中...')).not.toBeInTheDocument();
     });
+
+    it('加工済み画像の場合、プレビューモーダルに「加工をリセット」が表示され元画像に戻せること', async () => {
+      let appHook: ReturnType<typeof useApp> | null = null;
+      function TestWrapper() {
+        appHook = useApp();
+        return (
+          <>
+            <button
+              data-testid="add-file-btn"
+              onClick={() => {
+                const fakeFile = new File(['test-bytes'], 'edit_test.png', {
+                  type: 'image/png',
+                });
+                appHook?.addAttachedFiles([fakeFile]);
+              }}
+            >
+              Add
+            </button>
+            <NoteView />
+          </>
+        );
+      }
+
+      render(() => (
+        <AppProvider>
+          <TestWrapper />
+        </AppProvider>
+      ));
+
+      // 画像を追加
+      fireEvent.click(screen.getByTestId('add-file-btn'));
+      const thumb = await screen.findByAltText('edit_test.png');
+      expect(thumb).toBeInTheDocument();
+
+      // 手動で editState と加工済みファイルを設定
+      const imgItem = appHook!.attachedImages()[0];
+      const editedFile = new File(['edited-bytes'], 'edited.webp', { type: 'image/webp' });
+      appHook!.updateAttachedImage(imgItem.id, editedFile, {
+        rotation: 90,
+        flipX: false,
+        brightness: 100,
+        contrast: 100,
+        saturation: 100,
+        aspectRatio: 'free',
+        cropBox: null,
+        mosaics: [],
+        watermarkEnabled: false,
+        watermarkText: '',
+        watermarkPattern: 'diagonal',
+        watermarkOpacity: 22,
+        watermarkScale: 100,
+        signatureEnabled: false,
+        signatureText: '',
+        signaturePosition: 'bottom-right',
+        signatureOpacity: 85,
+        signatureScale: 100,
+      });
+
+      // 最新のサムネイル要素を再取得してクリック
+      const updatedThumb = await screen.findByAltText('edited.webp');
+      const mediaItem = updatedThumb.closest('.mizuna-media-item');
+      expect(mediaItem).not.toBeNull();
+      fireEvent.click(mediaItem!);
+
+      // 「加工をリセット」ボタンが表示されていること
+      const resetBtn = await screen.findByRole('button', { name: /(加工をリセット|元画像に戻す)/ });
+      expect(resetBtn).toBeInTheDocument();
+
+      // リセットをクリック
+      fireEvent.click(resetBtn);
+
+      // リセット後は editState が消え、「加工をリセット」ボタンも消えること
+      expect(screen.queryByRole('button', { name: /(加工をリセット|元画像に戻す)/ })).not.toBeInTheDocument();
+      expect(appHook!.attachedImages()[0].editState).toBeUndefined();
+    });
   });
 });

@@ -1,5 +1,5 @@
 import { compressAndConvertToWebP, createThumbnailUrl } from '../utils/image';
-import { editImageOptimized } from '../utils/imageEditor';
+import { editImageOptimized, type ImageEditState, type SignaturePosition } from '../utils/imageEditor';
 import gsap from 'gsap';
 import {
   createContext,
@@ -78,12 +78,16 @@ export interface AttachedImageItem {
   id: string;
   name: string;
   file: File;
+  /** 初回アップロード時の未加工元画像ファイル（非破壊・何度でも再編集できるように保持） */
+  rawFile: File;
   dataUrl: string;
   /** 一覧表示用の縮小サムネイル (ObjectURL)。生成前は undefined */
   thumbUrl?: string;
   compressedFile?: File;
   originalSize: number;
   compressedSize?: number;
+  /** 編集モーダルで適用された加工ステート（再編集時に復元して継続編集が可能） */
+  editState?: ImageEditState;
 }
 
 // 添付画像のサムネイル生成・事前圧縮を直列化するキュー
@@ -130,7 +134,8 @@ interface AppContextValue {
   attachedImages: Accessor<AttachedImageItem[]>;
   addAttachedFiles: (fileList: FileList | File[]) => void;
   removeAttachedImage: (id: string) => void;
-  updateAttachedImage: (id: string, file: File) => void;
+  updateAttachedImage: (id: string, file: File, editState?: ImageEditState) => void;
+  revertAttachedImage: (id: string) => void;
   clearNoteForm: (showNotification?: boolean) => void;
 
   // アカウント・設定操作
@@ -783,6 +788,7 @@ export function AppProvider(props: { children: JSX.Element }) {
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name: file.name,
       file,
+      rawFile: file,
       dataUrl: URL.createObjectURL(file),
       originalSize: file.size,
     }));
@@ -831,6 +837,26 @@ export function AppProvider(props: { children: JSX.Element }) {
                       file: activeFile,
                       dataUrl: activeDataUrl,
                       originalSize: activeFile.size,
+                      editState: {
+                        rotation: 0,
+                        flipX: false,
+                        brightness: 100,
+                        contrast: 100,
+                        saturation: 100,
+                        aspectRatio: 'free',
+                        cropBox: null,
+                        mosaics: [],
+                        watermarkEnabled: shouldAutoWatermark && !!watermarkText,
+                        watermarkText: watermarkText,
+                        watermarkPattern: watermarkPattern,
+                        watermarkOpacity: 22,
+                        watermarkScale: 100,
+                        signatureEnabled: shouldAutoSignature && !!signatureText,
+                        signatureText: signatureText,
+                        signaturePosition: (sigPos as SignaturePosition) || 'bottom-right',
+                        signatureOpacity: 85,
+                        signatureScale: 100,
+                      },
                     }
                   : img
               )
@@ -886,7 +912,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     });
   };
 
-  const updateAttachedImage = (id: string, updatedFile: File) => {
+  const updateAttachedImage = (id: string, updatedFile: File, editState?: ImageEditState) => {
     const current = attachedImages();
     const target = current.find((item) => item.id === id);
     if (!target) return;
@@ -903,6 +929,7 @@ export function AppProvider(props: { children: JSX.Element }) {
       originalSize: updatedFile.size,
       compressedFile: undefined,
       compressedSize: undefined,
+      editState: editState ?? target.editState,
     };
 
     setAttachedImages((prev) =>
@@ -932,6 +959,57 @@ export function AppProvider(props: { children: JSX.Element }) {
         );
       } catch (err) {
         console.warn('Pre-compression failed for edited image:', err);
+      }
+    });
+  };
+
+  const revertAttachedImage = (id: string) => {
+    const current = attachedImages();
+    const target = current.find((item) => item.id === id);
+    if (!target) return;
+
+    revokeAttachedUrls(target);
+
+    const newDataUrl = URL.createObjectURL(target.rawFile);
+    const revertedItem: AttachedImageItem = {
+      ...target,
+      name: target.rawFile.name,
+      file: target.rawFile,
+      dataUrl: newDataUrl,
+      thumbUrl: newDataUrl,
+      originalSize: target.rawFile.size,
+      compressedFile: undefined,
+      compressedSize: undefined,
+      editState: undefined,
+    };
+
+    setAttachedImages((prev) =>
+      prev.map((item) => (item.id === id ? revertedItem : item))
+    );
+
+    attachProcessQueue = attachProcessQueue.then(async () => {
+      const thumbUrl = (await createThumbnailUrl(target.rawFile)) ?? newDataUrl;
+      let alive = false;
+      setAttachedImages((prev) =>
+        prev.map((img) => {
+          if (img.id !== id) return img;
+          alive = true;
+          return { ...img, thumbUrl };
+        })
+      );
+      if (!alive && thumbUrl !== newDataUrl) URL.revokeObjectURL(thumbUrl);
+
+      try {
+        const compressed = await compressAndConvertToWebP(target.rawFile, 0.75);
+        setAttachedImages((prev) =>
+          prev.map((img) =>
+            img.id === id
+              ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
+              : img
+          )
+        );
+      } catch (err) {
+        console.warn('Pre-compression failed for reverted image:', err);
       }
     });
   };
@@ -1202,6 +1280,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     addAttachedFiles,
     removeAttachedImage,
     updateAttachedImage,
+    revertAttachedImage,
     clearNoteForm,
     switchAccount,
     deleteSelectedAccounts,

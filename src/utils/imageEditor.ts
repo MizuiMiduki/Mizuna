@@ -49,6 +49,30 @@ export interface ImageEditOptions {
 }
 
 /**
+ * ユーザーがエディタ上で設定した加工状態（非破壊・何度でも再編集できるように保持）
+ */
+export interface ImageEditState {
+  rotation: number;
+  flipX: boolean;
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  aspectRatio: 'free' | '1:1' | '4:3' | '16:9';
+  cropBox: { x: number; y: number; w: number; h: number } | null;
+  mosaics: { x: number; y: number; w: number; h: number }[];
+  watermarkEnabled: boolean;
+  watermarkText: string;
+  watermarkPattern: WatermarkPattern;
+  watermarkOpacity: number;
+  watermarkScale: number;
+  signatureEnabled: boolean;
+  signatureText: string;
+  signaturePosition: SignaturePosition;
+  signatureOpacity: number;
+  signatureScale: number;
+}
+
+/**
  * Canvasに対してモザイク処理を適用する（GPU/OffscreenCanvas対応）
  */
 export function applyMosaicsToContext(

@@ -16,6 +16,7 @@ import {
   type VisibilityType,
 } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
+import { type ImageEditState } from '../utils/imageEditor';
 import { comparisonVersion } from '../utils/version';
 import { HoldHoverTip } from './HoldHoverTip';
 import { ImageEditorModal } from './ImageEditorModal';
@@ -40,6 +41,7 @@ export function NoteView() {
     addAttachedFiles,
     removeAttachedImage,
     updateAttachedImage,
+    revertAttachedImage,
     clearNoteForm,
     showToast,
     t,
@@ -282,15 +284,17 @@ export function NoteView() {
     setPreviewModalImageId(null);
   };
 
-  const handleSaveEditedImage = (editedFile: File) => {
-    const item = editingImageItem();
-    if (!item) return;
-    updateAttachedImage(item.id, editedFile);
+  const handleSaveEditedImage = (id: string, editedFile: File, editState: ImageEditState) => {
+    updateAttachedImage(id, editedFile, editState);
     setEditingImageItem(null);
-    if (previewModalImageId() === item.id) {
+    if (previewModalImageId() === id) {
       setPreviewModalImageId(null);
     }
-    showToast('画像を加工しました', 'success');
+  };
+
+  const handleResetImage = (id: string) => {
+    revertAttachedImage(id);
+    showToast('加工をリセットして元画像に戻しました', 'info');
   };
 
   const handlePaste = (e: ClipboardEvent) => {
@@ -834,6 +838,16 @@ export function NoteView() {
                     <i>tune</i>
                     <span>画像を加工する</span>
                   </button>
+                  <Show when={imgItem().editState}>
+                    <button
+                      type="button"
+                      class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
+                      onClick={() => handleResetImage(imgItem().id)}
+                    >
+                      <i>restart_alt</i>
+                      <span>加工をリセット</span>
+                    </button>
+                  </Show>
                   <button
                     type="button"
                     id="deleteImageButton"
@@ -854,9 +868,12 @@ export function NoteView() {
       <Show when={editingImageItem()}>
         {(item) => (
           <ImageEditorModal
-            file={item().file}
+            file={item().rawFile || item().file}
+            initialState={item().editState}
             onClose={() => setEditingImageItem(null)}
-            onSave={handleSaveEditedImage}
+            onSave={(updatedFile, editState) =>
+              handleSaveEditedImage(item().id, updatedFile, editState)
+            }
           />
         )}
       </Show>

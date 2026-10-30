@@ -5,6 +5,7 @@ import {
   MosaicRect,
   ImageAdjustments,
   ImageEditOptions,
+  ImageEditState,
   SignatureOptions,
   SignaturePosition,
   WatermarkOptions,
@@ -17,7 +18,8 @@ import { useApp } from '../store/appStore';
 
 export interface ImageEditorModalProps {
   file: File;
-  onSave: (updatedFile: File) => void;
+  initialState?: ImageEditState;
+  onSave: (updatedFile: File, state: ImageEditState) => void;
   onClose: () => void;
 }
 
@@ -30,16 +32,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   const [activeTab, setActiveTab] = createSignal<TabType>('crop');
   const [isProcessing, setIsProcessing] = createSignal(false);
 
-  // 編集ステート
-  const [rotation, setRotation] = createSignal<number>(0); // 0, 90, 180, 270
-  const [flipX, setFlipX] = createSignal<boolean>(false);
-  const [brightness, setBrightness] = createSignal<number>(100);
-  const [contrast, setContrast] = createSignal<number>(100);
-  const [saturation, setSaturation] = createSignal<number>(100);
-  const [aspectRatio, setAspectRatio] = createSignal<AspectRatioType>('free');
+  const init = props.initialState;
+
+  // 編集ステート（前回の加工設定があればそのまま復元して継続編集を可能にする）
+  const [rotation, setRotation] = createSignal<number>(init?.rotation ?? 0); // 0, 90, 180, 270
+  const [flipX, setFlipX] = createSignal<boolean>(init?.flipX ?? false);
+  const [brightness, setBrightness] = createSignal<number>(init?.brightness ?? 100);
+  const [contrast, setContrast] = createSignal<number>(init?.contrast ?? 100);
+  const [saturation, setSaturation] = createSignal<number>(init?.saturation ?? 100);
+  const [aspectRatio, setAspectRatio] = createSignal<AspectRatioType>(init?.aspectRatio ?? 'free');
 
   // 1. 盗作防止透かしステート (画像全面パターン)
   const getInitialWatermarkText = () => {
+    if (init?.watermarkText !== undefined) return init.watermarkText;
     const custom = settings().watermark_text?.trim();
     if (custom) return custom;
     const user = currentUser();
@@ -47,14 +52,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     return 'DO NOT REPOST';
   };
 
-  const [watermarkEnabled, setWatermarkEnabled] = createSignal<boolean>(settings().watermark_enabled ?? false);
+  const [watermarkEnabled, setWatermarkEnabled] = createSignal<boolean>(
+    init?.watermarkEnabled ?? (settings().watermark_enabled ?? false)
+  );
   const [watermarkText, setWatermarkText] = createSignal<string>(getInitialWatermarkText());
-  const [watermarkPattern, setWatermarkPattern] = createSignal<WatermarkPattern>(settings().watermark_pattern ?? 'diagonal');
-  const [watermarkOpacity, setWatermarkOpacity] = createSignal<number>(22);
-  const [watermarkScale, setWatermarkScale] = createSignal<number>(100);
+  const [watermarkPattern, setWatermarkPattern] = createSignal<WatermarkPattern>(
+    init?.watermarkPattern ?? (settings().watermark_pattern ?? 'diagonal')
+  );
+  const [watermarkOpacity, setWatermarkOpacity] = createSignal<number>(init?.watermarkOpacity ?? 22);
+  const [watermarkScale, setWatermarkScale] = createSignal<number>(init?.watermarkScale ?? 100);
 
   // 2. 署名ステート (四隅クレジット表記)
   const getInitialSignatureText = () => {
+    if (init?.signatureText !== undefined) return init.signatureText;
     const custom = settings().signature_text?.trim() || settings().watermark_text?.trim();
     if (custom) return custom;
     const user = currentUser();
@@ -63,27 +73,34 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   };
 
   const getInitialSignaturePosition = (): SignaturePosition => {
+    if (init?.signaturePosition) return init.signaturePosition;
     const pos = settings().signature_position ?? settings().watermark_position;
     if (pos && pos !== 'none') return pos;
     return 'bottom-right';
   };
 
   const [signatureEnabled, setSignatureEnabled] = createSignal<boolean>(
-    (settings().signature_position && settings().signature_position !== 'none') ||
-    (settings().watermark_position && settings().watermark_position !== 'none')
-      ? true
-      : false
+    init?.signatureEnabled ?? (
+      (settings().signature_position && settings().signature_position !== 'none') ||
+      (settings().watermark_position && settings().watermark_position !== 'none')
+        ? true
+        : false
+    )
   );
   const [signatureText, setSignatureText] = createSignal<string>(getInitialSignatureText());
   const [signaturePosition, setSignaturePosition] = createSignal<SignaturePosition>(getInitialSignaturePosition());
-  const [signatureOpacity, setSignatureOpacity] = createSignal<number>(85);
-  const [signatureScale, setSignatureScale] = createSignal<number>(100);
+  const [signatureOpacity, setSignatureOpacity] = createSignal<number>(init?.signatureOpacity ?? 85);
+  const [signatureScale, setSignatureScale] = createSignal<number>(init?.signatureScale ?? 100);
 
   // クロップ座標 (元画像に対する比率 0.0 - 1.0)
-  const [cropBox, setCropBox] = createSignal<{ x: number; y: number; w: number; h: number } | null>(null);
+  const [cropBox, setCropBox] = createSignal<{ x: number; y: number; w: number; h: number } | null>(
+    init?.cropBox ? { ...init.cropBox } : null
+  );
 
   // モザイク矩形配列 (元画像に対する比率 0.0 - 1.0)
-  const [mosaics, setMosaics] = createSignal<{ x: number; y: number; w: number; h: number }[]>([]);
+  const [mosaics, setMosaics] = createSignal<{ x: number; y: number; w: number; h: number }[]>(
+    init?.mosaics ? init.mosaics.map((m) => ({ ...m })) : []
+  );
 
   // プレビュー表示用
   const [previewUrl, setPreviewUrl] = createSignal<string>('');
@@ -577,9 +594,47 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         quality: 0.85,
       };
 
-      const updatedFile = await editImageOptimized(props.file, options);
+      const currentState: ImageEditState = {
+        rotation: rotation(),
+        flipX: flipX(),
+        brightness: brightness(),
+        contrast: contrast(),
+        saturation: saturation(),
+        aspectRatio: aspectRatio(),
+        cropBox: cropBox(),
+        mosaics: mosaics(),
+        watermarkEnabled: watermarkEnabled(),
+        watermarkText: watermarkText(),
+        watermarkPattern: watermarkPattern(),
+        watermarkOpacity: watermarkOpacity(),
+        watermarkScale: watermarkScale(),
+        signatureEnabled: signatureEnabled(),
+        signatureText: signatureText(),
+        signaturePosition: signaturePosition(),
+        signatureOpacity: signatureOpacity(),
+        signatureScale: signatureScale(),
+      };
+
+      const hasAnyEdit =
+        ((rotation() % 360) + 360) % 360 !== 0 ||
+        flipX() ||
+        brightness() !== 100 ||
+        contrast() !== 100 ||
+        saturation() !== 100 ||
+        cropPixel !== null ||
+        mosaicPixels.length > 0 ||
+        watermarkOption !== null ||
+        signatureOption !== null;
+
+      let updatedFile: File;
+      if (!hasAnyEdit) {
+        updatedFile = props.file;
+      } else {
+        updatedFile = await editImageOptimized(props.file, options);
+      }
+
       showToast('画像を加工しました', 'success');
-      props.onSave(updatedFile);
+      props.onSave(updatedFile, currentState);
       props.onClose();
     } catch (err) {
       console.error('Image edit failed:', err);
@@ -607,17 +662,29 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             <span>キャンセル</span>
           </button>
           <div class="mizuna-editor-title">画像を加工</div>
-          <button
-            type="button"
-            class="mizuna-btn mizuna-btn-primary"
-            onClick={handleApply}
-            disabled={isProcessing()}
-          >
-            <Show when={isProcessing()} fallback={<i>check</i>}>
-              <i class="is-spinning">sync</i>
-            </Show>
-            <span>{isProcessing() ? '処理中...' : '完了'}</span>
-          </button>
+          <div class="mizuna-editor-actions">
+            <button
+              type="button"
+              class="mizuna-btn mizuna-btn-ghost"
+              onClick={handleResetAll}
+              disabled={isProcessing()}
+              title="編集内容を初期状態に戻す"
+            >
+              <i>restart_alt</i>
+              <span>リセット</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-btn mizuna-btn-primary"
+              onClick={handleApply}
+              disabled={isProcessing()}
+            >
+              <Show when={isProcessing()} fallback={<i>check</i>}>
+                <i class="is-spinning">sync</i>
+              </Show>
+              <span>{isProcessing() ? '処理中...' : '完了'}</span>
+            </button>
+          </div>
         </div>
 
         {/* 画像ステージ */}
