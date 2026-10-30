@@ -1304,21 +1304,6 @@ body {
   }
 }
 
-html.ui-size-large .mizuna-header-actions {
-  gap: 4px !important;
-}
-
-html.ui-size-large .mizuna-header-actions .mizuna-btn {
-  padding: 0 4px !important;
-  font-size: 0.70rem !important;
-  gap: 2px !important;
-}
-
-html.ui-size-large .mizuna-header-actions .mizuna-btn i {
-  font-size: 14px !important;
-  transform: none !important;
-}
-
 .mizuna-delete-banner {
   display: flex;
   align-items: center;
@@ -2157,17 +2142,6 @@ body.dark .mizuna-custom-css-warnings {
   }
 }
 
-html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill {
-  font-size: 0.70rem !important;
-  padding: 0 4px !important;
-  gap: 2px !important;
-}
-
-html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills-wrap) .mizuna-seg-pill i {
-  font-size: 14px !important;
-  transform: none !important;
-}
-
 .mizuna-seg-pills.mizuna-seg-pills-wrap {
   display: flex;
   flex-wrap: nowrap;
@@ -2232,17 +2206,6 @@ html.ui-size-large .mizuna-setting-row > .mizuna-seg-pills:not(.mizuna-seg-pills
   .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
     font-size: 13px !important;
   }
-}
-
-html.ui-size-large .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
-  font-size: 0.71rem !important;
-  padding: 0 2px !important;
-  gap: 2px !important;
-}
-
-html.ui-size-large .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
-  font-size: 13px !important;
-  transform: none !important;
 }
 
 .mizuna-seg-pill {
@@ -2860,17 +2823,6 @@ html.ui-size-large .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
   padding: 0 14px !important;
   flex-shrink: 0;
   box-sizing: border-box !important;
-}
-
-html.ui-size-large .mizuna-m3e-item {
-  min-width: 66px !important;
-  max-width: 86px !important;
-  padding: 0 10px !important;
-}
-
-html.ui-size-large .mizuna-floating-dock {
-  gap: 5px;
-  padding: 4px 6px;
 }
 
 .mizuna-m3e-indicator {
@@ -4003,28 +3955,28 @@ html.ui-size-large .mizuna-floating-dock {
       レイアウト崩れを起こさず安全・快適にスケーリング
    ========================================= */
 html.ui-size-large {
-  font-size: 17.5px;
-  --mizuna-btn-h: 42px;
-  --mizuna-btn-pad: 0 16px;
-  --mizuna-btn-font: 0.86rem;
+  font-size: 18px;
+  --mizuna-btn-h: 44px;
+  --mizuna-btn-pad: 0 18px;
+  --mizuna-btn-font: 0.90rem;
   --mizuna-btn-icon: 20px;
 
-  --mizuna-send-btn-h: 46px;
+  --mizuna-send-btn-h: 48px;
   --mizuna-send-btn-pad: 0 24px;
-  --mizuna-send-btn-font: 0.94rem;
+  --mizuna-send-btn-font: 0.96rem;
 
-  --mizuna-seg-track-h: 42px;
-  --mizuna-seg-pill-h: 36px;
-  --mizuna-seg-pill-pad: 0 9px;
-  --mizuna-seg-pill-font: 0.78rem;
-  --mizuna-seg-pill-icon: 17px;
+  --mizuna-seg-track-h: 44px;
+  --mizuna-seg-pill-h: 38px;
+  --mizuna-seg-pill-pad: 0 12px;
+  --mizuna-seg-pill-font: 0.84rem;
+  --mizuna-seg-pill-icon: 18px;
 
-  --mizuna-chip-h: 40px;
-  --mizuna-chip-pad: 0 14px;
-  --mizuna-chip-font: 0.82rem;
-  --mizuna-chip-icon: 18px;
+  --mizuna-chip-h: 42px;
+  --mizuna-chip-pad: 0 15px;
+  --mizuna-chip-font: 0.86rem;
+  --mizuna-chip-icon: 19px;
 
-  --mizuna-input-h: 42px;
+  --mizuna-input-h: 44px;
 }
 
 html.ui-size-large .mizuna-app-shell,
