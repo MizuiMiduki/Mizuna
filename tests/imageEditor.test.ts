@@ -11,7 +11,7 @@ import {
 } from '../src/utils/imageEditor';
 
 describe('imageEditor utility', () => {
-  it('applyMosaicsToContext が指定領域のピクセルを正しくモザイク化すること', () => {
+  it('applyMosaicsToContext が指定領域のピクセルを正しくモザイク化（ブロック / すりガラス）すること', () => {
     // 4x4 のピクセルデータ（RGBA）を作成
     const width = 4;
     const height = 4;
@@ -28,12 +28,19 @@ describe('imageEditor utility', () => {
       putImageData: vi.fn(),
     } as unknown as CanvasRenderingContext2D;
 
-    const mosaics: MosaicRect[] = [
-      { x: 0, y: 0, width: 4, height: 4, blockSize: 2 },
+    // 1. ブロックモザイク
+    const blockMosaics: MosaicRect[] = [
+      { x: 0, y: 0, width: 4, height: 4, blockSize: 2, type: 'pixelate' },
     ];
+    applyMosaicsToContext(mockCtx, blockMosaics);
+    expect(mockCtx.getImageData).toHaveBeenCalledWith(0, 0, 4, 4);
+    expect(mockCtx.putImageData).toHaveBeenCalled();
 
-    applyMosaicsToContext(mockCtx, mosaics);
-
+    // 2. すりガラス（ブラー）モザイク
+    const blurMosaics: MosaicRect[] = [
+      { x: 0, y: 0, width: 4, height: 4, type: 'blur' },
+    ];
+    applyMosaicsToContext(mockCtx, blurMosaics);
     expect(mockCtx.getImageData).toHaveBeenCalledWith(0, 0, 4, 4);
     expect(mockCtx.putImageData).toHaveBeenCalled();
   });

@@ -5,12 +5,15 @@ export interface CropRect {
   height: number;
 }
 
+export type MosaicType = 'blur' | 'pixelate';
+
 export interface MosaicRect {
   x: number;
   y: number;
   width: number;
   height: number;
   blockSize?: number;
+  type?: MosaicType;
 }
 
 export interface ImageAdjustments {
@@ -59,7 +62,8 @@ export interface ImageEditState {
   saturation: number;
   aspectRatio: 'free' | '1:1' | '4:3' | '16:9';
   cropBox: { x: number; y: number; w: number; h: number } | null;
-  mosaics: { x: number; y: number; w: number; h: number }[];
+  mosaics: { x: number; y: number; w: number; h: number; type?: MosaicType }[];
+  mosaicType?: MosaicType;
   watermarkEnabled: boolean;
   watermarkText: string;
   watermarkPattern: WatermarkPattern;
@@ -73,7 +77,203 @@ export interface ImageEditState {
 }
 
 /**
- * Canvasに対してモザイク処理を適用する（GPU/OffscreenCanvas対応）
+ * 3パス Fast Box Blur（ガウシアンブラーの高速・高品質近似アルゴリズム）
+ * 純粋な TypedArray 操作のため、Worker / OffscreenCanvas / メインスレッドで極めて高速に動作
+ */
+export function fastBoxBlur(
+  data: Uint8ClampedArray,
+  w: number,
+  h: number,
+  radius: number,
+  passes = 3
+): void {
+  if (w <= 0 || h <= 0 || radius <= 0) return;
+  const r = Math.min(Math.floor(radius), Math.min(w - 1, h - 1));
+  if (r <= 0) return;
+
+  const buffer = new Uint8ClampedArray(data.length);
+
+  let src = data;
+  let dst = buffer;
+
+  for (let p = 0; p < passes; p++) {
+    boxBlurH(src, dst, w, h, r);
+    boxBlurV(dst, src, w, h, r);
+  }
+}
+
+function boxBlurH(
+  scl: Uint8ClampedArray,
+  tcl: Uint8ClampedArray,
+  w: number,
+  h: number,
+  r: number
+): void {
+  const iarr = 1 / (r + r + 1);
+  for (let i = 0; i < h; i++) {
+    const rowOffset = i * w;
+    let ti = rowOffset;
+    let li = rowOffset;
+    let ri = rowOffset + r;
+
+    const fIdx = rowOffset * 4;
+    const lIdxFinal = (rowOffset + w - 1) * 4;
+
+    const fvR = scl[fIdx];
+    const fvG = scl[fIdx + 1];
+    const fvB = scl[fIdx + 2];
+    const fvA = scl[fIdx + 3];
+
+    const lvR = scl[lIdxFinal];
+    const lvG = scl[lIdxFinal + 1];
+    const lvB = scl[lIdxFinal + 2];
+    const lvA = scl[lIdxFinal + 3];
+
+    let valR = (r + 1) * fvR;
+    let valG = (r + 1) * fvG;
+    let valB = (r + 1) * fvB;
+    let valA = (r + 1) * fvA;
+
+    for (let j = 0; j < r; j++) {
+      const idx = (rowOffset + j) * 4;
+      valR += scl[idx];
+      valG += scl[idx + 1];
+      valB += scl[idx + 2];
+      valA += scl[idx + 3];
+    }
+
+    for (let j = 0; j <= r; j++) {
+      const rIdx = (ri < rowOffset + w ? ri++ : rowOffset + w - 1) * 4;
+      valR += scl[rIdx] - fvR;
+      valG += scl[rIdx + 1] - fvG;
+      valB += scl[rIdx + 2] - fvB;
+      valA += scl[rIdx + 3] - fvA;
+      const outIdx = (ti++) * 4;
+      tcl[outIdx] = (valR * iarr + 0.5) | 0;
+      tcl[outIdx + 1] = (valG * iarr + 0.5) | 0;
+      tcl[outIdx + 2] = (valB * iarr + 0.5) | 0;
+      tcl[outIdx + 3] = (valA * iarr + 0.5) | 0;
+    }
+
+    for (let j = r + 1; j < w - r; j++) {
+      const rIdx = (ri++) * 4;
+      const lIdx = (li++) * 4;
+      valR += scl[rIdx] - scl[lIdx];
+      valG += scl[rIdx + 1] - scl[lIdx + 1];
+      valB += scl[rIdx + 2] - scl[lIdx + 2];
+      valA += scl[rIdx + 3] - scl[lIdx + 3];
+      const outIdx = (ti++) * 4;
+      tcl[outIdx] = (valR * iarr + 0.5) | 0;
+      tcl[outIdx + 1] = (valG * iarr + 0.5) | 0;
+      tcl[outIdx + 2] = (valB * iarr + 0.5) | 0;
+      tcl[outIdx + 3] = (valA * iarr + 0.5) | 0;
+    }
+
+    for (let j = Math.max(r + 1, w - r); j < w; j++) {
+      const lIdx = (li < rowOffset + w ? li++ : rowOffset + w - 1) * 4;
+      valR += lvR - scl[lIdx];
+      valG += lvG - scl[lIdx + 1];
+      valB += lvB - scl[lIdx + 2];
+      valA += lvA - scl[lIdx + 3];
+      const outIdx = (ti++) * 4;
+      tcl[outIdx] = (valR * iarr + 0.5) | 0;
+      tcl[outIdx + 1] = (valG * iarr + 0.5) | 0;
+      tcl[outIdx + 2] = (valB * iarr + 0.5) | 0;
+      tcl[outIdx + 3] = (valA * iarr + 0.5) | 0;
+    }
+  }
+}
+
+function boxBlurV(
+  scl: Uint8ClampedArray,
+  tcl: Uint8ClampedArray,
+  w: number,
+  h: number,
+  r: number
+): void {
+  const iarr = 1 / (r + r + 1);
+  for (let i = 0; i < w; i++) {
+    let ti = i;
+    let li = ti;
+    let ri = ti + r * w;
+
+    const fIdx = ti * 4;
+    const lIdxFinal = (ti + (h - 1) * w) * 4;
+
+    const fvR = scl[fIdx];
+    const fvG = scl[fIdx + 1];
+    const fvB = scl[fIdx + 2];
+    const fvA = scl[fIdx + 3];
+
+    const lvR = scl[lIdxFinal];
+    const lvG = scl[lIdxFinal + 1];
+    const lvB = scl[lIdxFinal + 2];
+    const lvA = scl[lIdxFinal + 3];
+
+    let valR = (r + 1) * fvR;
+    let valG = (r + 1) * fvG;
+    let valB = (r + 1) * fvB;
+    let valA = (r + 1) * fvA;
+
+    for (let j = 0; j < r; j++) {
+      const idx = (ti + j * w) * 4;
+      valR += scl[idx];
+      valG += scl[idx + 1];
+      valB += scl[idx + 2];
+      valA += scl[idx + 3];
+    }
+
+    for (let j = 0; j <= r; j++) {
+      const rIdx = (ri < w * h ? ri : ti + (h - 1) * w) * 4;
+      ri += w;
+      valR += scl[rIdx] - fvR;
+      valG += scl[rIdx + 1] - fvG;
+      valB += scl[rIdx + 2] - fvB;
+      valA += scl[rIdx + 3] - fvA;
+      const outIdx = ti * 4;
+      ti += w;
+      tcl[outIdx] = (valR * iarr + 0.5) | 0;
+      tcl[outIdx + 1] = (valG * iarr + 0.5) | 0;
+      tcl[outIdx + 2] = (valB * iarr + 0.5) | 0;
+      tcl[outIdx + 3] = (valA * iarr + 0.5) | 0;
+    }
+
+    for (let j = r + 1; j < h - r; j++) {
+      const rIdx = ri * 4;
+      const lIdx = li * 4;
+      ri += w;
+      li += w;
+      valR += scl[rIdx] - scl[lIdx];
+      valG += scl[rIdx + 1] - scl[lIdx + 1];
+      valB += scl[rIdx + 2] - scl[lIdx + 2];
+      valA += scl[rIdx + 3] - scl[lIdx + 3];
+      const outIdx = ti * 4;
+      ti += w;
+      tcl[outIdx] = (valR * iarr + 0.5) | 0;
+      tcl[outIdx + 1] = (valG * iarr + 0.5) | 0;
+      tcl[outIdx + 2] = (valB * iarr + 0.5) | 0;
+      tcl[outIdx + 3] = (valA * iarr + 0.5) | 0;
+    }
+
+    for (let j = Math.max(r + 1, h - r); j < h; j++) {
+      const lIdx = (li < w * h ? li : ti + (h - 1) * w) * 4;
+      li += w;
+      valR += lvR - scl[lIdx];
+      valG += lvG - scl[lIdx + 1];
+      valB += lvB - scl[lIdx + 2];
+      valA += lvA - scl[lIdx + 3];
+      const outIdx = ti * 4;
+      ti += w;
+      tcl[outIdx] = (valR * iarr + 0.5) | 0;
+      tcl[outIdx + 1] = (valG * iarr + 0.5) | 0;
+      tcl[outIdx + 2] = (valB * iarr + 0.5) | 0;
+      tcl[outIdx + 3] = (valA * iarr + 0.5) | 0;
+    }
+  }
+}
+
+/**
+ * Canvasに対してモザイク処理（すりガラス / ブロック）を適用する（GPU/OffscreenCanvas対応）
  */
 export function applyMosaicsToContext(
   ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
@@ -88,53 +288,66 @@ export function applyMosaicsToContext(
     const rh = Math.round(m.height);
     if (rw <= 0 || rh <= 0) continue;
 
-    const blockSize = Math.max(6, Math.min(32, m.blockSize || Math.round(Math.min(rw, rh) / 8) || 12));
+    const mosaicType: MosaicType = m.type || 'pixelate';
 
-    try {
-      const imgData = ctx.getImageData(rx, ry, rw, rh);
-      const data = imgData.data;
+    if (mosaicType === 'blur') {
+      try {
+        const imgData = ctx.getImageData(rx, ry, rw, rh);
+        const radius = Math.max(4, Math.min(32, Math.round(Math.min(rw, rh) / 12)));
+        fastBoxBlur(imgData.data, rw, rh, radius, 3);
+        ctx.putImageData(imgData, rx, ry);
+      } catch (e) {
+        console.warn('Blur mosaic failed:', e);
+      }
+    } else {
+      const blockSize = Math.max(6, Math.min(32, m.blockSize || Math.round(Math.min(rw, rh) / 8) || 12));
 
-      for (let y = 0; y < rh; y += blockSize) {
-        for (let x = 0; x < rw; x += blockSize) {
-          const blockW = Math.min(blockSize, rw - x);
-          const blockH = Math.min(blockSize, rh - y);
+      try {
+        const imgData = ctx.getImageData(rx, ry, rw, rh);
+        const data = imgData.data;
 
-          let rTotal = 0;
-          let gTotal = 0;
-          let bTotal = 0;
-          let aTotal = 0;
-          const pixelCount = blockW * blockH;
+        for (let y = 0; y < rh; y += blockSize) {
+          for (let x = 0; x < rw; x += blockSize) {
+            const blockW = Math.min(blockSize, rw - x);
+            const blockH = Math.min(blockSize, rh - y);
 
-          for (let by = 0; by < blockH; by++) {
-            for (let bx = 0; bx < blockW; bx++) {
-              const idx = ((y + by) * rw + (x + bx)) * 4;
-              rTotal += data[idx];
-              gTotal += data[idx + 1];
-              bTotal += data[idx + 2];
-              aTotal += data[idx + 3];
+            let rTotal = 0;
+            let gTotal = 0;
+            let bTotal = 0;
+            let aTotal = 0;
+            const pixelCount = blockW * blockH;
+
+            for (let by = 0; by < blockH; by++) {
+              for (let bx = 0; bx < blockW; bx++) {
+                const idx = ((y + by) * rw + (x + bx)) * 4;
+                rTotal += data[idx];
+                gTotal += data[idx + 1];
+                bTotal += data[idx + 2];
+                aTotal += data[idx + 3];
+              }
             }
-          }
 
-          const rAvg = Math.round(rTotal / pixelCount);
-          const gAvg = Math.round(gTotal / pixelCount);
-          const bAvg = Math.round(bTotal / pixelCount);
-          const aAvg = Math.round(aTotal / pixelCount);
+            const rAvg = Math.round(rTotal / pixelCount);
+            const gAvg = Math.round(gTotal / pixelCount);
+            const bAvg = Math.round(bTotal / pixelCount);
+            const aAvg = Math.round(aTotal / pixelCount);
 
-          for (let by = 0; by < blockH; by++) {
-            for (let bx = 0; bx < blockW; bx++) {
-              const idx = ((y + by) * rw + (x + bx)) * 4;
-              data[idx] = rAvg;
-              data[idx + 1] = gAvg;
-              data[idx + 2] = bAvg;
-              data[idx + 3] = aAvg;
+            for (let by = 0; by < blockH; by++) {
+              for (let bx = 0; bx < blockW; bx++) {
+                const idx = ((y + by) * rw + (x + bx)) * 4;
+                data[idx] = rAvg;
+                data[idx + 1] = gAvg;
+                data[idx + 2] = bAvg;
+                data[idx + 3] = aAvg;
+              }
             }
           }
         }
-      }
 
-      ctx.putImageData(imgData, rx, ry);
-    } catch (e) {
-      console.warn('Mosaic processing fallback error:', e);
+        ctx.putImageData(imgData, rx, ry);
+      } catch (e) {
+        console.warn('Block mosaic processing fallback error:', e);
+      }
     }
   }
 }

@@ -4167,6 +4167,12 @@ body.is-simple-mode .mizuna-setting-col {
   letter-spacing: -0.01em;
 }
 
+.mizuna-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .mizuna-editor-topbar .mizuna-btn {
   height: 36px !important;
   padding: 0 14px !important;
@@ -4239,10 +4245,6 @@ body.is-simple-mode .mizuna-setting-col {
 /* モザイク枠 */
 .mizuna-mosaic-box {
   position: absolute;
-  border: 1.5px dashed #f43f5e;
-  background: color-mix(in srgb, #f43f5e 20%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
   box-sizing: border-box;
   pointer-events: none;
 }
@@ -4253,9 +4255,30 @@ body.is-simple-mode .mizuna-setting-col {
   touch-action: none;
 }
 
-.mizuna-mosaic-grid-pattern {
+/* すりガラスモザイク枠 */
+.mizuna-mosaic-box.is-blur {
+  border: 1.5px dashed var(--primary, #38bdf8);
+  background: color-mix(in srgb, var(--primary, #38bdf8) 15%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* ブロックモザイク枠 */
+.mizuna-mosaic-box.is-pixelate {
+  border: 1.5px dashed #f43f5e;
+  background: color-mix(in srgb, #f43f5e 20%, transparent);
+  backdrop-filter: contrast(130%) brightness(105%);
+  -webkit-backdrop-filter: contrast(130%) brightness(105%);
+}
+
+.mizuna-mosaic-box.is-pixelate .mizuna-mosaic-grid-pattern {
   width: 100%;
   height: 100%;
+  background-image:
+    linear-gradient(45deg, rgba(244, 63, 94, 0.28) 25%, transparent 25%, transparent 75%, rgba(244, 63, 94, 0.28) 75%, rgba(244, 63, 94, 0.28)),
+    linear-gradient(45deg, rgba(244, 63, 94, 0.28) 25%, transparent 25%, transparent 75%, rgba(244, 63, 94, 0.28) 75%, rgba(244, 63, 94, 0.28));
+  background-size: 16px 16px;
+  background-position: 0 0, 8px 8px;
   pointer-events: none;
 }
 
@@ -4305,8 +4328,12 @@ body.is-simple-mode .mizuna-setting-col {
   cursor: nesw-resize;
 }
 
-.mizuna-mosaic-box .mizuna-box-handle {
+.mizuna-mosaic-box.is-pixelate .mizuna-box-handle {
   border-color: #f43f5e;
+}
+
+.mizuna-mosaic-box.is-blur .mizuna-box-handle {
+  border-color: var(--primary, #38bdf8);
 }
 
 /* ドラッグ中のプレビュー枠 */
@@ -4318,9 +4345,17 @@ body.is-simple-mode .mizuna-setting-col {
   box-sizing: border-box;
 }
 
-.mizuna-drag-preview-box.is-mosaic {
+.mizuna-drag-preview-box.is-mosaic,
+.mizuna-drag-preview-box.is-pixelate {
   border-color: #f43f5e;
   background: rgba(244, 63, 94, 0.22);
+}
+
+.mizuna-drag-preview-box.is-blur {
+  border-color: var(--primary, #38bdf8);
+  background: color-mix(in srgb, var(--primary, #38bdf8) 22%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .mizuna-editor-stage-hint {
@@ -4442,13 +4477,30 @@ body.is-simple-mode .mizuna-setting-col {
 
 /* 4. モザイクツール */
 .mizuna-editor-mosaic-tools {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mizuna-mosaic-top-row {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 12px;
   flex-wrap: wrap;
-  font-size: 0.82rem;
-  color: #cbd5e1;
+}
+
+.mizuna-mosaic-type-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mizuna-mosaic-action-btns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 /* 下部機能切り替えタブバー */

@@ -3,6 +3,7 @@ import { Portal } from 'solid-js/web';
 import {
   CropRect,
   MosaicRect,
+  MosaicType,
   ImageAdjustments,
   ImageEditOptions,
   ImageEditState,
@@ -97,9 +98,12 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     init?.cropBox ? { ...init.cropBox } : null
   );
 
+  // モザイク種類（'blur': すりガラス, 'pixelate': ブロック）
+  const [mosaicType, setMosaicType] = createSignal<MosaicType>(init?.mosaicType ?? 'blur');
+
   // モザイク矩形配列 (元画像に対する比率 0.0 - 1.0)
-  const [mosaics, setMosaics] = createSignal<{ x: number; y: number; w: number; h: number }[]>(
-    init?.mosaics ? init.mosaics.map((m) => ({ ...m })) : []
+  const [mosaics, setMosaics] = createSignal<{ x: number; y: number; w: number; h: number; type?: MosaicType }[]>(
+    init?.mosaics ? init.mosaics.map((m) => ({ ...m, type: m.type ?? 'blur' })) : []
   );
 
   // プレビュー表示用
@@ -290,6 +294,34 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     setBrightness(100);
     setContrast(100);
     setSaturation(100);
+  };
+
+  // 編集全体の全リセット（未加工状態へ戻す）
+  const handleResetAll = () => {
+    setRotation(0);
+    setFlipX(false);
+    setBrightness(100);
+    setContrast(100);
+    setSaturation(100);
+    setAspectRatio('free');
+    setCropBox(null);
+    setMosaicType('blur');
+    setMosaics([]);
+    setWatermarkEnabled(false);
+    setSignatureEnabled(false);
+    showToast('編集内容をリセットしました', 'info');
+  };
+
+  // モザイク種類の切り替え（最新のモザイクが存在する場合はその種類も更新）
+  const handleSetMosaicType = (type: MosaicType) => {
+    setMosaicType(type);
+    setMosaics((prev) => {
+      if (prev.length === 0) return prev;
+      const updated = [...prev];
+      const lastIdx = updated.length - 1;
+      updated[lastIdx] = { ...updated[lastIdx], type };
+      return updated;
+    });
   };
 
   // モザイクの直前1件を取り消し
@@ -525,7 +557,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       if (!drag || drag.w < 0.03 || drag.h < 0.03) return;
 
       if (activeTab() === 'mosaic') {
-        setMosaics((prev) => [...prev, drag]);
+        setMosaics((prev) => [...prev, { ...drag, type: mosaicType() }]);
       } else if (activeTab() === 'crop') {
         setCropBox(drag);
       }
@@ -557,6 +589,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         width: Math.round(m.w * w),
         height: Math.round(m.h * h),
         blockSize: Math.max(8, Math.round(Math.min(w, h) / 35)),
+        type: m.type || 'blur',
       }));
 
       const watermarkOption: WatermarkOptions | null =
@@ -603,6 +636,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         aspectRatio: aspectRatio(),
         cropBox: cropBox(),
         mosaics: mosaics(),
+        mosaicType: mosaicType(),
         watermarkEnabled: watermarkEnabled(),
         watermarkText: watermarkText(),
         watermarkPattern: watermarkPattern(),
@@ -703,7 +737,9 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             <For each={mosaics()}>
               {(m, index) => (
                 <div
-                  class={`mizuna-mosaic-box ${activeTab() === 'mosaic' ? 'is-editable' : ''}`}
+                  class={`mizuna-mosaic-box ${activeTab() === 'mosaic' ? 'is-editable' : ''} ${
+                    (m.type || 'blur') === 'pixelate' ? 'is-pixelate' : 'is-blur'
+                  }`}
                   style={{
                     left: `${m.x * 100}%`,
                     top: `${m.y * 100}%`,
@@ -712,7 +748,9 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                   }}
                   onPointerDown={(e) => startMosaicMove(e, index())}
                 >
-                  <div class="mizuna-mosaic-grid-pattern" />
+                  <Show when={(m.type || 'blur') === 'pixelate'}>
+                    <div class="mizuna-mosaic-grid-pattern" />
+                  </Show>
                   <Show when={activeTab() === 'mosaic'}>
                     <div
                       class="mizuna-box-handle handle-nw"
@@ -773,7 +811,13 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             <Show when={currentDragRect()}>
               {(dr) => (
                 <div
-                  class={`mizuna-drag-preview-box ${activeTab() === 'crop' ? 'is-crop' : 'is-mosaic'}`}
+                  class={`mizuna-drag-preview-box ${
+                    activeTab() === 'crop'
+                      ? 'is-crop'
+                      : mosaicType() === 'pixelate'
+                      ? 'is-pixelate'
+                      : 'is-blur'
+                  }`}
                   style={{
                     left: `${dr().x * 100}%`,
                     top: `${dr().y * 100}%`,
@@ -945,25 +989,50 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             {/* 4. モザイクタブ */}
             <Show when={activeTab() === 'mosaic'}>
               <div class="mizuna-editor-mosaic-tools">
-                <span>モザイク: {mosaics().length} 箇所</span>
-                <button
-                  type="button"
-                  class="mizuna-btn mizuna-btn-outline mizuna-btn-sm"
-                  onClick={handleUndoMosaic}
-                  disabled={mosaics().length === 0}
-                >
-                  <i>undo</i>
-                  <span>1つ取り消す</span>
-                </button>
-                <button
-                  type="button"
-                  class="mizuna-btn mizuna-btn-ghost mizuna-btn-sm"
-                  onClick={() => setMosaics([])}
-                  disabled={mosaics().length === 0}
-                >
-                  <i>delete</i>
-                  <span>全消去</span>
-                </button>
+                <div class="mizuna-mosaic-type-selector">
+                  <span class="mizuna-editor-sublabel">種類:</span>
+                  <div class="mizuna-seg-pills">
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${mosaicType() === 'blur' ? 'is-active' : ''}`}
+                      onClick={() => handleSetMosaicType('blur')}
+                    >
+                      <i>blur_on</i>
+                      <span>すりガラス</span>
+                    </button>
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${mosaicType() === 'pixelate' ? 'is-active' : ''}`}
+                      onClick={() => handleSetMosaicType('pixelate')}
+                    >
+                      <i>grid_view</i>
+                      <span>ブロック</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="mizuna-mosaic-action-btns">
+                  <button
+                    type="button"
+                    class="mizuna-btn mizuna-btn-outline mizuna-btn-sm"
+                    onClick={handleUndoMosaic}
+                    disabled={mosaics().length === 0}
+                    title="直前のモザイクを取り消す"
+                  >
+                    <i>undo</i>
+                    <span>1つ取り消す</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="mizuna-btn mizuna-btn-ghost mizuna-btn-sm"
+                    onClick={() => setMosaics([])}
+                    disabled={mosaics().length === 0}
+                    title="すべてのモザイクを消去"
+                  >
+                    <i>delete</i>
+                    <span>全消去</span>
+                  </button>
+                </div>
               </div>
             </Show>
 
