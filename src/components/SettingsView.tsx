@@ -50,8 +50,8 @@ export function SettingsView() {
 
   const defaultWatermarkPlaceholder = () => {
     const user = currentUser();
-    if (!user) return 'DO NOT REPOST';
-    return `DO NOT REPOST / @${user.username}`;
+    if (!user) return '@username@instance';
+    return `@${user.username}@${user.address}`;
   };
 
   createEffect(() => {

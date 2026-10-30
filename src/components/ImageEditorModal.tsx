@@ -49,14 +49,14 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   const [saturation, setSaturation] = createSignal<number>(init?.saturation ?? 100);
   const [aspectRatio, setAspectRatio] = createSignal<AspectRatioType>(init?.aspectRatio ?? 'free');
 
-  // 1. 盗作防止透かしステート (画像全面パターン)
+  // 1. 画像透かしステート (画像全面パターン)
   const getInitialWatermarkText = () => {
     if (init?.watermarkText !== undefined) return init.watermarkText;
     const custom = settings().watermark_text?.trim();
     if (custom) return custom;
     const user = currentUser();
     if (user) return `@${user.username}@${user.address}`;
-    return 'DO NOT REPOST';
+    return '@username@instance';
   };
 
   const [watermarkEnabled, setWatermarkEnabled] = createSignal<boolean>(
@@ -1825,7 +1825,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                         type="text"
                         class="mizuna-editor-text-input"
                         value={watermarkText()}
-                        placeholder="DO NOT REPOST / @username"
+                        placeholder="@username@instance"
                         onInput={(e) => setWatermarkText(e.currentTarget.value)}
                       />
                     </div>

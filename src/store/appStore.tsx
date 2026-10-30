@@ -801,7 +801,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     const signatureText = settings().signature_text?.trim() || settings().watermark_text?.trim() || defaultUserText;
 
     const shouldAutoWatermark = settings().watermark_enabled === true;
-    const watermarkText = settings().watermark_text?.trim() || defaultUserText || 'DO NOT REPOST';
+    const watermarkText = settings().watermark_text?.trim() || defaultUserText || '@username@instance';
     const watermarkPattern = settings().watermark_pattern ?? 'diagonal';
 
     // サムネイル生成とWebP事前圧縮は、原寸デコードのピークメモリを抑えるため1枚ずつ直列に処理する
