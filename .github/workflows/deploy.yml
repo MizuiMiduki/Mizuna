@@ -24,6 +24,7 @@ permissions:
 jobs:
   schedule:
     name: Wait for Scheduled Time
+    if: inputs.scheduled_time != ''
     runs-on: ubuntu-latest
     timeout-minutes: 360
     outputs:
@@ -113,7 +114,10 @@ jobs:
   deploy:
     name: Deploy Release
     needs: schedule
-    if: needs.schedule.outputs.is_relay != 'true'
+    if: |
+      always() &&
+      (needs.schedule.result == 'success' || needs.schedule.result == 'skipped') &&
+      needs.schedule.outputs.is_relay != 'true'
     runs-on: ubuntu-latest
 
     steps:
