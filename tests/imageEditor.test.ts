@@ -1,11 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
+  applyDrawingsToContext,
   applyMosaicsToContext,
   applySignatureToContext,
   applyTextsToContext,
   applyWatermarkPatternToContext,
   applyWatermarkToContext,
   createCanvas2D,
+  DrawingStroke,
   ImageTextItem,
   MosaicRect,
   SignatureOptions,
@@ -223,6 +225,176 @@ describe('imageEditor utility', () => {
     applyTextsToContext(mockCtx, 800, 600, undefined as unknown as ImageTextItem[]);
     expect(mockCtx.save).not.toHaveBeenCalled();
     expect(mockCtx.fillText).not.toHaveBeenCalled();
+  });
+
+  it('applyDrawingsToContext がペン描画（通常線・点・マーカー・スムージング）を正しく描画すること', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      arc: vi.fn(),
+      fill: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      quadraticCurveTo: vi.fn(),
+      stroke: vi.fn(),
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    const drawings: DrawingStroke[] = [
+      // 1. 通常ペン（複数点: ベジェ曲線）
+      {
+        id: 's1',
+        points: [
+          { x: 0.1, y: 0.1 },
+          { x: 0.2, y: 0.3 },
+          { x: 0.4, y: 0.5 },
+        ],
+        color: '#ff3b30',
+        size: 6,
+        mode: 'pen',
+      },
+      // 2. マーカー（2点）
+      {
+        id: 's2',
+        points: [
+          { x: 0.3, y: 0.3 },
+          { x: 0.5, y: 0.3 },
+        ],
+        color: '#ffd60a',
+        size: 16,
+        mode: 'highlighter',
+      },
+      // 3. 1点タップ（ドット円）
+      {
+        id: 's3',
+        points: [{ x: 0.8, y: 0.8 }],
+        color: '#007aff',
+        size: 8,
+        mode: 'pen',
+      },
+    ];
+
+    applyDrawingsToContext(mockCtx, 800, 600, drawings);
+
+    // 3ストローク + 全体コンテキストで save / restore が呼ばれる
+    expect(mockCtx.save).toHaveBeenCalledTimes(4);
+    expect(mockCtx.restore).toHaveBeenCalledTimes(4);
+    expect(mockCtx.quadraticCurveTo).toHaveBeenCalled();
+    expect(mockCtx.arc).toHaveBeenCalledTimes(1);
+    expect(mockCtx.stroke).toHaveBeenCalledTimes(2);
+  });
+
+  it('applyDrawingsToContext に消しゴムが含まれる場合、中間レイヤーで合成されること', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    const mockLayerCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+    };
+    const getContextSpy = vi
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue(mockLayerCtx as unknown as RenderingContext);
+
+    const drawings: DrawingStroke[] = [
+      {
+        id: 's1',
+        points: [
+          { x: 0.1, y: 0.1 },
+          { x: 0.2, y: 0.2 },
+        ],
+        color: '#ff3b30',
+        size: 6,
+        mode: 'pen',
+      },
+      {
+        id: 's2',
+        points: [
+          { x: 0.15, y: 0.15 },
+          { x: 0.25, y: 0.25 },
+        ],
+        color: 'transparent',
+        size: 12,
+        mode: 'eraser',
+      },
+    ];
+
+    applyDrawingsToContext(mockCtx, 800, 600, drawings);
+    // レイヤー画像が親 ctx に drawImage される
+    expect(mockCtx.drawImage).toHaveBeenCalled();
+
+    getContextSpy.mockRestore();
+  });
+
+  it('applyDrawingsToContext がモザイク線（すりガラス / ブロック）を描画できること', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      quadraticCurveTo: vi.fn(),
+      stroke: vi.fn(),
+      drawImage: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    const mockSource = {
+      width: 800,
+      height: 600,
+    } as unknown as CanvasImageSource;
+
+    const drawings: DrawingStroke[] = [
+      {
+        id: 'm1',
+        points: [
+          { x: 0.1, y: 0.1 },
+          { x: 0.2, y: 0.2 },
+          { x: 0.3, y: 0.4 },
+        ],
+        color: '#ffffff',
+        size: 24,
+        mode: 'mosaic',
+        mosaicType: 'blur',
+      },
+      {
+        id: 'm2',
+        points: [
+          { x: 0.5, y: 0.5 },
+          { x: 0.6, y: 0.7 },
+        ],
+        color: '#ffffff',
+        size: 32,
+        mode: 'mosaic',
+        mosaicType: 'pixelate',
+      },
+    ];
+
+    expect(() => applyDrawingsToContext(mockCtx, 800, 600, drawings, mockSource)).not.toThrow();
+  });
+
+  it('applyDrawingsToContext に空リストまたは未指定が渡された場合は描画しないこと', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    applyDrawingsToContext(mockCtx, 800, 600, []);
+    applyDrawingsToContext(mockCtx, 800, 600, undefined);
+    expect(mockCtx.save).not.toHaveBeenCalled();
+    expect(mockCtx.beginPath).not.toHaveBeenCalled();
   });
 
   it('createCanvas2D で Canvas が正常に生成できること', () => {

@@ -1,4 +1,5 @@
 import {
+  applyDrawingsToContext,
   applyMosaicsToContext,
   applySignatureToContext,
   applyTextsToContext,
@@ -40,6 +41,7 @@ self.onmessage = async (e: MessageEvent<WorkerEditRequest>) => {
       adjustments = { brightness: 100, contrast: 100, saturation: 100 },
       mosaics = [],
       texts = [],
+      drawings = [],
       quality = 0.85,
     } = options;
 
@@ -72,6 +74,11 @@ self.onmessage = async (e: MessageEvent<WorkerEditRequest>) => {
     // モザイク
     if (mosaics && mosaics.length > 0) {
       applyMosaicsToContext(ctx, mosaics);
+    }
+
+    // ペン描画
+    if (drawings && drawings.length > 0) {
+      applyDrawingsToContext(ctx, stageWidth, stageHeight, drawings, canvas);
     }
 
     // 文字入れ（テキスト合成）

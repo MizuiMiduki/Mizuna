@@ -302,6 +302,7 @@ describe('UI Components', () => {
       fireEvent.click(mediaItem!);
 
       // プレビューモーダル（ライトボックス）が開く
+      const modalImg = await screen.findByDisplayValue ? document.getElementById('modalImage') : document.getElementById('modalImage');
       expect(document.getElementById('imageModal')).toBeInTheDocument();
 
       // 圧縮完了時に、リアルタイムで "KB (WebP)" と削減率が表示されること

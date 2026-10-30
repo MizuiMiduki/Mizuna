@@ -5,6 +5,9 @@ import {
   MosaicRect,
   MosaicType,
   ImageTextItem,
+  DrawingStroke,
+  DrawingMode,
+  DrawingPoint,
   ImageAdjustments,
   ImageEditOptions,
   ImageEditState,
@@ -12,6 +15,7 @@ import {
   SignaturePosition,
   WatermarkOptions,
   WatermarkPattern,
+  applyDrawingsToContext,
   applySignatureToContext,
   applyWatermarkPatternToContext,
   editImageOptimized,
@@ -26,7 +30,7 @@ export interface ImageEditorModalProps {
   onClose: () => void;
 }
 
-type TabType = 'crop' | 'rotate' | 'adjust' | 'mosaic' | 'text' | 'watermark' | 'signature';
+type TabType = 'crop' | 'rotate' | 'adjust' | 'mosaic' | 'draw' | 'text' | 'watermark' | 'signature';
 type AspectRatioType = 'free' | '1:1' | '4:3' | '16:9';
 
 export function ImageEditorModal(props: ImageEditorModalProps) {
@@ -76,7 +80,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   };
 
   const getInitialSignaturePosition = (): SignaturePosition => {
-    if (init?.signaturePosition) return init.signaturePosition;
+    if (init?.signaturePosition !== undefined) return init.signaturePosition;
     const pos = settings().signature_position ?? settings().watermark_position;
     if (pos && pos !== 'none') return pos;
     return 'bottom-right';
@@ -102,6 +106,9 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
 
   // モザイク種類（'blur': すりガラス, 'pixelate': ブロック）
   const [mosaicType, setMosaicType] = createSignal<MosaicType>(init?.mosaicType ?? 'blur');
+  // モザイク操作モード（'rect': 矩形選択, 'pen': フリーハンドペン）
+  const [mosaicTool, setMosaicTool] = createSignal<'rect' | 'pen'>('rect');
+  const [mosaicPenSize, setMosaicPenSize] = createSignal<number>(24);
 
   // モザイク矩形配列 (元画像に対する比率 0.0 - 1.0)
   const [mosaics, setMosaics] = createSignal<{ x: number; y: number; w: number; h: number; type?: MosaicType }[]>(
@@ -121,6 +128,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     return texts().find((t) => t.id === id) ?? null;
   };
 
+  // ペン描画ステート
+  const [drawings, setDrawings] = createSignal<DrawingStroke[]>(
+    init?.drawings
+      ? init.drawings.map((d) => ({
+          ...d,
+          points: d.points.map((p) => ({ ...p })),
+        }))
+      : []
+  );
+  const [penMode, setPenMode] = createSignal<DrawingMode>('pen');
+  const [penColor, setPenColor] = createSignal<string>('#ff3b30');
+  const [penSize, setPenSize] = createSignal<number>(6);
+
   // プレビュー表示用
   const [previewUrl, setPreviewUrl] = createSignal<string>('');
   const [imgNaturalSize, setImgNaturalSize] = createSignal<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -132,13 +152,45 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     | { type: 'crop-resize'; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
     | { type: 'mosaic-move'; index: number; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
     | { type: 'mosaic-resize'; index: number; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
-    | { type: 'text-move'; id: string; startX: number; startY: number; initPos: { x: number; y: number } };
+    | { type: 'text-move'; id: string; startX: number; startY: number; initPos: { x: number; y: number } }
+    | { type: 'draw' };
 
   let stageRef: HTMLDivElement | undefined;
   let canvasRef: HTMLCanvasElement | undefined;
+  let drawingCanvasRef: HTMLCanvasElement | undefined;
   let sourceImage: HTMLImageElement | null = null;
   let activeDrag: DragMode | null = null;
+  let activeStroke: DrawingStroke | null = null;
+  let drawingRafId: number | null = null;
   const [currentDragRect, setCurrentDragRect] = createSignal<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  // ペン描画オーバーレイキャンバスの再描画
+  const renderAllDrawingsToCanvas = () => {
+    if (!drawingCanvasRef) return;
+    const ctx = drawingCanvasRef.getContext('2d');
+    if (!ctx) return;
+    const w = drawingCanvasRef.width;
+    const h = drawingCanvasRef.height;
+    if (w <= 0 || h <= 0) return;
+
+    ctx.clearRect(0, 0, w, h);
+
+    const allStrokes = activeStroke
+      ? [...drawings(), activeStroke]
+      : drawings();
+
+    if (allStrokes.length === 0) return;
+
+    applyDrawingsToContext(ctx, w, h, allStrokes, canvasRef);
+  };
+
+  const scheduleDrawingRender = () => {
+    if (drawingRafId !== null) return;
+    drawingRafId = requestAnimationFrame(() => {
+      drawingRafId = null;
+      renderAllDrawingsToCanvas();
+    });
+  };
 
   // 回転・反転を反映した現在のステージ実寸（幅・高さ）
   const currentStageSize = () => {
@@ -205,7 +257,20 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         scale: signatureScale() / 100,
       });
     }
+
+    // ペン描画オーバーレイキャンバスのサイズも同期
+    if (drawingCanvasRef) {
+      drawingCanvasRef.width = targetW;
+      drawingCanvasRef.height = targetH;
+      renderAllDrawingsToCanvas();
+    }
   };
+
+  // ペン描画ステート変更時の再描画
+  createEffect(() => {
+    drawings();
+    renderAllDrawingsToCanvas();
+  });
 
   onMount(() => {
     const url = URL.createObjectURL(props.file);
@@ -325,9 +390,116 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     setMosaics([]);
     setTexts([]);
     setSelectedTextId(null);
+    setDrawings([]);
     setWatermarkEnabled(false);
     setSignatureEnabled(false);
     showToast('編集内容をリセットしました', 'info');
+  };
+
+  // ペン描画操作ハンドラー
+  const handleUndoDrawing = () => {
+    setDrawings((prev) => prev.slice(0, -1));
+  };
+
+  const handleClearDrawings = () => {
+    setDrawings([]);
+  };
+
+  const handleSetPenMode = (mode: DrawingMode) => {
+    setPenMode(mode);
+    if (mode === 'highlighter' && penSize() < 10) {
+      setPenSize(18);
+    } else if (mode === 'mosaic' && penSize() < 12) {
+      setPenSize(24);
+    } else if (mode === 'pen' && penSize() > 24) {
+      setPenSize(6);
+    }
+  };
+
+  const handleDrawingPointerDown = (e: PointerEvent) => {
+    const isDrawTab = activeTab() === 'draw';
+    const isMosaicPen = activeTab() === 'mosaic' && mosaicTool() === 'pen';
+    if (!isDrawTab && !isMosaicPen) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch (_) {}
+
+    const coords = getNormalizedCoords(e);
+    const mode: DrawingMode = isMosaicPen ? 'mosaic' : penMode();
+    const size = isMosaicPen ? mosaicPenSize() : penSize();
+
+    const stroke: DrawingStroke = {
+      id: `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      points: [coords],
+      color: isMosaicPen ? '#ffffff' : penColor(),
+      size,
+      mode,
+      mosaicType: mosaicType(),
+      opacity: mode === 'highlighter' ? 0.45 : 1.0,
+    };
+    activeStroke = stroke;
+    activeDrag = { type: 'draw' };
+
+    renderAllDrawingsToCanvas();
+  };
+
+  // 文字入れ操作ハンドラー
+  const handleAddText = () => {
+    const newId = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+    const newItem: ImageTextItem = {
+      id: newId,
+      text: '文字を入力',
+      x: 0.5,
+      y: 0.5,
+      fontSize: 28,
+      color: '#ffffff',
+      style: 'fill-stroke',
+    };
+    setTexts((prev) => [...prev, newItem]);
+    setSelectedTextId(newId);
+  };
+
+  const handleDeleteSelectedText = () => {
+    const id = selectedTextId();
+    if (!id) return;
+    setTexts((prev) => prev.filter((t) => t.id !== id));
+    setSelectedTextId(null);
+  };
+
+  const updateSelectedText = (updates: Partial<ImageTextItem>) => {
+    const id = selectedTextId();
+    if (!id) return;
+    setTexts((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+    );
+  };
+
+  // テキストドラッグ移動の開始
+  const startTextMove = (e: PointerEvent, id: string) => {
+    if (activeTab() !== 'text') return;
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedTextId(id);
+
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch (_) {}
+
+    const coords = getNormalizedCoords(e);
+    const target = texts().find((t) => t.id === id);
+    if (!target) return;
+
+    activeDrag = {
+      type: 'text-move',
+      id,
+      startX: coords.x,
+      startY: coords.y,
+      initPos: { x: target.x, y: target.y },
+    };
   };
 
   // モザイク種類の切り替え（最新のモザイクが存在する場合はその種類も更新）
@@ -345,74 +517,6 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   // モザイクの直前1件を取り消し
   const handleUndoMosaic = () => {
     setMosaics((prev) => prev.slice(0, -1));
-  };
-
-  // 文字入れの新規作成
-  const handleAddText = () => {
-    const newId = `t_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
-    const newItem: ImageTextItem = {
-      id: newId,
-      text: 'テキスト',
-      x: 0.5,
-      y: 0.5,
-      fontSize: 28,
-      color: '#ffffff',
-      style: 'fill-stroke',
-    };
-    setTexts((prev) => [...prev, newItem]);
-    setSelectedTextId(newId);
-  };
-
-  // 選択中テキストの削除
-  const handleDeleteSelectedText = () => {
-    const id = selectedTextId();
-    if (!id) return;
-    setTexts((prev) => prev.filter((t) => t.id !== id));
-    setSelectedTextId((prev) => {
-      const remaining = texts().filter((t) => t.id !== id);
-      return remaining.length > 0 ? remaining[remaining.length - 1].id : null;
-    });
-  };
-
-  // 指定テキストの削除
-  const handleDeleteText = (id: string, e?: MouseEvent | PointerEvent) => {
-    e?.stopPropagation();
-    setTexts((prev) => prev.filter((t) => t.id !== id));
-    if (selectedTextId() === id) {
-      const remaining = texts().filter((t) => t.id !== id);
-      setSelectedTextId(remaining.length > 0 ? remaining[remaining.length - 1].id : null);
-    }
-  };
-
-  // 選択中テキストのプロパティ更新
-  const updateSelectedText = (updates: Partial<ImageTextItem>) => {
-    const id = selectedTextId();
-    if (!id) return;
-    setTexts((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
-    );
-  };
-
-  // テキストオーバーレイのドラッグ移動開始
-  const startTextMove = (e: PointerEvent, id: string) => {
-    e.stopPropagation();
-    e.preventDefault();
-    setSelectedTextId(id);
-    try {
-      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
-    } catch (_) {}
-
-    const item = texts().find((t) => t.id === id);
-    if (!item) return;
-
-    const coords = getNormalizedCoords(e);
-    activeDrag = {
-      type: 'text-move',
-      id,
-      startX: coords.x,
-      startY: coords.y,
-      initPos: { x: item.x, y: item.y },
-    };
   };
 
   // 座標を元画像に対する相対座標 (0.0 - 1.0) に変換
@@ -556,6 +660,9 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       setSelectedTextId(null);
       return;
     }
+    if (activeTab() === 'mosaic' && mosaicTool() === 'pen') {
+      return;
+    }
     if (activeTab() !== 'mosaic' && activeTab() !== 'crop') return;
     if (!canvasRef) return;
 
@@ -636,12 +743,21 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       const dx = coords.x - activeDrag.startX;
       const dy = coords.y - activeDrag.startY;
       const targetId = activeDrag.id;
-      const initP = activeDrag.initPos;
-      const newX = Math.max(0.05, Math.min(0.95, initP.x + dx));
-      const newY = Math.max(0.05, Math.min(0.95, initP.y + dy));
+      const newX = Math.max(0.05, Math.min(0.95, activeDrag.initPos.x + dx));
+      const newY = Math.max(0.05, Math.min(0.95, activeDrag.initPos.y + dy));
       setTexts((prev) =>
         prev.map((t) => (t.id === targetId ? { ...t, x: newX, y: newY } : t))
       );
+    } else if (activeDrag.type === 'draw') {
+      if (!activeStroke) return;
+      const coords = getNormalizedCoords(e);
+      const lastPt = activeStroke.points[activeStroke.points.length - 1];
+      if (lastPt) {
+        const dist = Math.hypot(coords.x - lastPt.x, coords.y - lastPt.y);
+        if (dist < 0.001) return;
+      }
+      activeStroke.points.push(coords);
+      scheduleDrawingRender();
     }
   };
 
@@ -649,6 +765,22 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     if (!activeDrag) return;
     const current = activeDrag;
     activeDrag = null;
+
+    if (current.type === 'draw') {
+      if (drawingRafId !== null) {
+        cancelAnimationFrame(drawingRafId);
+        drawingRafId = null;
+      }
+      if (activeStroke && activeStroke.points.length > 0) {
+        const finished = activeStroke;
+        activeStroke = null;
+        setDrawings((prev) => [...prev, finished]);
+      } else {
+        activeStroke = null;
+      }
+      renderAllDrawingsToCanvas();
+      return;
+    }
 
     if (current.type === 'create') {
       const drag = currentDragRect();
@@ -712,6 +844,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             }
           : null;
 
+      const validTexts = texts().filter((t) => t.text?.trim().length > 0);
+
       const options: ImageEditOptions = {
         crop: cropPixel,
         rotate: ((rotation() % 360) + 360) % 360,
@@ -722,7 +856,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
           saturation: saturation(),
         },
         mosaics: mosaicPixels,
-        texts: texts(),
+        texts: validTexts,
+        drawings: drawings(),
         watermark: watermarkOption,
         signature: signatureOption,
         quality: 0.85,
@@ -739,6 +874,10 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         mosaics: mosaics(),
         mosaicType: mosaicType(),
         texts: texts(),
+        drawings: drawings().map((d) => ({
+          ...d,
+          points: d.points.map((p) => ({ ...p })),
+        })),
         watermarkEnabled: watermarkEnabled(),
         watermarkText: watermarkText(),
         watermarkPattern: watermarkPattern(),
@@ -759,6 +898,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         saturation() !== 100 ||
         cropPixel !== null ||
         mosaicPixels.length > 0 ||
+        validTexts.length > 0 ||
+        drawings().length > 0 ||
         watermarkOption !== null ||
         signatureOption !== null;
 
@@ -833,6 +974,15 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             <canvas
               ref={canvasRef}
               class="mizuna-editor-preview-canvas"
+            />
+            <canvas
+              ref={drawingCanvasRef}
+              class={`mizuna-editor-drawing-canvas ${
+                activeTab() === 'draw' || (activeTab() === 'mosaic' && mosaicTool() === 'pen')
+                  ? 'is-interactive'
+                  : ''
+              }`}
+              onPointerDown={handleDrawingPointerDown}
             />
 
             {/* モザイク枠オーバーレイ表示 */}
@@ -930,7 +1080,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
               )}
             </Show>
 
-            {/* 文字入れ（テキストオーバーレイ） */}
+            {/* テキストアイテムのオーバーレイ表示 */}
             <For each={texts()}>
               {(t) => {
                 const isSelected = () => selectedTextId() === t.id && activeTab() === 'text';
@@ -1134,13 +1284,36 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             {/* 4. モザイクタブ */}
             <Show when={activeTab() === 'mosaic'}>
               <div class="mizuna-editor-mosaic-tools">
-                <div class="mizuna-mosaic-type-selector">
-                  <span class="mizuna-editor-sublabel">種類:</span>
+                <div class="mizuna-mosaic-top-row">
+                  {/* ツール切替 (矩形 / ペン) */}
+                  <div class="mizuna-seg-pills">
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${mosaicTool() === 'rect' ? 'is-active' : ''}`}
+                      onClick={() => setMosaicTool('rect')}
+                      title="四角形でモザイクを指定"
+                    >
+                      <i>crop_free</i>
+                      <span>矩形</span>
+                    </button>
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${mosaicTool() === 'pen' ? 'is-active' : ''}`}
+                      onClick={() => setMosaicTool('pen')}
+                      title="ペンでなぞってモザイク"
+                    >
+                      <i>draw</i>
+                      <span>ペン</span>
+                    </button>
+                  </div>
+
+                  {/* 種類切替 */}
                   <div class="mizuna-seg-pills">
                     <button
                       type="button"
                       class={`mizuna-seg-pill ${mosaicType() === 'blur' ? 'is-active' : ''}`}
                       onClick={() => handleSetMosaicType('blur')}
+                      title="すりガラス（ブラー）"
                     >
                       <i>blur_on</i>
                       <span>すりガラス</span>
@@ -1149,39 +1322,226 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                       type="button"
                       class={`mizuna-seg-pill ${mosaicType() === 'pixelate' ? 'is-active' : ''}`}
                       onClick={() => handleSetMosaicType('pixelate')}
+                      title="ブロック（ピクセル）"
                     >
                       <i>grid_view</i>
                       <span>ブロック</span>
                     </button>
                   </div>
+
+                  {/* 操作ボタン */}
+                  <div class="mizuna-mosaic-action-btns">
+                    <Show
+                      when={mosaicTool() === 'pen'}
+                      fallback={
+                        <>
+                          <button
+                            type="button"
+                            class="mizuna-btn mizuna-btn-outline mizuna-btn-sm"
+                            onClick={handleUndoMosaic}
+                            disabled={mosaics().length === 0}
+                            title="直前のモザイクを取り消す"
+                          >
+                            <i>undo</i>
+                            <span>1つ取り消す</span>
+                          </button>
+                          <button
+                            type="button"
+                            class="mizuna-btn mizuna-btn-ghost mizuna-btn-sm"
+                            onClick={() => setMosaics([])}
+                            disabled={mosaics().length === 0}
+                            title="すべてのモザイクを消去"
+                          >
+                            <i>delete</i>
+                            <span>全消去</span>
+                          </button>
+                        </>
+                      }
+                    >
+                      <button
+                        type="button"
+                        class="mizuna-btn mizuna-btn-outline mizuna-btn-sm"
+                        onClick={handleUndoDrawing}
+                        disabled={drawings().filter((d) => d.mode === 'mosaic').length === 0}
+                        title="直前のモザイク描画を取り消す"
+                      >
+                        <i>undo</i>
+                        <span>1画戻す</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="mizuna-btn mizuna-btn-ghost mizuna-btn-sm mizuna-btn-danger"
+                        onClick={() => setDrawings((prev) => prev.filter((d) => d.mode !== 'mosaic'))}
+                        disabled={drawings().filter((d) => d.mode === 'mosaic').length === 0}
+                        title="すべてのモザイクペン描画を消去"
+                      >
+                        <i>delete_sweep</i>
+                        <span>全消去</span>
+                      </button>
+                    </Show>
+                  </div>
                 </div>
 
-                <div class="mizuna-mosaic-action-btns">
-                  <button
-                    type="button"
-                    class="mizuna-btn mizuna-btn-outline mizuna-btn-sm"
-                    onClick={handleUndoMosaic}
-                    disabled={mosaics().length === 0}
-                    title="直前のモザイクを取り消す"
+                <Show when={mosaicTool() === 'pen'}>
+                  <div class="mizuna-pen-bottom-row">
+                    <span class="mizuna-text-hint">画像上をなぞるとモザイクを描けます</span>
+                    <div class="mizuna-text-size-wrap">
+                      <span class="mizuna-editor-sublabel">太さ:</span>
+                      <input
+                        type="range"
+                        min="8"
+                        max="64"
+                        step="1"
+                        value={mosaicPenSize()}
+                        onInput={(e) => setMosaicPenSize(Number(e.currentTarget.value))}
+                        class="mizuna-slider"
+                      />
+                      <span class="mizuna-adjust-value">{mosaicPenSize()}px</span>
+                    </div>
+                  </div>
+                </Show>
+              </div>
+            </Show>
+
+            {/* 5. ペン描画タブ */}
+            <Show when={activeTab() === 'draw'}>
+              <div class="mizuna-editor-pen-tools">
+                <div class="mizuna-pen-top-row">
+                  {/* モード切替 */}
+                  <div class="mizuna-seg-pills">
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${penMode() === 'pen' ? 'is-active' : ''}`}
+                      onClick={() => handleSetPenMode('pen')}
+                      title="ペン"
+                    >
+                      <i>edit</i>
+                      <span>ペン</span>
+                    </button>
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${penMode() === 'highlighter' ? 'is-active' : ''}`}
+                      onClick={() => handleSetPenMode('highlighter')}
+                      title="蛍光ペン"
+                    >
+                      <i>border_color</i>
+                      <span>マーカー</span>
+                    </button>
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${penMode() === 'mosaic' ? 'is-active' : ''}`}
+                      onClick={() => handleSetPenMode('mosaic')}
+                      title="モザイクペン"
+                    >
+                      <i>blur_on</i>
+                      <span>モザイク</span>
+                    </button>
+                    <button
+                      type="button"
+                      class={`mizuna-seg-pill ${penMode() === 'eraser' ? 'is-active' : ''}`}
+                      onClick={() => handleSetPenMode('eraser')}
+                      title="消しゴム"
+                    >
+                      <i>ink_eraser</i>
+                      <span>消しゴム</span>
+                    </button>
+                  </div>
+
+                  {/* 操作ボタン (1画戻す / 全消去) */}
+                  <div class="mizuna-pen-action-buttons">
+                    <button
+                      type="button"
+                      class="mizuna-btn mizuna-btn-ghost mizuna-btn-sm"
+                      onClick={handleUndoDrawing}
+                      disabled={drawings().length === 0}
+                      title="直前の1画を取り消す"
+                    >
+                      <i>undo</i>
+                      <span>1画戻す</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="mizuna-btn mizuna-btn-ghost mizuna-btn-sm mizuna-btn-danger"
+                      onClick={handleClearDrawings}
+                      disabled={drawings().length === 0}
+                      title="描画をすべて消去"
+                    >
+                      <i>delete_sweep</i>
+                      <span>全消去</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="mizuna-pen-bottom-row">
+                  {/* カラーパレット / モザイク種類切替 / 消しゴム案内 */}
+                  <Show
+                    when={penMode() !== 'eraser'}
+                    fallback={
+                      <div class="mizuna-eraser-hint">
+                        <span>なぞった部分の描画を消去します</span>
+                      </div>
+                    }
                   >
-                    <i>undo</i>
-                    <span>1つ取り消す</span>
-                  </button>
-                  <button
-                    type="button"
-                    class="mizuna-btn mizuna-btn-ghost mizuna-btn-sm"
-                    onClick={() => setMosaics([])}
-                    disabled={mosaics().length === 0}
-                    title="すべてのモザイクを消去"
-                  >
-                    <i>delete</i>
-                    <span>全消去</span>
-                  </button>
+                    <Show
+                      when={penMode() === 'mosaic'}
+                      fallback={
+                        <div class="mizuna-color-palette">
+                          <For each={['#ff3b30', '#ff9500', '#ffd60a', '#34c759', '#007aff', '#af52de', '#ffffff', '#000000']}>
+                            {(c) => (
+                              <button
+                                type="button"
+                                class={`mizuna-color-dot ${penColor() === c ? 'is-active' : ''}`}
+                                style={{ 'background-color': c }}
+                                onClick={() => setPenColor(c)}
+                                aria-label={c}
+                              />
+                            )}
+                          </For>
+                        </div>
+                      }
+                    >
+                      <div class="mizuna-seg-pills">
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${mosaicType() === 'blur' ? 'is-active' : ''}`}
+                          onClick={() => handleSetMosaicType('blur')}
+                          title="すりガラス"
+                        >
+                          <i>blur_on</i>
+                          <span>すりガラス</span>
+                        </button>
+                        <button
+                          type="button"
+                          class={`mizuna-seg-pill ${mosaicType() === 'pixelate' ? 'is-active' : ''}`}
+                          onClick={() => handleSetMosaicType('pixelate')}
+                          title="ブロック"
+                        >
+                          <i>grid_view</i>
+                          <span>ブロック</span>
+                        </button>
+                      </div>
+                    </Show>
+                  </Show>
+
+                  {/* 太さスライダー */}
+                  <div class="mizuna-text-size-wrap">
+                    <span class="mizuna-editor-sublabel">太さ:</span>
+                    <input
+                      type="range"
+                      min={penMode() === 'highlighter' || penMode() === 'mosaic' ? '8' : '2'}
+                      max={penMode() === 'highlighter' || penMode() === 'mosaic' ? '64' : '36'}
+                      step="1"
+                      value={penSize()}
+                      onInput={(e) => setPenSize(Number(e.currentTarget.value))}
+                      class="mizuna-slider"
+                    />
+                    <span class="mizuna-adjust-value">{penSize()}px</span>
+                  </div>
                 </div>
               </div>
             </Show>
 
-            {/* 5. 文字入れタブ */}
+            {/* 6. 文字入れタブ */}
             <Show when={activeTab() === 'text'}>
               <div class="mizuna-editor-text-tools">
                 <Show
@@ -1529,6 +1889,14 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             >
               <i>blur_on</i>
               <span>モザイク</span>
+            </button>
+            <button
+              type="button"
+              class={`mizuna-editor-tab-btn ${activeTab() === 'draw' ? 'is-active' : ''}`}
+              onClick={() => setActiveTab('draw')}
+            >
+              <i>draw</i>
+              <span>ペン</span>
             </button>
             <button
               type="button"

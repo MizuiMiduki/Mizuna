@@ -4675,6 +4675,61 @@ body.is-simple-mode .mizuna-setting-col {
   max-width: 200px;
 }
 
+/* ペン描画オーバーレイキャンバス */
+.mizuna-editor-drawing-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+}
+
+.mizuna-editor-drawing-canvas.is-interactive {
+  pointer-events: auto;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+/* ペン描画ツールパネル */
+.mizuna-editor-pen-tools {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mizuna-pen-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mizuna-pen-action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mizuna-pen-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mizuna-eraser-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
 /* 下部機能切り替えタブバー */
 .mizuna-editor-tabs {
   display: flex;

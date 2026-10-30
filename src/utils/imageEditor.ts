@@ -50,6 +50,23 @@ export interface ImageTextItem {
   style?: 'fill-stroke' | 'fill' | 'badge'; // 'fill-stroke': 縁取り, 'fill': 単色, 'badge': 背景帯
 }
 
+export type DrawingMode = 'pen' | 'highlighter' | 'mosaic' | 'eraser';
+
+export interface DrawingPoint {
+  x: number; // 0.0 - 1.0 (ステージ相対座標)
+  y: number; // 0.0 - 1.0 (ステージ相対座標)
+}
+
+export interface DrawingStroke {
+  id: string;
+  points: DrawingPoint[];
+  color: string;
+  size: number; // 基準太さ (px)
+  opacity?: number; // 0.1 - 1.0
+  mode?: DrawingMode; // 'pen' | 'highlighter' | 'mosaic' | 'eraser'
+  mosaicType?: MosaicType; // 'blur' | 'pixelate'
+}
+
 export interface ImageEditOptions {
   crop?: CropRect | null;
   rotate?: number; // 0, 90, 180, 270
@@ -57,6 +74,7 @@ export interface ImageEditOptions {
   adjustments?: ImageAdjustments;
   mosaics?: MosaicRect[];
   texts?: ImageTextItem[];
+  drawings?: DrawingStroke[];
   signature?: SignatureOptions | null;
   watermark?: WatermarkOptions | null;
   quality?: number; // 0.0 - 1.0 (default 0.85)
@@ -76,6 +94,7 @@ export interface ImageEditState {
   mosaics: { x: number; y: number; w: number; h: number; type?: MosaicType }[];
   mosaicType?: MosaicType;
   texts: ImageTextItem[];
+  drawings?: DrawingStroke[];
   watermarkEnabled: boolean;
   watermarkText: string;
   watermarkPattern: WatermarkPattern;
@@ -418,8 +437,8 @@ export function applyTextsToContext(
 
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
       ctx.beginPath();
-      if (typeof (ctx as any).roundRect === 'function') {
-        (ctx as any).roundRect(boxX, boxY, boxW, boxH, radius);
+      if (typeof ctx.roundRect === 'function') {
+        ctx.roundRect(boxX, boxY, boxW, boxH, radius);
       } else {
         ctx.rect(boxX, boxY, boxW, boxH);
       }
@@ -446,6 +465,237 @@ export function applyTextsToContext(
     }
 
     ctx.restore();
+  }
+}
+
+/**
+ * Canvasに対してフリーハンドペン描画（通常線・マーカー・モザイクペン・消しゴム）を描画する
+ */
+export function applyDrawingsToContext(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  stageWidth: number,
+  stageHeight: number,
+  drawings?: DrawingStroke[],
+  sourceCanvas?: CanvasImageSource | null
+): void {
+  if (!drawings || drawings.length === 0) return;
+
+  const hasEraser = drawings.some((d) => d.mode === 'eraser');
+  let targetCtx = ctx;
+  let layerCanvas: HTMLCanvasElement | OffscreenCanvas | null = null;
+
+  if (hasEraser) {
+    try {
+      const created = createCanvas2D(stageWidth, stageHeight);
+      if (created.ctx && typeof created.ctx.save === 'function') {
+        layerCanvas = created.canvas;
+        targetCtx = created.ctx;
+      }
+    } catch (_) {
+      // フォールバック: 直接ctxに描画
+      targetCtx = ctx;
+    }
+  }
+
+  const scale = Math.max(0.4, Math.min(stageWidth, stageHeight) / 700);
+
+  // モザイクストローク用のテクスチャキャッシュ（すりガラス / ブロック）
+  let blurredTexture: HTMLCanvasElement | OffscreenCanvas | null = null;
+  let pixelatedTexture: HTMLCanvasElement | OffscreenCanvas | null = null;
+
+  const effectiveSource = sourceCanvas || ((ctx as unknown as { canvas?: CanvasImageSource }).canvas ?? null);
+
+  const getMosaicTexture = (type: MosaicType) => {
+    if (!effectiveSource) return null;
+    if (type === 'pixelate') {
+      if (pixelatedTexture) return pixelatedTexture;
+      try {
+        const blockSize = Math.max(8, Math.round(Math.min(stageWidth, stageHeight) / 32));
+        const sw = Math.max(2, Math.round(stageWidth / blockSize));
+        const sh = Math.max(2, Math.round(stageHeight / blockSize));
+        const { canvas: sCanvas, ctx: sCtx } = createCanvas2D(sw, sh);
+        sCtx.drawImage(effectiveSource, 0, 0, sw, sh);
+        const { canvas: pCanvas, ctx: pCtx } = createCanvas2D(stageWidth, stageHeight);
+        pCtx.imageSmoothingEnabled = false;
+        pCtx.drawImage(sCanvas, 0, 0, stageWidth, stageHeight);
+        pixelatedTexture = pCanvas;
+        return pixelatedTexture;
+      } catch {
+        return null;
+      }
+    } else {
+      if (blurredTexture) return blurredTexture;
+      try {
+        const blurScale = 8;
+        const sw = Math.max(2, Math.round(stageWidth / blurScale));
+        const sh = Math.max(2, Math.round(stageHeight / blurScale));
+        const { canvas: sCanvas, ctx: sCtx } = createCanvas2D(sw, sh);
+        sCtx.drawImage(effectiveSource, 0, 0, sw, sh);
+        try {
+          const imgData = sCtx.getImageData(0, 0, sw, sh);
+          fastBoxBlur(imgData.data, sw, sh, 3, 3);
+          sCtx.putImageData(imgData, 0, 0);
+        } catch (_) {}
+        const { canvas: bCanvas, ctx: bCtx } = createCanvas2D(stageWidth, stageHeight);
+        bCtx.imageSmoothingEnabled = true;
+        bCtx.drawImage(sCanvas, 0, 0, stageWidth, stageHeight);
+        blurredTexture = bCanvas;
+        return blurredTexture;
+      } catch {
+        return null;
+      }
+    }
+  };
+
+  targetCtx.save?.();
+
+  for (const stroke of drawings) {
+    if (!stroke.points || stroke.points.length === 0) continue;
+
+    const lineWidth = Math.max(1, Math.round((stroke.size || 6) * scale));
+
+    // モザイクペン描画
+    if (stroke.mode === 'mosaic') {
+      const mosaicType = stroke.mosaicType || 'blur';
+      const texture = getMosaicTexture(mosaicType);
+
+      if (texture) {
+        try {
+          const { canvas: maskCanvas, ctx: maskCtx } = createCanvas2D(stageWidth, stageHeight);
+          // 1. テクスチャを描画
+          maskCtx.drawImage(texture as CanvasImageSource, 0, 0);
+          // 2. ストロークの形状でくり抜き (destination-in)
+          maskCtx.globalCompositeOperation = 'destination-in';
+          maskCtx.save?.();
+          maskCtx.lineCap = 'round';
+          maskCtx.lineJoin = 'round';
+          maskCtx.lineWidth = lineWidth;
+          maskCtx.strokeStyle = 'rgba(0, 0, 0, 1)';
+          maskCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+
+          if (stroke.points.length === 1) {
+            const pt = stroke.points[0];
+            maskCtx.beginPath();
+            maskCtx.arc(pt.x * stageWidth, pt.y * stageHeight, lineWidth / 2, 0, Math.PI * 2);
+            maskCtx.fill();
+          } else {
+            maskCtx.beginPath();
+            const first = stroke.points[0];
+            maskCtx.moveTo(first.x * stageWidth, first.y * stageHeight);
+            if (stroke.points.length === 2) {
+              const p2 = stroke.points[1];
+              maskCtx.lineTo(p2.x * stageWidth, p2.y * stageHeight);
+            } else {
+              for (let i = 1; i < stroke.points.length - 1; i++) {
+                const curr = stroke.points[i];
+                const next = stroke.points[i + 1];
+                const midX = ((curr.x + next.x) / 2) * stageWidth;
+                const midY = ((curr.y + next.y) / 2) * stageHeight;
+                maskCtx.quadraticCurveTo(
+                  curr.x * stageWidth,
+                  curr.y * stageHeight,
+                  midX,
+                  midY
+                );
+              }
+              const last = stroke.points[stroke.points.length - 1];
+              maskCtx.lineTo(last.x * stageWidth, last.y * stageHeight);
+            }
+            maskCtx.stroke();
+          }
+          maskCtx.restore?.();
+
+          // 3. targetCtx に合成
+          targetCtx.save?.();
+          targetCtx.globalCompositeOperation = 'source-over';
+          targetCtx.drawImage(maskCanvas as CanvasImageSource, 0, 0);
+          targetCtx.restore?.();
+          continue;
+        } catch (_) {
+          // フォールバック
+        }
+      }
+
+      // フォールバック描画
+      targetCtx.save?.();
+      targetCtx.lineCap = 'round';
+      targetCtx.lineJoin = 'round';
+      targetCtx.lineWidth = lineWidth;
+      targetCtx.strokeStyle = 'rgba(148, 163, 184, 0.75)';
+      targetCtx.fillStyle = 'rgba(148, 163, 184, 0.75)';
+      if (stroke.points.length === 1) {
+        const pt = stroke.points[0];
+        targetCtx.beginPath();
+        targetCtx.arc(pt.x * stageWidth, pt.y * stageHeight, lineWidth / 2, 0, Math.PI * 2);
+        targetCtx.fill();
+      } else {
+        targetCtx.beginPath();
+        targetCtx.moveTo(stroke.points[0].x * stageWidth, stroke.points[0].y * stageHeight);
+        for (let i = 1; i < stroke.points.length; i++) {
+          targetCtx.lineTo(stroke.points[i].x * stageWidth, stroke.points[i].y * stageHeight);
+        }
+        targetCtx.stroke();
+      }
+      targetCtx.restore?.();
+      continue;
+    }
+
+    targetCtx.save?.();
+    targetCtx.lineCap = 'round';
+    targetCtx.lineJoin = 'round';
+    targetCtx.lineWidth = lineWidth;
+
+    if (stroke.mode === 'eraser') {
+      targetCtx.globalCompositeOperation = 'destination-out';
+      targetCtx.strokeStyle = 'rgba(0, 0, 0, 1)';
+      targetCtx.fillStyle = 'rgba(0, 0, 0, 1)';
+    } else {
+      targetCtx.globalCompositeOperation = 'source-over';
+      const opacity = stroke.opacity ?? (stroke.mode === 'highlighter' ? 0.45 : 1.0);
+      targetCtx.globalAlpha = opacity;
+      targetCtx.strokeStyle = stroke.color || '#ff3b30';
+      targetCtx.fillStyle = stroke.color || '#ff3b30';
+    }
+
+    if (stroke.points.length === 1) {
+      const pt = stroke.points[0];
+      targetCtx.beginPath();
+      targetCtx.arc(pt.x * stageWidth, pt.y * stageHeight, lineWidth / 2, 0, Math.PI * 2);
+      targetCtx.fill();
+    } else {
+      targetCtx.beginPath();
+      const first = stroke.points[0];
+      targetCtx.moveTo(first.x * stageWidth, first.y * stageHeight);
+
+      if (stroke.points.length === 2) {
+        const p2 = stroke.points[1];
+        targetCtx.lineTo(p2.x * stageWidth, p2.y * stageHeight);
+      } else {
+        for (let i = 1; i < stroke.points.length - 1; i++) {
+          const curr = stroke.points[i];
+          const next = stroke.points[i + 1];
+          const midX = ((curr.x + next.x) / 2) * stageWidth;
+          const midY = ((curr.y + next.y) / 2) * stageHeight;
+          targetCtx.quadraticCurveTo(
+            curr.x * stageWidth,
+            curr.y * stageHeight,
+            midX,
+            midY
+          );
+        }
+        const last = stroke.points[stroke.points.length - 1];
+        targetCtx.lineTo(last.x * stageWidth, last.y * stageHeight);
+      }
+      targetCtx.stroke();
+    }
+
+    targetCtx.restore?.();
+  }
+
+  targetCtx.restore?.();
+
+  if (layerCanvas) {
+    ctx.drawImage(layerCanvas as CanvasImageSource, 0, 0);
   }
 }
 
@@ -690,6 +940,7 @@ export async function processImageEdits(
     adjustments = { brightness: 100, contrast: 100, saturation: 100 },
     mosaics = [],
     texts = [],
+    drawings = [],
     signature = null,
     watermark = null,
     quality = 0.85,
@@ -764,6 +1015,11 @@ export async function processImageEdits(
     // モザイク処理を適用
     if (mosaics && mosaics.length > 0) {
       applyMosaicsToContext(ctx, mosaics);
+    }
+
+    // ペン描画を適用
+    if (drawings && drawings.length > 0) {
+      applyDrawingsToContext(ctx, stageWidth, stageHeight, drawings, canvas);
     }
 
     // 文字入れ（テキスト合成）を適用
