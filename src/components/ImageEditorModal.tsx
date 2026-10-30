@@ -1794,11 +1794,11 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
               </div>
             </Show>
 
-            {/* 6. 盗作防止透かしタブ */}
+            {/* 6. 画像透かしタブ */}
             <Show when={activeTab() === 'watermark'}>
               <div class="mizuna-editor-watermark-tools">
                 <div class="mizuna-watermark-header">
-                  <span class="mizuna-editor-sublabel">盗作防止透かし:</span>
+                  <span class="mizuna-editor-sublabel">画像透かし:</span>
                   <div class="mizuna-seg-pills">
                     <button
                       type="button"

@@ -115,8 +115,8 @@ export function SettingsView() {
   const showSignatureText = () => matches(t('settings.group_signature'), t('settings.signature_setting'), t('settings.signature_setting_desc'), '署名文字', 'クレジット文字');
   const showGroupSignature = () => showSignaturePos() || showSignatureText();
 
-  // 3. 盗作防止透かし設定
-  const showWatermarkEnabled = () => matches(t('settings.group_watermark'), t('settings.watermark_auto_enabled'), t('settings.watermark_auto_enabled_desc'), '透かし', '盗作防止', 'ウォーターマーク', 'watermark');
+  // 3. 画像透かし設定
+  const showWatermarkEnabled = () => matches(t('settings.group_watermark'), t('settings.watermark_auto_enabled'), t('settings.watermark_auto_enabled_desc'), '画像透かし', '透かし', 'ウォーターマーク', 'watermark');
   const showWatermarkPattern = () => matches(t('settings.group_watermark'), t('settings.watermark_pattern_setting'), t('settings.watermark_pattern_diagonal'), t('settings.watermark_pattern_grid'), t('settings.watermark_pattern_center_huge'), 'パターン', 'pattern');
   const showWatermarkText = () => matches(t('settings.group_watermark'), t('settings.watermark_setting'), t('settings.watermark_setting_desc'), '透かし文字');
   const showGroupWatermark = () => showWatermarkEnabled() || showWatermarkPattern() || showWatermarkText();
@@ -425,13 +425,13 @@ export function SettingsView() {
             </div>
           </Show>
 
-          {/* 盗作防止透かし設定グループ */}
+          {/* 画像透かし設定グループ */}
           <Show when={showGroupWatermark()}>
             <div class="mizuna-setting-group">
               <div class="mizuna-group-label">{t('settings.group_watermark')}</div>
 
               <div class="mizuna-setting-card">
-                {/* 盗作防止透かしの自動付与 (ON/OFF) */}
+                {/* 画像透かしの自動付与 (ON/OFF) */}
                 <Show when={showWatermarkEnabled()}>
                   <div class="mizuna-setting-row">
                     <div class="mizuna-setting-info">
@@ -457,7 +457,7 @@ export function SettingsView() {
                   </div>
                 </Show>
 
-                {/* 盗作防止透かしパターン */}
+                {/* 画像透かしパターン */}
                 <Show when={showWatermarkPattern()}>
                   <div class="mizuna-setting-row" style={{ "margin-top": "12px" }}>
                     <div class="mizuna-setting-info">
@@ -489,7 +489,7 @@ export function SettingsView() {
                   </div>
                 </Show>
 
-                {/* 盗作防止透かし文字 */}
+                {/* 画像透かし文字 */}
                 <Show when={showWatermarkText()}>
                   <div class="mizuna-setting-col" style={{ "margin-top": "12px" }}>
                     <div class="mizuna-setting-info">

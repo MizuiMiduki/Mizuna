@@ -235,7 +235,7 @@ describe('UI Components', () => {
 
       // 「透かし」で絞り込み
       fireEvent.input(searchInput, { target: { value: '透かし' } });
-      expect(screen.getAllByText(/(盗作防止透かし|Watermark)/).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/(画像透かし|Watermark)/).length).toBeGreaterThan(0);
       // カスタムCSSグループは非表示になる
       expect(screen.queryAllByText(/(カスタムCSS|Custom CSS)/).length).toBe(0);
 
