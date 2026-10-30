@@ -150,8 +150,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     | { type: 'create'; startX: number; startY: number }
     | { type: 'crop-move'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
     | { type: 'crop-resize'; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
-    | { type: 'mosaic-move'; index: number; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
-    | { type: 'mosaic-resize'; index: number; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
+    | { type: 'mosaic-move'; index: number; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number; type?: MosaicType } }
+    | { type: 'mosaic-resize'; index: number; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number; type?: MosaicType } }
     | { type: 'text-move'; id: string; startX: number; startY: number; initPos: { x: number; y: number } }
     | { type: 'draw' };
 
@@ -759,13 +759,13 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       const newY = Math.max(0, Math.min(1 - box.h, box.y + dy));
       const idx = activeDrag.index;
       setMosaics((prev) =>
-        prev.map((item, i) => (i === idx ? { x: newX, y: newY, w: box.w, h: box.h } : item))
+        prev.map((item, i) => (i === idx ? { ...item, x: newX, y: newY, w: box.w, h: box.h } : item))
       );
     } else if (activeDrag.type === 'mosaic-resize') {
       const updated = resizeRect(activeDrag.initBox, activeDrag.handle, coords.x, coords.y);
       const idx = activeDrag.index;
       setMosaics((prev) =>
-        prev.map((item, i) => (i === idx ? updated : item))
+        prev.map((item, i) => (i === idx ? { ...item, ...updated } : item))
       );
     } else if (activeDrag.type === 'text-move') {
       const dx = coords.x - activeDrag.startX;
