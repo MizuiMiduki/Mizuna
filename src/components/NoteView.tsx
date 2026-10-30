@@ -48,7 +48,12 @@ export function NoteView() {
   const [isInputFocused, setIsInputFocused] = createSignal(false);
   const [isSending, setIsSending] = createSignal(false);
   const [sendingStatus, setSendingStatus] = createSignal('');
-  const [previewModalImage, setPreviewModalImage] = createSignal<AttachedImageItem | null>(null);
+  const [previewModalImageId, setPreviewModalImageId] = createSignal<string | null>(null);
+  const previewModalImage = createMemo(() => {
+    const id = previewModalImageId();
+    if (!id) return null;
+    return attachedImages().find((img) => img.id === id) ?? null;
+  });
   const [editingImageItem, setEditingImageItem] = createSignal<AttachedImageItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = createSignal(false);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = createSignal(false);
@@ -258,7 +263,7 @@ export function NoteView() {
   });
 
   const handleOpenPreview = (item: AttachedImageItem) => {
-    setPreviewModalImage(item);
+    setPreviewModalImageId(item.id);
     setTimeout(() => {
       if (modalContentRef) {
         gsap.fromTo(
@@ -274,7 +279,7 @@ export function NoteView() {
     const target = previewModalImage();
     if (!target) return;
     removeAttachedImage(target.id);
-    setPreviewModalImage(null);
+    setPreviewModalImageId(null);
   };
 
   const handleSaveEditedImage = (editedFile: File) => {
@@ -282,8 +287,8 @@ export function NoteView() {
     if (!item) return;
     updateAttachedImage(item.id, editedFile);
     setEditingImageItem(null);
-    if (previewModalImage()?.id === item.id) {
-      setPreviewModalImage(null);
+    if (previewModalImageId() === item.id) {
+      setPreviewModalImageId(null);
     }
     showToast('画像を加工しました', 'success');
   };
@@ -747,7 +752,7 @@ export function NoteView() {
             <div
               id="imageModal"
               class="mizuna-lightbox"
-              onClick={() => setPreviewModalImage(null)}
+              onClick={() => setPreviewModalImageId(null)}
             >
               {/* トップバー: ファイル情報・WebP削減率 & 閉じるボタン */}
               <div class="mizuna-lightbox-topbar" onClick={(e) => e.stopPropagation()}>
@@ -790,7 +795,7 @@ export function NoteView() {
                   <button
                     type="button"
                     class="circle mizuna-lightbox-close-icon-btn"
-                    onClick={() => setPreviewModalImage(null)}
+                    onClick={() => setPreviewModalImageId(null)}
                     aria-label="閉じる"
                   >
                     <i>close</i>
@@ -801,7 +806,7 @@ export function NoteView() {
               {/* メイン画像ステージ */}
               <div
                 class="mizuna-lightbox-stage"
-                onClick={() => setPreviewModalImage(null)}
+                onClick={() => setPreviewModalImageId(null)}
               >
                 <img
                   ref={modalContentRef}
@@ -823,7 +828,7 @@ export function NoteView() {
                     class="mizuna-btn mizuna-btn-tonal mizuna-lightbox-action-btn"
                     onClick={() => {
                       setEditingImageItem(imgItem());
-                      setPreviewModalImage(null);
+                      setPreviewModalImageId(null);
                     }}
                   >
                     <i>tune</i>

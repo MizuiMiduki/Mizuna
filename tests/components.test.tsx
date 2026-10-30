@@ -9,6 +9,8 @@ import { AnnouncementsView } from '../src/components/AnnouncementsView';
 import { HoldHoverTip } from '../src/components/HoldHoverTip';
 import { AccountView } from '../src/components/AccountView';
 import { SettingsView } from '../src/components/SettingsView';
+import { NoteView } from '../src/components/NoteView';
+import { useApp } from '../src/store/appStore';
 import { DialogHost } from '../src/components/DialogHost';
 import { SnackbarHost } from '../src/components/SnackbarHost';
 import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
@@ -254,6 +256,58 @@ describe('UI Components', () => {
       // 完了ボタンをクリックして終了
       fireEvent.click(completeBtns[0]);
       expect(screen.queryByTitle('ドラッグして並べ替え')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('NoteView - 画像プレビューと圧縮表示のリアルタイム更新', () => {
+    it('プレビューモーダルを開いた後、WebP圧縮完了時にリアルタイムで表示が更新されること', async () => {
+      function TestWrapper() {
+        const { addAttachedFiles } = useApp();
+
+        return (
+          <>
+            <button
+              data-testid="add-file-btn"
+              onClick={() => {
+                const fakeFile = new File(['test-image-content-bytes'], 'test.png', {
+                  type: 'image/png',
+                });
+                addAttachedFiles([fakeFile]);
+              }}
+            >
+              Add
+            </button>
+            <NoteView />
+          </>
+        );
+      }
+
+      render(() => (
+        <AppProvider>
+          <TestWrapper />
+        </AppProvider>
+      ));
+
+      // 画像を追加
+      const addBtn = screen.getByTestId('add-file-btn');
+      fireEvent.click(addBtn);
+
+      // サムネイルが表示されるのを待つ
+      const thumb = await screen.findByAltText('test.png');
+      expect(thumb).toBeInTheDocument();
+
+      // サムネイルの親要素（.mizuna-media-item）をクリックしてプレビューを開く
+      const mediaItem = thumb.closest('.mizuna-media-item');
+      expect(mediaItem).not.toBeNull();
+      fireEvent.click(mediaItem!);
+
+      // プレビューモーダル（ライトボックス）が開く
+      expect(document.getElementById('imageModal')).toBeInTheDocument();
+
+      // 圧縮完了時に、リアルタイムで "KB (WebP)" と削減率が表示されること
+      const webpMeta = await screen.findByText(/KB \(WebP\)/, {}, { timeout: 3000 });
+      expect(webpMeta).toBeInTheDocument();
+      expect(screen.queryByText('WebP圧縮中...')).not.toBeInTheDocument();
     });
   });
 });
