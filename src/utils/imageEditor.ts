@@ -40,12 +40,23 @@ export interface WatermarkOptions {
   scale?: number;   // 0.5 - 2.0 (default: 1.0)
 }
 
+export interface ImageTextItem {
+  id: string;
+  text: string;
+  x: number; // 0.0 - 1.0 (相対中心X座標)
+  y: number; // 0.0 - 1.0 (相対中心Y座標)
+  fontSize: number; // 基準フォントサイズ (14 - 64)
+  color: string; // '#ffffff' など
+  style?: 'fill-stroke' | 'fill' | 'badge'; // 'fill-stroke': 縁取り, 'fill': 単色, 'badge': 背景帯
+}
+
 export interface ImageEditOptions {
   crop?: CropRect | null;
   rotate?: number; // 0, 90, 180, 270
   flipHorizontal?: boolean;
   adjustments?: ImageAdjustments;
   mosaics?: MosaicRect[];
+  texts?: ImageTextItem[];
   signature?: SignatureOptions | null;
   watermark?: WatermarkOptions | null;
   quality?: number; // 0.0 - 1.0 (default 0.85)
@@ -64,6 +75,7 @@ export interface ImageEditState {
   cropBox: { x: number; y: number; w: number; h: number } | null;
   mosaics: { x: number; y: number; w: number; h: number; type?: MosaicType }[];
   mosaicType?: MosaicType;
+  texts: ImageTextItem[];
   watermarkEnabled: boolean;
   watermarkText: string;
   watermarkPattern: WatermarkPattern;
@@ -353,6 +365,91 @@ export function applyMosaicsToContext(
 }
 
 /**
+ * 色が明るい（明度が高い）かどうかを判定するヘルパー（縁取りやコントラスト決定に使用）
+ */
+export function isColorLight(hexColor: string): boolean {
+  if (!hexColor || hexColor === '#ffffff' || hexColor.toLowerCase() === 'white') return true;
+  if (hexColor.startsWith('#')) {
+    const c = hexColor.replace('#', '');
+    const r = parseInt(c.substring(0, 2), 16) || 0;
+    const g = parseInt(c.substring(2, 4), 16) || 0;
+    const b = parseInt(c.substring(4, 6), 16) || 0;
+    return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+  }
+  return true;
+}
+
+/**
+ * Canvasに対して文字入れ（テキストアイテム）を描画する
+ */
+export function applyTextsToContext(
+  ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
+  stageWidth: number,
+  stageHeight: number,
+  texts?: ImageTextItem[]
+): void {
+  if (!texts || texts.length === 0) return;
+
+  for (const item of texts) {
+    const text = item.text?.trim();
+    if (!text) continue;
+
+    const x = Math.round(item.x * stageWidth);
+    const y = Math.round(item.y * stageHeight);
+    const scale = Math.max(0.4, Math.min(stageWidth, stageHeight) / 700);
+    const fontSize = Math.max(14, Math.round((item.fontSize || 28) * scale));
+
+    ctx.save();
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'center';
+
+    const metrics = ctx.measureText(text);
+    const textWidth = metrics.width;
+    const paddingX = Math.round(fontSize * 0.45);
+    const paddingY = Math.round(fontSize * 0.35);
+
+    if (item.style === 'badge') {
+      const boxW = Math.round(textWidth + paddingX * 2);
+      const boxH = Math.round(fontSize * 1.35);
+      const boxX = Math.round(x - boxW / 2);
+      const boxY = Math.round(y - boxH / 2);
+      const radius = Math.min(8, Math.round(fontSize * 0.25));
+
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+      ctx.beginPath();
+      if (typeof (ctx as any).roundRect === 'function') {
+        (ctx as any).roundRect(boxX, boxY, boxW, boxH, radius);
+      } else {
+        ctx.rect(boxX, boxY, boxW, boxH);
+      }
+      ctx.fill();
+
+      ctx.fillStyle = item.color || '#ffffff';
+      ctx.fillText(text, x, y);
+    } else if (item.style === 'fill-stroke' || !item.style) {
+      const isLight = isColorLight(item.color || '#ffffff');
+      ctx.strokeStyle = isLight ? 'rgba(0, 0, 0, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+      ctx.lineWidth = Math.max(3, Math.round(fontSize / 7));
+      ctx.lineJoin = 'round';
+      ctx.strokeText(text, x, y);
+
+      ctx.fillStyle = item.color || '#ffffff';
+      ctx.fillText(text, x, y);
+    } else {
+      ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+      ctx.shadowBlur = Math.max(3, Math.round(fontSize / 6));
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 2;
+      ctx.fillStyle = item.color || '#ffffff';
+      ctx.fillText(text, x, y);
+    }
+
+    ctx.restore();
+  }
+}
+
+/**
  * Canvasに対して署名（クレジット表記のカプセル）を描画する
  */
 export function applySignatureToContext(
@@ -592,6 +689,7 @@ export async function processImageEdits(
     flipHorizontal = false,
     adjustments = { brightness: 100, contrast: 100, saturation: 100 },
     mosaics = [],
+    texts = [],
     signature = null,
     watermark = null,
     quality = 0.85,
@@ -666,6 +764,11 @@ export async function processImageEdits(
     // モザイク処理を適用
     if (mosaics && mosaics.length > 0) {
       applyMosaicsToContext(ctx, mosaics);
+    }
+
+    // 文字入れ（テキスト合成）を適用
+    if (texts && texts.length > 0) {
+      applyTextsToContext(ctx, stageWidth, stageHeight, texts);
     }
 
     // 3. クロップ処理

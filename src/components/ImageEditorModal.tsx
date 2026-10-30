@@ -4,6 +4,7 @@ import {
   CropRect,
   MosaicRect,
   MosaicType,
+  ImageTextItem,
   ImageAdjustments,
   ImageEditOptions,
   ImageEditState,
@@ -14,6 +15,7 @@ import {
   applySignatureToContext,
   applyWatermarkPatternToContext,
   editImageOptimized,
+  isColorLight,
 } from '../utils/imageEditor';
 import { useApp } from '../store/appStore';
 
@@ -24,7 +26,7 @@ export interface ImageEditorModalProps {
   onClose: () => void;
 }
 
-type TabType = 'crop' | 'rotate' | 'adjust' | 'mosaic' | 'watermark' | 'signature';
+type TabType = 'crop' | 'rotate' | 'adjust' | 'mosaic' | 'text' | 'watermark' | 'signature';
 type AspectRatioType = 'free' | '1:1' | '4:3' | '16:9';
 
 export function ImageEditorModal(props: ImageEditorModalProps) {
@@ -106,6 +108,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     init?.mosaics ? init.mosaics.map((m) => ({ ...m, type: m.type ?? 'blur' })) : []
   );
 
+  // 文字入れ（テキストアイテム）ステート
+  const [texts, setTexts] = createSignal<ImageTextItem[]>(
+    init?.texts ? init.texts.map((t) => ({ ...t })) : []
+  );
+  const [selectedTextId, setSelectedTextId] = createSignal<string | null>(
+    init?.texts && init.texts.length > 0 ? init.texts[0].id : null
+  );
+  const selectedTextItem = () => {
+    const id = selectedTextId();
+    if (!id) return null;
+    return texts().find((t) => t.id === id) ?? null;
+  };
+
   // プレビュー表示用
   const [previewUrl, setPreviewUrl] = createSignal<string>('');
   const [imgNaturalSize, setImgNaturalSize] = createSignal<{ w: number; h: number }>({ w: 0, h: 0 });
@@ -116,7 +131,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     | { type: 'crop-move'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
     | { type: 'crop-resize'; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
     | { type: 'mosaic-move'; index: number; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
-    | { type: 'mosaic-resize'; index: number; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } };
+    | { type: 'mosaic-resize'; index: number; handle: 'nw' | 'ne' | 'se' | 'sw'; startX: number; startY: number; initBox: { x: number; y: number; w: number; h: number } }
+    | { type: 'text-move'; id: string; startX: number; startY: number; initPos: { x: number; y: number } };
 
   let stageRef: HTMLDivElement | undefined;
   let canvasRef: HTMLCanvasElement | undefined;
@@ -307,6 +323,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     setCropBox(null);
     setMosaicType('blur');
     setMosaics([]);
+    setTexts([]);
+    setSelectedTextId(null);
     setWatermarkEnabled(false);
     setSignatureEnabled(false);
     showToast('編集内容をリセットしました', 'info');
@@ -327,6 +345,74 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   // モザイクの直前1件を取り消し
   const handleUndoMosaic = () => {
     setMosaics((prev) => prev.slice(0, -1));
+  };
+
+  // 文字入れの新規作成
+  const handleAddText = () => {
+    const newId = `t_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const newItem: ImageTextItem = {
+      id: newId,
+      text: 'テキスト',
+      x: 0.5,
+      y: 0.5,
+      fontSize: 28,
+      color: '#ffffff',
+      style: 'fill-stroke',
+    };
+    setTexts((prev) => [...prev, newItem]);
+    setSelectedTextId(newId);
+  };
+
+  // 選択中テキストの削除
+  const handleDeleteSelectedText = () => {
+    const id = selectedTextId();
+    if (!id) return;
+    setTexts((prev) => prev.filter((t) => t.id !== id));
+    setSelectedTextId((prev) => {
+      const remaining = texts().filter((t) => t.id !== id);
+      return remaining.length > 0 ? remaining[remaining.length - 1].id : null;
+    });
+  };
+
+  // 指定テキストの削除
+  const handleDeleteText = (id: string, e?: MouseEvent | PointerEvent) => {
+    e?.stopPropagation();
+    setTexts((prev) => prev.filter((t) => t.id !== id));
+    if (selectedTextId() === id) {
+      const remaining = texts().filter((t) => t.id !== id);
+      setSelectedTextId(remaining.length > 0 ? remaining[remaining.length - 1].id : null);
+    }
+  };
+
+  // 選択中テキストのプロパティ更新
+  const updateSelectedText = (updates: Partial<ImageTextItem>) => {
+    const id = selectedTextId();
+    if (!id) return;
+    setTexts((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+    );
+  };
+
+  // テキストオーバーレイのドラッグ移動開始
+  const startTextMove = (e: PointerEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setSelectedTextId(id);
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch (_) {}
+
+    const item = texts().find((t) => t.id === id);
+    if (!item) return;
+
+    const coords = getNormalizedCoords(e);
+    activeDrag = {
+      type: 'text-move',
+      id,
+      startX: coords.x,
+      startY: coords.y,
+      initPos: { x: item.x, y: item.y },
+    };
   };
 
   // 座標を元画像に対する相対座標 (0.0 - 1.0) に変換
@@ -466,6 +552,10 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
 
   // ステージ上での新規矩形ドラッグ（スワイプ範囲指定）開始
   const handleStagePointerDown = (e: PointerEvent) => {
+    if (activeTab() === 'text') {
+      setSelectedTextId(null);
+      return;
+    }
     if (activeTab() !== 'mosaic' && activeTab() !== 'crop') return;
     if (!canvasRef) return;
 
@@ -541,6 +631,16 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       const idx = activeDrag.index;
       setMosaics((prev) =>
         prev.map((item, i) => (i === idx ? updated : item))
+      );
+    } else if (activeDrag.type === 'text-move') {
+      const dx = coords.x - activeDrag.startX;
+      const dy = coords.y - activeDrag.startY;
+      const targetId = activeDrag.id;
+      const initP = activeDrag.initPos;
+      const newX = Math.max(0.05, Math.min(0.95, initP.x + dx));
+      const newY = Math.max(0.05, Math.min(0.95, initP.y + dy));
+      setTexts((prev) =>
+        prev.map((t) => (t.id === targetId ? { ...t, x: newX, y: newY } : t))
       );
     }
   };
@@ -622,6 +722,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
           saturation: saturation(),
         },
         mosaics: mosaicPixels,
+        texts: texts(),
         watermark: watermarkOption,
         signature: signatureOption,
         quality: 0.85,
@@ -637,6 +738,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         cropBox: cropBox(),
         mosaics: mosaics(),
         mosaicType: mosaicType(),
+        texts: texts(),
         watermarkEnabled: watermarkEnabled(),
         watermarkText: watermarkText(),
         watermarkPattern: watermarkPattern(),
@@ -827,7 +929,50 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                 />
               )}
             </Show>
+
+            {/* 文字入れ（テキストオーバーレイ） */}
+            <For each={texts()}>
+              {(t) => {
+                const isSelected = () => selectedTextId() === t.id && activeTab() === 'text';
+                return (
+                  <div
+                    class={`mizuna-text-overlay ${isSelected() ? 'is-selected' : ''} ${
+                      activeTab() === 'text' ? 'is-interactive' : ''
+                    } style-${t.style || 'fill-stroke'}`}
+                    style={{
+                      left: `${t.x * 100}%`,
+                      top: `${t.y * 100}%`,
+                      'font-size': `${t.fontSize}px`,
+                      color: t.color || '#ffffff',
+                    }}
+                    onPointerDown={(e) => startTextMove(e, t.id)}
+                  >
+                    <span>{t.text}</span>
+                    <Show when={isSelected()}>
+                      <button
+                        type="button"
+                        class="mizuna-text-delete-badge"
+                        onPointerDown={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSelectedText();
+                        }}
+                        title="削除"
+                      >
+                        <i>close</i>
+                      </button>
+                    </Show>
+                  </div>
+                );
+              }}
+            </For>
           </div>
+
+          <Show when={activeTab() === 'text'}>
+            <div class="mizuna-editor-stage-hint">
+              <i>touch_app</i>
+              <span>文字をタップで選択・ドラッグで位置を移動できます</span>
+            </div>
+          </Show>
 
           <Show when={activeTab() === 'mosaic'}>
             <div class="mizuna-editor-stage-hint">
@@ -1036,7 +1181,118 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
               </div>
             </Show>
 
-            {/* 5. 盗作防止透かしタブ */}
+            {/* 5. 文字入れタブ */}
+            <Show when={activeTab() === 'text'}>
+              <div class="mizuna-editor-text-tools">
+                <Show
+                  when={selectedTextItem()}
+                  fallback={
+                    <div class="mizuna-text-empty-state">
+                      <button
+                        type="button"
+                        class="mizuna-btn mizuna-btn-primary mizuna-btn-sm"
+                        onClick={handleAddText}
+                      >
+                        <i>add</i>
+                        <span>文字を追加</span>
+                      </button>
+                      <span class="mizuna-text-hint">配置済みの文字をタップして選択するか、「文字を追加」を押してください</span>
+                    </div>
+                  }
+                >
+                  {(cur) => (
+                    <div class="mizuna-text-panel">
+                      <div class="mizuna-text-row-main">
+                        <input
+                          type="text"
+                          class="mizuna-text-input"
+                          value={cur().text}
+                          onInput={(e) => updateSelectedText({ text: e.currentTarget.value })}
+                          placeholder="文字を入力..."
+                        />
+                        <button
+                          type="button"
+                          class="mizuna-btn mizuna-btn-ghost mizuna-btn-sm mizuna-icon-only-btn"
+                          onClick={handleAddText}
+                          title="さらに文字を追加"
+                        >
+                          <i>add</i>
+                        </button>
+                        <button
+                          type="button"
+                          class="mizuna-btn mizuna-btn-danger mizuna-btn-sm mizuna-icon-only-btn"
+                          onClick={handleDeleteSelectedText}
+                          title="この文字を削除"
+                        >
+                          <i>delete</i>
+                        </button>
+                      </div>
+
+                      <div class="mizuna-text-row-controls">
+                        {/* カラーパレット */}
+                        <div class="mizuna-color-palette">
+                          <For each={['#ffffff', '#000000', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899']}>
+                            {(c) => (
+                              <button
+                                type="button"
+                                class={`mizuna-color-dot ${cur().color === c ? 'is-active' : ''}`}
+                                style={{ 'background-color': c }}
+                                onClick={() => updateSelectedText({ color: c })}
+                                aria-label={c}
+                              />
+                            )}
+                          </For>
+                        </div>
+
+                        {/* スタイル切替 */}
+                        <div class="mizuna-seg-pills">
+                          <button
+                            type="button"
+                            class={`mizuna-seg-pill ${(cur().style || 'fill-stroke') === 'fill-stroke' ? 'is-active' : ''}`}
+                            onClick={() => updateSelectedText({ style: 'fill-stroke' })}
+                            title="縁取り"
+                          >
+                            <span>縁取り</span>
+                          </button>
+                          <button
+                            type="button"
+                            class={`mizuna-seg-pill ${cur().style === 'badge' ? 'is-active' : ''}`}
+                            onClick={() => updateSelectedText({ style: 'badge' })}
+                            title="背景帯"
+                          >
+                            <span>背景帯</span>
+                          </button>
+                          <button
+                            type="button"
+                            class={`mizuna-seg-pill ${cur().style === 'fill' ? 'is-active' : ''}`}
+                            onClick={() => updateSelectedText({ style: 'fill' })}
+                            title="単色"
+                          >
+                            <span>単色</span>
+                          </button>
+                        </div>
+
+                        {/* フォントサイズ */}
+                        <div class="mizuna-text-size-wrap">
+                          <span class="mizuna-editor-sublabel">サイズ:</span>
+                          <input
+                            type="range"
+                            min="14"
+                            max="64"
+                            value={cur().fontSize}
+                            onInput={(e) => updateSelectedText({ fontSize: Number(e.currentTarget.value) })}
+                            class="mizuna-slider"
+                          />
+                          <span class="mizuna-adjust-value">{cur().fontSize}px</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </Show>
+              </div>
+            </Show>
+
+            {/* 6. 盗作防止透かしタブ */}
             <Show when={activeTab() === 'watermark'}>
               <div class="mizuna-editor-watermark-tools">
                 <div class="mizuna-watermark-header">
@@ -1273,6 +1529,21 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             >
               <i>blur_on</i>
               <span>モザイク</span>
+            </button>
+            <button
+              type="button"
+              class={`mizuna-editor-tab-btn ${activeTab() === 'text' ? 'is-active' : ''}`}
+              onClick={() => {
+                setActiveTab('text');
+                if (texts().length === 0) {
+                  handleAddText();
+                } else if (!selectedTextId()) {
+                  setSelectedTextId(texts()[0].id);
+                }
+              }}
+            >
+              <i>title</i>
+              <span>文字入れ</span>
             </button>
             <button
               type="button"

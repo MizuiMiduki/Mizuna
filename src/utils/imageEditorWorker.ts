@@ -1,6 +1,7 @@
 import {
   applyMosaicsToContext,
   applySignatureToContext,
+  applyTextsToContext,
   applyWatermarkPatternToContext,
   ImageEditOptions,
 } from './imageEditor';
@@ -38,6 +39,7 @@ self.onmessage = async (e: MessageEvent<WorkerEditRequest>) => {
       flipHorizontal = false,
       adjustments = { brightness: 100, contrast: 100, saturation: 100 },
       mosaics = [],
+      texts = [],
       quality = 0.85,
     } = options;
 
@@ -70,6 +72,11 @@ self.onmessage = async (e: MessageEvent<WorkerEditRequest>) => {
     // モザイク
     if (mosaics && mosaics.length > 0) {
       applyMosaicsToContext(ctx, mosaics);
+    }
+
+    // 文字入れ（テキスト合成）
+    if (texts && texts.length > 0) {
+      applyTextsToContext(ctx, stageWidth, stageHeight, texts);
     }
 
     // クロップ

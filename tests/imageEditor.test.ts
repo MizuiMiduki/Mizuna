@@ -2,9 +2,11 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   applyMosaicsToContext,
   applySignatureToContext,
+  applyTextsToContext,
   applyWatermarkPatternToContext,
   applyWatermarkToContext,
   createCanvas2D,
+  ImageTextItem,
   MosaicRect,
   SignatureOptions,
   WatermarkOptions,
@@ -147,6 +149,80 @@ describe('imageEditor utility', () => {
 
     applyWatermarkPatternToContext(mockCtx, 800, 600, null);
     expect(mockCtx.save).not.toHaveBeenCalled();
+  });
+
+  it('applyTextsToContext が文字入れ（通常・縁取り・帯・シャドウ）を正しく描画すること', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      measureText: vi.fn((text: string) => ({ width: text.length * 12 })),
+      beginPath: vi.fn(),
+      roundRect: vi.fn(),
+      fill: vi.fn(),
+      stroke: vi.fn(),
+      fillText: vi.fn(),
+      strokeText: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    const texts: ImageTextItem[] = [
+      {
+        id: 't1',
+        text: 'こんにちは',
+        x: 0.5,
+        y: 0.5,
+        fontSize: 24,
+        color: '#ffffff',
+        style: 'fill-stroke',
+      },
+      {
+        id: 't2',
+        text: '帯付きテキスト',
+        x: 0.2,
+        y: 0.8,
+        fontSize: 18,
+        color: '#ffcc00',
+        style: 'badge',
+      },
+      {
+        id: 't3',
+        text: 'シャドウ付き',
+        x: 0.1,
+        y: 0.1,
+        fontSize: 20,
+        color: '#000000',
+        style: 'fill',
+      },
+      {
+        id: 't4',
+        text: '   ',
+        x: 0,
+        y: 0,
+        fontSize: 14,
+        color: '#ffffff',
+      },
+    ];
+
+    applyTextsToContext(mockCtx, 800, 600, texts);
+
+    // 3つの有効テキストそれぞれに save/restore が呼ばれる
+    expect(mockCtx.save).toHaveBeenCalledTimes(3);
+    expect(mockCtx.fillText).toHaveBeenCalledTimes(3);
+    expect(mockCtx.strokeText).toHaveBeenCalledTimes(1); // fill-stroke
+    expect(mockCtx.roundRect).toHaveBeenCalledTimes(1); // badge
+    expect(mockCtx.restore).toHaveBeenCalledTimes(3);
+  });
+
+  it('applyTextsToContext に空リストまたは未指定が渡された場合は描画しないこと', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      fillText: vi.fn(),
+    } as unknown as CanvasRenderingContext2D;
+
+    applyTextsToContext(mockCtx, 800, 600, []);
+    applyTextsToContext(mockCtx, 800, 600, undefined as unknown as ImageTextItem[]);
+    expect(mockCtx.save).not.toHaveBeenCalled();
+    expect(mockCtx.fillText).not.toHaveBeenCalled();
   });
 
   it('createCanvas2D で Canvas が正常に生成できること', () => {
