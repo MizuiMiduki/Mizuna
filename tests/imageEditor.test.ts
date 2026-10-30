@@ -32,17 +32,17 @@ describe('imageEditor utility', () => {
       putImageData: vi.fn(),
     } as unknown as CanvasRenderingContext2D;
 
-    // 1. ブロックモザイク
+    // 1. ブロックモザイク（blockSize / granularity 指定）
     const blockMosaics: MosaicRect[] = [
-      { x: 0, y: 0, width: 4, height: 4, blockSize: 2, type: 'pixelate' },
+      { x: 0, y: 0, width: 4, height: 4, blockSize: 2, granularity: 16, type: 'pixelate' },
     ];
     applyMosaicsToContext(mockCtx, blockMosaics);
     expect(mockCtx.getImageData).toHaveBeenCalledWith(0, 0, 4, 4);
     expect(mockCtx.putImageData).toHaveBeenCalled();
 
-    // 2. すりガラス（ブラー）モザイク
+    // 2. すりガラス（ブラー）モザイク（granularity 指定）
     const blurMosaics: MosaicRect[] = [
-      { x: 0, y: 0, width: 4, height: 4, type: 'blur' },
+      { x: 0, y: 0, width: 4, height: 4, granularity: 12, type: 'blur' },
     ];
     applyMosaicsToContext(mockCtx, blurMosaics);
     expect(mockCtx.getImageData).toHaveBeenCalledWith(0, 0, 4, 4);

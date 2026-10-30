@@ -4513,6 +4513,15 @@ body.is-simple-mode .mizuna-setting-col {
   gap: 8px;
 }
 
+.mizuna-mosaic-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
 /* 文字入れ（テキストオーバーレイ） */
 .mizuna-text-overlay {
   position: absolute;

@@ -13,6 +13,7 @@ export interface MosaicRect {
   width: number;
   height: number;
   blockSize?: number;
+  granularity?: number;
   type?: MosaicType;
 }
 
@@ -65,6 +66,7 @@ export interface DrawingStroke {
   opacity?: number; // 0.1 - 1.0
   mode?: DrawingMode; // 'pen' | 'highlighter' | 'mosaic' | 'eraser'
   mosaicType?: MosaicType; // 'blur' | 'pixelate'
+  granularity?: number;
 }
 
 export interface ImageEditOptions {
@@ -91,8 +93,10 @@ export interface ImageEditState {
   saturation: number;
   aspectRatio: 'free' | '1:1' | '4:3' | '16:9';
   cropBox: { x: number; y: number; w: number; h: number } | null;
-  mosaics: { x: number; y: number; w: number; h: number; type?: MosaicType }[];
+  mosaics: { x: number; y: number; w: number; h: number; type?: MosaicType; granularity?: number }[];
   mosaicType?: MosaicType;
+  pixelateGranularity?: number;
+  blurGranularity?: number;
   texts?: ImageTextItem[];
   drawings?: DrawingStroke[];
   watermarkEnabled: boolean;
@@ -324,7 +328,7 @@ export function applyMosaicsToContext(
     if (mosaicType === 'blur') {
       try {
         const imgData = ctx.getImageData(rx, ry, rw, rh);
-        const radius = Math.max(4, Math.min(32, Math.round(Math.min(rw, rh) / 12)));
+        const radius = Math.max(2, Math.min(64, m.granularity || Math.round(Math.min(rw, rh) / 12) || 16));
         fastBoxBlur(imgData.data, rw, rh, radius, 3);
         ctx.putImageData(imgData, rx, ry);
       } catch (e) {
@@ -332,13 +336,9 @@ export function applyMosaicsToContext(
       }
     } else {
       // ブロック（ピクセル）モザイク: ガビガビのレトロピクセル描画（ニアレストネイバー）
-      const stageMin = Math.min(
-        ((ctx as any).canvas ? (ctx as any).canvas.width : rw),
-        ((ctx as any).canvas ? (ctx as any).canvas.height : rh)
-      );
       const blockSize = Math.max(
-        8,
-        m.blockSize || Math.round(stageMin / 32) || Math.round(Math.min(rw, rh) / 8) || 16
+        6,
+        m.blockSize || m.granularity || 24
       );
 
       let success = false;
@@ -527,12 +527,11 @@ export function applyDrawingsToContext(
 
   const effectiveSource = sourceCanvas || ((ctx as unknown as { canvas?: CanvasImageSource }).canvas ?? null);
 
-  const getMosaicTexture = (type: MosaicType) => {
+  const getMosaicTexture = (type: MosaicType, granularity?: number) => {
     if (!effectiveSource) return null;
     if (type === 'pixelate') {
-      if (pixelatedTexture) return pixelatedTexture;
       try {
-        const blockSize = Math.max(8, Math.round(Math.min(stageWidth, stageHeight) / 32));
+        const blockSize = Math.max(6, Math.round((granularity || 24) * scale));
         const sw = Math.max(2, Math.round(stageWidth / blockSize));
         const sh = Math.max(2, Math.round(stageHeight / blockSize));
         const { canvas: sCanvas, ctx: sCtx } = createCanvas2D(sw, sh);
@@ -540,29 +539,28 @@ export function applyDrawingsToContext(
         const { canvas: pCanvas, ctx: pCtx } = createCanvas2D(stageWidth, stageHeight);
         pCtx.imageSmoothingEnabled = false;
         pCtx.drawImage(sCanvas, 0, 0, stageWidth, stageHeight);
-        pixelatedTexture = pCanvas;
-        return pixelatedTexture;
+        return pCanvas;
       } catch {
         return null;
       }
     } else {
-      if (blurredTexture) return blurredTexture;
       try {
-        const blurScale = 8;
+        const gran = granularity || 16;
+        const blurScale = Math.max(4, Math.min(32, Math.round((gran * scale) / 2)));
         const sw = Math.max(2, Math.round(stageWidth / blurScale));
         const sh = Math.max(2, Math.round(stageHeight / blurScale));
         const { canvas: sCanvas, ctx: sCtx } = createCanvas2D(sw, sh);
         sCtx.drawImage(effectiveSource, 0, 0, sw, sh);
         try {
           const imgData = sCtx.getImageData(0, 0, sw, sh);
-          fastBoxBlur(imgData.data, sw, sh, 3, 3);
+          const rad = Math.max(2, Math.round((gran * scale) / 4));
+          fastBoxBlur(imgData.data, sw, sh, rad, 3);
           sCtx.putImageData(imgData, 0, 0);
         } catch (_) {}
         const { canvas: bCanvas, ctx: bCtx } = createCanvas2D(stageWidth, stageHeight);
         bCtx.imageSmoothingEnabled = true;
         bCtx.drawImage(sCanvas, 0, 0, stageWidth, stageHeight);
-        blurredTexture = bCanvas;
-        return blurredTexture;
+        return bCanvas;
       } catch {
         return null;
       }
@@ -579,7 +577,7 @@ export function applyDrawingsToContext(
     // モザイクペン描画
     if (stroke.mode === 'mosaic') {
       const mosaicType = stroke.mosaicType || 'blur';
-      const texture = getMosaicTexture(mosaicType);
+      const texture = getMosaicTexture(mosaicType, stroke.granularity);
 
       if (texture) {
         try {

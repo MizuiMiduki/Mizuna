@@ -109,10 +109,17 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   // モザイク操作モード（'rect': 矩形選択, 'pen': フリーハンドペン）
   const [mosaicTool, setMosaicTool] = createSignal<'rect' | 'pen'>('rect');
   const [mosaicPenSize, setMosaicPenSize] = createSignal<number>(24);
+  // モザイク粒度（ブロックサイズ / ブラー半径）
+  const [pixelateGranularity, setPixelateGranularity] = createSignal<number>(
+    init?.pixelateGranularity ?? 24
+  );
+  const [blurGranularity, setBlurGranularity] = createSignal<number>(
+    init?.blurGranularity ?? 16
+  );
 
   // モザイク矩形配列 (元画像に対する比率 0.0 - 1.0)
-  const [mosaics, setMosaics] = createSignal<{ x: number; y: number; w: number; h: number; type?: MosaicType }[]>(
-    init?.mosaics ? init.mosaics.map((m) => ({ ...m, type: m.type ?? 'blur' })) : []
+  const [mosaics, setMosaics] = createSignal<{ x: number; y: number; w: number; h: number; type?: MosaicType; granularity?: number }[]>(
+    init?.mosaics ? init.mosaics.map((m) => ({ ...m, type: m.type ?? 'blur', granularity: m.granularity })) : []
   );
 
   // 文字入れ（テキストアイテム）ステート
@@ -269,7 +276,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   // ブロックモザイク用のリアルタイムピクセルプレビュー描画（ガビガビ描画）
   const renderMosaicPreviewCanvas = (
     el: HTMLCanvasElement | undefined,
-    rect: { x: number; y: number; w: number; h: number }
+    rect: { x: number; y: number; w: number; h: number; granularity?: number; type?: MosaicType }
   ) => {
     if (!el || !canvasRef) return;
     const cW = canvasRef.width;
@@ -281,7 +288,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     const rw = Math.max(1, Math.min(cW - rx, Math.round(rect.w * cW)));
     const rh = Math.max(1, Math.min(cH - ry, Math.round(rect.h * cH)));
 
-    const blockSize = Math.max(8, Math.round(Math.min(cW, cH) / 32));
+    const gran = rect.granularity || pixelateGranularity() || 24;
+    const blockSize = Math.max(6, Math.min(80, gran));
     const downW = Math.max(1, Math.round(rw / blockSize));
     const downH = Math.max(1, Math.round(rh / blockSize));
 
@@ -415,6 +423,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     setAspectRatio('free');
     setCropBox(null);
     setMosaicType('blur');
+    setPixelateGranularity(24);
+    setBlurGranularity(16);
     setMosaics([]);
     setTexts([]);
     setSelectedTextId(null);
@@ -467,6 +477,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       size,
       mode,
       mosaicType: mosaicType(),
+      granularity: mosaicType() === 'pixelate' ? pixelateGranularity() : blurGranularity(),
       opacity: mode === 'highlighter' ? 0.45 : 1.0,
     };
     activeStroke = stroke;
@@ -530,14 +541,33 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     };
   };
 
-  // モザイク種類の切り替え（最新のモザイクが存在する場合はその種類も更新）
+  // モザイク種類の切り替え（最新のモザイクが存在する場合はその種類・粒度も更新）
   const handleSetMosaicType = (type: MosaicType) => {
     setMosaicType(type);
     setMosaics((prev) => {
       if (prev.length === 0) return prev;
       const updated = [...prev];
       const lastIdx = updated.length - 1;
-      updated[lastIdx] = { ...updated[lastIdx], type };
+      const gran = type === 'pixelate' ? pixelateGranularity() : blurGranularity();
+      updated[lastIdx] = { ...updated[lastIdx], type, granularity: gran };
+      return updated;
+    });
+  };
+
+  // モザイク粒度の切り替え（最新のモザイクが存在する場合はリアルタイム反映）
+  const handleSetMosaicGranularity = (val: number) => {
+    if (mosaicType() === 'pixelate') {
+      setPixelateGranularity(val);
+    } else {
+      setBlurGranularity(val);
+    }
+    setMosaics((prev) => {
+      if (prev.length === 0) return prev;
+      const updated = [...prev];
+      const lastIdx = updated.length - 1;
+      if ((updated[lastIdx].type || 'blur') === mosaicType()) {
+        updated[lastIdx] = { ...updated[lastIdx], granularity: val };
+      }
       return updated;
     });
   };
@@ -646,6 +676,12 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   // モザイク枠のドラッグ移動開始
   const startMosaicMove = (e: PointerEvent, index: number) => {
     if (activeTab() !== 'mosaic' || !mosaics()[index]) return;
+    const target = mosaics()[index];
+    if (target.type) setMosaicType(target.type);
+    if (target.granularity) {
+      if (target.type === 'pixelate') setPixelateGranularity(target.granularity);
+      else setBlurGranularity(target.granularity);
+    }
     e.stopPropagation();
     e.preventDefault();
     try {
@@ -817,7 +853,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       if (!drag || drag.w < 0.03 || drag.h < 0.03) return;
 
       if (activeTab() === 'mosaic') {
-        setMosaics((prev) => [...prev, { ...drag, type: mosaicType() }]);
+        const gran = mosaicType() === 'pixelate' ? pixelateGranularity() : blurGranularity();
+        setMosaics((prev) => [...prev, { ...drag, type: mosaicType(), granularity: gran }]);
       } else if (activeTab() === 'crop') {
         setCropBox(drag);
       }
@@ -843,14 +880,23 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         };
       }
 
-      const mosaicPixels: MosaicRect[] = mosaics().map((m) => ({
-        x: Math.round(m.x * w),
-        y: Math.round(m.y * h),
-        width: Math.round(m.w * w),
-        height: Math.round(m.h * h),
-        blockSize: Math.max(8, Math.round(Math.min(w, h) / 35)),
-        type: m.type || 'blur',
-      }));
+      const previewW = canvasRef ? canvasRef.width : w;
+      const scaleRatio = previewW > 0 ? w / previewW : 1;
+
+      const mosaicPixels: MosaicRect[] = mosaics().map((m) => {
+        const isPixel = (m.type || 'blur') === 'pixelate';
+        const gran = m.granularity || (isPixel ? pixelateGranularity() : blurGranularity());
+        const scaledGran = Math.max(4, Math.round(gran * scaleRatio));
+        return {
+          x: Math.round(m.x * w),
+          y: Math.round(m.y * h),
+          width: Math.round(m.w * w),
+          height: Math.round(m.h * h),
+          blockSize: scaledGran,
+          granularity: scaledGran,
+          type: m.type || 'blur',
+        };
+      });
 
       const watermarkOption: WatermarkOptions | null =
         watermarkEnabled() && watermarkText().trim()
@@ -901,6 +947,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
         cropBox: cropBox(),
         mosaics: mosaics(),
         mosaicType: mosaicType(),
+        pixelateGranularity: pixelateGranularity(),
+        blurGranularity: blurGranularity(),
         texts: texts(),
         drawings: drawings().map((d) => ({
           ...d,
@@ -1025,6 +1073,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                     top: `${m.y * 100}%`,
                     width: `${m.w * 100}%`,
                     height: `${m.h * 100}%`,
+                    'backdrop-filter': (m.type || 'blur') === 'blur' ? `blur(${m.granularity || blurGranularity()}px)` : undefined,
+                    '-webkit-backdrop-filter': (m.type || 'blur') === 'blur' ? `blur(${m.granularity || blurGranularity()}px)` : undefined,
                   }}
                   onPointerDown={(e) => startMosaicMove(e, index())}
                 >
@@ -1115,6 +1165,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                     top: `${dr().y * 100}%`,
                     width: `${dr().w * 100}%`,
                     height: `${dr().h * 100}%`,
+                    'backdrop-filter': activeTab() === 'mosaic' && mosaicType() === 'blur' ? `blur(${blurGranularity()}px)` : undefined,
+                    '-webkit-backdrop-filter': activeTab() === 'mosaic' && mosaicType() === 'blur' ? `blur(${blurGranularity()}px)` : undefined,
                   }}
                 >
                   <Show when={activeTab() === 'mosaic' && mosaicType() === 'pixelate'}>
@@ -1122,7 +1174,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                       ref={(el) => {
                         createEffect(() => {
                           const rect = currentDragRect();
-                          if (rect) renderMosaicPreviewCanvas(el, rect);
+                          if (rect) renderMosaicPreviewCanvas(el, { ...rect, granularity: pixelateGranularity() });
                         });
                       }}
                       class="mizuna-mosaic-pixel-canvas"
@@ -1436,9 +1488,42 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                   </div>
                 </div>
 
-                <Show when={mosaicTool() === 'pen'}>
-                  <div class="mizuna-pen-bottom-row">
-                    <span class="mizuna-text-hint">画像上をなぞるとモザイクを描けます</span>
+                <div class="mizuna-mosaic-bottom-row">
+                  {/* 粒度スライダー（すりガラス・ブロック両対応） */}
+                  <div class="mizuna-text-size-wrap">
+                    <span class="mizuna-editor-sublabel">粒度:</span>
+                    <Show
+                      when={mosaicType() === 'pixelate'}
+                      fallback={
+                        <>
+                          <input
+                            type="range"
+                            min="4"
+                            max="40"
+                            step="2"
+                            value={blurGranularity()}
+                            onInput={(e) => handleSetMosaicGranularity(Number(e.currentTarget.value))}
+                            class="mizuna-slider"
+                          />
+                          <span class="mizuna-adjust-value">{blurGranularity()}px</span>
+                        </>
+                      }
+                    >
+                      <input
+                        type="range"
+                        min="10"
+                        max="64"
+                        step="2"
+                        value={pixelateGranularity()}
+                        onInput={(e) => handleSetMosaicGranularity(Number(e.currentTarget.value))}
+                        class="mizuna-slider"
+                      />
+                      <span class="mizuna-adjust-value">{pixelateGranularity()}px</span>
+                    </Show>
+                  </div>
+
+                  {/* ペンモード時の太さスライダー */}
+                  <Show when={mosaicTool() === 'pen'}>
                     <div class="mizuna-text-size-wrap">
                       <span class="mizuna-editor-sublabel">太さ:</span>
                       <input
@@ -1452,8 +1537,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                       />
                       <span class="mizuna-adjust-value">{mosaicPenSize()}px</span>
                     </div>
-                  </div>
-                </Show>
+                  </Show>
+                </div>
               </div>
             </Show>
 
