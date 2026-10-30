@@ -2698,6 +2698,7 @@ body.dark .mizuna-custom-css-warnings {
 }
 
 .mizuna-floating-dock {
+  position: relative;
   pointer-events: auto;
   display: flex;
   align-items: center;
@@ -2720,10 +2721,35 @@ body.dark .mizuna-custom-css-warnings {
   -webkit-user-select: none;
 }
 
+/* スライドするアクティブインジケーター（ピルハイライト） */
+.mizuna-dock-active-pill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: var(--mizuna-radius-pill);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 48%, transparent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 14%, transparent);
+  pointer-events: none;
+  z-index: 0;
+  box-sizing: border-box;
+  transform-origin: center center;
+  will-change: transform, width, height, opacity;
+}
+
+.mizuna-dock-active-pill.is-animated {
+  transition:
+    transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.28s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s ease-out;
+}
+
 /* フッター内全ボタン共通：BeerCSSのデフォルト角丸エフェクト(::before/::after)を完全無効化し、すべて統一ピル形状に揃える */
 .mizuna-dock-avatar-btn,
 .mizuna-m3e-item {
   position: relative;
+  z-index: 1;
   height: 56px !important;
   min-height: 56px !important;
   block-size: 56px !important;
@@ -2736,12 +2762,14 @@ body.dark .mizuna-custom-css-warnings {
   outline: none !important;
   cursor: pointer;
   text-transform: none;
-  transform: translateZ(0);
-  will-change: transform, background-color, border-color;
   transition:
-    background-color 0.15s ease-out,
-    border-color 0.15s ease-out,
-    color 0.15s ease-out;
+    color 0.2s ease-out,
+    transform 0.1s ease-out;
+}
+
+.mizuna-dock-avatar-btn:active,
+.mizuna-m3e-item:active {
+  transform: scale(0.94);
 }
 
 .mizuna-dock-avatar-btn::before,
@@ -2752,19 +2780,19 @@ body.dark .mizuna-custom-css-warnings {
   content: none !important;
 }
 
-/* ホバー時・選択時（アクティブ）の背景と縁取りを全アイテムで完全統一 */
+/* ホバー時（非アクティブ時のみ背景を軽く表示） */
 .mizuna-dock-avatar-btn:hover:not(.is-active),
 .mizuna-m3e-item:hover:not(.is-active) {
-  background: color-mix(in srgb, var(--on-surface) 7%, transparent) !important;
+  background: color-mix(in srgb, var(--on-surface) 6%, transparent) !important;
   color: var(--on-surface) !important;
 }
 
 .mizuna-dock-avatar-btn.is-active,
 .mizuna-m3e-item.is-active {
-  background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
-  border-color: color-mix(in srgb, var(--primary) 48%, transparent) !important;
   color: var(--primary) !important;
-  box-shadow: 0 2px 10px color-mix(in srgb, var(--primary) 14%, transparent) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
 }
 
 /* 左側：ユーザーアイコンボタン（高さ54pxの統一カプセル内に40pxアイコンを配置し、右側のアイコン＋文字の高さと揃える） */
@@ -2837,25 +2865,30 @@ body.dark .mizuna-custom-css-warnings {
 
 .mizuna-m3e-indicator i {
   font-size: 24px !important;
-  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  font-variation-settings: 'FILL' 0, 'wght' 500;
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 0.2s ease,
+    font-variation-settings 0.25s ease;
 }
 
 .mizuna-m3e-item.is-active .mizuna-m3e-indicator i {
   font-variation-settings: 'FILL' 1, 'wght' 600;
   color: var(--primary);
+  transform: scale(1.06);
 }
 
 .mizuna-m3e-label {
   font-size: 0.73rem;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.1;
   letter-spacing: 0.01em;
   color: inherit;
+  transition: color 0.2s ease;
 }
 
 .mizuna-m3e-item.is-active .mizuna-m3e-label {
   color: var(--primary);
-  font-weight: 800;
 }
 
 /* 表示サイズ「大」時のボトムドック拡大 */
