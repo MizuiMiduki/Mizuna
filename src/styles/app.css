@@ -4548,6 +4548,11 @@ body.is-simple-mode .mizuna-setting-col {
   outline-offset: 4px;
 }
 
+.mizuna-text-overlay .is-placeholder {
+  opacity: 0.75;
+  font-style: italic;
+}
+
 .mizuna-text-delete-badge {
   position: absolute;
   top: -12px;

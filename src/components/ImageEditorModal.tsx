@@ -452,7 +452,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     const newId = `${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
     const newItem: ImageTextItem = {
       id: newId,
-      text: '文字を入力',
+      text: '',
       x: 0.5,
       y: 0.5,
       fontSize: 28,
@@ -1097,7 +1097,9 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                     }}
                     onPointerDown={(e) => startTextMove(e, t.id)}
                   >
-                    <span>{t.text}</span>
+                    <span class={!t.text ? 'is-placeholder' : ''}>
+                      {t.text || (isSelected() ? '文字を入力...' : '')}
+                    </span>
                     <Show when={isSelected()}>
                       <button
                         type="button"
@@ -1564,6 +1566,9 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                     <div class="mizuna-text-panel">
                       <div class="mizuna-text-row-main">
                         <input
+                          ref={(el) => {
+                            if (el && !cur().text) setTimeout(() => el.focus(), 50);
+                          }}
                           type="text"
                           class="mizuna-text-input"
                           value={cur().text}
@@ -1903,9 +1908,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
               class={`mizuna-editor-tab-btn ${activeTab() === 'text' ? 'is-active' : ''}`}
               onClick={() => {
                 setActiveTab('text');
-                if (texts().length === 0) {
-                  handleAddText();
-                } else if (!selectedTextId()) {
+                if (texts().length > 0 && !selectedTextId()) {
                   setSelectedTextId(texts()[0].id);
                 }
               }}
