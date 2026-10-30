@@ -1014,7 +1014,6 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             <i>close</i>
             <span>キャンセル</span>
           </button>
-          <div class="mizuna-editor-title">画像を加工</div>
           <div class="mizuna-editor-actions">
             <button
               type="button"

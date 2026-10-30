@@ -5030,13 +5030,17 @@ body.is-simple-mode .mizuna-setting-col {
 .mizuna-editor-tabs {
   display: flex;
   align-items: center;
-  justify-content: space-around;
+  justify-content: space-between;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(15, 23, 42, 0.95);
-  padding: 4px 6px;
+  background: rgba(15, 23, 42, 0.96);
+  padding: 6px 4px calc(8px + env(safe-area-inset-bottom, 0px));
+  min-height: calc(56px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
   flex-shrink: 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
+  gap: 2px;
 }
 
 .mizuna-editor-tabs::-webkit-scrollbar {
@@ -5044,26 +5048,38 @@ body.is-simple-mode .mizuna-setting-col {
 }
 
 .mizuna-editor-tab-btn {
-  flex: 1;
-  max-width: 90px;
+  flex: 1 1 0;
+  min-width: 44px;
+  max-width: 68px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 6px 2px;
+  gap: 2px;
+  padding: 4px 2px;
   border: none !important;
   background: transparent !important;
   color: #94a3b8 !important;
-  font-size: 0.70rem;
+  font-size: 0.68rem;
   font-weight: 600;
   cursor: pointer;
   border-radius: 8px;
   transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+
+.mizuna-editor-tab-btn span {
+  white-space: nowrap;
+  text-overflow: clip;
+  line-height: 1.1;
+  font-size: 0.66rem;
+  display: block;
 }
 
 .mizuna-editor-tab-btn i {
   font-size: 20px !important;
+  line-height: 1;
 }
 
 .mizuna-editor-tab-btn.is-active {
