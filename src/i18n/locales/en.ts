@@ -10,6 +10,7 @@ export const en = {
     refresh: 'Reload',
     network_online: 'Internet connection restored',
     network_offline: 'Network disconnected (Offline)',
+    exit_confirm: 'Press back again to exit',
   },
   header: {
     announcements: 'Announcements',

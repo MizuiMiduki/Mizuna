@@ -157,6 +157,7 @@ interface AppContextValue {
   dialogConfig: Accessor<DialogConfig | null>;
   openDialog: (config: DialogConfig) => void;
   closeDialog: () => void;
+  pushModalBackHandler: (handler: () => void) => () => void;
 
   // PWA アップデート制御
   hasPendingUpdate: Accessor<boolean>;
@@ -233,12 +234,53 @@ export function AppProvider(props: { children: JSX.Element }) {
     setToasts((prev) => prev.filter((item) => item.id !== id));
   };
 
+  // ----------------------------------------------------
+  // Android / ブラウザの戻るボタン (PopState) ハンドリング
+  // ----------------------------------------------------
+  const modalBackHandlers: Array<() => void> = [];
+  let isPopStateActive = false;
+  let lastBackPressTime = 0;
+
+  const pushModalBackHandler = (handler: () => void): () => void => {
+    if (typeof window === 'undefined') return () => {};
+
+    modalBackHandlers.push(handler);
+    try {
+      window.history.pushState({ isModal: true }, '');
+    } catch (e) {
+      // ignore
+    }
+
+    let cleaned = false;
+    return () => {
+      if (cleaned) return;
+      cleaned = true;
+      const idx = modalBackHandlers.indexOf(handler);
+      if (idx !== -1) {
+        modalBackHandlers.splice(idx, 1);
+      }
+      if (!isPopStateActive && typeof window !== 'undefined' && window.history.state?.isModal) {
+        window.history.back();
+      }
+    };
+  };
+
   const openDialog = (config: DialogConfig) => {
     setDialogConfig(config);
+    if (typeof window !== 'undefined') {
+      try {
+        window.history.pushState({ isDialog: true }, '');
+      } catch (e) {
+        // ignore
+      }
+    }
   };
 
   const closeDialog = () => {
     setDialogConfig(null);
+    if (!isPopStateActive && typeof window !== 'undefined' && window.history.state?.isDialog) {
+      window.history.back();
+    }
   };
 
   // 多言語翻訳ヘルパー（Solid.js のリアクティビティと連動し、言語切替時に最小コストで即座に反映）
@@ -401,18 +443,26 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   const setCurrentView = (view: ViewType) => {
-    if (
+    const target =
       accounts().length === 0 &&
       view !== 'add_account' &&
       view !== 'shortcuts' &&
       view !== 'about' &&
       view !== 'announcements' &&
       view !== 'privacy'
-    ) {
-      setCurrentViewInternal('add_account');
-      return;
+        ? 'add_account'
+        : view;
+
+    if (target === currentView()) return;
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.history.pushState({ view: target }, '');
+      } catch (e) {
+        // ignore
+      }
     }
-    setCurrentViewInternal(view);
+    setCurrentViewInternal(target);
   };
 
   /**
@@ -692,6 +742,65 @@ export function AppProvider(props: { children: JSX.Element }) {
     if (typeof window !== 'undefined' && window.location.search.includes('reload=')) {
       const cleanUrl = window.location.pathname + window.location.hash;
       window.history.replaceState({}, document.title, cleanUrl || '/');
+    }
+
+    // Android / ブラウザの戻る操作 (PopState) をハンドリング
+    if (typeof window !== 'undefined') {
+      try {
+        window.history.replaceState({ view: currentView(), isRoot: true }, '');
+      } catch (e) {
+        // ignore
+      }
+
+      const handlePopState = (e: PopStateEvent) => {
+        isPopStateActive = true;
+        try {
+          // 1. 最優先：ダイアログが開いている場合はダイアログを閉じる
+          if (dialogConfig()) {
+            setDialogConfig(null);
+            return;
+          }
+
+          // 2. モーダル（画像編集、画像プレビュー等）が開いている場合は最新のものを閉じる
+          if (modalBackHandlers.length > 0) {
+            const handler = modalBackHandlers.pop();
+            if (handler) {
+              handler();
+              return;
+            }
+          }
+
+          // 3. サブ画面（設定、アカウント、お知らせ等）にいる場合はホーム画面（アカウント未登録時はadd_account）に戻る
+          const homeTarget: ViewType = accounts().length > 0 ? 'note' : 'add_account';
+          if (currentView() !== homeTarget) {
+            setCurrentViewInternal(homeTarget);
+            return;
+          }
+
+          // 4. ホーム画面（note）にいる場合：誤終了防止（二度押しで終了）
+          const now = Date.now();
+          if (now - lastBackPressTime < 2000) {
+            return;
+          }
+
+          lastBackPressTime = now;
+          showToast(t('common.exit_confirm') || 'もう一度「戻る」を押すと終了します', 'info');
+          try {
+            window.history.pushState({ view: 'note', isRoot: true }, '');
+          } catch (e) {
+            // ignore
+          }
+        } finally {
+          setTimeout(() => {
+            isPopStateActive = false;
+          }, 50);
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+      onCleanup(() => {
+        window.removeEventListener('popstate', handlePopState);
+      });
     }
 
     const hasShareParams = captureWebShareTargetFromUrl();
@@ -1300,6 +1409,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     dialogConfig,
     openDialog,
     closeDialog,
+    pushModalBackHandler,
     hasPendingUpdate,
     isCheckingUpdate,
     showUpdateBanner,

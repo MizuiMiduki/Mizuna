@@ -10,6 +10,7 @@ export const ja = {
     refresh: '再読み込み',
     network_online: 'インターネット接続が回復しました',
     network_offline: 'ネットワークが切断されました（オフライン）',
+    exit_confirm: 'もう一度「戻る」を押すと終了します',
   },
   header: {
     announcements: 'お知らせ',

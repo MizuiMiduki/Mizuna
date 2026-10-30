@@ -44,6 +44,7 @@ export function NoteView() {
     revertAttachedImage,
     clearNoteForm,
     showToast,
+    pushModalBackHandler,
     t,
   } = useApp();
 
@@ -59,6 +60,34 @@ export function NoteView() {
   const [editingImageItem, setEditingImageItem] = createSignal<AttachedImageItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = createSignal(false);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = createSignal(false);
+
+  // Androidの戻るボタン対応：画像加工モーダル・プレビュー・アカウントピッカーを戻る操作で安全に閉じる
+  createEffect(() => {
+    if (editingImageItem()) {
+      const unregister = pushModalBackHandler(() => {
+        setEditingImageItem(null);
+      });
+      onCleanup(unregister);
+    }
+  });
+
+  createEffect(() => {
+    if (previewModalImageId()) {
+      const unregister = pushModalBackHandler(() => {
+        setPreviewModalImageId(null);
+      });
+      onCleanup(unregister);
+    }
+  });
+
+  createEffect(() => {
+    if (isAccountPickerOpen()) {
+      const unregister = pushModalBackHandler(() => {
+        setIsAccountPickerOpen(false);
+      });
+      onCleanup(unregister);
+    }
+  });
 
   let viewContainerRef: HTMLDivElement | undefined;
   let cwSectionRef: HTMLDivElement | undefined;

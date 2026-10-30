@@ -224,5 +224,51 @@ describe('appStore', () => {
       const saved = await db.setting.get(1);
       expect(saved?.ui_mode).toBe(2);
     });
+
+    it('Androidの戻る操作 (popstate) でサブ画面からnote画面へ戻り、モーダルが開いている時はモーダルを閉じること', async () => {
+      // テスト用アカウントを追加
+      await db.account.add({
+        token: 'tok_back_test',
+        name: '戻るテストユーザー',
+        username: 'back_user',
+        address: 'misskey.test',
+        avatarurl: '',
+        add_mizuna_versinon: '3.12.0',
+      });
+
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      // アカウントの非同期読み込みを待機
+      await result.reloadAccounts();
+      result.forceSetCurrentView('note');
+
+      // 設定画面へ遷移
+      result.setCurrentView('about');
+      expect(result.currentView()).toBe('about');
+
+      // Android の戻るボタン（popstate）が押された場合 -> note 画面に戻る
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      expect(result.currentView()).toBe('note');
+
+      // モーダルハンドラーの登録（画像編集等）
+      let modalClosed = false;
+      const unregister = result.pushModalBackHandler(() => {
+        modalClosed = true;
+      });
+
+      // モーダルが開いている時に戻るボタン（popstate）が押された場合 -> モーダルが閉じる
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      expect(modalClosed).toBe(true);
+      expect(result.currentView()).toBe('note');
+
+      // ホーム画面で1回目の戻るが押された場合 -> 二度押し防止トーストが表示される
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      const exitConfirmMsg = result.t('common.exit_confirm');
+      expect(result.toasts().some((t) => t.message === exitConfirmMsg)).toBe(true);
+
+      unregister();
+    });
   });
 });
