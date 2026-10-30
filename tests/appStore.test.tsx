@@ -269,6 +269,20 @@ describe('appStore', () => {
       expect(result.toasts().some((t) => t.message === exitConfirmMsg)).toBe(true);
 
       unregister();
+
+      // UIの閉じるボタンなどでモーダルを閉じた場合、直後の popstate でトーストが出ないこと
+      const initialToastCount = result.toasts().length;
+      let uiModalClosed = false;
+      const unregisterUiModal = result.pushModalBackHandler(() => {
+        uiModalClosed = true;
+      });
+      // UIの×ボタンを押して閉じる操作をシミュレート
+      unregisterUiModal();
+      // ブラウザが history.back() 起因で発火する popstate をシミュレート
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      // トーストが増えていないこと
+      expect(result.toasts().length).toBe(initialToastCount);
+      expect(uiModalClosed).toBe(false);
     });
   });
 });

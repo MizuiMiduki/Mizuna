@@ -239,12 +239,21 @@ export function AppProvider(props: { children: JSX.Element }) {
   // ----------------------------------------------------
   const modalBackHandlers: Array<() => void> = [];
   let isPopStateActive = false;
+  let ignoreNextPopState = false;
+  let isDialogPoppedByPopState = false;
   let lastBackPressTime = 0;
 
   const pushModalBackHandler = (handler: () => void): () => void => {
     if (typeof window === 'undefined') return () => {};
 
-    modalBackHandlers.push(handler);
+    let isPoppedByPopState = false;
+
+    const wrappedHandler = () => {
+      isPoppedByPopState = true;
+      handler();
+    };
+
+    modalBackHandlers.push(wrappedHandler);
     try {
       window.history.pushState({ isModal: true }, '');
     } catch (e) {
@@ -255,17 +264,21 @@ export function AppProvider(props: { children: JSX.Element }) {
     return () => {
       if (cleaned) return;
       cleaned = true;
-      const idx = modalBackHandlers.indexOf(handler);
+      const idx = modalBackHandlers.indexOf(wrappedHandler);
       if (idx !== -1) {
         modalBackHandlers.splice(idx, 1);
       }
-      if (!isPopStateActive && typeof window !== 'undefined' && window.history.state?.isModal) {
+      // Androidの戻るボタン(popstate)で既に閉じられた場合はブラウザ履歴が既に戻っているためback()不要
+      // UIの閉じるボタンや背景タップで閉じられた場合のみ、pushされた履歴エントリを巻き戻す
+      if (!isPoppedByPopState && typeof window !== 'undefined' && window.history.state?.isModal) {
+        ignoreNextPopState = true;
         window.history.back();
       }
     };
   };
 
   const openDialog = (config: DialogConfig) => {
+    isDialogPoppedByPopState = false;
     setDialogConfig(config);
     if (typeof window !== 'undefined') {
       try {
@@ -278,7 +291,8 @@ export function AppProvider(props: { children: JSX.Element }) {
 
   const closeDialog = () => {
     setDialogConfig(null);
-    if (!isPopStateActive && typeof window !== 'undefined' && window.history.state?.isDialog) {
+    if (!isDialogPoppedByPopState && typeof window !== 'undefined' && window.history.state?.isDialog) {
+      ignoreNextPopState = true;
       window.history.back();
     }
   };
@@ -753,10 +767,17 @@ export function AppProvider(props: { children: JSX.Element }) {
       }
 
       const handlePopState = (e: PopStateEvent) => {
+        // UI操作（閉じるボタンや背景タップ）によってプログラムで history.back() された時は何もしない
+        if (ignoreNextPopState) {
+          ignoreNextPopState = false;
+          return;
+        }
+
         isPopStateActive = true;
         try {
           // 1. 最優先：ダイアログが開いている場合はダイアログを閉じる
           if (dialogConfig()) {
+            isDialogPoppedByPopState = true;
             setDialogConfig(null);
             return;
           }
