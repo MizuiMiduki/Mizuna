@@ -266,6 +266,34 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     }
   };
 
+  // ブロックモザイク用のリアルタイムピクセルプレビュー描画（ガビガビ描画）
+  const renderMosaicPreviewCanvas = (
+    el: HTMLCanvasElement | undefined,
+    rect: { x: number; y: number; w: number; h: number }
+  ) => {
+    if (!el || !canvasRef) return;
+    const cW = canvasRef.width;
+    const cH = canvasRef.height;
+    if (cW <= 0 || cH <= 0) return;
+
+    const rx = Math.max(0, Math.round(rect.x * cW));
+    const ry = Math.max(0, Math.round(rect.y * cH));
+    const rw = Math.max(1, Math.min(cW - rx, Math.round(rect.w * cW)));
+    const rh = Math.max(1, Math.min(cH - ry, Math.round(rect.h * cH)));
+
+    const blockSize = Math.max(8, Math.round(Math.min(cW, cH) / 32));
+    const downW = Math.max(1, Math.round(rw / blockSize));
+    const downH = Math.max(1, Math.round(rh / blockSize));
+
+    el.width = downW;
+    el.height = downH;
+
+    const ctx = el.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(canvasRef, rx, ry, rw, rh, 0, 0, downW, downH);
+  };
+
   // ペン描画ステート変更時の再描画
   createEffect(() => {
     drawings();
@@ -1001,7 +1029,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                   onPointerDown={(e) => startMosaicMove(e, index())}
                 >
                   <Show when={(m.type || 'blur') === 'pixelate'}>
-                    <div class="mizuna-mosaic-grid-pattern" />
+                    <canvas
+                      ref={(el) => {
+                        createEffect(() => {
+                          rotation();
+                          flipX();
+                          brightness();
+                          contrast();
+                          saturation();
+                          renderMosaicPreviewCanvas(el, m);
+                        });
+                      }}
+                      class="mizuna-mosaic-pixel-canvas"
+                    />
                   </Show>
                   <Show when={activeTab() === 'mosaic'}>
                     <div
@@ -1076,7 +1116,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                     width: `${dr().w * 100}%`,
                     height: `${dr().h * 100}%`,
                   }}
-                />
+                >
+                  <Show when={activeTab() === 'mosaic' && mosaicType() === 'pixelate'}>
+                    <canvas
+                      ref={(el) => {
+                        createEffect(() => {
+                          const rect = currentDragRect();
+                          if (rect) renderMosaicPreviewCanvas(el, rect);
+                        });
+                      }}
+                      class="mizuna-mosaic-pixel-canvas"
+                    />
+                  </Show>
+                </div>
               )}
             </Show>
 

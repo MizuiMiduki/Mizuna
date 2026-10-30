@@ -331,53 +331,75 @@ export function applyMosaicsToContext(
         console.warn('Blur mosaic failed:', e);
       }
     } else {
-      const blockSize = Math.max(6, Math.min(32, m.blockSize || Math.round(Math.min(rw, rh) / 8) || 12));
+      // ブロック（ピクセル）モザイク: ガビガビのレトロピクセル描画（ニアレストネイバー）
+      const stageMin = Math.min(
+        ((ctx as any).canvas ? (ctx as any).canvas.width : rw),
+        ((ctx as any).canvas ? (ctx as any).canvas.height : rh)
+      );
+      const blockSize = Math.max(
+        8,
+        m.blockSize || Math.round(stageMin / 32) || Math.round(Math.min(rw, rh) / 8) || 16
+      );
 
-      try {
-        const imgData = ctx.getImageData(rx, ry, rw, rh);
-        const data = imgData.data;
+      let success = false;
+      const ctxCanvas = (ctx as any).canvas;
+      if (ctxCanvas) {
+        try {
+          const sw = Math.max(1, Math.round(rw / blockSize));
+          const sh = Math.max(1, Math.round(rh / blockSize));
+          const { canvas: sCanvas, ctx: sCtx } = createCanvas2D(sw, sh);
+          sCtx.drawImage(ctxCanvas, rx, ry, rw, rh, 0, 0, sw, sh);
 
-        for (let y = 0; y < rh; y += blockSize) {
-          for (let x = 0; x < rw; x += blockSize) {
-            const blockW = Math.min(blockSize, rw - x);
-            const blockH = Math.min(blockSize, rh - y);
+          ctx.save();
+          ctx.imageSmoothingEnabled = false;
+          if ('mozImageSmoothingEnabled' in ctx) (ctx as any).mozImageSmoothingEnabled = false;
+          if ('webkitImageSmoothingEnabled' in ctx) (ctx as any).webkitImageSmoothingEnabled = false;
+          if ('msImageSmoothingEnabled' in ctx) (ctx as any).msImageSmoothingEnabled = false;
 
-            let rTotal = 0;
-            let gTotal = 0;
-            let bTotal = 0;
-            let aTotal = 0;
-            const pixelCount = blockW * blockH;
+          ctx.drawImage(sCanvas as CanvasImageSource, 0, 0, sw, sh, rx, ry, rw, rh);
+          ctx.restore();
+          success = true;
+        } catch {
+          success = false;
+        }
+      }
 
-            for (let by = 0; by < blockH; by++) {
-              for (let bx = 0; bx < blockW; bx++) {
-                const idx = ((y + by) * rw + (x + bx)) * 4;
-                rTotal += data[idx];
-                gTotal += data[idx + 1];
-                bTotal += data[idx + 2];
-                aTotal += data[idx + 3];
-              }
-            }
+      // フォールバック（ctx.canvas が取得できない環境やテスト環境用）
+      if (!success) {
+        try {
+          const imgData = ctx.getImageData(rx, ry, rw, rh);
+          const data = imgData.data;
 
-            const rAvg = Math.round(rTotal / pixelCount);
-            const gAvg = Math.round(gTotal / pixelCount);
-            const bAvg = Math.round(bTotal / pixelCount);
-            const aAvg = Math.round(aTotal / pixelCount);
+          for (let y = 0; y < rh; y += blockSize) {
+            for (let x = 0; x < rw; x += blockSize) {
+              const blockW = Math.min(blockSize, rw - x);
+              const blockH = Math.min(blockSize, rh - y);
 
-            for (let by = 0; by < blockH; by++) {
-              for (let bx = 0; bx < blockW; bx++) {
-                const idx = ((y + by) * rw + (x + bx)) * 4;
-                data[idx] = rAvg;
-                data[idx + 1] = gAvg;
-                data[idx + 2] = bAvg;
-                data[idx + 3] = aAvg;
+              // ニアレストネイバー（中心ピクセルサンプリング）でシャープなガビガビ感を出す
+              const sampleX = Math.min(rw - 1, x + Math.floor(blockW / 2));
+              const sampleY = Math.min(rh - 1, y + Math.floor(blockH / 2));
+              const sampleIdx = (sampleY * rw + sampleX) * 4;
+              const r = data[sampleIdx];
+              const g = data[sampleIdx + 1];
+              const b = data[sampleIdx + 2];
+              const a = data[sampleIdx + 3];
+
+              for (let by = 0; by < blockH; by++) {
+                for (let bx = 0; bx < blockW; bx++) {
+                  const idx = ((y + by) * rw + (x + bx)) * 4;
+                  data[idx] = r;
+                  data[idx + 1] = g;
+                  data[idx + 2] = b;
+                  data[idx + 3] = a;
+                }
               }
             }
           }
-        }
 
-        ctx.putImageData(imgData, rx, ry);
-      } catch (e) {
-        console.warn('Block mosaic processing fallback error:', e);
+          ctx.putImageData(imgData, rx, ry);
+        } catch (e) {
+          console.warn('Block mosaic processing fallback error:', e);
+        }
       }
     }
   }
