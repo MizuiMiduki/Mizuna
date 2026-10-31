@@ -118,7 +118,7 @@ function FooterNavContent() {
 
   createEffect(() => {
     // 表示サイズ切り替え時にもピルサイズと位置を即座に追従
-    settings().ui_size;
+    settings().ui_mode;
     requestAnimationFrame(() => {
       updatePill(false);
     });
