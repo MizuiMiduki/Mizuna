@@ -57,6 +57,41 @@ describe('UI Components', () => {
       const settingsBtn = await screen.findByRole('button', { name: /(設定|Settings)/ });
       expect(settingsBtn).toBeInTheDocument();
     });
+
+    it('フッターナビゲーションのアクティブピルインジケーターが初期描画時に配置されること', async () => {
+      const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = function () {
+        return {
+          width: 60,
+          height: 56,
+          top: 100,
+          left: 100,
+          bottom: 156,
+          right: 160,
+          x: 100,
+          y: 100,
+          toJSON: () => {},
+        };
+      };
+
+      try {
+        const { container } = render(() => (
+          <AppProvider>
+            <FooterNav />
+          </AppProvider>
+        ));
+
+        await screen.findByRole('button', { name: /(設定|Settings)/ });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const activePill = container.querySelector('.mizuna-dock-active-pill') as HTMLElement;
+        expect(activePill).toBeInTheDocument();
+        expect(activePill.style.opacity).toBe('1');
+        expect(activePill.style.width).toBe('60px');
+      } finally {
+        HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+      }
+    });
   });
 
   describe('AnnouncementsView', () => {
