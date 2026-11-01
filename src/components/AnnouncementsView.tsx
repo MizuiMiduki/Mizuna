@@ -47,7 +47,7 @@ export function AnnouncementsView() {
       gsap.fromTo(
         containerRef,
         { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out' }
+        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
       );
     }
     loadPage(1);

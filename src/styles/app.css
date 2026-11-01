@@ -1359,35 +1359,6 @@ body {
   animation: mizuna-mini-bar-slide 1.1s infinite ease-in-out alternate;
 }
 
-.mizuna-lightbox-topbar-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  width: 100%;
-  height: 2.5px;
-  background: rgba(255, 255, 255, 0.08);
-  overflow: hidden;
-  z-index: 10;
-}
-
-.mizuna-lightbox-topbar-progress-fill {
-  height: 100%;
-  width: 35%;
-  background: linear-gradient(90deg, transparent, #38bdf8, #818cf8, transparent);
-  border-radius: 9999px;
-  animation: mizuna-lightbox-slide 1.25s infinite cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes mizuna-lightbox-slide {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(380%);
-  }
-}
-
 @keyframes mizuna-mini-bar-slide {
   0% {
     transform: translateX(-20%);

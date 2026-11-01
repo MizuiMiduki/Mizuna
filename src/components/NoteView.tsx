@@ -857,11 +857,6 @@ export function NoteView() {
             >
               {/* トップバー: ファイル情報・WebP削減率 & 閉じるボタン */}
               <div class="mizuna-lightbox-topbar" onClick={(e) => e.stopPropagation()}>
-                <Show when={!imgItem().compressedSize}>
-                  <div class="mizuna-lightbox-topbar-progress" role="progressbar" aria-label="WebP圧縮中">
-                    <div class="mizuna-lightbox-topbar-progress-fill" />
-                  </div>
-                </Show>
                 <div class="mizuna-lightbox-topbar-inner">
                   <div class="mizuna-lightbox-fileinfo">
                     <span class="mizuna-lightbox-filename" title={imgItem().name}>

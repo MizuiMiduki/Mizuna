@@ -21,7 +21,7 @@ export function AddAccountView() {
       gsap.fromTo(
         containerRef,
         { opacity: 0, y: 14 },
-        { opacity: 1, y: 0, duration: 0.34, ease: 'power3.out' }
+        { opacity: 1, y: 0, duration: 0.34, ease: 'power3.out', clearProps: 'transform' }
       );
     }
   });
