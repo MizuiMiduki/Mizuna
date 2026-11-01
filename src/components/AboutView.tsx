@@ -2,6 +2,7 @@ import gsap from 'gsap';
 import { For, onMount, Show } from 'solid-js';
 import { mizuna_options, mizuna_share } from '../config/mizunaOptions';
 import { useApp } from '../store/appStore';
+import { FloatingBackButton } from './FloatingBackButton';
 
 const OSS_LICENSES = [
   {
@@ -85,14 +86,6 @@ export function AboutView() {
         <div>
           <h2 class="mizuna-section-title">Mizunaについて</h2>
         </div>
-        <button
-          type="button"
-          class="mizuna-btn mizuna-btn-outline"
-          onClick={handleBack}
-        >
-          <i>arrow_back</i>
-          <span>もどる</span>
-        </button>
       </div>
 
       {/* ヒーロープロフィールカード */}
@@ -246,6 +239,8 @@ export function AboutView() {
           )}
         </For>
       </div>
+
+      <FloatingBackButton onClick={handleBack} />
     </div>
   );
 }

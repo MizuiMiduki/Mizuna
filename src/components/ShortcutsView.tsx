@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import { For, onMount, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
+import { FloatingBackButton } from './FloatingBackButton';
 
 interface ShortcutItem {
   label: string;
@@ -44,14 +45,6 @@ export function ShortcutsView() {
         <div>
           <h2 class="mizuna-section-title">ショートカット</h2>
         </div>
-        <button
-          type="button"
-          class="mizuna-btn mizuna-btn-outline"
-          onClick={handleBack}
-        >
-          <i>arrow_back</i>
-          <span>もどる</span>
-        </button>
       </div>
 
       <div class="mizuna-shortcut-bento">
@@ -75,6 +68,8 @@ export function ShortcutsView() {
           )}
         </For>
       </div>
+
+      <FloatingBackButton onClick={handleBack} />
     </div>
   );
 }

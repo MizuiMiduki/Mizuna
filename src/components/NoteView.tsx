@@ -844,6 +844,11 @@ export function NoteView() {
             >
               {/* トップバー: ファイル情報・WebP削減率 & 閉じるボタン */}
               <div class="mizuna-lightbox-topbar" onClick={(e) => e.stopPropagation()}>
+                <Show when={!imgItem().compressedSize}>
+                  <div class="mizuna-lightbox-topbar-progress" role="progressbar" aria-label="WebP圧縮中">
+                    <div class="mizuna-lightbox-topbar-progress-fill" />
+                  </div>
+                </Show>
                 <div class="mizuna-lightbox-topbar-inner">
                   <div class="mizuna-lightbox-fileinfo">
                     <span class="mizuna-lightbox-filename" title={imgItem().name}>
@@ -855,7 +860,17 @@ export function NoteView() {
                       </span>
                       <Show
                         when={imgItem().compressedSize}
-                        fallback={<span class="mizuna-lightbox-compressing">WebP圧縮中...</span>}
+                        fallback={
+                          <div class="mizuna-lightbox-compressing-wrap">
+                            <span class="mizuna-lightbox-compressing">
+                              <span class="mizuna-lightbox-compressing-spinner" />
+                              WebP圧縮中...
+                            </span>
+                            <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
+                              <div class="mizuna-lightbox-mini-bar-fill" />
+                            </div>
+                          </div>
+                        }
                       >
                         {(compSize) => {
                           const savedPercent = Math.max(

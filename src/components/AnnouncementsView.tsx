@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import { createSignal, For, onMount, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
+import { FloatingBackButton } from './FloatingBackButton';
 import {
   fetchAnnouncements,
   formatAnnouncementDate,
@@ -76,14 +77,6 @@ export function AnnouncementsView() {
         <div>
           <h2 class="mizuna-section-title">お知らせ</h2>
         </div>
-        <button
-          type="button"
-          class="mizuna-btn mizuna-btn-outline"
-          onClick={handleBack}
-        >
-          <i>arrow_back</i>
-          <span>もどる</span>
-        </button>
       </div>
 
       {/* ローディング表示 */}
@@ -202,6 +195,8 @@ export function AnnouncementsView() {
           </div>
         </Show>
       </Show>
+
+      <FloatingBackButton onClick={handleBack} />
     </div>
   );
 }
