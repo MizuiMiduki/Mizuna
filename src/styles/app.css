@@ -2190,9 +2190,8 @@ body.dark .mizuna-custom-css-warnings {
 .mizuna-seg-pills.mizuna-seg-pills-wrap {
   display: flex;
   flex-wrap: nowrap;
-  align-items: stretch;
-  height: auto;
-  min-height: calc(var(--mizuna-seg-track-h) + 4px);
+  align-items: center;
+  height: var(--mizuna-seg-track-h);
   width: 100%;
   border-radius: var(--mizuna-radius-pill);
   padding: 3px;
@@ -2213,6 +2212,7 @@ body.dark .mizuna-custom-css-warnings {
   font-size: var(--mizuna-seg-pill-font);
   gap: 2px;
   white-space: nowrap;
+  align-self: center;
 }
 
 /* 文字数に応じたプロポーショナル配分：1文字（大・中・小）はコンパクトにし、文字数の多い（シンプル）に余裕を配分 */
@@ -2231,17 +2231,24 @@ body.dark .mizuna-custom-css-warnings {
   flex-shrink: 0;
   overflow: visible;
   text-overflow: clip;
+  line-height: 1;
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
   font-size: clamp(12px, 3.2vw, 15px) !important;
+  inline-size: auto;
+  block-size: auto;
+  min-inline-size: 0;
+  min-block-size: 0;
+  line-height: 1;
   flex-shrink: 0;
 }
 
 @media (max-width: 480px) {
   .mizuna-seg-pills.mizuna-seg-pills-wrap {
     gap: 2px;
-    padding: 2px;
+    padding: 3px 2px;
+    height: var(--mizuna-seg-track-h);
   }
   .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
     padding: 0 3px !important;
@@ -2267,6 +2274,7 @@ body.dark .mizuna-custom-css-warnings {
   color: var(--on-surface-variant);
   font-size: var(--mizuna-seg-pill-font);
   font-weight: 600;
+  line-height: 1;
   cursor: pointer;
   transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
   white-space: nowrap !important;
@@ -2280,10 +2288,19 @@ body.dark .mizuna-custom-css-warnings {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  line-height: 1;
 }
 
 .mizuna-seg-pill i {
   font-size: var(--mizuna-seg-pill-icon) !important;
+  inline-size: auto;
+  block-size: auto;
+  min-inline-size: 0;
+  min-block-size: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   transition: transform 0.15s ease;
 }

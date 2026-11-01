@@ -142,11 +142,11 @@ export function SettingsView() {
   const showImportSettings = () => matches(t('settings.group_sync_backup'), t('settings.import_settings'), t('settings.import_settings_desc'), t('settings.import_button'), 'インポート', 'import', '復元', '設定');
   const showGroupSyncBackup = () => showSyncAll() || showExport() || showExportSettings() || showImportSettings();
 
-  // 7. アプリ更新・メンテナンス設定
-  const showPendingUpdate = () => hasPendingUpdate() && matches(t('settings.group_maintenance'), t('update.pending_title'), t('update.pending_desc'), 'アップデート', '更新', 'update');
-  const showCheckUpdate = () => matches(t('settings.group_maintenance'), t('settings.check_update'), t('settings.check_update_desc'), t('settings.check_button'), 'アップデート', '更新', 'update');
-  const showClearCache = () => matches(t('settings.group_maintenance'), t('settings.clear_cache'), t('settings.clear_cache_desc'), t('settings.reload_button'), 'キャッシュ', 'cache', 'クリア', 'clear');
-  const showGroupMaintenance = () => showPendingUpdate() || showCheckUpdate() || showClearCache();
+  // 7. その他（更新・キャッシュ設定）
+  const showPendingUpdate = () => hasPendingUpdate() && matches(t('settings.group_other'), t('update.pending_title'), t('update.pending_desc'), 'アップデート', '更新', 'update', 'その他', 'other');
+  const showCheckUpdate = () => matches(t('settings.group_other'), t('settings.check_update'), t('settings.check_update_desc'), t('settings.check_button'), 'アップデート', '更新', 'update', 'その他', 'other');
+  const showClearCache = () => matches(t('settings.group_other'), t('settings.clear_cache'), t('settings.clear_cache_desc'), t('settings.reload_button'), 'キャッシュ', 'cache', 'クリア', 'clear', 'その他', 'other');
+  const showGroupOther = () => showPendingUpdate() || showCheckUpdate() || showClearCache();
 
   // 8. カスタムCSS
   const showCustomCss = () => matches(t('settings.group_custom_css'), t('settings.custom_css'), t('settings.custom_css_desc'), 'カスタムcss', 'custom css', 'スタイル', 'style');
@@ -159,7 +159,7 @@ export function SettingsView() {
     showGroupAppearance() ||
     showGroupLanguage() ||
     showGroupSyncBackup() ||
-    showGroupMaintenance() ||
+    showGroupOther() ||
     showGroupCustomCss();
 
   const handleSettingFileChange = async (e: Event) => {
@@ -860,10 +860,10 @@ export function SettingsView() {
             </div>
           </Show>
 
-          {/* アプリ更新・メンテナンスグループ */}
-          <Show when={showGroupMaintenance()}>
+          {/* その他（更新・キャッシュ設定）グループ */}
+          <Show when={showGroupOther()}>
             <div class="mizuna-setting-group">
-              <div class="mizuna-group-label">{t('settings.group_maintenance')}</div>
+              <div class="mizuna-group-label">{t('settings.group_other')}</div>
 
               <div class="mizuna-setting-card">
                 <Show when={showPendingUpdate()}>

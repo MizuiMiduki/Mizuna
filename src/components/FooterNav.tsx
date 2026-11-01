@@ -35,7 +35,7 @@ function FooterNavContent() {
     if (typeof window === 'undefined') return;
     const view = currentView();
     let targetEl: HTMLElement | undefined;
-    if (view === 'accounts' || view === 'add_account') {
+    if (view === 'accounts') {
       targetEl = avatarBtnRef;
     } else if (view === 'note') {
       targetEl = noteBtnRef;
@@ -206,11 +206,13 @@ function FooterNavContent() {
   );
 }
 
+const MENU_BAR_VIEWS: ViewType[] = ['note', 'accounts', 'settings'];
+
 export function FooterNav() {
-  const { accounts } = useApp();
+  const { accounts, currentView } = useApp();
 
   return (
-    <Show when={accounts().length > 0}>
+    <Show when={accounts().length > 0 && MENU_BAR_VIEWS.includes(currentView())}>
       <FooterNavContent />
     </Show>
   );

@@ -169,7 +169,7 @@ export const ja = {
     import_settings_desc: 'エクスポートした設定JSONファイルから設定を復元します',
     export_button: 'エクスポート',
     import_button: 'インポート',
-    group_maintenance: 'アプリの更新 ＆ メンテナンス',
+    group_other: 'その他',
     clear_cache: 'アプリのキャッシュクリア',
     clear_cache_desc: '一時キャッシュを消去して最新状態に更新します',
     reload_button: '再読み込み',

@@ -14,9 +14,13 @@ import { useApp } from '../src/store/appStore';
 import { DialogHost } from '../src/components/DialogHost';
 import { SnackbarHost } from '../src/components/SnackbarHost';
 import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
+import { safeSessionStorage, safeLocalStorage } from '../src/utils/storage';
 
 describe('UI Components', () => {
   beforeEach(async () => {
+    safeSessionStorage.clear();
+    safeLocalStorage.clear();
+    sessionStorage.clear();
     await db.open();
     await db.account.clear();
     await db.setting.clear();
@@ -32,14 +36,14 @@ describe('UI Components', () => {
   });
 
   describe('Header & FooterNav', () => {
-    it('ヘッダーにタイトルとお知らせアイコンが表示されること', () => {
+    it('ヘッダーにタイトルとお知らせアイコンが表示されること', async () => {
       render(() => (
         <AppProvider>
           <Header />
         </AppProvider>
       ));
 
-      expect(screen.getByText('Mizuna')).toBeInTheDocument();
+      expect(await screen.findByText('Mizuna')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /(お知らせ|Announcements)/ })).toBeInTheDocument();
     });
 
@@ -126,6 +130,22 @@ describe('UI Components', () => {
       // 2回目のクリックでも accounts のまま維持されること
       fireEvent.click(accountBtn);
       expect(currentAppView()).toBe('accounts');
+    });
+
+    it('メニューバーに定義されていない画面（about, shortcuts, announcements等）ではメニューバーが表示されないこと', async () => {
+      function TestWrapper() {
+        const { forceSetCurrentView } = useApp();
+        forceSetCurrentView('about');
+        return <FooterNav />;
+      }
+
+      const { container } = render(() => (
+        <AppProvider>
+          <TestWrapper />
+        </AppProvider>
+      ));
+
+      expect(container.querySelector('.mizuna-floating-dock')).not.toBeInTheDocument();
     });
   });
 
@@ -341,14 +361,14 @@ describe('UI Components', () => {
       expect(document.querySelector('.import_settings_data')).toBeInTheDocument();
     });
 
-    it('最新バージョンの確認とキャッシュクリアが独立したメンテナンスグループに表示されること', async () => {
+    it('最新バージョンの確認とキャッシュクリアが独立した「その他」グループに表示されること', async () => {
       render(() => (
         <AppProvider>
           <SettingsView />
         </AppProvider>
       ));
 
-      expect(screen.getByText(/(アプリの更新 ＆ メンテナンス|Updates & Maintenance)/)).toBeInTheDocument();
+      expect(screen.getByText(/(その他|Other)/)).toBeInTheDocument();
       expect(screen.getByText(/(最新バージョンの確認|Check for Updates)/)).toBeInTheDocument();
       expect(screen.getByText(/(アプリのキャッシュクリア|Clear App Cache)/)).toBeInTheDocument();
     });

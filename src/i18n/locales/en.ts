@@ -169,7 +169,7 @@ export const en = {
     import_settings_desc: 'Restore settings from an exported settings JSON file',
     export_button: 'Export',
     import_button: 'Import',
-    group_maintenance: 'Updates & Maintenance',
+    group_other: 'Other',
     clear_cache: 'Clear App Cache',
     clear_cache_desc: 'Clears temporary cache and reloads to the latest state',
     reload_button: 'Reload',

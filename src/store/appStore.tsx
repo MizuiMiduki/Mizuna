@@ -185,6 +185,7 @@ const VALID_VIEWS: ViewType[] = [
   'shortcuts',
   'about',
   'announcements',
+  'privacy',
 ];
 
 function getSavedView(): ViewType | null {
@@ -537,6 +538,7 @@ export function AppProvider(props: { children: JSX.Element }) {
         );
       }
     }
+    return sortedAccounts;
   };
 
   /**
@@ -840,13 +842,13 @@ export function AppProvider(props: { children: JSX.Element }) {
       const addedViaMiAuth = await handleMiAuthCallbackIfPresent();
 
       // アカウント読み込み
-      await reloadAccounts();
+      const loadedAccounts = await reloadAccounts();
 
-      if (accounts().length > 0) {
+      if (loadedAccounts && loadedAccounts.length > 0) {
         applyWebShareTargetToForm();
         if (addedViaMiAuth || hasShareParams) {
           setCurrentViewInternal('note');
-        } else if (savedView) {
+        } else if (savedView && savedView !== 'add_account') {
           setCurrentViewInternal(savedView);
         } else {
           setCurrentViewInternal('note');
