@@ -168,6 +168,23 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   const [previewUrl, setPreviewUrl] = createSignal<string>('');
   const [imgNaturalSize, setImgNaturalSize] = createSignal<{ w: number; h: number }>({ w: 0, h: 0 });
 
+  // タブバーの横スクロール検知 & インジケーター表示ステート
+  let tabsRef: HTMLDivElement | undefined;
+  const [canScrollLeft, setCanScrollLeft] = createSignal(false);
+  const [canScrollRight, setCanScrollRight] = createSignal(false);
+
+  const updateTabsScrollState = () => {
+    if (!tabsRef) return;
+    const { scrollLeft, scrollWidth, clientWidth } = tabsRef;
+    setCanScrollLeft(scrollLeft > 2);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 2);
+  };
+
+  const scrollTabs = (offset: number) => {
+    if (!tabsRef) return;
+    tabsRef.scrollBy({ left: offset, behavior: 'smooth' });
+  };
+
   // ドラッグ操作関連
   type DragMode =
     | { type: 'create'; startX: number; startY: number }
@@ -344,12 +361,37 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     window.addEventListener('pointerup', onGlobalUp, { passive: false });
     window.addEventListener('pointercancel', onGlobalUp, { passive: false });
 
+    // タブバーの横スクロール検知
+    setTimeout(updateTabsScrollState, 50);
+    const onWindowResize = () => updateTabsScrollState();
+    window.addEventListener('resize', onWindowResize);
+
+    let ro: ResizeObserver | undefined;
+    if (tabsRef && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => updateTabsScrollState());
+      ro.observe(tabsRef);
+    }
+
     onCleanup(() => {
       URL.revokeObjectURL(url);
       window.removeEventListener('pointermove', onGlobalMove);
       window.removeEventListener('pointerup', onGlobalUp);
       window.removeEventListener('pointercancel', onGlobalUp);
+      window.removeEventListener('resize', onWindowResize);
+      ro?.disconnect();
     });
+  });
+
+  // アクティブタブ切り替え時にスクロール状態を更新し、選択項目を見える位置へスクロール
+  createEffect(() => {
+    activeTab();
+    if (tabsRef) {
+      setTimeout(() => {
+        updateTabsScrollState();
+        const activeBtn = tabsRef?.querySelector<HTMLElement>('.mizuna-editor-tab-btn.is-active');
+        activeBtn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }, 40);
+    }
   });
 
   // 編集パラメータ変更時にプレビューを自動再描画
@@ -1998,76 +2040,108 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
           </div>
 
           {/* 下部機能切り替えタブバー */}
-          <div class="mizuna-editor-tabs">
-            <button
-              type="button"
-              class={`mizuna-editor-tab-btn ${activeTab() === 'crop' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('crop')}
+          <div class="mizuna-editor-tabs-wrap">
+            <Show when={canScrollLeft()}>
+              <div class="mizuna-editor-tabs-scroll-indicator is-left">
+                <button
+                  type="button"
+                  class="mizuna-editor-tabs-scroll-btn"
+                  onClick={() => scrollTabs(-140)}
+                  aria-label="前へスクロール"
+                >
+                  <i>chevron_left</i>
+                </button>
+              </div>
+            </Show>
+
+            <div
+              ref={tabsRef}
+              class="mizuna-editor-tabs"
+              onScroll={updateTabsScrollState}
             >
-              <i>crop</i>
-              <span>切り抜き</span>
-            </button>
-            <button
-              type="button"
-              class={`mizuna-editor-tab-btn ${activeTab() === 'rotate' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('rotate')}
-            >
-              <i>rotate_right</i>
-              <span>回転・反転</span>
-            </button>
-            <button
-              type="button"
-              class={`mizuna-editor-tab-btn ${activeTab() === 'adjust' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('adjust')}
-            >
-              <i>tune</i>
-              <span>色調補正</span>
-            </button>
-            <button
-              type="button"
-              class={`mizuna-editor-tab-btn ${activeTab() === 'mosaic' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('mosaic')}
-            >
-              <i>blur_on</i>
-              <span>モザイク</span>
-            </button>
-            <button
-              type="button"
-              class={`mizuna-editor-tab-btn ${activeTab() === 'draw' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('draw')}
-            >
-              <i>draw</i>
-              <span>ペン</span>
-            </button>
-            <button
-              type="button"
-              class={`mizuna-editor-tab-btn ${activeTab() === 'text' ? 'is-active' : ''}`}
-              onClick={() => {
-                setActiveTab('text');
-                if (texts().length > 0 && !selectedTextId()) {
-                  setSelectedTextId(texts()[0].id);
-                }
-              }}
-            >
-              <i>title</i>
-              <span>文字入れ</span>
-            </button>
-            <button
-              type="button"
-              class={`mizuna-editor-tab-btn ${activeTab() === 'watermark' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('watermark')}
-            >
-              <i>pattern</i>
-              <span>透かし</span>
-            </button>
-            <button
-              type="button"
-              class={`mizuna-editor-tab-btn ${activeTab() === 'signature' ? 'is-active' : ''}`}
-              onClick={() => setActiveTab('signature')}
-            >
-              <i>branding_watermark</i>
-              <span>署名</span>
-            </button>
+              <button
+                type="button"
+                class={`mizuna-editor-tab-btn ${activeTab() === 'crop' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('crop')}
+              >
+                <i>crop</i>
+                <span>切り抜き</span>
+              </button>
+              <button
+                type="button"
+                class={`mizuna-editor-tab-btn ${activeTab() === 'rotate' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('rotate')}
+              >
+                <i>rotate_right</i>
+                <span>回転・反転</span>
+              </button>
+              <button
+                type="button"
+                class={`mizuna-editor-tab-btn ${activeTab() === 'adjust' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('adjust')}
+              >
+                <i>tune</i>
+                <span>色調補正</span>
+              </button>
+              <button
+                type="button"
+                class={`mizuna-editor-tab-btn ${activeTab() === 'mosaic' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('mosaic')}
+              >
+                <i>blur_on</i>
+                <span>モザイク</span>
+              </button>
+              <button
+                type="button"
+                class={`mizuna-editor-tab-btn ${activeTab() === 'draw' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('draw')}
+              >
+                <i>draw</i>
+                <span>ペン</span>
+              </button>
+              <button
+                type="button"
+                class={`mizuna-editor-tab-btn ${activeTab() === 'text' ? 'is-active' : ''}`}
+                onClick={() => {
+                  setActiveTab('text');
+                  if (texts().length > 0 && !selectedTextId()) {
+                    setSelectedTextId(texts()[0].id);
+                  }
+                }}
+              >
+                <i>title</i>
+                <span>文字入れ</span>
+              </button>
+              <button
+                type="button"
+                class={`mizuna-editor-tab-btn ${activeTab() === 'watermark' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('watermark')}
+              >
+                <i>pattern</i>
+                <span>透かし</span>
+              </button>
+              <button
+                type="button"
+                class={`mizuna-editor-tab-btn ${activeTab() === 'signature' ? 'is-active' : ''}`}
+                onClick={() => setActiveTab('signature')}
+              >
+                <i>branding_watermark</i>
+                <span>署名</span>
+              </button>
+            </div>
+
+            <Show when={canScrollRight()}>
+              <div class="mizuna-editor-tabs-scroll-indicator is-right">
+                <button
+                  type="button"
+                  class="mizuna-editor-tabs-scroll-btn"
+                  onClick={() => scrollTabs(140)}
+                  aria-label="次へスクロール"
+                >
+                  <i>chevron_right</i>
+                </button>
+              </div>
+            </Show>
           </div>
         </div>
       </div>

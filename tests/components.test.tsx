@@ -610,10 +610,12 @@ describe('UI Components', () => {
       expect(editBtn).toBeInTheDocument();
       fireEvent.click(editBtn);
 
-      // 画像加工モーダルが開き、キャンセルボタンが表示されること
+      // 画像加工モーダルが開き、キャンセルボタンと下部タブバーが表示されること
       const cancelBtn = await screen.findByRole('button', { name: /(キャンセル|Cancel)/i });
       expect(cancelBtn).toBeInTheDocument();
       expect(document.querySelector('.mizuna-image-editor-portal')).toBeInTheDocument();
+      expect(document.querySelector('.mizuna-editor-tabs-wrap')).toBeInTheDocument();
+      expect(document.querySelector('.mizuna-editor-tabs')).toBeInTheDocument();
     });
 
     it('3.5.0未満の古いアカウントがアクティブな場合、画像選択ボタンが無効化 (disabled) されること', async () => {

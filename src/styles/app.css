@@ -5462,36 +5462,153 @@ body.is-simple-mode .mizuna-setting-col {
 }
 
 /* 下部機能切り替えタブバー */
+.mizuna-editor-tabs-wrap {
+  position: relative;
+  width: 100%;
+  flex-shrink: 0;
+  background: rgba(15, 23, 42, 0.98);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.mizuna-editor-tabs-scroll-indicator {
+  position: absolute;
+  top: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
+  width: 44px;
+  display: flex;
+  align-items: center;
+  pointer-events: none; /* スワイプ操作を邪魔しないように透過 */
+  z-index: 5;
+  transition: opacity 0.2s ease;
+}
+
+.mizuna-editor-tabs-scroll-indicator.is-left {
+  left: 0;
+  background: linear-gradient(to right, rgba(15, 23, 42, 0.98) 45%, rgba(15, 23, 42, 0.6) 75%, transparent);
+  justify-content: flex-start;
+  padding-left: 4px;
+}
+
+.mizuna-editor-tabs-scroll-indicator.is-right {
+  right: 0;
+  background: linear-gradient(to left, rgba(15, 23, 42, 0.98) 45%, rgba(15, 23, 42, 0.6) 75%, transparent);
+  justify-content: flex-end;
+  padding-right: 4px;
+}
+
+.mizuna-editor-tabs-scroll-btn {
+  pointer-events: auto; /* ボタンのみタップ可能 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(30, 41, 59, 0.85) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  cursor: pointer;
+  padding: 0;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.15s ease;
+}
+
+.mizuna-editor-tabs-scroll-btn:hover {
+  background: rgba(56, 189, 248, 0.3) !important;
+  border-color: rgba(56, 189, 248, 0.6) !important;
+  color: #38bdf8 !important;
+  transform: scale(1.08);
+}
+
+.mizuna-editor-tabs-scroll-btn:active {
+  transform: scale(0.95);
+}
+
+.mizuna-editor-tabs-scroll-btn i {
+  font-size: 18px !important;
+  line-height: 1;
+}
+
+.mizuna-editor-tabs-scroll-indicator.is-right .mizuna-editor-tabs-scroll-btn i {
+  animation: mizuna-scroll-btn-pulse-right 1.8s ease-in-out infinite;
+}
+
+.mizuna-editor-tabs-scroll-indicator.is-left .mizuna-editor-tabs-scroll-btn i {
+  animation: mizuna-scroll-btn-pulse-left 1.8s ease-in-out infinite;
+}
+
+@keyframes mizuna-scroll-btn-pulse-right {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes mizuna-scroll-btn-pulse-left {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-2px);
+  }
+}
+
 .mizuna-editor-tabs {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(15, 23, 42, 0.96);
-  padding: 6px 4px calc(8px + env(safe-area-inset-bottom, 0px));
+  justify-content: flex-start;
+  background: transparent;
+  padding: 6px 12px calc(8px + env(safe-area-inset-bottom, 0px));
   min-height: calc(56px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
   flex-shrink: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  gap: 2px;
+  scroll-behavior: smooth;
+  gap: 4px;
+  /* スクロールバーのスタイル（薄く上品に表示してスクロール可能であることを明示） */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
 }
 
 .mizuna-editor-tabs::-webkit-scrollbar {
-  display: none;
+  height: 3px;
+}
+
+.mizuna-editor-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mizuna-editor-tabs::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 9999px;
+}
+
+.mizuna-editor-tabs::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+@media (min-width: 600px) {
+  .mizuna-editor-tabs {
+    justify-content: center;
+  }
 }
 
 .mizuna-editor-tab-btn {
-  flex: 1 1 0;
-  min-width: 44px;
-  max-width: 68px;
+  flex: 0 0 auto;
+  min-width: 60px;
+  max-width: 74px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 4px 2px;
+  padding: 5px 6px;
   border: none !important;
   background: transparent !important;
   color: #94a3b8 !important;
