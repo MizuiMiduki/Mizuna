@@ -311,5 +311,69 @@ describe('appStore', () => {
       expect(resultAfter.dialogConfig()?.title).toBe('Mizuna がアップデートされました');
       expect(safeLocalStorage.getItem('mizuna_show_release_notes_after_update')).toBeNull();
     });
+
+    it('アカウントのエクスポート (exportAccounts) が実行されトーストが表示されること', async () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      await result.exportAccounts();
+      expect(result.toasts().some((t) => t.message.includes('エクスポート'))).toBe(true);
+    });
+
+    it('設定のエクスポート (exportSettings) が実行されトーストが表示されること', async () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      await result.exportSettings();
+      expect(result.toasts().some((t) => t.message.includes('エクスポート'))).toBe(true);
+    });
+
+    it('設定のインポート (importSettingsFromFile) で確認ダイアログが表示され、実行時に設定が復元されること', async () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      const backupData = {
+        default_visibility: 2,
+        is_note_end_mizuna: true,
+        ui_mode: 3,
+        is_darkmode: 3,
+        watermark_text: 'TEST_WATERMARK',
+        watermark_enabled: true,
+        watermark_pattern: 'grid',
+        signature_text: 'TEST_SIGNATURE',
+        signature_position: 'top-right',
+      };
+      const jsonBlob = new Blob([JSON.stringify(backupData)], { type: 'application/json' });
+      const testFile = new File([jsonBlob], 'mizuna_setting_20261101_123456.json', { type: 'application/json' });
+
+      await result.importSettingsFromFile(testFile);
+
+      // 確認ダイアログが開いていること
+      expect(result.dialogConfig()).not.toBeNull();
+      expect(result.dialogConfig()?.title).toBe('設定データのインポート');
+
+      // 「インポートを実行」ボタンのクリックハンドラを実行
+      const importButton = result.dialogConfig()?.buttons.find((b) => b.label === 'インポートを実行');
+      expect(importButton).toBeDefined();
+
+      await importButton!.onClick!();
+
+      // 設定が更新されていること
+      expect(result.settings().default_visibility).toBe(2);
+      expect(result.settings().is_note_end_mizuna).toBe(true);
+      expect(result.settings().ui_mode).toBe(3);
+      expect(result.settings().is_darkmode).toBe(3);
+      expect(result.settings().watermark_text).toBe('TEST_WATERMARK');
+      expect(result.settings().watermark_enabled).toBe(true);
+      expect(result.settings().watermark_pattern).toBe('grid');
+      expect(result.settings().signature_text).toBe('TEST_SIGNATURE');
+      expect(result.settings().signature_position).toBe('top-right');
+
+      // トーストが表示されていること
+      expect(result.toasts().some((t) => t.message.includes('インポート'))).toBe(true);
+    });
   });
 });

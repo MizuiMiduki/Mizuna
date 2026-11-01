@@ -24,7 +24,7 @@ import { checkMiAuthSession, fetchLatestAccountInfo, fetchLatestReleaseNote, Mis
 import { applyThemeAndMode } from '../utils/theme';
 import { applyCustomCss } from '../utils/customCss';
 import { translate, type I18nKey } from '../i18n';
-import { safeLocalStorage, safeSessionStorage } from '../utils/storage';
+import { safeLocalStorage, safeSessionStorage, generateSettingBackupFileName, generateAccountBackupFileName } from '../utils/storage';
 import {
   captureWebShareTargetFromUrl,
   getWebShareTargetStorage,
@@ -148,6 +148,8 @@ interface AppContextValue {
   syncCurrentAccount: () => Promise<void>;
   exportAccounts: () => Promise<void>;
   importAccountsFromFile: (file: File) => Promise<void>;
+  exportSettings: () => Promise<void>;
+  importSettingsFromFile: (file: File) => Promise<void>;
   reloadAccounts: () => Promise<void>;
 
   // UI通知・ダイアログ
@@ -1311,17 +1313,182 @@ export function AppProvider(props: { children: JSX.Element }) {
     await syncAllAccounts();
   };
 
+  const readFileAsText = async (file: File): Promise<string> => {
+    if (typeof file.text === 'function') {
+      return file.text();
+    }
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string) || '');
+      reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  };
+
   const exportAccounts = async () => {
     const all = await db.account.toArray();
+    const fileName = generateAccountBackupFileName();
     const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'mizuna_accounts.json';
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
     showToast('アカウント情報をエクスポートしました', 'success');
+  };
+
+  const exportSettings = async () => {
+    const current = settings();
+    const exportData: Omit<SettingRecord, 'id'> = {
+      select_user: current.select_user,
+      default_visibility: current.default_visibility,
+      is_note_end_mizuna: current.is_note_end_mizuna,
+      is_visible_icon: current.is_visible_icon,
+      ui_mode: current.ui_mode,
+      is_darkmode: current.is_darkmode,
+      is_pick_theme_color: current.is_pick_theme_color,
+      latest_theme_color: current.latest_theme_color,
+      is_check_releasenote: current.is_check_releasenote,
+      language: current.language,
+      account_order: current.account_order ?? [],
+      custom_css: current.custom_css ?? '',
+      watermark_text: current.watermark_text ?? '',
+      watermark_position: current.watermark_position ?? 'none',
+      watermark_enabled: current.watermark_enabled ?? false,
+      watermark_pattern: current.watermark_pattern ?? 'diagonal',
+      signature_text: current.signature_text ?? '',
+      signature_position: current.signature_position ?? 'none',
+    };
+    const fileName = generateSettingBackupFileName();
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showToast('設定情報をエクスポートしました', 'success');
+  };
+
+  const importSettingsFromFile = async (file: File) => {
+    openDialog({
+      title: '設定データのインポート',
+      icon: 'tune',
+      tone: 'warning',
+      badgeText: 'RESTORE SETTINGS',
+      contentText:
+        'エクスポートした設定ファイルから設定を復元します。現在の設定は上書きされますがよろしいですか？',
+      buttons: [
+        {
+          label: 'キャンセル',
+          variant: 'border',
+        },
+        {
+          label: 'インポートを実行',
+          variant: 'fill',
+          onClick: async () => {
+            try {
+              const text = await readFileAsText(file);
+              const parsed = JSON.parse(text);
+              if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                throw new Error('Invalid JSON format: expected an object');
+              }
+
+              const changes: Partial<SettingRecord> = {};
+
+              if (typeof parsed.default_visibility === 'number' && [1, 2, 3].includes(parsed.default_visibility)) {
+                changes.default_visibility = parsed.default_visibility as 1 | 2 | 3;
+              }
+              if (typeof parsed.is_note_end_mizuna === 'boolean') {
+                changes.is_note_end_mizuna = parsed.is_note_end_mizuna;
+              }
+              if (typeof parsed.is_visible_icon === 'boolean') {
+                changes.is_visible_icon = parsed.is_visible_icon;
+              }
+              if (typeof parsed.ui_mode === 'number' && [1, 2, 3, 4, 5].includes(parsed.ui_mode)) {
+                changes.ui_mode = parsed.ui_mode as 1 | 2 | 3 | 4 | 5;
+              }
+              if (typeof parsed.is_darkmode === 'number' && [1, 2, 3].includes(parsed.is_darkmode)) {
+                changes.is_darkmode = parsed.is_darkmode as 1 | 2 | 3;
+              }
+              if (typeof parsed.is_pick_theme_color === 'boolean') {
+                changes.is_pick_theme_color = parsed.is_pick_theme_color;
+              }
+              if (Array.isArray(parsed.latest_theme_color) && parsed.latest_theme_color.length === 3) {
+                changes.latest_theme_color = parsed.latest_theme_color;
+              }
+              if (typeof parsed.language === 'string' && parsed.language.trim()) {
+                changes.language = parsed.language;
+              }
+              if (typeof parsed.custom_css === 'string') {
+                changes.custom_css = parsed.custom_css;
+              }
+              if (typeof parsed.watermark_text === 'string') {
+                changes.watermark_text = parsed.watermark_text;
+              }
+              if (
+                typeof parsed.watermark_position === 'string' &&
+                ['none', 'bottom-right', 'bottom-left', 'top-right', 'top-left'].includes(parsed.watermark_position)
+              ) {
+                changes.watermark_position = parsed.watermark_position;
+              }
+              if (typeof parsed.watermark_enabled === 'boolean') {
+                changes.watermark_enabled = parsed.watermark_enabled;
+              }
+              if (
+                typeof parsed.watermark_pattern === 'string' &&
+                ['diagonal', 'grid', 'center-huge'].includes(parsed.watermark_pattern)
+              ) {
+                changes.watermark_pattern = parsed.watermark_pattern;
+              }
+              if (typeof parsed.signature_text === 'string') {
+                changes.signature_text = parsed.signature_text;
+              }
+              if (
+                typeof parsed.signature_position === 'string' &&
+                ['none', 'bottom-right', 'bottom-left', 'top-right', 'top-left'].includes(parsed.signature_position)
+              ) {
+                changes.signature_position = parsed.signature_position;
+              }
+
+              // アカウント順序や選択ユーザーは、端末に存在するアカウントIDと照合して安全に復元
+              if (Array.isArray(parsed.account_order)) {
+                const currentAccountIds = new Set(
+                  accounts()
+                    .map((a) => a.id)
+                    .filter((id): id is number => id !== undefined)
+                );
+                const validOrder = parsed.account_order.filter(
+                  (id: any) => typeof id === 'number' && currentAccountIds.has(id)
+                );
+                for (const id of currentAccountIds) {
+                  if (!validOrder.includes(id)) {
+                    validOrder.push(id);
+                  }
+                }
+                changes.account_order = validOrder;
+              }
+
+              if (typeof parsed.select_user === 'number') {
+                const hasUser = accounts().some((a) => a.id === parsed.select_user);
+                if (hasUser) {
+                  changes.select_user = parsed.select_user;
+                }
+              }
+
+              await updateSettings(changes);
+              showToast('設定情報をインポートしました', 'success');
+            } catch (err) {
+              console.error('Settings import failed:', err);
+              showToast('設定のインポートに失敗しました', 'error');
+            }
+          },
+        },
+      ],
+    });
   };
 
   const importAccountsFromFile = async (file: File) => {
@@ -1342,7 +1509,7 @@ export function AppProvider(props: { children: JSX.Element }) {
           variant: 'fill',
           onClick: async () => {
             try {
-              const text = await file.text();
+              const text = await readFileAsText(file);
               const parsed = JSON.parse(text);
               if (!Array.isArray(parsed)) {
                 throw new Error('Invalid JSON format');
@@ -1423,6 +1590,8 @@ export function AppProvider(props: { children: JSX.Element }) {
     syncCurrentAccount,
     exportAccounts,
     importAccountsFromFile,
+    exportSettings,
+    importSettingsFromFile,
     reloadAccounts,
     toasts,
     showToast,

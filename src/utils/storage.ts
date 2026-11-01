@@ -79,3 +79,27 @@ class SafeStorageWrapper {
 
 export const safeLocalStorage = new SafeStorageWrapper('localStorage');
 export const safeSessionStorage = new SafeStorageWrapper('sessionStorage');
+
+/**
+ * 設定バックアップ用のファイル名を生成
+ * 形式: mizuna_setting_yyyymmdd_ランダムな数字.json
+ */
+export function generateSettingBackupFileName(date: Date = new Date()): string {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const randomNum = Math.floor(100000 + Math.random() * 900000);
+  return `mizuna_setting_${yyyy}${mm}${dd}_${randomNum}.json`;
+}
+
+/**
+ * アカウントバックアップ用のファイル名を生成
+ * 形式: mizuna_account_yyyymmdd_ランダムな数字.json
+ */
+export function generateAccountBackupFileName(date: Date = new Date()): string {
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const randomNum = Math.floor(100000 + Math.random() * 900000);
+  return `mizuna_account_${yyyy}${mm}${dd}_${randomNum}.json`;
+}

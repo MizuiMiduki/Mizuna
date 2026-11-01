@@ -322,6 +322,36 @@ describe('UI Components', () => {
       expect(screen.getByText(/(投稿のデフォルト設定|Default Post Settings)/)).toBeInTheDocument();
       expect(screen.getAllByText(/(カスタムCSS|Custom CSS)/).length).toBeGreaterThan(0);
     });
+
+    it('設定データのエクスポートおよびインポートUIが表示されること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      expect(screen.getByText(/(設定データのエクスポート|Export Settings Data)/)).toBeInTheDocument();
+      expect(screen.getByText(/(設定データのインポート|Import Settings Data)/)).toBeInTheDocument();
+
+      const exportButtons = screen.getAllByRole('button', {
+        name: /(エクスポート|Export)/i,
+      });
+      expect(exportButtons.length).toBeGreaterThanOrEqual(2);
+      expect(document.querySelector('.export_settings_data')).toBeInTheDocument();
+      expect(document.querySelector('.import_settings_data')).toBeInTheDocument();
+    });
+
+    it('最新バージョンの確認とキャッシュクリアが独立したメンテナンスグループに表示されること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      expect(screen.getByText(/(アプリの更新 ＆ メンテナンス|Updates & Maintenance)/)).toBeInTheDocument();
+      expect(screen.getByText(/(最新バージョンの確認|Check for Updates)/)).toBeInTheDocument();
+      expect(screen.getByText(/(アプリのキャッシュクリア|Clear App Cache)/)).toBeInTheDocument();
+    });
   });
 
   describe('AccountView', () => {
@@ -362,6 +392,38 @@ describe('UI Components', () => {
       // 完了ボタンをクリックして終了
       fireEvent.click(completeBtns[0]);
       expect(screen.queryByTitle('ドラッグして並べ替え')).not.toBeInTheDocument();
+    });
+
+    it('3.5.0未満のアカウントに「画像非対応」バッジが表示され、タップ時に不足権限ダイアログが表示されること', async () => {
+      // 3.5.0未満の古いアカウントを追加
+      await db.account.add({
+        token: 'tok_old_user',
+        name: '旧バージョンユーザー',
+        username: 'old_user',
+        address: 'misskey.io',
+        avatarurl: 'https://example.com/avatar_old.webp',
+        add_mizuna_versinon: '3.4.0',
+      });
+
+      render(() => (
+        <AppProvider>
+          <AccountView />
+          <DialogHost />
+        </AppProvider>
+      ));
+
+      // 画像非対応バッジが存在すること
+      const warningBadge = await screen.findByRole('button', { name: /(画像非対応|warning)/i });
+      expect(warningBadge).toBeInTheDocument();
+
+      // バッジをクリック
+      fireEvent.click(warningBadge);
+
+      // モーダルダイアログが開き、不足権限として write:drive が表示されること
+      expect(await screen.findByText('アカウント権限の確認')).toBeInTheDocument();
+      expect(screen.getByText(/write:drive/)).toBeInTheDocument();
+      expect(screen.getByText(/(ドライブへの画像アップロード権限)/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '再認証する' })).toBeInTheDocument();
     });
   });
 
@@ -490,6 +552,30 @@ describe('UI Components', () => {
       // リセット後は editState が消え、「加工をリセット」ボタンも消えること
       expect(screen.queryByRole('button', { name: /(加工をリセット|元画像に戻す)/ })).not.toBeInTheDocument();
       expect(appHook!.attachedImages()[0].editState).toBeUndefined();
+    });
+
+    it('3.5.0未満の古いアカウントがアクティブな場合、画像選択ボタンが無効化 (disabled) されること', async () => {
+      // 既存アカウント（3.10.0）をクリアして、3.4.0のアカウントを設定
+      await db.account.clear();
+      await db.account.add({
+        id: 1,
+        token: 'tok_old',
+        name: '旧アカウント',
+        username: 'old',
+        address: 'misskey.io',
+        avatarurl: '',
+        add_mizuna_versinon: '3.4.0',
+      });
+
+      render(() => (
+        <AppProvider>
+          <NoteView />
+        </AppProvider>
+      ));
+
+      const selectPicBtn = await screen.findByRole('button', { name: /(画像添付非対応|写真|画像)/i });
+      expect(selectPicBtn).toBeDisabled();
+      expect(selectPicBtn).toHaveClass('is-disabled');
     });
   });
 });

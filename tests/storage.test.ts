@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { safeLocalStorage, safeSessionStorage } from '../src/utils/storage';
+import { safeLocalStorage, safeSessionStorage, generateSettingBackupFileName, generateAccountBackupFileName } from '../src/utils/storage';
 
 describe('SafeStorageWrapper', () => {
   beforeEach(() => {
@@ -29,5 +29,31 @@ describe('SafeStorageWrapper', () => {
     safeSessionStorage.clear();
     expect(safeSessionStorage.getItem('key1')).toBeNull();
     expect(safeSessionStorage.getItem('key2')).toBeNull();
+  });
+
+  describe('generateSettingBackupFileName', () => {
+    it('mizuna_setting_yyyymmdd_ランダムな数字.json のフォーマットでファイル名を生成すること', () => {
+      const fileName = generateSettingBackupFileName();
+      expect(fileName).toMatch(/^mizuna_setting_\d{8}_\d+\.json$/);
+    });
+
+    it('指定した日付の yyyymmdd がファイル名に含まれること', () => {
+      const testDate = new Date(2026, 10, 1); // 2026-11-01
+      const fileName = generateSettingBackupFileName(testDate);
+      expect(fileName).toMatch(/^mizuna_setting_20261101_\d+\.json$/);
+    });
+  });
+
+  describe('generateAccountBackupFileName', () => {
+    it('mizuna_account_yyyymmdd_ランダムな数字.json のフォーマットでファイル名を生成すること', () => {
+      const fileName = generateAccountBackupFileName();
+      expect(fileName).toMatch(/^mizuna_account_\d{8}_\d+\.json$/);
+    });
+
+    it('指定した日付の yyyymmdd がファイル名に含まれること', () => {
+      const testDate = new Date(2026, 10, 1); // 2026-11-01
+      const fileName = generateAccountBackupFileName(testDate);
+      expect(fileName).toMatch(/^mizuna_account_20261101_\d+\.json$/);
+    });
   });
 });

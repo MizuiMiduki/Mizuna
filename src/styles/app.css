@@ -847,6 +847,19 @@ body {
   color: var(--primary) !important;
 }
 
+.mizuna-tool-chip:disabled,
+.mizuna-tool-chip.is-disabled {
+  opacity: 0.42 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(0.5);
+}
+
+.mizuna-tool-chip:disabled:hover,
+.mizuna-tool-chip.is-disabled:hover {
+  border-color: color-mix(in srgb, var(--outline-variant) 65%, transparent) !important;
+  color: var(--on-surface-variant) !important;
+}
+
 .mizuna-chip-count {
   font-size: 0.7rem;
   font-weight: 800;
@@ -1476,6 +1489,38 @@ body {
 
 .mizuna-acc-meta {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mizuna-perm-warning-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  margin: 0;
+  border-radius: var(--mizuna-radius-pill);
+  background: color-mix(in srgb, #f59e0b 16%, var(--surface));
+  color: #d97706;
+  border: 1px solid color-mix(in srgb, #f59e0b 45%, transparent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+  line-height: 1.2;
+}
+
+.mizuna-perm-warning-badge:hover {
+  background: color-mix(in srgb, #f59e0b 28%, var(--surface));
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+}
+
+.mizuna-perm-warning-badge i {
+  font-size: 13px;
+  color: #f59e0b;
 }
 
 .mizuna-ver-tag {

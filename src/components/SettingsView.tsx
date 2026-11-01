@@ -13,6 +13,8 @@ export function SettingsView() {
     isSyncingAccounts,
     syncAllAccounts,
     exportAccounts,
+    exportSettings,
+    importSettingsFromFile,
     hasPendingUpdate,
     isCheckingUpdate,
     applyPendingUpdate,
@@ -21,6 +23,7 @@ export function SettingsView() {
     t,
   } = useApp();
   let panelRef: HTMLDivElement | undefined;
+  let settingFileInputRef: HTMLInputElement | undefined;
 
   const [customCssValue, setCustomCssValue] = createSignal(settings().custom_css ?? '');
   const [cssWarnings, setCssWarnings] = createSignal<string[]>([]);
@@ -132,15 +135,20 @@ export function SettingsView() {
   const showLanguage = () => matches(t('settings.group_language'), t('settings.language'), t('settings.language_desc'), '言語', 'language', '日本語', 'English');
   const showGroupLanguage = () => showLanguage();
 
-  // 6. データ・同期設定
-  const showPendingUpdate = () => hasPendingUpdate() && matches(t('settings.group_sync_backup'), t('update.pending_title'), t('update.pending_desc'), 'アップデート', '更新', 'update');
+  // 6. アカウント同期・バックアップ設定
   const showSyncAll = () => matches(t('settings.group_sync_backup'), t('settings.sync_all'), t('settings.sync_all_desc'), t('settings.sync_button'), '同期', 'sync');
   const showExport = () => matches(t('settings.group_sync_backup'), t('settings.export_data'), t('settings.export_button'), 'エクスポート', 'export', 'バックアップ', 'backup');
-  const showClearCache = () => matches(t('settings.group_sync_backup'), t('settings.clear_cache'), t('settings.clear_cache_desc'), t('settings.reload_button'), 'キャッシュ', 'cache', 'クリア', 'clear');
-  const showCheckUpdate = () => matches(t('settings.group_sync_backup'), t('settings.check_update'), t('settings.check_update_desc'), t('settings.check_button'), 'アップデート', '更新', 'update');
-  const showGroupSyncBackup = () => showPendingUpdate() || showSyncAll() || showExport() || showClearCache() || showCheckUpdate();
+  const showExportSettings = () => matches(t('settings.group_sync_backup'), t('settings.export_settings'), t('settings.export_settings_desc'), t('settings.export_button'), 'エクスポート', 'export', 'バックアップ', 'backup', '設定');
+  const showImportSettings = () => matches(t('settings.group_sync_backup'), t('settings.import_settings'), t('settings.import_settings_desc'), t('settings.import_button'), 'インポート', 'import', '復元', '設定');
+  const showGroupSyncBackup = () => showSyncAll() || showExport() || showExportSettings() || showImportSettings();
 
-  // 7. カスタムCSS
+  // 7. アプリ更新・メンテナンス設定
+  const showPendingUpdate = () => hasPendingUpdate() && matches(t('settings.group_maintenance'), t('update.pending_title'), t('update.pending_desc'), 'アップデート', '更新', 'update');
+  const showCheckUpdate = () => matches(t('settings.group_maintenance'), t('settings.check_update'), t('settings.check_update_desc'), t('settings.check_button'), 'アップデート', '更新', 'update');
+  const showClearCache = () => matches(t('settings.group_maintenance'), t('settings.clear_cache'), t('settings.clear_cache_desc'), t('settings.reload_button'), 'キャッシュ', 'cache', 'クリア', 'clear');
+  const showGroupMaintenance = () => showPendingUpdate() || showCheckUpdate() || showClearCache();
+
+  // 8. カスタムCSS
   const showCustomCss = () => matches(t('settings.group_custom_css'), t('settings.custom_css'), t('settings.custom_css_desc'), 'カスタムcss', 'custom css', 'スタイル', 'style');
   const showGroupCustomCss = () => showCustomCss();
 
@@ -151,7 +159,17 @@ export function SettingsView() {
     showGroupAppearance() ||
     showGroupLanguage() ||
     showGroupSyncBackup() ||
+    showGroupMaintenance() ||
     showGroupCustomCss();
+
+  const handleSettingFileChange = async (e: Event) => {
+    const input = e.currentTarget as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file) {
+      await importSettingsFromFile(file);
+      input.value = '';
+    }
+  };
 
   const handleClearCache = async () => {
     if (isClearingCache()) return;
@@ -755,34 +773,12 @@ export function SettingsView() {
             </div>
           </Show>
 
-          {/* データ・メンテナンスグループ */}
+          {/* 同期・バックアップグループ */}
           <Show when={showGroupSyncBackup()}>
             <div class="mizuna-setting-group">
               <div class="mizuna-group-label">{t('settings.group_sync_backup')}</div>
 
               <div class="mizuna-setting-card">
-                <Show when={showPendingUpdate()}>
-                  <div class="mizuna-setting-row" style="background: color-mix(in srgb, var(--primary) 12%, transparent); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);">
-                    <div class="mizuna-setting-info">
-                      <div class="mizuna-setting-title" style="color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 6px;">
-                        <i style="font-size: 20px;">system_update</i>
-                        <span>{t('update.pending_title')}</span>
-                      </div>
-                      <div class="mizuna-setting-desc">
-                        {t('update.pending_desc')}
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      class="mizuna-btn mizuna-btn-primary"
-                      onClick={applyPendingUpdate}
-                    >
-                      <i>restart_alt</i>
-                      <span>{t('update.apply_now')}</span>
-                    </button>
-                  </div>
-                </Show>
-
                 <Show when={showSyncAll()}>
                   <div class="mizuna-setting-row">
                     <div class="mizuna-setting-info">
@@ -819,20 +815,75 @@ export function SettingsView() {
                   </div>
                 </Show>
 
-                <Show when={showClearCache()}>
+                <Show when={showExportSettings()}>
                   <div class="mizuna-setting-row">
                     <div class="mizuna-setting-info">
-                      <div class="mizuna-setting-title">{t('settings.clear_cache')}</div>
-                      <div class="mizuna-setting-desc">{t('settings.clear_cache_desc')}</div>
+                      <div class="mizuna-setting-title">{t('settings.export_settings')}</div>
+                      <div class="mizuna-setting-desc">{t('settings.export_settings_desc')}</div>
                     </div>
                     <button
                       type="button"
-                      class="mizuna_clear_cache mizuna-btn mizuna-btn-outline"
-                      onClick={handleClearCache}
-                      disabled={isClearingCache()}
+                      class="export_settings_data mizuna-btn mizuna-btn-outline"
+                      onClick={exportSettings}
                     >
-                      <i class={isClearingCache() ? 'is-spinning' : ''}>refresh</i>
-                      <span>{isClearingCache() ? (t('settings.syncing') || 'クリア中...') : t('settings.reload_button')}</span>
+                      <i>download</i>
+                      <span>{t('settings.export_button')}</span>
+                    </button>
+                  </div>
+                </Show>
+
+                <Show when={showImportSettings()}>
+                  <div class="mizuna-setting-row">
+                    <div class="mizuna-setting-info">
+                      <div class="mizuna-setting-title">{t('settings.import_settings')}</div>
+                      <div class="mizuna-setting-desc">{t('settings.import_settings_desc')}</div>
+                    </div>
+                    <input
+                      ref={settingFileInputRef}
+                      type="file"
+                      accept=".json,application/json"
+                      id="import_setting_input"
+                      style="display: none;"
+                      onChange={handleSettingFileChange}
+                    />
+                    <button
+                      type="button"
+                      class="import_settings_data mizuna-btn mizuna-btn-outline"
+                      onClick={() => settingFileInputRef?.click()}
+                    >
+                      <i>upload</i>
+                      <span>{t('settings.import_button')}</span>
+                    </button>
+                  </div>
+                </Show>
+              </div>
+            </div>
+          </Show>
+
+          {/* アプリ更新・メンテナンスグループ */}
+          <Show when={showGroupMaintenance()}>
+            <div class="mizuna-setting-group">
+              <div class="mizuna-group-label">{t('settings.group_maintenance')}</div>
+
+              <div class="mizuna-setting-card">
+                <Show when={showPendingUpdate()}>
+                  <div class="mizuna-setting-row" style="background: color-mix(in srgb, var(--primary) 12%, transparent); border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);">
+                    <div class="mizuna-setting-info">
+                      <div class="mizuna-setting-title" style="color: var(--primary); font-weight: 700; display: flex; align-items: center; gap: 6px;">
+                        <i style="font-size: 20px;">system_update</i>
+                        <span>{t('update.pending_title')}</span>
+                      </div>
+                      <div class="mizuna-setting-desc">
+                        {t('update.pending_desc')}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      class="mizuna-btn mizuna-btn-primary"
+                      onClick={applyPendingUpdate}
+                    >
+                      <i>restart_alt</i>
+                      <span>{t('update.apply_now')}</span>
                     </button>
                   </div>
                 </Show>
@@ -851,6 +902,24 @@ export function SettingsView() {
                     >
                       <i class={isCheckingUpdate() ? 'is-spinning' : ''}>sync</i>
                       <span>{isCheckingUpdate() ? t('update.checking') : t('settings.check_button')}</span>
+                    </button>
+                  </div>
+                </Show>
+
+                <Show when={showClearCache()}>
+                  <div class="mizuna-setting-row">
+                    <div class="mizuna-setting-info">
+                      <div class="mizuna-setting-title">{t('settings.clear_cache')}</div>
+                      <div class="mizuna-setting-desc">{t('settings.clear_cache_desc')}</div>
+                    </div>
+                    <button
+                      type="button"
+                      class="mizuna_clear_cache mizuna-btn mizuna-btn-outline"
+                      onClick={handleClearCache}
+                      disabled={isClearingCache()}
+                    >
+                      <i class={isClearingCache() ? 'is-spinning' : ''}>refresh</i>
+                      <span>{isClearingCache() ? (t('settings.syncing') || 'クリア中...') : t('settings.reload_button')}</span>
                     </button>
                   </div>
                 </Show>
