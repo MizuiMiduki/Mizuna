@@ -6,6 +6,7 @@ import {
   visibilityNumToString,
 } from '../src/store/appStore';
 import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
+import { safeLocalStorage } from '../src/utils/storage';
 
 describe('appStore', () => {
   beforeEach(async () => {
@@ -283,6 +284,32 @@ describe('appStore', () => {
       // トーストが増えていないこと
       expect(result.toasts().length).toBe(initialToastCount);
       expect(uiModalClosed).toBe(false);
+    });
+
+    it('アップデート適用前（通常起動・バージョン不一致時）にはリリースノートダイアログが開かず、アップデート適用後（mizuna_show_release_notes_after_update フラグ設定時）にのみダイアログが開くこと', async () => {
+      // 1. 適用前: 古いバージョン番号が記録されている状態
+      await db.setting.update(1, { is_check_releasenote: '3.12.0' });
+      safeLocalStorage.removeItem('mizuna_show_release_notes_after_update');
+
+      const { result: resultBefore } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      // DBおよび初期化完了を待機
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(resultBefore.dialogConfig()).toBeNull();
+
+      // 2. 適用後: アップデート適用フラグが保存された状態
+      safeLocalStorage.setItem('mizuna_show_release_notes_after_update', 'true');
+
+      const { result: resultAfter } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(resultAfter.dialogConfig()).not.toBeNull();
+      expect(resultAfter.dialogConfig()?.title).toBe('Mizuna がアップデートされました');
+      expect(safeLocalStorage.getItem('mizuna_show_release_notes_after_update')).toBeNull();
     });
   });
 });

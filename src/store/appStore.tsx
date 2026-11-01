@@ -627,8 +627,8 @@ export function AppProvider(props: { children: JSX.Element }) {
       return;
     }
 
-    // バージョン更新時、またはPWAアップデート適用直後の初回起動時にダイアログを確実に表示
-    if (forceShowAfterUpdate || mizuna_options.mizuna_version !== currentSettings.is_check_releasenote) {
+    // アップデート適用直後（ユーザーが更新を適用してリロードされた後）にのみダイアログを表示
+    if (forceShowAfterUpdate) {
       let latestPost: { title: string; link: string } | null = null;
       try {
         latestPost = await fetchLatestReleaseNote();
