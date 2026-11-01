@@ -574,6 +574,48 @@ describe('UI Components', () => {
       expect(appHook!.attachedImages()[0].editState).toBeUndefined();
     });
 
+    it('添付画像の左上にある編集ボタンをクリックしたときに画像加工モーダルが開くこと', async () => {
+      let appHook: ReturnType<typeof useApp> | null = null;
+      function TestWrapper() {
+        appHook = useApp();
+        return (
+          <>
+            <button
+              data-testid="add-file-btn"
+              onClick={() => {
+                const fakeFile = new File(['test-bytes'], 'editor_open_test.png', {
+                  type: 'image/png',
+                });
+                appHook?.addAttachedFiles([fakeFile]);
+              }}
+            >
+              Add
+            </button>
+            <NoteView />
+          </>
+        );
+      }
+
+      render(() => (
+        <AppProvider>
+          <TestWrapper />
+        </AppProvider>
+      ));
+
+      fireEvent.click(screen.getByTestId('add-file-btn'));
+      const thumb = await screen.findByAltText('editor_open_test.png');
+      expect(thumb).toBeInTheDocument();
+
+      const editBtn = screen.getByRole('button', { name: /(画像を編集|Edit image)/i });
+      expect(editBtn).toBeInTheDocument();
+      fireEvent.click(editBtn);
+
+      // 画像加工モーダルが開き、キャンセルボタンが表示されること
+      const cancelBtn = await screen.findByRole('button', { name: /(キャンセル|Cancel)/i });
+      expect(cancelBtn).toBeInTheDocument();
+      expect(document.querySelector('.mizuna-image-editor-portal')).toBeInTheDocument();
+    });
+
     it('3.5.0未満の古いアカウントがアクティブな場合、画像選択ボタンが無効化 (disabled) されること', async () => {
       // 既存アカウント（3.10.0）をクリアして、3.4.0のアカウントを設定
       await db.account.clear();

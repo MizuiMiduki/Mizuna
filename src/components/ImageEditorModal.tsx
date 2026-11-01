@@ -33,6 +33,21 @@ export interface ImageEditorModalProps {
 type TabType = 'crop' | 'rotate' | 'adjust' | 'mosaic' | 'draw' | 'text' | 'watermark' | 'signature';
 type AspectRatioType = 'free' | '1:1' | '4:3' | '16:9';
 
+const EDITOR_COLOR_PALETTE = [
+  '#ffffff',
+  '#000000',
+  '#94a3b8',
+  '#ef4444',
+  '#f97316',
+  '#f59e0b',
+  '#eab308',
+  '#10b981',
+  '#06b6d4',
+  '#3b82f6',
+  '#8b5cf6',
+  '#ec4899',
+];
+
 export function ImageEditorModal(props: ImageEditorModalProps) {
   const { currentUser, settings, showToast } = useApp();
 
@@ -134,6 +149,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     if (!id) return null;
     return texts().find((t) => t.id === id) ?? null;
   };
+  const [lastTextColor, setLastTextColor] = createSignal<string>('#ffffff');
 
   // ペン描画ステート
   const [drawings, setDrawings] = createSignal<DrawingStroke[]>(
@@ -175,7 +191,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   const renderAllDrawingsToCanvas = () => {
     if (!drawingCanvasRef) return;
     const ctx = drawingCanvasRef.getContext('2d');
-    if (!ctx) return;
+    if (!ctx || typeof ctx.clearRect !== 'function') return;
     const w = drawingCanvasRef.width;
     const h = drawingCanvasRef.height;
     if (w <= 0 || h <= 0) return;
@@ -234,7 +250,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     canvasRef.height = targetH;
 
     const ctx = canvasRef.getContext('2d');
-    if (!ctx) return;
+    if (!ctx || typeof ctx.clearRect !== 'function') return;
 
     ctx.clearRect(0, 0, targetW, targetH);
     ctx.save();
@@ -297,7 +313,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     el.height = downH;
 
     const ctx = el.getContext('2d');
-    if (!ctx) return;
+    if (!ctx || typeof ctx.drawImage !== 'function') return;
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(canvasRef, rx, ry, rw, rh, 0, 0, downW, downH);
   };
@@ -447,8 +463,6 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     setPenMode(mode);
     if (mode === 'highlighter' && penSize() < 10) {
       setPenSize(18);
-    } else if (mode === 'mosaic' && penSize() < 12) {
-      setPenSize(24);
     } else if (mode === 'pen' && penSize() > 24) {
       setPenSize(6);
     }
@@ -495,7 +509,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       x: 0.5,
       y: 0.5,
       fontSize: 28,
-      color: '#ffffff',
+      color: lastTextColor(),
       style: 'fill-stroke',
     };
     setTexts((prev) => [...prev, newItem]);
@@ -1222,23 +1236,10 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             </For>
           </div>
 
-          <Show when={activeTab() === 'text'}>
-            <div class="mizuna-editor-stage-hint">
-              <i>touch_app</i>
-              <span>文字をタップで選択・ドラッグで位置を移動できます</span>
-            </div>
-          </Show>
-
           <Show when={activeTab() === 'mosaic'}>
             <div class="mizuna-editor-stage-hint">
               <i>touch_app</i>
               <span>ドラッグで新規作成・枠をつまんでサイズや位置を変更できます</span>
-            </div>
-          </Show>
-          <Show when={activeTab() === 'crop'}>
-            <div class="mizuna-editor-stage-hint">
-              <i>crop</i>
-              <span>ドラッグで新規指定・四隅のハンドルでサイズ変更できます</span>
             </div>
           </Show>
         </div>
@@ -1567,15 +1568,6 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                     </button>
                     <button
                       type="button"
-                      class={`mizuna-seg-pill ${penMode() === 'mosaic' ? 'is-active' : ''}`}
-                      onClick={() => handleSetPenMode('mosaic')}
-                      title="モザイクペン"
-                    >
-                      <i>blur_on</i>
-                      <span>モザイク</span>
-                    </button>
-                    <button
-                      type="button"
                       class={`mizuna-seg-pill ${penMode() === 'eraser' ? 'is-active' : ''}`}
                       onClick={() => handleSetPenMode('eraser')}
                       title="消しゴム"
@@ -1611,7 +1603,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                 </div>
 
                 <div class="mizuna-pen-bottom-row">
-                  {/* カラーパレット / モザイク種類切替 / 消しゴム案内 */}
+                  {/* カラーパレット / 消しゴム案内 */}
                   <Show
                     when={penMode() !== 'eraser'}
                     fallback={
@@ -1620,45 +1612,33 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                       </div>
                     }
                   >
-                    <Show
-                      when={penMode() === 'mosaic'}
-                      fallback={
-                        <div class="mizuna-color-palette">
-                          <For each={['#ff3b30', '#ff9500', '#ffd60a', '#34c759', '#007aff', '#af52de', '#ffffff', '#000000']}>
-                            {(c) => (
-                              <button
-                                type="button"
-                                class={`mizuna-color-dot ${penColor() === c ? 'is-active' : ''}`}
-                                style={{ 'background-color': c }}
-                                onClick={() => setPenColor(c)}
-                                aria-label={c}
-                              />
-                            )}
-                          </For>
-                        </div>
-                      }
-                    >
-                      <div class="mizuna-seg-pills">
-                        <button
-                          type="button"
-                          class={`mizuna-seg-pill ${mosaicType() === 'blur' ? 'is-active' : ''}`}
-                          onClick={() => handleSetMosaicType('blur')}
-                          title="すりガラス"
-                        >
-                          <i>blur_on</i>
-                          <span>すりガラス</span>
-                        </button>
-                        <button
-                          type="button"
-                          class={`mizuna-seg-pill ${mosaicType() === 'pixelate' ? 'is-active' : ''}`}
-                          onClick={() => handleSetMosaicType('pixelate')}
-                          title="ブロック"
-                        >
-                          <i>grid_view</i>
-                          <span>ブロック</span>
-                        </button>
-                      </div>
-                    </Show>
+                    <div class="mizuna-color-palette">
+                      <For each={EDITOR_COLOR_PALETTE}>
+                        {(c) => (
+                          <button
+                            type="button"
+                            class={`mizuna-color-dot ${penColor() === c ? 'is-active' : ''}`}
+                            style={{ 'background-color': c }}
+                            onClick={() => setPenColor(c)}
+                            aria-label={c}
+                          />
+                        )}
+                      </For>
+                      <label
+                        class={`mizuna-color-picker-btn ${!EDITOR_COLOR_PALETTE.includes(penColor()) ? 'is-active' : ''}`}
+                        title="カラーパレット / カスタム色を選択"
+                        aria-label="カラーパレット / カスタム色を選択"
+                        style={!EDITOR_COLOR_PALETTE.includes(penColor()) ? { 'background-color': penColor() } : {}}
+                      >
+                        <i>palette</i>
+                        <input
+                          type="color"
+                          class="mizuna-hidden-color-input"
+                          value={penColor()}
+                          onInput={(e) => setPenColor(e.currentTarget.value)}
+                        />
+                      </label>
+                    </div>
                   </Show>
 
                   {/* 太さスライダー */}
@@ -1666,8 +1646,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                     <span class="mizuna-editor-sublabel">太さ:</span>
                     <input
                       type="range"
-                      min={penMode() === 'highlighter' || penMode() === 'mosaic' ? '8' : '2'}
-                      max={penMode() === 'highlighter' || penMode() === 'mosaic' ? '64' : '36'}
+                      min={penMode() === 'highlighter' ? '8' : '2'}
+                      max={penMode() === 'highlighter' ? '64' : '36'}
                       step="1"
                       value={penSize()}
                       onInput={(e) => setPenSize(Number(e.currentTarget.value))}
@@ -1732,17 +1712,37 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                       <div class="mizuna-text-row-controls">
                         {/* カラーパレット */}
                         <div class="mizuna-color-palette">
-                          <For each={['#ffffff', '#000000', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899']}>
+                          <For each={EDITOR_COLOR_PALETTE}>
                             {(c) => (
                               <button
                                 type="button"
                                 class={`mizuna-color-dot ${cur().color === c ? 'is-active' : ''}`}
                                 style={{ 'background-color': c }}
-                                onClick={() => updateSelectedText({ color: c })}
+                                onClick={() => {
+                                  setLastTextColor(c);
+                                  updateSelectedText({ color: c });
+                                }}
                                 aria-label={c}
                               />
                             )}
                           </For>
+                          <label
+                            class={`mizuna-color-picker-btn ${!EDITOR_COLOR_PALETTE.includes(cur().color) ? 'is-active' : ''}`}
+                            title="カラーパレット / カスタム色を選択"
+                            aria-label="カラーパレット / カスタム色を選択"
+                            style={!EDITOR_COLOR_PALETTE.includes(cur().color) ? { 'background-color': cur().color } : {}}
+                          >
+                            <i>palette</i>
+                            <input
+                              type="color"
+                              class="mizuna-hidden-color-input"
+                              value={cur().color || '#ffffff'}
+                              onInput={(e) => {
+                                setLastTextColor(e.currentTarget.value);
+                                updateSelectedText({ color: e.currentTarget.value });
+                              }}
+                            />
+                          </label>
                         </div>
 
                         {/* スタイル切替 */}
@@ -1863,8 +1863,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                       <span class="mizuna-editor-sublabel">不透明度:</span>
                       <input
                         type="range"
-                        min="5"
-                        max="60"
+                        min="1"
+                        max="100"
                         value={watermarkOpacity()}
                         onInput={(e) => setWatermarkOpacity(Number(e.currentTarget.value))}
                         class="mizuna-slider"

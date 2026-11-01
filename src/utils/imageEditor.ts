@@ -806,7 +806,7 @@ export function applyWatermarkPatternToContext(
   const shortSide = Math.min(width, height);
   const pattern = watermark.pattern ?? 'diagonal';
   const scale = Math.max(0.5, Math.min(2.0, watermark.scale ?? 1.0));
-  const opacity = Math.max(0.04, Math.min(0.8, watermark.opacity ?? 0.22));
+  const opacity = Math.max(0.01, Math.min(1.0, watermark.opacity ?? 0.22));
 
   ctx.save();
   ctx.globalAlpha = opacity;

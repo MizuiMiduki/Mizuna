@@ -956,7 +956,7 @@ export function AppProvider(props: { children: JSX.Element }) {
               watermark: shouldAutoWatermark && watermarkText ? {
                 text: watermarkText,
                 pattern: watermarkPattern,
-                opacity: 0.22,
+                opacity: (settings().watermark_opacity ?? 22) / 100,
               } : null,
             });
             const oldDataUrl = activeDataUrl;
@@ -985,7 +985,7 @@ export function AppProvider(props: { children: JSX.Element }) {
                         watermarkEnabled: Boolean(shouldAutoWatermark && watermarkText),
                         watermarkText: watermarkText,
                         watermarkPattern: watermarkPattern,
-                        watermarkOpacity: 22,
+                        watermarkOpacity: settings().watermark_opacity ?? 22,
                         watermarkScale: 100,
                         signatureEnabled: Boolean(shouldAutoSignature && signatureText),
                         signatureText: signatureText,
@@ -1360,6 +1360,7 @@ export function AppProvider(props: { children: JSX.Element }) {
       watermark_position: current.watermark_position ?? 'none',
       watermark_enabled: current.watermark_enabled ?? false,
       watermark_pattern: current.watermark_pattern ?? 'diagonal',
+      watermark_opacity: current.watermark_opacity ?? 22,
       signature_text: current.signature_text ?? '',
       signature_position: current.signature_position ?? 'none',
     };
@@ -1445,6 +1446,9 @@ export function AppProvider(props: { children: JSX.Element }) {
                 ['diagonal', 'grid', 'center-huge'].includes(parsed.watermark_pattern)
               ) {
                 changes.watermark_pattern = parsed.watermark_pattern;
+              }
+              if (typeof parsed.watermark_opacity === 'number') {
+                changes.watermark_opacity = Math.max(1, Math.min(100, Math.round(parsed.watermark_opacity)));
               }
               if (typeof parsed.signature_text === 'string') {
                 changes.signature_text = parsed.signature_text;

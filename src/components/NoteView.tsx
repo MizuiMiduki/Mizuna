@@ -552,8 +552,21 @@ export function NoteView() {
                     </div>
                     <button
                       type="button"
+                      class={`mizuna-media-edit ${item.editState ? 'is-edited' : ''}`}
+                      title={t('note.edit_image')}
+                      aria-label={t('note.edit_image')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingImageItem(item);
+                      }}
+                    >
+                      <i>edit</i>
+                    </button>
+                    <button
+                      type="button"
                       class="mizuna-media-remove"
                       title={t('note.delete_image')}
+                      aria-label={t('note.delete_image')}
                       onClick={(e) => {
                         e.stopPropagation();
                         removeAttachedImage(item.id);

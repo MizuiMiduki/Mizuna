@@ -55,6 +55,8 @@ export interface SettingRecord {
   watermark_enabled?: boolean;
   /** 盗作防止透かしのパターン ('diagonal' | 'grid' | 'center-huge') */
   watermark_pattern?: 'diagonal' | 'grid' | 'center-huge';
+  /** 盗作防止透かしの不透明度 (1〜100) */
+  watermark_opacity?: number;
   /** 画像署名のカスタムテキスト (未設定時は @username@address) */
   signature_text?: string;
   /** 画像署名の自動付与位置 ('none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left') */
@@ -80,6 +82,7 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
   watermark_position: 'none',
   watermark_enabled: false,
   watermark_pattern: 'diagonal',
+  watermark_opacity: 22,
   signature_text: '',
   signature_position: 'none',
 };
@@ -141,6 +144,9 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
       watermark_position: (settingData.watermark_position as AutoWatermarkPosition) ?? DEFAULT_USER_SETTINGS.watermark_position,
       watermark_enabled: typeof settingData.watermark_enabled === 'boolean' ? settingData.watermark_enabled : DEFAULT_USER_SETTINGS.watermark_enabled,
       watermark_pattern: (settingData.watermark_pattern as 'diagonal' | 'grid' | 'center-huge') ?? DEFAULT_USER_SETTINGS.watermark_pattern,
+      watermark_opacity: typeof settingData.watermark_opacity === 'number'
+        ? Math.max(1, Math.min(100, Math.round(settingData.watermark_opacity)))
+        : (DEFAULT_USER_SETTINGS.watermark_opacity ?? 22),
       signature_text: typeof settingData.signature_text === 'string' ? settingData.signature_text : (typeof settingData.watermark_text === 'string' ? settingData.watermark_text : DEFAULT_USER_SETTINGS.signature_text),
       signature_position: (settingData.signature_position as AutoWatermarkPosition) ?? (settingData.watermark_position as AutoWatermarkPosition) ?? DEFAULT_USER_SETTINGS.signature_position,
     };

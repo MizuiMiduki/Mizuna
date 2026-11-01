@@ -122,7 +122,8 @@ export function SettingsView() {
   const showWatermarkEnabled = () => matches(t('settings.group_watermark'), t('settings.watermark_auto_enabled'), t('settings.watermark_auto_enabled_desc'), '画像透かし', '透かし', 'ウォーターマーク', 'watermark');
   const showWatermarkPattern = () => matches(t('settings.group_watermark'), t('settings.watermark_pattern_setting'), t('settings.watermark_pattern_diagonal'), t('settings.watermark_pattern_grid'), t('settings.watermark_pattern_center_huge'), 'パターン', 'pattern');
   const showWatermarkText = () => matches(t('settings.group_watermark'), t('settings.watermark_setting'), t('settings.watermark_setting_desc'), '透かし文字');
-  const showGroupWatermark = () => showWatermarkEnabled() || showWatermarkPattern() || showWatermarkText();
+  const showWatermarkOpacity = () => matches(t('settings.group_watermark'), t('settings.watermark_opacity'), t('settings.watermark_opacity_desc'), '不透明度', 'opacity', '濃さ');
+  const showGroupWatermark = () => showWatermarkEnabled() || showWatermarkPattern() || showWatermarkText() || showWatermarkOpacity();
 
   // 4. 外観・テーマ設定
   const showUiMode = () => matches(t('settings.group_appearance'), t('settings.ui_mode'), t('settings.ui_mode_desc'), t('settings.ui_mode_normal'), t('settings.ui_mode_large'), t('settings.ui_mode_medium'), t('settings.ui_mode_small'), t('settings.ui_mode_simple'), '表示サイズ', 'サイズ', 'scale', 'ui mode');
@@ -545,6 +546,30 @@ export function SettingsView() {
                           <span>リセット</span>
                         </button>
                       </Show>
+                    </div>
+                  </div>
+                </Show>
+
+                {/* 画像透かし不透明度 */}
+                <Show when={showWatermarkOpacity()}>
+                  <div class="mizuna-setting-col" style={{ "margin-top": "12px" }}>
+                    <div class="mizuna-setting-info">
+                      <div class="mizuna-setting-title">{t('settings.watermark_opacity')}</div>
+                      <div class="mizuna-setting-desc">{t('settings.watermark_opacity_desc')}</div>
+                    </div>
+                    <div class="mizuna-adjust-slider-row" style={{ "padding": "4px 0", "display": "flex", "align-items": "center", "gap": "10px" }}>
+                      <input
+                        type="range"
+                        min="1"
+                        max="100"
+                        value={settings().watermark_opacity ?? 22}
+                        onInput={(e) => updateSettings({ watermark_opacity: Number(e.currentTarget.value) })}
+                        class="mizuna-slider"
+                        style={{ "flex": "1" }}
+                      />
+                      <span class="mizuna-adjust-value" style={{ "min-width": "44px", "text-align": "right", "font-weight": "700" }}>
+                        {settings().watermark_opacity ?? 22}%
+                      </span>
                     </div>
                   </div>
                 </Show>
