@@ -28,11 +28,7 @@ function FooterNavContent() {
   });
 
   const handleNavClick = (targetView: ViewType) => {
-    if (targetView !== 'note' && currentView() === targetView && accounts().length > 0) {
-      setCurrentView('note');
-    } else {
-      setCurrentView(targetView);
-    }
+    setCurrentView(targetView);
   };
 
   const updatePill = (enableAnimation = true) => {

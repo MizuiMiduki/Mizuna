@@ -92,6 +92,41 @@ describe('UI Components', () => {
         HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
       }
     });
+
+    it('メニューバーのボタンを再度押しても投稿画面に戻らず、対象の画面を維持すること', async () => {
+      let currentAppView: any;
+      function TestConsumer() {
+        const { currentView } = useApp();
+        currentAppView = currentView;
+        return null;
+      }
+
+      render(() => (
+        <AppProvider>
+          <FooterNav />
+          <TestConsumer />
+        </AppProvider>
+      ));
+
+      const settingsBtn = await screen.findByRole('button', { name: /(設定|Settings)/ });
+
+      // 1回目のクリック: 設定画面へ遷移
+      fireEvent.click(settingsBtn);
+      expect(currentAppView()).toBe('settings');
+
+      // 2回目のクリック: 投稿画面（note）に戻らず settings のまま維持されること
+      fireEvent.click(settingsBtn);
+      expect(currentAppView()).toBe('settings');
+
+      // アカウントボタンも同様
+      const accountBtn = await screen.findByRole('button', { name: /(アカウント管理|Accounts)/ });
+      fireEvent.click(accountBtn);
+      expect(currentAppView()).toBe('accounts');
+
+      // 2回目のクリックでも accounts のまま維持されること
+      fireEvent.click(accountBtn);
+      expect(currentAppView()).toBe('accounts');
+    });
   });
 
   describe('AnnouncementsView', () => {
