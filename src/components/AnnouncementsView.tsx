@@ -75,7 +75,6 @@ export function AnnouncementsView() {
       <div class="mizuna-section-header">
         <div>
           <h2 class="mizuna-section-title">お知らせ</h2>
-          <p class="mizuna-section-desc">Mizuna のアップデート情報・リリースノート</p>
         </div>
         <button
           type="button"
