@@ -315,13 +315,6 @@ export function NoteView() {
     }, 10);
   };
 
-  const handleDeletePreviewImage = () => {
-    const target = previewModalImage();
-    if (!target) return;
-    removeAttachedImage(target.id);
-    setPreviewModalImageId(null);
-  };
-
   const handleSaveEditedImage = (id: string, editedFile: File, editState: ImageEditState) => {
     updateAttachedImage(id, editedFile, editState);
     setEditingImageItem(null);
@@ -931,21 +924,10 @@ export function NoteView() {
                 />
               </div>
 
-              {/* ボトムバー: アクションボタン */}
-              <div class="mizuna-lightbox-bottombar" onClick={(e) => e.stopPropagation()}>
-                <div class="mizuna-lightbox-bottombar-inner">
-                  <button
-                    type="button"
-                    class="mizuna-btn mizuna-btn-tonal mizuna-lightbox-action-btn"
-                    onClick={() => {
-                      setEditingImageItem(imgItem());
-                      setPreviewModalImageId(null);
-                    }}
-                  >
-                    <i>tune</i>
-                    <span>画像を加工する</span>
-                  </button>
-                  <Show when={imgItem().editState}>
+              {/* ボトムバー: アクションボタン（加工済み時のみリセットボタンを表示） */}
+              <Show when={imgItem().editState}>
+                <div class="mizuna-lightbox-bottombar" onClick={(e) => e.stopPropagation()}>
+                  <div class="mizuna-lightbox-bottombar-inner">
                     <button
                       type="button"
                       class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
@@ -954,18 +936,9 @@ export function NoteView() {
                       <i>restart_alt</i>
                       <span>加工をリセット</span>
                     </button>
-                  </Show>
-                  <button
-                    type="button"
-                    id="deleteImageButton"
-                    class="mizuna-btn mizuna-btn-danger mizuna-lightbox-action-btn"
-                    onClick={handleDeletePreviewImage}
-                  >
-                    <i>delete</i>
-                    <span>削除する</span>
-                  </button>
+                  </div>
                 </div>
-              </div>
+              </Show>
             </div>
           </Portal>
         )}
