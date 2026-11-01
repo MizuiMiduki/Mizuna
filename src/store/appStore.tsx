@@ -150,7 +150,7 @@ interface AppContextValue {
   importAccountsFromFile: (file: File) => Promise<void>;
   exportSettings: () => Promise<void>;
   importSettingsFromFile: (file: File) => Promise<void>;
-  reloadAccounts: () => Promise<void>;
+  reloadAccounts: () => Promise<AccountRecord[]>;
 
   // UI通知・ダイアログ
   toasts: Accessor<ToastItem[]>;
@@ -517,7 +517,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     if (sortedAccounts.length === 0) {
       setCurrentUser(null);
       await applyThemeAndMode(settings(), undefined);
-      return;
+      return [];
     }
 
     const selectedId = settings().select_user;
