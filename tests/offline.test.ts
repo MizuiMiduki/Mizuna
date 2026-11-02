@@ -71,8 +71,13 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toContain("event.data.type === 'SKIP_WAITING'");
     expect(content).toContain('self.skipWaiting()');
 
-    // キャッシュ戦略 (request.mode === 'navigate')
+    // GET_VERSION メッセージでバージョンを応答すること
+    expect(content).toContain("event.data.type === 'GET_VERSION'");
+    expect(content).toContain('SW_VERSION');
+
+    // キャッシュ戦略 (request.mode === 'navigate') で Cache First（通信量削減）となっていること
     expect(content).toContain("mode === 'navigate'");
+    expect(content).toContain("await cache.match('/index.html')");
     expect(content).toContain('url.origin !== self.location.origin'); // 外部APIはキャッシュしない
   });
 
@@ -100,6 +105,8 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toContain('checkForUpdate');
     expect(content).toContain('mizuna_show_release_notes_after_update');
     expect(content).toContain("type: 'SKIP_WAITING'");
+    expect(content).toContain("type: 'GET_VERSION'");
+    expect(content).toContain('queryWorkerVersion');
     expect(content).toContain("navigator.serviceWorker.addEventListener?.('controllerchange'");
   });
 

@@ -12,10 +12,15 @@ import packageJson from './package.json';
 function syncSwVersionPlugin() {
   const version = packageJson.version;
   const updateSwContent = (content: string) => {
-    return content.replace(
-      /const CACHE_NAME = ['"]mizuna-cache-v[^'"]+['"];/,
-      `const CACHE_NAME = 'mizuna-cache-v${version}';`
-    );
+    return content
+      .replace(
+        /const SW_VERSION = ['"][^'"]+['"];/,
+        `const SW_VERSION = '${version}';`
+      )
+      .replace(
+        /const CACHE_NAME = ['"]mizuna-cache-v[^'"]+['"];/,
+        `const CACHE_NAME = 'mizuna-cache-v${version}';`
+      );
   };
 
   return {

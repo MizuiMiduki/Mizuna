@@ -1,5 +1,6 @@
 // Mizuna Service Worker - App Cache & Controlled Update
-const CACHE_NAME = 'mizuna-cache-v3.13.0';
+const SW_VERSION = '3.13.1';
+const CACHE_NAME = 'mizuna-cache-v3.13.1';
 const OFFLINE_URL = '/offline.html';
 
 // 事前キャッシュするコアアセット
@@ -23,8 +24,14 @@ self.addEventListener('install', (event) => {
 });
 
 // クライアントからのメッセージを受信
-// ユーザーが「今すぐアップデート」を選択した時のみ SKIP_WAITING を実行
 self.addEventListener('message', (event) => {
+  // バージョン照会に応答
+  if (event.data && event.data.type === 'GET_VERSION') {
+    if (event.ports && event.ports[0]) {
+      event.ports[0].postMessage({ version: SW_VERSION });
+    }
+  }
+  // ユーザーが「今すぐアップデート」を選択した時のみ SKIP_WAITING を実行
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
@@ -70,24 +77,34 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 1. ナビゲーションリクエスト（HTMLページの表示・遷移）
+  // Cache First: ユーザーが更新を適用するまでは既存のキャッシュから即座に返し、通信量を削減する
   if (request.mode === 'navigate') {
     event.respondWith(
       (async () => {
+        const cache = await caches.open(CACHE_NAME);
+
+        // まず現在のバージョンキャッシュから HTML を探す（通信量 0 で即座に表示）
+        const cachedResponse =
+          (await cache.match(request)) ||
+          (await cache.match('/index.html')) ||
+          (await cache.match('/'));
+
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        // キャッシュにない場合（初回インストール時など）のみネットワークから取得
         try {
-          // ネットワークから最新のHTMLを取得
           const networkResponse = await fetch(request);
           if (networkResponse && networkResponse.status === 200) {
-            const cache = await caches.open(CACHE_NAME);
             cache.put(request, networkResponse.clone());
           }
           return networkResponse;
         } catch (error) {
           // オフライン時: キャッシュされた最新HTML、またはオフライン専用画面を返却
-          const cachedResponse = await caches.match(request);
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          const offlineFallback = await caches.match(OFFLINE_URL);
+          const offlineFallback =
+            (await cache.match(OFFLINE_URL)) ||
+            (await caches.match(OFFLINE_URL));
           return offlineFallback || Response.error();
         }
       })()
@@ -98,26 +115,28 @@ self.addEventListener('fetch', (event) => {
   // 2. 同一オリジンの静的アセット（JS, CSS, アイコン, フォント等）
   // Cache First with Network Fallback & Runtime Caching
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const cachedResponse = await cache.match(request);
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(request).then((networkResponse) => {
+
+      try {
+        const networkResponse = await fetch(request);
         if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache);
-          });
+          cache.put(request, responseToCache);
         }
         return networkResponse;
-      }).catch(async () => {
+      } catch (error) {
         // オフライン時の事前キャッシュフォールバック（例: /icon.png）
         if (PRECACHE_ASSETS.includes(url.pathname)) {
-          const fallback = await caches.match(url.pathname);
+          const fallback = await cache.match(url.pathname);
           if (fallback) return fallback;
         }
         return Response.error();
-      });
-    })
+      }
+    })()
   );
 });
