@@ -14,6 +14,7 @@ const SHORTCUT_LIST: ShortcutItem[] = [
   { label: '公開範囲：ホーム', keys: ['Ctrl', 'Alt', 'H'] },
   { label: '公開範囲：フォロワー', keys: ['Ctrl', 'Alt', 'F'] },
   { label: 'CW（閲覧注意）の切り替え', keys: ['Ctrl', 'Alt', 'W'] },
+  { label: 'MFMプレビューの切り替え', keys: ['Ctrl', 'Alt', 'K'] },
   { label: '末尾に『(from Mizuna)』を付与', keys: ['Ctrl', 'Alt', 'M'] },
   { label: '画像ファイルを選択', keys: ['Ctrl', 'Alt', 'V'] },
   { label: '入力フォームをクリア', keys: ['Ctrl', 'Alt', 'C'] },

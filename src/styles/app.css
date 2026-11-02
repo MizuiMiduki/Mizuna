@@ -5871,5 +5871,352 @@ body.is-simple-mode .mizuna-lightbox-action-btn {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent);
 }
 
+/* ==========================================================================
+   MFM (Misskey Flavored Markdown) & Note Preview Styles (v3.14.0)
+   ========================================================================== */
+
+/* エフェクトキーフレーム */
+@keyframes mfm-shake {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-1.5px, 1.5px); }
+  40% { transform: translate(-1.5px, -1.5px); }
+  60% { transform: translate(1.5px, 1.5px); }
+  80% { transform: translate(1.5px, -1.5px); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes mfm-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-0.42em); }
+}
+
+@keyframes mfm-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes mfm-spin-left {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+@keyframes mfm-rainbow {
+  0% { filter: hue-rotate(0deg); }
+  100% { filter: hue-rotate(360deg); }
+}
+
+@keyframes mfm-tada {
+  0% { transform: scale(1); }
+  10%, 20% { transform: scale(0.92) rotate(-3deg); }
+  30%, 50%, 70%, 90% { transform: scale(1.1) rotate(3deg); }
+  40%, 60%, 80% { transform: scale(1.1) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+/* MFM エフェクトクラス */
+.mfm-shake {
+  display: inline-block;
+  animation: mfm-shake 0.4s infinite ease-in-out;
+}
+
+.mfm-bounce {
+  display: inline-block;
+  animation: mfm-bounce 0.75s infinite ease-in-out;
+  transform-origin: bottom center;
+}
+
+.mfm-spin {
+  display: inline-block;
+  animation: mfm-spin 1.6s infinite linear;
+  transform-origin: center center;
+}
+
+.mfm-spin.mfm-spin-left {
+  animation-name: mfm-spin-left;
+}
+
+.mfm-rainbow {
+  display: inline-block;
+  color: #ff3366;
+  animation: mfm-rainbow 1.8s infinite linear;
+}
+
+.mfm-tada {
+  display: inline-block;
+  animation: mfm-tada 1s infinite;
+  transform-origin: center center;
+}
+
+.mfm-blur {
+  display: inline-block;
+  filter: blur(6px);
+  transition: filter 0.25s ease, opacity 0.25s ease;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+.mfm-blur:hover,
+.mfm-blur:focus,
+.mfm-blur:active {
+  filter: blur(0);
+  background: transparent;
+  user-select: auto;
+}
+
+.mfm-flip {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
+.mfm-flip-v {
+  display: inline-block;
+  transform: scaleY(-1);
+}
+
+.mfm-fg,
+.mfm-bg {
+  display: inline;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.mfm-code-block {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.88em;
+  line-height: 1.45;
+  overflow-x: auto;
+  margin: 8px 0;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.mfm-inline-code {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.mfm-quote {
+  margin: 6px 0;
+  padding: 4px 0 4px 12px;
+  border-left: 3px solid var(--primary, #2b8cbe);
+  opacity: 0.88;
+  font-style: normal;
+}
+
+.mfm-link {
+  color: var(--primary, #2b8cbe);
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.mfm-mention,
+.mfm-hashtag {
+  color: var(--primary, #2b8cbe);
+  font-weight: 500;
+}
+
+ruby {
+  ruby-align: center;
+}
+
+ruby > rt {
+  font-size: 0.65em;
+  opacity: 0.85;
+}
+
+/* MFM ツールバー (入力補助) */
+.mizuna-mfm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mizuna-mfm-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.mizuna-mfm-toolbar-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--primary, #2b8cbe);
+  letter-spacing: 0.04em;
+  padding-right: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.mizuna-mfm-toolbar-label i {
+  font-size: 15px;
+}
+
+.mizuna-mfm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--surface, #ffffff);
+  color: var(--text_color, #181c20);
+  font-size: 0.76rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+.mizuna-mfm-chip:hover {
+  background: color-mix(in srgb, var(--primary, #2b8cbe) 10%, #ffffff);
+  border-color: var(--primary, #2b8cbe);
+  color: var(--primary, #2b8cbe);
+  transform: translateY(-1px);
+}
+
+.mizuna-mfm-chip:active {
+  transform: scale(0.96);
+}
+
+.mizuna-mfm-chip i {
+  font-size: 14px;
+}
+
+/* 編集 / プレビュー 切り替えタブ (セグメントコントロール) */
+.mizuna-composer-mode-tabs {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 3px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  gap: 2px;
+}
+
+.mizuna-composer-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  border: none;
+  background: transparent;
+  color: var(--text_color, #181c20);
+  opacity: 0.7;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.mizuna-composer-tab.is-active {
+  background: var(--surface, #ffffff);
+  color: var(--primary, #2b8cbe);
+  opacity: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.mizuna-composer-tab i {
+  font-size: 15px;
+}
+
+/* プレビュービューエリア */
+.mizuna-preview-area {
+  min-height: 160px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mizuna-preview-cw-card {
+  padding: 10px 14px;
+  border-radius: var(--mizuna-radius-md, 12px);
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mizuna-preview-cw-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text_color, #181c20);
+  word-break: break-all;
+}
+
+.mizuna-preview-cw-text i {
+  font-size: 18px;
+  color: #ea580c;
+  flex-shrink: 0;
+}
+
+.mizuna-preview-cw-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: var(--surface, #ffffff);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mizuna-preview-content {
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: var(--text_color, #181c20);
+  word-break: break-word;
+}
+
+.mizuna-preview-empty {
+  font-size: 0.88rem;
+  color: rgba(0, 0, 0, 0.4);
+  font-style: italic;
+}
+
+.mizuna-preview-footer-note {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+  font-size: 0.76rem;
+  color: var(--primary, #2b8cbe);
+  opacity: 0.85;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mizuna-preview-footer-note i {
+  font-size: 14px;
+}
+
+
 
 

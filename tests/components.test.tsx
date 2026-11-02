@@ -768,5 +768,37 @@ describe('UI Components', () => {
       expect(selectPicBtn).toBeDisabled();
       expect(selectPicBtn).toHaveClass('is-disabled');
     });
+
+    it('MFMツールバーからタグを挿入でき、プレビューでレンダリング結果を確認できること', async () => {
+      render(() => (
+        <AppProvider>
+          <NoteView />
+        </AppProvider>
+      ));
+
+      // MFM ツールバーが存在すること
+      expect(screen.getByRole('toolbar', { name: 'MFM Insertion Toolbar' })).toBeInTheDocument();
+
+      // 揺らすボタンをクリック
+      const shakeBtn = screen.getByRole('button', { name: /(揺らす|Shake)/i });
+      fireEvent.click(shakeBtn);
+
+      const textarea = screen.getByPlaceholderText(/(いまどうしてる？|What's happening)/i) as HTMLTextAreaElement;
+      expect(textarea.value).toContain('$[shake text]');
+
+      // プレビュー切り替えボタンをクリック
+      const previewBtn = screen.getByRole('button', { name: /(MFMプレビュー|MFM Preview)/i });
+      fireEvent.click(previewBtn);
+
+      // プレビューエリアが表示され、mfm-shake クラスが付与された要素が存在すること
+      expect(document.querySelector('.mizuna-preview-area')).toBeInTheDocument();
+      expect(document.querySelector('.mfm-shake')).toBeInTheDocument();
+      expect(document.querySelector('.mfm-shake')?.textContent).toBe('text');
+
+      // 編集に戻るボタンをクリック
+      const editBtn = screen.getByRole('button', { name: /(編集|Edit)/i });
+      fireEvent.click(editBtn);
+      expect(document.querySelector('.mizuna-main-textarea')).toBeInTheDocument();
+    });
   });
 });
