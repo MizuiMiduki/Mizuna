@@ -797,35 +797,52 @@ export function AppProvider(props: { children: JSX.Element }) {
       };
       navigator.serviceWorker.addEventListener?.('controllerchange', handleControllerChange);
 
-      navigator.serviceWorker
-        .register?.('/sw.js')
-        ?.then((registration) => {
-          activeSwRegistration = registration;
+      const setupRegistration = (registration: ServiceWorkerRegistration) => {
+        activeSwRegistration = registration;
 
-          // 前回の起動などで既に待機状態のワーカーがいる場合
-          if (registration.waiting && navigator.serviceWorker.controller) {
-            handleWaitingWorker(registration.waiting);
-          }
+        // 前回の起動などで既に待機状態のワーカーがいる場合
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          handleWaitingWorker(registration.waiting);
+        }
 
-          // 新しいService Workerのインストールを検知
-          registration.addEventListener?.('updatefound', () => {
-            const installingWorker = registration.installing;
-            if (!installingWorker) return;
+        // 新しいService Workerのインストールを検知
+        registration.addEventListener?.('updatefound', () => {
+          const installingWorker = registration.installing;
+          if (!installingWorker) return;
 
-            installingWorker.addEventListener?.('statechange', () => {
-              if (
-                installingWorker.state === 'installed' &&
-                navigator.serviceWorker.controller
-              ) {
-                // 新しいバージョンがインストール完了＆待機状態（ユーザーの選択待ち）
-                handleWaitingWorker(installingWorker);
-              }
-            });
+          installingWorker.addEventListener?.('statechange', () => {
+            if (
+              installingWorker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
+              // 新しいバージョンがインストール完了＆待機状態（ユーザーの選択待ち）
+              handleWaitingWorker(installingWorker);
+            }
           });
-        })
-        ?.catch((error) => {
-          console.error('Service Worker registration error:', error);
         });
+      };
+
+      // 既存の登録を確認。すでに登録済みの場合は register を呼ばず、勝手なバックグラウンドダウンロード・更新を抑止する
+      navigator.serviceWorker.getRegistration?.().then((existingReg) => {
+        if (existingReg) {
+          setupRegistration(existingReg);
+        } else {
+          // 初回起動時のみ Service Worker を登録
+          navigator.serviceWorker
+            .register?.('/sw.js', { updateViaCache: 'all' })
+            ?.then(setupRegistration)
+            ?.catch((error) => {
+              console.error('Service Worker registration error:', error);
+            });
+        }
+      }).catch(() => {
+        navigator.serviceWorker
+          .register?.('/sw.js', { updateViaCache: 'all' })
+          ?.then(setupRegistration)
+          ?.catch((error) => {
+            console.error('Service Worker registration error:', error);
+          });
+      });
     }
 
     if (mizuna_options.maintenance) {

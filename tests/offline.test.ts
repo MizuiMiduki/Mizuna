@@ -89,10 +89,16 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(viteConfigContent).toContain('mizuna-cache-v');
   });
 
-  it('index.html に Service Worker 登録スクリプトが含まれていること', () => {
-    const content = fs.readFileSync(indexHtmlPath, 'utf-8');
-    expect(content).toContain("'serviceWorker' in navigator");
-    expect(content).toContain("navigator.serviceWorker.register('/sw.js')");
+  it('Service Worker の登録・管理が appStore で一元化され、勝手な更新ダウンロードが抑止されていること', () => {
+    const appStoreContent = fs.readFileSync(appStorePath, 'utf-8');
+    expect(appStoreContent).toContain("'serviceWorker' in navigator");
+    expect(appStoreContent).toContain('navigator.serviceWorker.getRegistration');
+    expect(appStoreContent).toContain("register?.('/sw.js'");
+    expect(appStoreContent).toContain("updateViaCache: 'all'");
+
+    // index.html から無条件の自動登録スクリプトが排除されていること
+    const indexContent = fs.readFileSync(indexHtmlPath, 'utf-8');
+    expect(indexContent).not.toContain("navigator.serviceWorker.register('/sw.js')");
   });
 
   it('appStore に PWA アップデート制御およびリリースノート自動表示機能が実装されていること', () => {
