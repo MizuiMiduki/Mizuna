@@ -1238,20 +1238,51 @@ body {
   animation: mizuna-lightbox-fade-in 0.22s ease-out;
 }
 
-/* トップバー (フローティング アイランド ヘッダー) */
-.mizuna-lightbox-topbar {
+/* メイン画像ステージ */
+.mizuna-lightbox-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
   width: 100%;
-  padding: max(14px, calc(10px + env(safe-area-inset-top, 0px))) 16px 8px;
+  padding: max(20px, calc(14px + env(safe-area-inset-top, 0px))) 16px 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+  cursor: zoom-out;
+}
+
+.mizuna-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: var(--mizuna-radius-xl);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  box-shadow:
+    0 24px 64px -12px rgba(0, 0, 0, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.12);
+  cursor: default;
+  animation: mizuna-lightbox-img-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ボトムバー (フローティング アイランド コントロールバー) */
+.mizuna-lightbox-bottombar {
+  width: 100%;
+  padding: 8px 16px max(18px, calc(14px + env(safe-area-inset-bottom, 0px)));
   z-index: 2;
   flex-shrink: 0;
   display: flex;
   justify-content: center;
   box-sizing: border-box;
+  pointer-events: none;
 }
 
-.mizuna-lightbox-topbar-inner {
+.mizuna-lightbox-bottombar-inner {
   width: 100%;
   max-width: 680px;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1265,7 +1296,7 @@ body {
   box-shadow:
     0 12px 36px -8px color-mix(in srgb, var(--primary) 12%, rgba(0, 0, 0, 0.16)),
     0 2px 10px rgba(0, 0, 0, 0.08);
-  animation: mizuna-lightbox-slide-down 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: mizuna-lightbox-slide-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .mizuna-lightbox-fileinfo {
@@ -1388,6 +1419,44 @@ body {
   }
 }
 
+.mizuna-lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mizuna-lightbox-action-btn {
+  height: 38px !important;
+  padding: 0 14px !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  border-radius: var(--mizuna-radius-pill) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  color: var(--primary) !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent) !important;
+  transition: all 0.18s ease !important;
+  cursor: pointer;
+  white-space: nowrap !important;
+}
+
+.mizuna-lightbox-action-btn:hover {
+  background: color-mix(in srgb, var(--primary) 22%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent) !important;
+  transform: scale(1.02);
+}
+
+.mizuna-lightbox-action-btn:active {
+  transform: scale(0.97);
+}
+
+.mizuna-lightbox-action-btn i {
+  font-size: 17px !important;
+}
+
 .mizuna-lightbox-close-icon-btn {
   width: 38px !important;
   height: 38px !important;
@@ -1429,108 +1498,10 @@ body {
   padding: 0 !important;
 }
 
-/* メイン画像ステージ */
-.mizuna-lightbox-stage {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  width: 100%;
-  padding: 16px;
-  box-sizing: border-box;
-  overflow: hidden;
-  cursor: zoom-out;
-}
-
-.mizuna-lightbox-img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  border-radius: var(--mizuna-radius-xl);
-  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
-  box-shadow:
-    0 24px 64px -12px rgba(0, 0, 0, 0.4),
-    0 4px 16px rgba(0, 0, 0, 0.12);
-  cursor: default;
-  animation: mizuna-lightbox-img-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-/* ボトムバー (フローティング ピル ドック) */
-.mizuna-lightbox-bottombar {
-  width: 100%;
-  padding: 8px 16px max(18px, calc(14px + env(safe-area-inset-bottom, 0px)));
-  z-index: 2;
-  flex-shrink: 0;
-  display: flex;
-  justify-content: center;
-  box-sizing: border-box;
-}
-
-.mizuna-lightbox-bottombar-inner {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border-radius: var(--mizuna-radius-pill);
-  background: color-mix(in srgb, var(--surface-container-high) 90%, transparent);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid color-mix(in srgb, var(--primary) 22%, color-mix(in srgb, var(--outline-variant) 55%, transparent));
-  box-shadow:
-    0 12px 32px -6px color-mix(in srgb, var(--primary) 14%, rgba(0, 0, 0, 0.18)),
-    0 2px 10px rgba(0, 0, 0, 0.08);
-  animation: mizuna-lightbox-slide-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.mizuna-lightbox-action-btn {
-  height: 40px !important;
-  padding: 0 18px !important;
-  font-size: 0.86rem !important;
-  font-weight: 700 !important;
-  border-radius: var(--mizuna-radius-pill) !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 6px !important;
-  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
-  color: var(--primary) !important;
-  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent) !important;
-  transition: all 0.18s ease !important;
-  cursor: pointer;
-  white-space: nowrap !important;
-}
-
-.mizuna-lightbox-action-btn:hover {
-  background: color-mix(in srgb, var(--primary) 22%, transparent) !important;
-  border-color: color-mix(in srgb, var(--primary) 55%, transparent) !important;
-  transform: scale(1.02);
-}
-
-.mizuna-lightbox-action-btn:active {
-  transform: scale(0.97);
-}
-
-.mizuna-lightbox-action-btn i {
-  font-size: 18px !important;
-}
-
 /* アニメーションキーフレーム */
 @keyframes mizuna-lightbox-fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-@keyframes mizuna-lightbox-slide-down {
-  from {
-    opacity: 0;
-    transform: translateY(-16px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 @keyframes mizuna-lightbox-slide-up {
@@ -4856,7 +4827,7 @@ body.is-simple-mode .mizuna-setting-col {
 }
 
 /* 12. 画像プレビューモーダルのシンプルモード調整 */
-body.is-simple-mode .mizuna-lightbox-topbar-inner {
+body.is-simple-mode .mizuna-lightbox-bottombar-inner {
   border-radius: var(--mizuna-radius-lg, 18px) !important;
   padding: 10px 14px !important;
 }

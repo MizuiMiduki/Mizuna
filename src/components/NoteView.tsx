@@ -848,9 +848,26 @@ export function NoteView() {
               class="mizuna-lightbox"
               onClick={() => setPreviewModalImageId(null)}
             >
-              {/* トップバー: ファイル情報・WebP削減率 & 閉じるボタン */}
-              <div class="mizuna-lightbox-topbar">
-                <div class="mizuna-lightbox-topbar-inner" onClick={(e) => e.stopPropagation()}>
+              {/* メイン画像ステージ */}
+              <div
+                class="mizuna-lightbox-stage"
+                onClick={() => setPreviewModalImageId(null)}
+              >
+                <img
+                  ref={modalContentRef}
+                  id="modalImage"
+                  class="mizuna-lightbox-img"
+                  src={imgItem().dataUrl}
+                  alt={imgItem().name}
+                  data-name={imgItem().name}
+                  decoding="async"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+
+              {/* ボトムバー: ファイル情報・WebP削減率 & リセットボタン & 閉じるボタン */}
+              <div class="mizuna-lightbox-bottombar">
+                <div class="mizuna-lightbox-bottombar-inner" onClick={(e) => e.stopPropagation()}>
                   <div class="mizuna-lightbox-fileinfo">
                     <span class="mizuna-lightbox-filename" title={imgItem().name}>
                       {imgItem().name}
@@ -896,49 +913,29 @@ export function NoteView() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    class="circle mizuna-lightbox-close-icon-btn"
-                    onClick={() => setPreviewModalImageId(null)}
-                    aria-label="閉じる"
-                  >
-                    <i>close</i>
-                  </button>
-                </div>
-              </div>
+                  <div class="mizuna-lightbox-actions">
+                    <Show when={imgItem().editState}>
+                      <button
+                        type="button"
+                        class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
+                        onClick={() => handleResetImage(imgItem().id)}
+                      >
+                        <i>restart_alt</i>
+                        <span>加工をリセット</span>
+                      </button>
+                    </Show>
 
-              {/* メイン画像ステージ */}
-              <div
-                class="mizuna-lightbox-stage"
-                onClick={() => setPreviewModalImageId(null)}
-              >
-                <img
-                  ref={modalContentRef}
-                  id="modalImage"
-                  class="mizuna-lightbox-img"
-                  src={imgItem().dataUrl}
-                  alt={imgItem().name}
-                  data-name={imgItem().name}
-                  decoding="async"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-
-              {/* ボトムバー: アクションボタン（加工済み時のみリセットボタンを表示） */}
-              <Show when={imgItem().editState}>
-                <div class="mizuna-lightbox-bottombar">
-                  <div class="mizuna-lightbox-bottombar-inner" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
-                      class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
-                      onClick={() => handleResetImage(imgItem().id)}
+                      class="circle mizuna-lightbox-close-icon-btn"
+                      onClick={() => setPreviewModalImageId(null)}
+                      aria-label="閉じる"
                     >
-                      <i>restart_alt</i>
-                      <span>加工をリセット</span>
+                      <i>close</i>
                     </button>
                   </div>
                 </div>
-              </Show>
+              </div>
             </div>
           </Portal>
         )}
