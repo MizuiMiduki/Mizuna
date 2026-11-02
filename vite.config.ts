@@ -23,6 +23,15 @@ function syncSwVersionPlugin() {
       );
   };
 
+  const updateVersionJson = (filePath: string) => {
+    try {
+      const data = { version };
+      fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
+    } catch {
+      // ignore
+    }
+  };
+
   return {
     name: 'mizuna-sync-sw-version',
     buildStart() {
@@ -34,6 +43,8 @@ function syncSwVersionPlugin() {
           fs.writeFileSync(publicSwPath, updated, 'utf-8');
         }
       }
+      const publicVersionPath = path.resolve(__dirname, 'public/version.json');
+      updateVersionJson(publicVersionPath);
     },
     configureServer(server: any) {
       server.middlewares.use((req: any, res: any, next: any) => {
@@ -45,6 +56,11 @@ function syncSwVersionPlugin() {
             res.end(updateSwContent(content));
             return;
           }
+        }
+        if (req.url === '/version.json') {
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ version }, null, 2));
+          return;
         }
         next();
       });
@@ -58,6 +74,8 @@ function syncSwVersionPlugin() {
           fs.writeFileSync(distSwPath, updated, 'utf-8');
         }
       }
+      const distVersionPath = path.resolve(__dirname, 'dist/version.json');
+      updateVersionJson(distVersionPath);
     },
   };
 }

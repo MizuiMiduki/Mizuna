@@ -24,6 +24,7 @@ import { checkMiAuthSession, fetchLatestAccountInfo, fetchLatestReleaseNote, Mis
 import { applyThemeAndMode } from '../utils/theme';
 import { applyCustomCss } from '../utils/customCss';
 import { translate, type I18nKey } from '../i18n';
+import { comparisonVersion } from '../utils/version';
 import { safeLocalStorage, safeSessionStorage, generateSettingBackupFileName, generateAccountBackupFileName } from '../utils/storage';
 import {
   captureWebShareTargetFromUrl,
@@ -163,6 +164,7 @@ interface AppContextValue {
 
   // PWA アップデート制御
   hasPendingUpdate: Accessor<boolean>;
+  availableUpdateVersion: Accessor<string | null>;
   isCheckingUpdate: Accessor<boolean>;
   showUpdateBanner: Accessor<boolean>;
   dismissUpdateBanner: () => void;
@@ -308,7 +310,9 @@ export function AppProvider(props: { children: JSX.Element }) {
   // PWA アップデート状態管理
   const [waitingWorker, setWaitingWorker] = createSignal<ServiceWorker | null>(null);
   const [hasPendingUpdate, setHasPendingUpdate] = createSignal(false);
+  const [availableUpdateVersion, setAvailableUpdateVersion] = createSignal<string | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = createSignal(false);
+  const [isApplyingUpdate, setIsApplyingUpdate] = createSignal(false);
   const [showUpdateBanner, setShowUpdateBanner] = createSignal(false);
   let activeSwRegistration: ServiceWorkerRegistration | null = null;
   let suppressNextControllerChange = false;
@@ -345,6 +349,47 @@ export function AppProvider(props: { children: JSX.Element }) {
     setShowUpdateBanner(false);
   };
 
+  /**
+   * 軽量エンドポイント (/version.json) による最新バージョン自動確認
+   * コアアセット等のダウンロードを行わず、わずか数十バイトで最新バージョンの有無のみを安全に確認
+   */
+  const checkVersionOnServer = async (silent = true): Promise<boolean> => {
+    try {
+      const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-cache' });
+      if (!res.ok) {
+        if (!silent) {
+          showToast(translate('update.failed', undefined, settings().language as any), 'error');
+        }
+        return false;
+      }
+      const data = await res.json();
+      if (data && typeof data.version === 'string') {
+        const isNewer = comparisonVersion(data.version, mizuna_options.mizuna_version) > 0;
+        if (isNewer) {
+          setAvailableUpdateVersion(data.version);
+          setHasPendingUpdate(true);
+          setShowUpdateBanner(true);
+          if (!silent) {
+            promptUpdateDialog(null, true);
+          }
+          return true;
+        } else {
+          setHasPendingUpdate(false);
+          setShowUpdateBanner(false);
+          if (!silent) {
+            showToast(translate('update.up_to_date', undefined, settings().language as any), 'info');
+          }
+          return false;
+        }
+      }
+    } catch {
+      if (!silent) {
+        showToast(translate('update.failed', undefined, settings().language as any), 'error');
+      }
+    }
+    return false;
+  };
+
   const handleWaitingWorker = async (worker: ServiceWorker, forceDialog = false) => {
     const swVersion = await queryWorkerVersion(worker);
 
@@ -370,9 +415,6 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   const promptUpdateDialog = (worker?: ServiceWorker | null, forceDialog = false) => {
-    const target = worker || waitingWorker();
-    if (!target) return;
-
     // ヘッダー下の控えめバナーを表示
     setShowUpdateBanner(true);
 
@@ -403,10 +445,18 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
   };
 
-  const applyPendingUpdate = () => {
+  /**
+   * ユーザー主導によるアップデート適用
+   * ここで初めて最新版の Service Worker をダウンロード・更新し、適用リロードを行う
+   */
+  const applyPendingUpdate = async () => {
+    if (isApplyingUpdate()) return;
+    setIsApplyingUpdate(true);
     suppressNextControllerChange = false;
+
     // アップデート適用直後フラグを保存（リロード後にリリースノートを自動表示するため）
     safeLocalStorage.setItem('mizuna_show_release_notes_after_update', 'true');
+    showToast('最新版をダウンロードして適用しています...', 'info');
 
     const worker = waitingWorker() || activeSwRegistration?.waiting;
     if (worker) {
@@ -415,122 +465,65 @@ export function AppProvider(props: { children: JSX.Element }) {
       } catch (err) {
         console.error('SKIP_WAITING postMessage error:', err);
       }
-      // controllerchange が発火しなかった場合のフォールバックリロード
       setTimeout(() => {
         window.location.reload();
       }, 1000);
-    } else {
-      window.location.reload();
-    }
-  };
-
-  const checkForUpdate = async () => {
-    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator) || !navigator.serviceWorker) {
-      showToast(translate('update.not_supported', undefined, settings().language as any), 'info');
       return;
     }
-    if (isCheckingUpdate()) return;
 
-    setIsCheckingUpdate(true);
-    showToast(translate('update.checking', undefined, settings().language as any), 'info');
-
+    // 待機中ワーカーがまだダウンロードされていない場合、手動で Service Worker の更新を開始
     try {
       const reg = activeSwRegistration || (await navigator.serviceWorker.getRegistration());
-      if (!reg) {
-        showToast(translate('update.not_registered', undefined, settings().language as any), 'info');
-        setIsCheckingUpdate(false);
-        return;
-      }
-      activeSwRegistration = reg;
-
-      // 既に待機中のワーカーがいる場合（ダウンロード完了済み）
-      if (reg.waiting) {
-        const swVersion = await queryWorkerVersion(reg.waiting);
-        if (swVersion && swVersion === mizuna_options.mizuna_version) {
-          suppressNextControllerChange = true;
-          try {
-            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-          } catch {}
-          setHasPendingUpdate(false);
-          setWaitingWorker(null);
-          showToast(translate('update.up_to_date', undefined, settings().language as any), 'info');
-          setIsCheckingUpdate(false);
-          return;
-        }
-        await handleWaitingWorker(reg.waiting, true);
-        setIsCheckingUpdate(false);
-        return;
-      }
-
-      // 新しい Service Worker のインストール完了を待つ Promise を生成
-      const waitInstallPromise = new Promise<'updated' | 'no-update'>((resolve) => {
-        let timeoutId: any;
-
-        const onStateChange = (worker: ServiceWorker) => {
-          if (worker.state === 'installed') {
-            clearTimeout(timeoutId);
-            setWaitingWorker(worker);
-            setHasPendingUpdate(true);
-            resolve('updated');
+      if (reg) {
+        let resolved = false;
+        const onStateChange = (w: ServiceWorker) => {
+          if (w.state === 'installed') {
+            resolved = true;
+            try {
+              w.postMessage({ type: 'SKIP_WAITING' });
+            } catch {}
+            setTimeout(() => window.location.reload(), 500);
           }
         };
 
-        const onUpdateFound = () => {
+        reg.addEventListener?.('updatefound', () => {
           const installing = reg.installing;
           if (installing) {
             installing.addEventListener('statechange', () => onStateChange(installing));
           }
-        };
-
-        reg.addEventListener?.('updatefound', onUpdateFound, { once: true });
+        });
 
         if (reg.installing) {
           reg.installing.addEventListener?.('statechange', () => onStateChange(reg.installing!));
         }
 
-        // 3.5秒待って更新がない場合は最新と判断
-        timeoutId = setTimeout(() => {
-          try {
-            reg.removeEventListener?.('updatefound', onUpdateFound);
-          } catch {
-            // 無視
-          }
-          if (reg.waiting) {
-            setWaitingWorker(reg.waiting);
-            setHasPendingUpdate(true);
-            resolve('updated');
-          } else {
-            resolve('no-update');
-          }
-        }, 3500);
-      });
+        await reg.update();
 
-      // Service Worker スクリプトのネットワークチェックを実行
-      await reg.update();
-
-      const result = await waitInstallPromise;
-      if (result === 'updated') {
-        const worker = reg.waiting || waitingWorker();
-        if (worker) {
-          const swVersion = await queryWorkerVersion(worker);
-          if (swVersion && swVersion === mizuna_options.mizuna_version) {
-            suppressNextControllerChange = true;
-            try {
-              worker.postMessage({ type: 'SKIP_WAITING' });
-            } catch {}
-            setHasPendingUpdate(false);
-            setWaitingWorker(null);
-            showToast(translate('update.up_to_date', undefined, settings().language as any), 'info');
-            return;
+        // 3秒経っても完了イベントが発火しない場合のフォールバック（リロード）
+        setTimeout(() => {
+          if (!resolved) {
+            window.location.reload();
           }
-          await handleWaitingWorker(worker, true);
-        }
-      } else {
-        showToast(translate('update.up_to_date', undefined, settings().language as any), 'info');
+        }, 3000);
+        return;
       }
-    } catch (err) {
-      console.error('アップデート確認エラー:', err);
-      showToast(translate('update.failed', undefined, settings().language as any), 'error');
+    } catch (e) {
+      console.error('applyPendingUpdate error:', e);
+    }
+
+    window.location.reload();
+  };
+
+  /**
+   * 「更新を確認」ボタン押下時の手動チェック
+   */
+  const checkForUpdate = async () => {
+    if (isCheckingUpdate()) return;
+    setIsCheckingUpdate(true);
+    showToast(translate('update.checking', undefined, settings().language as any), 'info');
+
+    try {
+      await checkVersionOnServer(false);
     } finally {
       setIsCheckingUpdate(false);
     }
@@ -844,6 +837,9 @@ export function AppProvider(props: { children: JSX.Element }) {
           });
       });
     }
+
+    // 起動時にサーバー上の最新バージョン情報を軽量チェック（アップデートの有無を自動検知）
+    checkVersionOnServer(true);
 
     if (mizuna_options.maintenance) {
       window.location.href = `${mizuna_options.mizuna_address}/maintenance.html`;
@@ -1701,6 +1697,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     closeDialog,
     pushModalBackHandler,
     hasPendingUpdate,
+    availableUpdateVersion,
     isCheckingUpdate,
     showUpdateBanner,
     dismissUpdateBanner,

@@ -53,6 +53,7 @@ export function AboutView() {
     setCurrentView,
     showToast,
     hasPendingUpdate,
+    availableUpdateVersion,
     applyPendingUpdate,
     checkForUpdate,
     isCheckingUpdate,
@@ -116,7 +117,7 @@ export function AboutView() {
                 onClick={applyPendingUpdate}
               >
                 <i>system_update</i>
-                <span>{t('update.apply_now')}</span>
+                <span>{availableUpdateVersion() ? `v${availableUpdateVersion()} に更新` : t('update.apply_now')}</span>
               </button>
             </Show>
             <button

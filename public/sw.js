@@ -76,6 +76,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // バージョン自動確認用エンドポイント（/version.json）はキャッシュせずネットワーク直通
+  if (url.pathname === '/version.json') {
+    return;
+  }
+
   // 1. ナビゲーションリクエスト（HTMLページの表示・遷移）
   // Cache First: ユーザーが更新を適用するまでは既存のキャッシュから即座に返し、通信量を削減する
   if (request.mode === 'navigate') {

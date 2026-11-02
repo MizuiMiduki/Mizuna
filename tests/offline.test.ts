@@ -76,10 +76,21 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toContain("event.data.type === 'GET_VERSION'");
     expect(content).toContain('SW_VERSION');
 
+    // /version.json は最新バージョン確認用のためキャッシュせずネットワーク直通であること
+    expect(content).toContain("url.pathname === '/version.json'");
+
     // キャッシュ戦略 (request.mode === 'navigate') で Cache First（通信量削減）となっていること
     expect(content).toContain("mode === 'navigate'");
     expect(content).toContain("await cache.match('/index.html')");
     expect(content).toContain('url.origin !== self.location.origin'); // 外部APIはキャッシュしない
+  });
+
+  it('public/version.json が存在し、package.json のバージョンと同期していること', () => {
+    const versionJsonPath = path.resolve(rootDir, 'public/version.json');
+    expect(fs.existsSync(versionJsonPath)).toBe(true);
+    const data = JSON.parse(fs.readFileSync(versionJsonPath, 'utf-8'));
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(rootDir, 'package.json'), 'utf-8'));
+    expect(data.version).toBe(pkg.version);
   });
 
   it('vite.config.ts に Service Worker のバージョン自動同期プラグインが設定されていること', () => {
@@ -106,6 +117,7 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     const content = fs.readFileSync(appStorePath, 'utf-8');
 
     expect(content).toContain('hasPendingUpdate');
+    expect(content).toContain('checkVersionOnServer');
     expect(content).toContain('showUpdateBanner');
     expect(content).toContain('dismissUpdateBanner');
     expect(content).toContain('applyPendingUpdate');
