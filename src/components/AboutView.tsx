@@ -48,7 +48,16 @@ const OSS_LICENSES = [
 ];
 
 export function AboutView() {
-  const { accounts, setCurrentView, showToast, hasPendingUpdate, applyPendingUpdate } = useApp();
+  const {
+    accounts,
+    setCurrentView,
+    showToast,
+    hasPendingUpdate,
+    applyPendingUpdate,
+    checkForUpdate,
+    isCheckingUpdate,
+    t,
+  } = useApp();
   let containerRef: HTMLDivElement | undefined;
 
   onMount(() => {
@@ -98,8 +107,8 @@ export function AboutView() {
               v{mizuna_options.mizuna_version}
             </span>
           </div>
-          <Show when={hasPendingUpdate()}>
-            <div style="margin-top: 8px;">
+          <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <Show when={hasPendingUpdate()}>
               <button
                 type="button"
                 class="mizuna-btn mizuna-btn-tonal"
@@ -107,10 +116,21 @@ export function AboutView() {
                 onClick={applyPendingUpdate}
               >
                 <i>system_update</i>
-                <span>最新版にアップデート</span>
+                <span>{t('update.apply_now')}</span>
               </button>
-            </div>
-          </Show>
+            </Show>
+            <button
+              type="button"
+              id="check_update_button"
+              class="mizuna-btn mizuna-btn-outline"
+              style="padding: 0 12px; height: 32px; font-size: 0.8rem; gap: 4px;"
+              disabled={isCheckingUpdate()}
+              onClick={checkForUpdate}
+            >
+              <i class={isCheckingUpdate() ? 'is-spinning' : ''}>sync</i>
+              <span>{isCheckingUpdate() ? t('update.checking') : t('settings.check_button')}</span>
+            </button>
+          </div>
         </div>
         <button
           type="button"

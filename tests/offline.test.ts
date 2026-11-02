@@ -15,6 +15,7 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
   const indexHtmlPath = path.resolve(rootDir, 'index.html');
   const appStorePath = path.resolve(rootDir, 'src/store/appStore.tsx');
   const settingsViewPath = path.resolve(rootDir, 'src/components/SettingsView.tsx');
+  const aboutViewPath = path.resolve(rootDir, 'src/components/AboutView.tsx');
   const headerPath = path.resolve(rootDir, 'src/components/Header.tsx');
 
   it('offline.html が存在し、必要なメタタグおよび要素が含まれていること', () => {
@@ -119,12 +120,20 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toMatch(/(今すぐ更新|update\.apply_now)/);
   });
 
-  it('SettingsView に待機中アップデートの適用と更新確認UIが実装されていること', () => {
+  it('AboutView に最新バージョンの確認ボタンが実装されていること', () => {
+    expect(fs.existsSync(aboutViewPath)).toBe(true);
+    const content = fs.readFileSync(aboutViewPath, 'utf-8');
+
+    expect(content).toContain('checkForUpdate');
+    expect(content).toContain('check_update_button');
+    expect(content).toContain('applyPendingUpdate');
+  });
+
+  it('SettingsView に待機中アップデートの適用UIが実装されていること', () => {
     expect(fs.existsSync(settingsViewPath)).toBe(true);
     const content = fs.readFileSync(settingsViewPath, 'utf-8');
 
     expect(content).toContain('hasPendingUpdate');
     expect(content).toContain('applyPendingUpdate');
-    expect(content).toContain('checkForUpdate');
   });
 });
