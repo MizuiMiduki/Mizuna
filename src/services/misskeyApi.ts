@@ -98,8 +98,9 @@ export async function checkServerExists(rawAddress: string): Promise<boolean> {
 export function buildMiAuthUrl(address: string, sessionId: string): string {
   const cleanAddress = address.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
   const callbackOrigin = `${location.protocol}//${location.host}`;
+  const appNameWithVersion = `${mizuna_options.app_name} v${mizuna_options.mizuna_version}`;
   return `https://${cleanAddress}/miauth/${sessionId}?name=${encodeURIComponent(
-    mizuna_options.app_name
+    appNameWithVersion
   )}&callback=${encodeURIComponent(callbackOrigin)}&permission=write:notes,read:account,write:drive`;
 }
 

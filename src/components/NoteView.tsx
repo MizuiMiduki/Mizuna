@@ -17,7 +17,7 @@ import {
 } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { type ImageEditState } from '../utils/imageEditor';
-import { comparisonVersion } from '../utils/version';
+import { comparisonVersion, hasDrivePermission } from '../utils/version';
 import { HoldHoverTip } from './HoldHoverTip';
 import { ImageEditorModal } from './ImageEditorModal';
 
@@ -99,6 +99,7 @@ export function NoteView() {
   let pickerBackdropRef: HTMLDivElement | undefined;
 
   const maxCharCount = createMemo(() => (endMizuna() ? 2986 : 3000));
+  const isImageSupported = createMemo(() => hasDrivePermission(currentUser()?.add_mizuna_versinon));
   const noteLength = createMemo(() => noteText().length);
   const cwLength = createMemo(() => cwText().length);
 
@@ -185,7 +186,7 @@ export function NoteView() {
 
     const images = attachedImages();
     if (images.length > 0) {
-      if (comparisonVersion('3.5.0', user.add_mizuna_versinon) > 0) {
+      if (!isImageSupported()) {
         showToast(
           'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
           'warning',
@@ -269,7 +270,15 @@ export function NoteView() {
             break;
           case 'v':
             event.preventDefault();
-            fileInputRef?.click();
+            if (isImageSupported()) {
+              fileInputRef?.click();
+            } else {
+              showToast(
+                'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+                'warning',
+                'このアカウントでは画像付きノートが出来ません'
+              );
+            }
             break;
           case 'c':
             event.preventDefault();
@@ -306,13 +315,6 @@ export function NoteView() {
     }, 10);
   };
 
-  const handleDeletePreviewImage = () => {
-    const target = previewModalImage();
-    if (!target) return;
-    removeAttachedImage(target.id);
-    setPreviewModalImageId(null);
-  };
-
   const handleSaveEditedImage = (id: string, editedFile: File, editState: ImageEditState) => {
     updateAttachedImage(id, editedFile, editState);
     setEditingImageItem(null);
@@ -329,6 +331,14 @@ export function NoteView() {
   const handlePaste = (e: ClipboardEvent) => {
     const items = e.clipboardData?.files;
     if (items && items.length > 0) {
+      if (!isImageSupported()) {
+        showToast(
+          'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+          'warning',
+          'このアカウントでは画像付きノートが出来ません'
+        );
+        return;
+      }
       addAttachedFiles(items);
     }
   };
@@ -337,6 +347,14 @@ export function NoteView() {
     e.preventDefault();
     setIsDraggingOver(false);
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      if (!isImageSupported()) {
+        showToast(
+          'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+          'warning',
+          'このアカウントでは画像付きノートが出来ません'
+        );
+        return;
+      }
       addAttachedFiles(e.dataTransfer.files);
     }
   };
@@ -527,8 +545,21 @@ export function NoteView() {
                     </div>
                     <button
                       type="button"
+                      class={`mizuna-media-edit ${item.editState ? 'is-edited' : ''}`}
+                      title={t('note.edit_image')}
+                      aria-label={t('note.edit_image')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingImageItem(item);
+                      }}
+                    >
+                      <i>edit</i>
+                    </button>
+                    <button
+                      type="button"
                       class="mizuna-media-remove"
                       title={t('note.delete_image')}
+                      aria-label={t('note.delete_image')}
                       onClick={(e) => {
                         e.stopPropagation();
                         removeAttachedImage(item.id);
@@ -556,8 +587,18 @@ export function NoteView() {
           name="image"
           accept="image/*"
           style="display: none;"
+          disabled={!isImageSupported()}
           onChange={(e) => {
             if (e.currentTarget.files) {
+              if (!isImageSupported()) {
+                showToast(
+                  'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+                  'warning',
+                  'このアカウントでは画像付きノートが出来ません'
+                );
+                e.currentTarget.value = '';
+                return;
+              }
               addAttachedFiles(e.currentTarget.files);
               e.currentTarget.value = '';
             }
@@ -594,12 +635,32 @@ export function NoteView() {
             </HoldHoverTip>
 
             {/* 画像選択ボタン */}
-            <HoldHoverTip label={t('note.attach_image_tip')} sublabel={t('note.attach_image_tip_sub')} placement="top">
+            <HoldHoverTip
+              label={isImageSupported() ? t('note.attach_image_tip') : '画像添付非対応'}
+              sublabel={
+                isImageSupported()
+                  ? t('note.attach_image_tip_sub')
+                  : 'v3.5.0未満で追加されたため画像添付権限がありません。アカウント管理から再認証してください。'
+              }
+              placement="top"
+            >
               <button
                 type="button"
                 id="select_picture_button"
-                class={`mizuna-tool-chip ${attachedImages().length > 0 ? 'has-badge' : ''}`}
-                onClick={() => fileInputRef?.click()}
+                class={`mizuna-tool-chip ${attachedImages().length > 0 ? 'has-badge' : ''} ${!isImageSupported() ? 'is-disabled' : ''}`}
+                disabled={!isImageSupported()}
+                onClick={() => {
+                  if (!isImageSupported()) {
+                    showToast(
+                      'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+                      'warning',
+                      'このアカウントでは画像付きノートが出来ません'
+                    );
+                    return;
+                  }
+                  fileInputRef?.click();
+                }}
+                aria-label={isImageSupported() ? t('note.attach_image_label') : '画像添付非対応'}
               >
                 <i>image</i>
                 <span>{t('note.attach_image_label')}</span>
@@ -787,9 +848,26 @@ export function NoteView() {
               class="mizuna-lightbox"
               onClick={() => setPreviewModalImageId(null)}
             >
-              {/* トップバー: ファイル情報・WebP削減率 & 閉じるボタン */}
-              <div class="mizuna-lightbox-topbar" onClick={(e) => e.stopPropagation()}>
-                <div class="mizuna-lightbox-topbar-inner">
+              {/* メイン画像ステージ */}
+              <div
+                class="mizuna-lightbox-stage"
+                onClick={() => setPreviewModalImageId(null)}
+              >
+                <img
+                  ref={modalContentRef}
+                  id="modalImage"
+                  class="mizuna-lightbox-img"
+                  src={imgItem().dataUrl}
+                  alt={imgItem().name}
+                  data-name={imgItem().name}
+                  decoding="async"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+
+              {/* ボトムバー: ファイル情報・WebP削減率 & リセットボタン & 閉じるボタン */}
+              <div class="mizuna-lightbox-bottombar">
+                <div class="mizuna-lightbox-bottombar-inner" onClick={(e) => e.stopPropagation()}>
                   <div class="mizuna-lightbox-fileinfo">
                     <span class="mizuna-lightbox-filename" title={imgItem().name}>
                       {imgItem().name}
@@ -800,7 +878,17 @@ export function NoteView() {
                       </span>
                       <Show
                         when={imgItem().compressedSize}
-                        fallback={<span class="mizuna-lightbox-compressing">WebP圧縮中...</span>}
+                        fallback={
+                          <div class="mizuna-lightbox-compressing-wrap">
+                            <span class="mizuna-lightbox-compressing">
+                              <span class="mizuna-lightbox-compressing-spinner" />
+                              WebP圧縮中...
+                            </span>
+                            <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
+                              <div class="mizuna-lightbox-mini-bar-fill" />
+                            </div>
+                          </div>
+                        }
                       >
                         {(compSize) => {
                           const savedPercent = Math.max(
@@ -825,67 +913,27 @@ export function NoteView() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    class="circle mizuna-lightbox-close-icon-btn"
-                    onClick={() => setPreviewModalImageId(null)}
-                    aria-label="閉じる"
-                  >
-                    <i>close</i>
-                  </button>
-                </div>
-              </div>
+                  <div class="mizuna-lightbox-actions">
+                    <Show when={imgItem().editState}>
+                      <button
+                        type="button"
+                        class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
+                        onClick={() => handleResetImage(imgItem().id)}
+                      >
+                        <i>restart_alt</i>
+                        <span>加工をリセット</span>
+                      </button>
+                    </Show>
 
-              {/* メイン画像ステージ */}
-              <div
-                class="mizuna-lightbox-stage"
-                onClick={() => setPreviewModalImageId(null)}
-              >
-                <img
-                  ref={modalContentRef}
-                  id="modalImage"
-                  class="mizuna-lightbox-img"
-                  src={imgItem().dataUrl}
-                  alt={imgItem().name}
-                  data-name={imgItem().name}
-                  decoding="async"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-
-              {/* ボトムバー: アクションボタン */}
-              <div class="mizuna-lightbox-bottombar" onClick={(e) => e.stopPropagation()}>
-                <div class="mizuna-lightbox-bottombar-inner">
-                  <button
-                    type="button"
-                    class="mizuna-btn mizuna-btn-tonal mizuna-lightbox-action-btn"
-                    onClick={() => {
-                      setEditingImageItem(imgItem());
-                      setPreviewModalImageId(null);
-                    }}
-                  >
-                    <i>tune</i>
-                    <span>画像を加工する</span>
-                  </button>
-                  <Show when={imgItem().editState}>
                     <button
                       type="button"
-                      class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
-                      onClick={() => handleResetImage(imgItem().id)}
+                      class="circle mizuna-lightbox-close-icon-btn"
+                      onClick={() => setPreviewModalImageId(null)}
+                      aria-label="閉じる"
                     >
-                      <i>restart_alt</i>
-                      <span>加工をリセット</span>
+                      <i>close</i>
                     </button>
-                  </Show>
-                  <button
-                    type="button"
-                    id="deleteImageButton"
-                    class="mizuna-btn mizuna-btn-danger mizuna-lightbox-action-btn"
-                    onClick={handleDeletePreviewImage}
-                  >
-                    <i>delete</i>
-                    <span>削除する</span>
-                  </button>
+                  </div>
                 </div>
               </div>
             </div>

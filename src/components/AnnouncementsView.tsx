@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import { createSignal, For, onMount, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
+import { FloatingBackButton } from './FloatingBackButton';
 import {
   fetchAnnouncements,
   formatAnnouncementDate,
@@ -46,7 +47,7 @@ export function AnnouncementsView() {
       gsap.fromTo(
         containerRef,
         { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out' }
+        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
       );
     }
     loadPage(1);
@@ -75,16 +76,7 @@ export function AnnouncementsView() {
       <div class="mizuna-section-header">
         <div>
           <h2 class="mizuna-section-title">お知らせ</h2>
-          <p class="mizuna-section-desc">Mizuna のアップデート情報・リリースノート</p>
         </div>
-        <button
-          type="button"
-          class="mizuna-btn mizuna-btn-outline"
-          onClick={handleBack}
-        >
-          <i>arrow_back</i>
-          <span>もどる</span>
-        </button>
       </div>
 
       {/* ローディング表示 */}
@@ -203,6 +195,8 @@ export function AnnouncementsView() {
           </div>
         </Show>
       </Show>
+
+      <FloatingBackButton onClick={handleBack} />
     </div>
   );
 }

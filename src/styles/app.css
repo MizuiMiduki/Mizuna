@@ -55,7 +55,7 @@
   border-radius: inherit;
 }
 
-/* タッチデバイスでタップ後にBeerCSSの波紋(after)やfocusが残留する問題を解消 */
+/* タッチデバイスでタップ後にBeerCSSの波紋(after)やfocus、ホバー色が残留する問題を解消 */
 @media (hover: none) {
   :is(.wave, .chip, .button, button, nav.tabbed > a, .tabs > a, nav.toolbar > a):not(.slow-ripple, .ripple, .fast-ripple):after {
     display: none !important;
@@ -64,6 +64,29 @@
   .button:focus:not(:focus-visible),
   .chip:focus:not(:focus-visible) {
     outline: none !important;
+  }
+
+  /* タッチ端末で指が離れた後のホバー色・変形の残留を防止（押下中 :active のみフィードバックを有効化） */
+  :is(
+    button,
+    .button,
+    .chip,
+    .mizuna-btn,
+    .mizuna-tool-chip,
+    .mizuna-tool-icon-btn,
+    .mizuna-cw-toggle-btn,
+    .mizuna-send-btn,
+    .mizuna-floating-back-btn,
+    .mizuna-topbar-btn,
+    .mizuna-vis-pill,
+    .mizuna-seg-pill,
+    .mizuna-media-edit,
+    .mizuna-media-remove,
+    .mizuna-color-dot,
+    .mizuna-color-picker-btn
+  ):hover:not(:active) {
+    transform: none !important;
+    box-shadow: none;
   }
 }
 
@@ -87,8 +110,9 @@ body {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  padding-bottom: 108px;
+  padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
   position: relative;
+  overflow-x: hidden;
   background:
     radial-gradient(
       800px circle at 15% -10%,
@@ -224,7 +248,15 @@ body {
   font-size: 20px !important;
 }
 
-.mizuna-topbar-btn:hover:not(.is-active) {
+@media (hover: hover) {
+  .mizuna-topbar-btn:hover:not(.is-active) {
+    background: var(--surface-container-highest) !important;
+    color: var(--on-surface) !important;
+  }
+}
+
+.mizuna-topbar-btn:active:not(.is-active) {
+  transform: scale(0.95);
   background: var(--surface-container-highest) !important;
   color: var(--on-surface) !important;
 }
@@ -582,11 +614,13 @@ body {
   font-size: var(--mizuna-seg-pill-icon) !important;
 }
 
-.mizuna-vis-pill:hover:not(.is-active) {
-  color: var(--on-surface);
-  background: color-mix(in srgb, var(--surface) 96%, transparent);
-  border-color: color-mix(in srgb, var(--outline-variant) 75%, transparent) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+@media (hover: hover) {
+  .mizuna-vis-pill:hover:not(.is-active) {
+    color: var(--on-surface);
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    border-color: color-mix(in srgb, var(--outline-variant) 75%, transparent) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
 }
 
 .mizuna-vis-pill:active:not(.is-active) {
@@ -763,10 +797,10 @@ body {
   opacity: 1;
 }
 
+.mizuna-media-edit,
 .mizuna-media-remove {
   position: absolute;
   top: 5px;
-  right: 5px;
   width: 24px !important;
   height: 24px !important;
   min-width: 24px !important;
@@ -782,8 +816,49 @@ body {
   justify-content: center;
   cursor: pointer;
   z-index: 2;
+  transition: background-color 0.15s ease, transform 0.15s ease, color 0.15s ease;
 }
 
+.mizuna-media-edit {
+  left: 5px;
+}
+
+.mizuna-media-remove {
+  right: 5px;
+}
+
+@media (hover: hover) {
+  .mizuna-media-edit:hover {
+    background: var(--primary) !important;
+    color: var(--on-primary) !important;
+    transform: scale(1.1);
+  }
+
+  .mizuna-media-remove:hover {
+    background: rgba(239, 68, 68, 0.9) !important;
+    color: #fff !important;
+    transform: scale(1.1);
+  }
+}
+
+.mizuna-media-edit:active {
+  background: var(--primary) !important;
+  color: var(--on-primary) !important;
+  transform: scale(0.92);
+}
+
+.mizuna-media-remove:active {
+  background: rgba(239, 68, 68, 0.9) !important;
+  color: #fff !important;
+  transform: scale(0.92);
+}
+
+.mizuna-media-edit.is-edited {
+  background: color-mix(in srgb, var(--primary) 85%, transparent) !important;
+  color: var(--on-primary) !important;
+}
+
+.mizuna-media-edit i,
 .mizuna-media-remove i {
   font-size: 14px !important;
 }
@@ -836,15 +911,35 @@ body {
   font-size: var(--mizuna-chip-icon) !important;
 }
 
-.mizuna-tool-chip:hover {
-  border-color: var(--primary) !important;
-  color: var(--on-surface);
+@media (hover: hover) {
+  .mizuna-tool-chip:hover {
+    border-color: var(--primary) !important;
+    color: var(--on-surface);
+  }
+
+  .mizuna-tool-chip:disabled:hover,
+  .mizuna-tool-chip.is-disabled:hover {
+    border-color: color-mix(in srgb, var(--outline-variant) 65%, transparent) !important;
+    color: var(--on-surface-variant) !important;
+  }
+}
+
+.mizuna-tool-chip:active:not(:disabled):not(.is-disabled) {
+  transform: scale(0.96);
+  background: color-mix(in srgb, var(--surface-container-highest) 90%, transparent);
 }
 
 .mizuna-tool-chip.is-active {
   background: color-mix(in srgb, var(--primary) 16%, var(--surface)) !important;
   border-color: var(--primary) !important;
   color: var(--primary) !important;
+}
+
+.mizuna-tool-chip:disabled,
+.mizuna-tool-chip.is-disabled {
+  opacity: 0.42 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(0.5);
 }
 
 .mizuna-chip-count {
@@ -873,10 +968,18 @@ body {
   transition: all 0.18s ease;
 }
 
-.mizuna-tool-icon-btn:hover {
+@media (hover: hover) {
+  .mizuna-tool-icon-btn:hover {
+    color: var(--error);
+    border-color: color-mix(in srgb, var(--error) 50%, transparent) !important;
+    background: color-mix(in srgb, var(--error) 10%, transparent);
+  }
+}
+
+.mizuna-tool-icon-btn:active {
+  transform: scale(0.94);
   color: var(--error);
-  border-color: color-mix(in srgb, var(--error) 50%, transparent) !important;
-  background: color-mix(in srgb, var(--error) 10%, transparent);
+  background: color-mix(in srgb, var(--error) 12%, transparent);
 }
 
 /* 文字数カウンター＆送信ボタングループ */
@@ -963,9 +1066,11 @@ body {
   box-sizing: border-box;
 }
 
-.mizuna-send-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 48%, transparent);
+@media (hover: hover) {
+  .mizuna-send-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px color-mix(in srgb, var(--primary) 48%, transparent);
+  }
 }
 
 .mizuna-send-btn:active:not(:disabled) {
@@ -1001,6 +1106,11 @@ body {
   font-size: var(--mizuna-btn-icon) !important;
 }
 
+.mizuna-btn:active:not(:disabled) {
+  transform: scale(0.97);
+  opacity: 0.92;
+}
+
 .mizuna-btn-primary {
   border: none !important;
   background: var(--primary) !important;
@@ -1008,8 +1118,10 @@ body {
   box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
 }
 
-.mizuna-btn-primary:hover {
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .mizuna-btn-primary:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .mizuna-btn-tonal {
@@ -1024,9 +1136,11 @@ body {
   color: var(--on-surface) !important;
 }
 
-.mizuna-btn-outline:hover {
-  border-color: var(--primary) !important;
-  background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+@media (hover: hover) {
+  .mizuna-btn-outline:hover {
+    border-color: var(--primary) !important;
+    background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
+  }
 }
 
 .mizuna-btn-danger {
@@ -1036,12 +1150,82 @@ body {
 }
 
 /* =========================================
+   サブ画面用 右下フローティング戻るボタン (.mizuna-floating-back-btn)
+   ========================================= */
+.mizuna-floating-back-btn {
+  position: fixed;
+  right: calc(20px + env(safe-area-inset-right, 0px));
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  z-index: 95;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 48px !important;
+  padding: 0 20px 0 16px !important;
+  border-radius: var(--mizuna-radius-pill, 9999px) !important;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, color-mix(in srgb, var(--outline-variant) 50%, transparent)) !important;
+  background: color-mix(in srgb, var(--surface-container-high) 85%, transparent) !important;
+  color: var(--on-surface) !important;
+  box-shadow:
+    0 8px 24px -4px color-mix(in srgb, var(--primary) 20%, rgba(0, 0, 0, 0.28)),
+    0 2px 6px -1px rgba(0, 0, 0, 0.16) !important;
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), background-color 0.18s ease, border-color 0.18s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+@media (hover: hover) {
+  .mizuna-floating-back-btn:hover {
+    transform: translateY(-2px);
+    border-color: var(--primary) !important;
+    background: color-mix(in srgb, var(--surface-container-highest) 95%, transparent) !important;
+    box-shadow:
+      0 12px 28px -4px color-mix(in srgb, var(--primary) 32%, rgba(0, 0, 0, 0.35)),
+      0 4px 10px -1px rgba(0, 0, 0, 0.2) !important;
+  }
+}
+
+.mizuna-floating-back-btn:active {
+  transform: translateY(0) scale(0.96);
+}
+
+.mizuna-floating-back-btn i {
+  font-size: 20px !important;
+  color: var(--primary);
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.mizuna-floating-back-btn span {
+  line-height: 1;
+}
+
+@media (max-width: 480px) {
+  .mizuna-floating-back-btn {
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    height: 44px !important;
+    padding: 0 16px 0 14px !important;
+    font-size: 0.88rem;
+  }
+  .mizuna-floating-back-btn i {
+    font-size: 18px !important;
+  }
+}
+
+/* =========================================
    ライトボックスモーダル (画像拡大)
    ========================================= */
 .mizuna-lightbox {
   position: fixed;
   inset: 0;
-  background: rgba(8, 11, 16, 0.94);
+  background: color-mix(in srgb, var(--surface) 52%, rgba(10, 14, 22, 0.68));
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   z-index: 500;
@@ -1051,28 +1235,68 @@ body {
   user-select: none;
   -webkit-user-select: none;
   overflow: hidden;
+  animation: mizuna-lightbox-fade-in 0.22s ease-out;
 }
 
-/* トップバー (ファイル情報・WebP削減率 & 閉じるボタン) */
-.mizuna-lightbox-topbar {
+/* メイン画像ステージ */
+.mizuna-lightbox-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
   width: 100%;
-  background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: max(10px, env(safe-area-inset-top, 10px)) 16px 10px;
+  padding: max(20px, calc(14px + env(safe-area-inset-top, 0px))) 16px 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+  cursor: zoom-out;
+}
+
+.mizuna-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 0;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  box-shadow:
+    0 24px 64px -12px rgba(0, 0, 0, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.12);
+  cursor: default;
+  animation: mizuna-lightbox-img-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ボトムバー (フローティング アイランド コントロールバー) */
+.mizuna-lightbox-bottombar {
+  width: 100%;
+  padding: 8px 16px max(18px, calc(14px + env(safe-area-inset-bottom, 0px)));
   z-index: 2;
   flex-shrink: 0;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  box-sizing: border-box;
+  pointer-events: none;
 }
 
-.mizuna-lightbox-topbar-inner {
-  max-width: 860px;
-  margin: 0 auto;
+.mizuna-lightbox-bottombar-inner {
+  width: 100%;
+  max-width: 680px;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  padding: 10px 16px;
+  border-radius: var(--mizuna-radius-xl);
+  background: color-mix(in srgb, var(--surface-container-high) 88%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, color-mix(in srgb, var(--outline-variant) 55%, transparent));
+  box-shadow:
+    0 12px 36px -8px color-mix(in srgb, var(--primary) 12%, rgba(0, 0, 0, 0.16)),
+    0 2px 10px rgba(0, 0, 0, 0.08);
+  animation: mizuna-lightbox-slide-up 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .mizuna-lightbox-fileinfo {
@@ -1084,12 +1308,13 @@ body {
 }
 
 .mizuna-lightbox-filename {
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   font-weight: 700;
-  color: #f8fafc;
+  color: var(--on-surface);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.01em;
 }
 
 .mizuna-lightbox-meta {
@@ -1102,46 +1327,143 @@ body {
 }
 
 .mizuna-lightbox-raw-size {
-  color: #94a3b8;
+  color: var(--on-surface-variant);
   font-weight: 500;
 }
 
 .mizuna-lightbox-meta-arrow {
   font-size: 13px !important;
-  color: #64748b;
+  color: color-mix(in srgb, var(--on-surface-variant) 70%, transparent);
 }
 
 .mizuna-lightbox-webp-size {
-  color: #38bdf8;
+  color: var(--primary);
   font-weight: 700;
 }
 
 .mizuna-lightbox-badge {
   display: inline-flex;
   align-items: center;
-  font-size: 0.68rem;
+  font-size: 0.70rem;
   font-weight: 800;
-  padding: 1px 7px;
-  border-radius: 9999px;
-  background: rgba(16, 185, 129, 0.2);
-  border: 1px solid rgba(16, 185, 129, 0.45);
-  color: #34d399;
+  padding: 2px 8px;
+  border-radius: var(--mizuna-radius-pill);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 36%, transparent);
+  color: var(--primary);
   letter-spacing: 0.02em;
 }
 
+.mizuna-lightbox-compressing-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+
 .mizuna-lightbox-compressing {
-  font-size: 0.72rem;
-  color: #fbbf24;
+  font-size: 0.74rem;
+  color: var(--tertiary, var(--primary));
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mizuna-lightbox-compressing-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--primary) 25%, transparent);
+  border-top-color: var(--primary);
+  animation: mizuna-spinner-rotate 0.8s linear infinite;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.mizuna-lightbox-mini-bar {
+  width: 44px;
+  height: 4px;
+  border-radius: var(--mizuna-radius-pill);
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.mizuna-lightbox-mini-bar-fill {
+  height: 100%;
+  width: 50%;
+  border-radius: var(--mizuna-radius-pill);
+  background: var(--primary);
+  animation: mizuna-mini-bar-slide 1.1s infinite ease-in-out alternate;
+}
+
+@keyframes mizuna-mini-bar-slide {
+  0% {
+    transform: translateX(-20%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes mizuna-spinner-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mizuna-lightbox-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.mizuna-lightbox-action-btn {
+  height: 38px !important;
+  padding: 0 14px !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  border-radius: var(--mizuna-radius-pill) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  background: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+  color: var(--primary) !important;
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent) !important;
+  transition: all 0.18s ease !important;
+  cursor: pointer;
+  white-space: nowrap !important;
+}
+
+.mizuna-lightbox-action-btn:hover {
+  background: color-mix(in srgb, var(--primary) 22%, transparent) !important;
+  border-color: color-mix(in srgb, var(--primary) 55%, transparent) !important;
+  transform: scale(1.02);
+}
+
+.mizuna-lightbox-action-btn:active {
+  transform: scale(0.97);
+}
+
+.mizuna-lightbox-action-btn i {
+  font-size: 17px !important;
 }
 
 .mizuna-lightbox-close-icon-btn {
-  width: 40px !important;
-  height: 40px !important;
-  min-width: 40px !important;
-  min-height: 40px !important;
-  max-width: 40px !important;
-  max-height: 40px !important;
+  width: 38px !important;
+  height: 38px !important;
+  min-width: 38px !important;
+  min-height: 38px !important;
+  max-width: 38px !important;
+  max-height: 38px !important;
   aspect-ratio: 1 / 1 !important;
   padding: 0 !important;
   margin: 0 !important;
@@ -1149,17 +1471,19 @@ body {
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #f8fafc;
+  background: color-mix(in srgb, var(--surface-container) 90%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 60%, transparent) !important;
+  color: var(--on-surface) !important;
   cursor: pointer;
   flex-shrink: 0;
   box-sizing: border-box !important;
-  transition: background 0.18s ease, transform 0.18s ease;
+  transition: all 0.18s ease;
 }
 
 .mizuna-lightbox-close-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface-container)) !important;
+  border-color: color-mix(in srgb, var(--primary) 40%, transparent) !important;
+  color: var(--primary) !important;
   transform: scale(1.06);
 }
 
@@ -1168,70 +1492,38 @@ body {
 }
 
 .mizuna-lightbox-close-icon-btn i {
-  font-size: 20px !important;
+  font-size: 19px !important;
   line-height: 1 !important;
   margin: 0 !important;
   padding: 0 !important;
 }
 
-/* メイン画像ステージ */
-.mizuna-lightbox-stage {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 0;
-  width: 100%;
-  padding: 16px;
-  box-sizing: border-box;
-  overflow: hidden;
+/* アニメーションキーフレーム */
+@keyframes mizuna-lightbox-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-.mizuna-lightbox-img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  border-radius: 16px;
-  box-shadow:
-    0 24px 60px -10px rgba(0, 0, 0, 0.75),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-  cursor: default;
+@keyframes mizuna-lightbox-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
-/* ボトムバー (アクションボタン) */
-.mizuna-lightbox-bottombar {
-  width: 100%;
-  background: rgba(15, 23, 42, 0.88);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 12px 16px max(14px, env(safe-area-inset-bottom, 14px));
-  z-index: 2;
-  flex-shrink: 0;
-  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.35);
-}
-
-.mizuna-lightbox-bottombar-inner {
-  max-width: 440px;
-  margin: 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-}
-
-.mizuna-lightbox-action-btn {
-  flex: 1 1 0;
-  min-width: 0;
-  max-width: 200px;
-  height: 44px !important;
-  font-size: 0.88rem !important;
-  font-weight: 700 !important;
-  border-radius: var(--mizuna-radius-pill) !important;
-  justify-content: center !important;
-  white-space: nowrap !important;
+@keyframes mizuna-lightbox-img-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* =========================================
@@ -1476,6 +1768,38 @@ body {
 
 .mizuna-acc-meta {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mizuna-perm-warning-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  margin: 0;
+  border-radius: var(--mizuna-radius-pill);
+  background: color-mix(in srgb, #f59e0b 16%, var(--surface));
+  color: #d97706;
+  border: 1px solid color-mix(in srgb, #f59e0b 45%, transparent);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.18s ease;
+  line-height: 1.2;
+}
+
+.mizuna-perm-warning-badge:hover {
+  background: color-mix(in srgb, #f59e0b 28%, var(--surface));
+  border-color: #f59e0b;
+  transform: translateY(-1px);
+}
+
+.mizuna-perm-warning-badge i {
+  font-size: 13px;
+  color: #f59e0b;
 }
 
 .mizuna-ver-tag {
@@ -1647,7 +1971,7 @@ body {
   border: 1px solid color-mix(in srgb, var(--outline-variant) 85%, transparent);
   border-radius: var(--mizuna-radius-pill);
   padding: 5px 6px 5px 16px;
-  gap: 8px;
+  gap: 0;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -1662,6 +1986,8 @@ body {
   color: var(--on-surface-variant);
   opacity: 0.7;
   user-select: none;
+  flex-shrink: 0;
+  padding-right: 2px;
 }
 
 .mizuna-modern-input {
@@ -1674,6 +2000,13 @@ body {
   font-weight: 500;
   min-width: 0;
   height: 36px;
+  padding: 0 8px 0 0 !important;
+  margin: 0 !important;
+}
+
+.mizuna-input-submit {
+  margin-left: 8px !important;
+  flex-shrink: 0;
 }
 
 .mizuna-quick-servers {
@@ -2145,9 +2478,8 @@ body.dark .mizuna-custom-css-warnings {
 .mizuna-seg-pills.mizuna-seg-pills-wrap {
   display: flex;
   flex-wrap: nowrap;
-  align-items: stretch;
-  height: auto;
-  min-height: calc(var(--mizuna-seg-track-h) + 4px);
+  align-items: center;
+  height: var(--mizuna-seg-track-h);
   width: 100%;
   border-radius: var(--mizuna-radius-pill);
   padding: 3px;
@@ -2168,6 +2500,7 @@ body.dark .mizuna-custom-css-warnings {
   font-size: var(--mizuna-seg-pill-font);
   gap: 2px;
   white-space: nowrap;
+  align-self: center;
 }
 
 /* 文字数に応じたプロポーショナル配分：1文字（大・中・小）はコンパクトにし、文字数の多い（シンプル）に余裕を配分 */
@@ -2186,17 +2519,24 @@ body.dark .mizuna-custom-css-warnings {
   flex-shrink: 0;
   overflow: visible;
   text-overflow: clip;
+  line-height: 1;
 }
 
 .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill i {
   font-size: clamp(12px, 3.2vw, 15px) !important;
+  inline-size: auto;
+  block-size: auto;
+  min-inline-size: 0;
+  min-block-size: 0;
+  line-height: 1;
   flex-shrink: 0;
 }
 
 @media (max-width: 480px) {
   .mizuna-seg-pills.mizuna-seg-pills-wrap {
     gap: 2px;
-    padding: 2px;
+    padding: 3px 2px;
+    height: var(--mizuna-seg-track-h);
   }
   .mizuna-seg-pills.mizuna-seg-pills-wrap .mizuna-seg-pill {
     padding: 0 3px !important;
@@ -2222,6 +2562,7 @@ body.dark .mizuna-custom-css-warnings {
   color: var(--on-surface-variant);
   font-size: var(--mizuna-seg-pill-font);
   font-weight: 600;
+  line-height: 1;
   cursor: pointer;
   transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
   white-space: nowrap !important;
@@ -2235,19 +2576,30 @@ body.dark .mizuna-custom-css-warnings {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  line-height: 1;
 }
 
 .mizuna-seg-pill i {
   font-size: var(--mizuna-seg-pill-icon) !important;
+  inline-size: auto;
+  block-size: auto;
+  min-inline-size: 0;
+  min-block-size: 0;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   transition: transform 0.15s ease;
 }
 
-.mizuna-seg-pill:hover:not(.is-active) {
-  color: var(--on-surface);
-  background: color-mix(in srgb, var(--surface) 96%, transparent);
-  border-color: color-mix(in srgb, var(--outline-variant) 75%, transparent) !important;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+@media (hover: hover) {
+  .mizuna-seg-pill:hover:not(.is-active) {
+    color: var(--on-surface);
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    border-color: color-mix(in srgb, var(--outline-variant) 75%, transparent) !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
 }
 
 .mizuna-seg-pill:active:not(.is-active) {
@@ -2684,7 +3036,7 @@ body.dark .mizuna-custom-css-warnings {
    ========================================= */
 .mizuna-dock-wrapper {
   position: fixed;
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   width: 100%;
@@ -2695,6 +3047,9 @@ body.dark .mizuna-custom-css-warnings {
   padding: 0 12px;
   pointer-events: none;
   box-sizing: border-box;
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  will-change: transform;
 }
 
 .mizuna-floating-dock {
@@ -2719,6 +3074,12 @@ body.dark .mizuna-custom-css-warnings {
   flex-shrink: 0;
   user-select: none;
   -webkit-user-select: none;
+  touch-action: none;
+  cursor: grab;
+}
+
+.mizuna-floating-dock:active {
+  cursor: grabbing;
 }
 
 /* スライドするアクティブインジケーター（ピルハイライト） */
@@ -3307,6 +3668,11 @@ html.ui-size-large .mizuna-m3e-label {
   transition: all 0.18s ease;
 }
 
+.mizuna-modal-btn:active {
+  transform: scale(0.97);
+  opacity: 0.92;
+}
+
 .mizuna-modal-btn.is-primary {
   border: none !important;
   background: var(--primary) !important;
@@ -3314,8 +3680,10 @@ html.ui-size-large .mizuna-m3e-label {
   box-shadow: 0 6px 16px color-mix(in srgb, var(--primary) 32%, transparent);
 }
 
-.mizuna-modal-btn.is-primary:hover {
-  transform: translateY(-1px);
+@media (hover: hover) {
+  .mizuna-modal-btn.is-primary:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .mizuna-modal-btn.is-secondary {
@@ -3324,8 +3692,10 @@ html.ui-size-large .mizuna-m3e-label {
   color: var(--on-surface) !important;
 }
 
-.mizuna-modal-btn.is-secondary:hover {
-  background: var(--surface-container-high) !important;
+@media (hover: hover) {
+  .mizuna-modal-btn.is-secondary:hover {
+    background: var(--surface-container-high) !important;
+  }
 }
 
 .mizuna-modal-btn.is-danger {
@@ -4276,6 +4646,27 @@ body.is-simple-mode .mizuna-media-item {
   height: 54px !important;
 }
 
+body.is-simple-mode .mizuna-media-edit,
+body.is-simple-mode .mizuna-media-remove {
+  top: 3px;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px !important;
+}
+
+body.is-simple-mode .mizuna-media-edit {
+  left: 3px;
+}
+
+body.is-simple-mode .mizuna-media-remove {
+  right: 3px;
+}
+
+body.is-simple-mode .mizuna-media-edit i,
+body.is-simple-mode .mizuna-media-remove i {
+  font-size: 11px !important;
+}
+
 /* 9. ツールバー & 送信ボタン */
 body.is-simple-mode .mizuna-composer-footer {
   padding: 6px 10px !important;
@@ -4324,7 +4715,7 @@ body.is-simple-mode .mizuna-submit-btn i {
 
 /* 10. フッターナビゲーション (Dock) */
 body.is-simple-mode .mizuna-dock-wrapper {
-  bottom: 12px !important;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 body.is-simple-mode .mizuna-floating-dock {
@@ -4433,6 +4824,25 @@ body.is-simple-mode .mizuna-setting-row {
 
 body.is-simple-mode .mizuna-setting-col {
   padding: 10px 14px !important;
+}
+
+/* 12. 画像プレビューモーダルのシンプルモード調整 */
+body.is-simple-mode .mizuna-lightbox-bottombar-inner {
+  border-radius: var(--mizuna-radius-lg, 18px) !important;
+  padding: 10px 14px !important;
+}
+
+body.is-simple-mode .mizuna-lightbox-close-icon-btn {
+  width: 42px !important;
+  height: 42px !important;
+  min-width: 42px !important;
+  min-height: 42px !important;
+}
+
+body.is-simple-mode .mizuna-lightbox-action-btn {
+  height: 44px !important;
+  padding: 0 20px !important;
+  font-size: 0.90rem !important;
 }
 
 /* =========================================
@@ -4972,27 +5382,97 @@ body.is-simple-mode .mizuna-setting-col {
   display: flex;
   align-items: center;
   gap: 6px;
+  flex-wrap: wrap;
 }
 
 .mizuna-color-dot {
   width: 22px;
   height: 22px;
+  min-width: 22px;
+  min-height: 22px;
   border-radius: 50%;
   border: 2px solid transparent;
+  outline: 1px solid rgba(255, 255, 255, 0.25);
   cursor: pointer;
   padding: 0;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
 }
 
-.mizuna-color-dot:hover {
-  transform: scale(1.15);
+@media (hover: hover) {
+  .mizuna-color-dot:hover {
+    transform: scale(1.15);
+  }
+}
+
+.mizuna-color-dot:active {
+  transform: scale(0.92);
 }
 
 .mizuna-color-dot.is-active {
   border-color: #38bdf8;
+  outline-color: #38bdf8;
   transform: scale(1.2);
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.5);
+}
+
+.mizuna-color-picker-btn {
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px dashed rgba(255, 255, 255, 0.4);
+  color: #f8fafc;
+  position: relative;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+@media (hover: hover) {
+  .mizuna-color-picker-btn:hover {
+    transform: scale(1.15);
+    border-color: #38bdf8;
+    color: #38bdf8;
+  }
+}
+
+.mizuna-color-picker-btn:active {
+  transform: scale(0.92);
+}
+
+.mizuna-color-picker-btn.is-active {
+  border-style: solid;
+  border-color: #38bdf8;
+  transform: scale(1.2);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.5);
+}
+
+.mizuna-color-picker-btn i {
+  font-size: 15px !important;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.mizuna-hidden-color-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  border: none;
 }
 
 .mizuna-text-size-wrap {
@@ -5060,36 +5540,153 @@ body.is-simple-mode .mizuna-setting-col {
 }
 
 /* 下部機能切り替えタブバー */
+.mizuna-editor-tabs-wrap {
+  position: relative;
+  width: 100%;
+  flex-shrink: 0;
+  background: rgba(15, 23, 42, 0.98);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.mizuna-editor-tabs-scroll-indicator {
+  position: absolute;
+  top: 0;
+  bottom: env(safe-area-inset-bottom, 0px);
+  width: 44px;
+  display: flex;
+  align-items: center;
+  pointer-events: none; /* スワイプ操作を邪魔しないように透過 */
+  z-index: 5;
+  transition: opacity 0.2s ease;
+}
+
+.mizuna-editor-tabs-scroll-indicator.is-left {
+  left: 0;
+  background: linear-gradient(to right, rgba(15, 23, 42, 0.98) 45%, rgba(15, 23, 42, 0.6) 75%, transparent);
+  justify-content: flex-start;
+  padding-left: 4px;
+}
+
+.mizuna-editor-tabs-scroll-indicator.is-right {
+  right: 0;
+  background: linear-gradient(to left, rgba(15, 23, 42, 0.98) 45%, rgba(15, 23, 42, 0.6) 75%, transparent);
+  justify-content: flex-end;
+  padding-right: 4px;
+}
+
+.mizuna-editor-tabs-scroll-btn {
+  pointer-events: auto; /* ボタンのみタップ可能 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.18) !important;
+  background: rgba(30, 41, 59, 0.85) !important;
+  color: rgba(255, 255, 255, 0.85) !important;
+  cursor: pointer;
+  padding: 0;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.15s ease;
+}
+
+.mizuna-editor-tabs-scroll-btn:hover {
+  background: rgba(56, 189, 248, 0.3) !important;
+  border-color: rgba(56, 189, 248, 0.6) !important;
+  color: #38bdf8 !important;
+  transform: scale(1.08);
+}
+
+.mizuna-editor-tabs-scroll-btn:active {
+  transform: scale(0.95);
+}
+
+.mizuna-editor-tabs-scroll-btn i {
+  font-size: 18px !important;
+  line-height: 1;
+}
+
+.mizuna-editor-tabs-scroll-indicator.is-right .mizuna-editor-tabs-scroll-btn i {
+  animation: mizuna-scroll-btn-pulse-right 1.8s ease-in-out infinite;
+}
+
+.mizuna-editor-tabs-scroll-indicator.is-left .mizuna-editor-tabs-scroll-btn i {
+  animation: mizuna-scroll-btn-pulse-left 1.8s ease-in-out infinite;
+}
+
+@keyframes mizuna-scroll-btn-pulse-right {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes mizuna-scroll-btn-pulse-left {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-2px);
+  }
+}
+
 .mizuna-editor-tabs {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(15, 23, 42, 0.96);
-  padding: 6px 4px calc(8px + env(safe-area-inset-bottom, 0px));
+  justify-content: flex-start;
+  background: transparent;
+  padding: 6px 12px calc(8px + env(safe-area-inset-bottom, 0px));
   min-height: calc(56px + env(safe-area-inset-bottom, 0px));
   box-sizing: border-box;
   flex-shrink: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  gap: 2px;
+  scroll-behavior: smooth;
+  gap: 4px;
+  /* スクロールバーのスタイル（薄く上品に表示してスクロール可能であることを明示） */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
 }
 
 .mizuna-editor-tabs::-webkit-scrollbar {
-  display: none;
+  height: 3px;
+}
+
+.mizuna-editor-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mizuna-editor-tabs::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: 9999px;
+}
+
+.mizuna-editor-tabs::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+@media (min-width: 600px) {
+  .mizuna-editor-tabs {
+    justify-content: center;
+  }
 }
 
 .mizuna-editor-tab-btn {
-  flex: 1 1 0;
-  min-width: 44px;
-  max-width: 68px;
+  flex: 0 0 auto;
+  min-width: 60px;
+  max-width: 74px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 4px 2px;
+  padding: 5px 6px;
   border: none !important;
   background: transparent !important;
   color: #94a3b8 !important;

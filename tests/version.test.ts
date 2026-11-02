@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { comparisonVersion } from '../src/utils/version';
+import { comparisonVersion, hasDrivePermission, getMissingPermissions } from '../src/utils/version';
 
 describe('comparisonVersion', () => {
   it('同一バージョンで 0 を返すこと', () => {
@@ -27,5 +27,33 @@ describe('comparisonVersion', () => {
     expect(comparisonVersion('3', '3.0.0')).toBe(0);
     expect(comparisonVersion('3.1', '3.0.5')).toBeGreaterThan(0);
     expect(comparisonVersion('', '0.0.0')).toBe(0);
+  });
+
+  describe('hasDrivePermission', () => {
+    it('3.5.0 未満のアカウントでは false を返すこと', () => {
+      expect(hasDrivePermission('3.4.0')).toBe(false);
+      expect(hasDrivePermission('3.0.0')).toBe(false);
+      expect(hasDrivePermission('2.0.0')).toBe(false);
+      expect(hasDrivePermission(null)).toBe(false);
+    });
+
+    it('3.5.0 以上のバージョンでは true を返すこと', () => {
+      expect(hasDrivePermission('3.5.0')).toBe(true);
+      expect(hasDrivePermission('3.5.1')).toBe(true);
+      expect(hasDrivePermission('3.13.0')).toBe(true);
+      expect(hasDrivePermission('4.0.0')).toBe(true);
+    });
+  });
+
+  describe('getMissingPermissions', () => {
+    it('3.5.0 未満のアカウントでは write:drive を含むこと', () => {
+      expect(getMissingPermissions('3.4.0')).toEqual(['write:drive']);
+      expect(getMissingPermissions('1.0.0')).toEqual(['write:drive']);
+    });
+
+    it('3.5.0 以上のバージョンでは空配列を返すこと', () => {
+      expect(getMissingPermissions('3.5.0')).toEqual([]);
+      expect(getMissingPermissions('3.13.0')).toEqual([]);
+    });
   });
 });

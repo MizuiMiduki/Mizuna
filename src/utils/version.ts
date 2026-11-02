@@ -18,3 +18,25 @@ export function comparisonVersion(version1: string, version2: string): number {
   if (minor1 !== minor2) return minor1 - minor2;
   return patch1 - patch2;
 }
+
+/** 画像添付（write:drive）権限が必要になったバージョン */
+export const DRIVE_PERMISSION_REQUIRED_VERSION = '3.5.0';
+
+/**
+ * 指定されたアカウント追加バージョンが画像添付（write:drive）権限を保持しているか判定
+ */
+export function hasDrivePermission(addVersion?: string | null): boolean {
+  if (!addVersion) return false;
+  return comparisonVersion(DRIVE_PERMISSION_REQUIRED_VERSION, addVersion) <= 0;
+}
+
+/**
+ * 指定されたアカウント追加バージョンで不足している権限一覧を取得
+ */
+export function getMissingPermissions(addVersion?: string | null): string[] {
+  const missing: string[] = [];
+  if (!hasDrivePermission(addVersion)) {
+    missing.push('write:drive');
+  }
+  return missing;
+}

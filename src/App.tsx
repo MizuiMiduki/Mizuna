@@ -1,4 +1,5 @@
 import { createEffect, Match, onMount, Show, Switch } from 'solid-js';
+import gsap from 'gsap';
 import { AboutView } from './components/AboutView';
 import { AccountView } from './components/AccountView';
 import { AddAccountView } from './components/AddAccountView';
@@ -12,11 +13,15 @@ import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { SettingsView } from './components/SettingsView';
 import { ShortcutsView } from './components/ShortcutsView';
 import { SnackbarHost } from './components/SnackbarHost';
-import { AppProvider, useApp } from './store/appStore';
+import { AppProvider, useApp, type ViewType } from './store/appStore';
 import { initAnalytics, trackPageView } from './utils/analytics';
+
+const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'settings'];
 
 function MainContent() {
   const { isInitializing, currentView, settings } = useApp();
+  let mainContainerRef: HTMLElement | undefined;
+  let prevView: ViewType = currentView();
 
   onMount(() => {
     initAnalytics();
@@ -39,6 +44,38 @@ function MainContent() {
         if (document.documentElement) document.documentElement.scrollTop = 0;
         if (document.body) document.body.scrollTop = 0;
       });
+    }
+  });
+
+  // メニューバー画面間（アカウント・投稿・設定）の遷移時にiOS風の方向連動スライド演出
+  createEffect(() => {
+    const nextView = currentView();
+    const prev = prevView;
+    prevView = nextView;
+
+    const prevIdx = DOCK_VIEWS.indexOf(prev);
+    const nextIdx = DOCK_VIEWS.indexOf(nextView);
+
+    if (prevIdx !== -1 && nextIdx !== -1 && prevIdx !== nextIdx && mainContainerRef) {
+      const direction = nextIdx > prevIdx ? 1 : -1;
+      const prefersReduced =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+      if (!prefersReduced) {
+        gsap.killTweensOf(mainContainerRef);
+        gsap.fromTo(
+          mainContainerRef,
+          { opacity: 0.65, x: direction * 24 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.22,
+            ease: 'power2.out',
+            clearProps: 'transform',
+          }
+        );
+      }
     }
   });
 
@@ -72,7 +109,7 @@ function MainContent() {
     <div class={appShellClasses()}>
       <Header />
 
-      <main class="main_column mizuna-main-container">
+      <main ref={mainContainerRef} class="main_column mizuna-main-container">
         <Show
           when={!isInitializing()}
           fallback={

@@ -196,6 +196,8 @@ export function DebugMenu() {
                     { id: 'settings', label: '設定' },
                     { id: 'shortcuts', label: 'キー一覧' },
                     { id: 'about', label: 'About' },
+                    { id: 'announcements', label: 'お知らせ' },
+                    { id: 'privacy', label: 'ポリシー' },
                   ] as { id: ViewType; label: string }[]
                 ).map((v) => (
                   <button
@@ -286,6 +288,20 @@ export function DebugMenu() {
                 <button type="button" class="mizuna-debug-btn" onClick={simulateWebShareTarget}>
                   <i>share</i>
                   <span>WebShare受信テスト</span>
+                </button>
+              </div>
+
+              <div class="mizuna-debug-row top-gap">
+                <button
+                  type="button"
+                  class="mizuna-debug-btn"
+                  onClick={() => {
+                    window.open('/maintenance.html', '_blank');
+                    showToast('maintenance.html を別タブで開きました', 'info', 'Debug');
+                  }}
+                >
+                  <i>engineering</i>
+                  <span>メンテナンス画面 (maintenance.html)</span>
                 </button>
               </div>
             </div>

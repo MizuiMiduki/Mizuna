@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { mizuna_options } from '../src/config/mizunaOptions';
 import {
   checkServerExists,
   buildMiAuthUrl,
@@ -42,7 +43,8 @@ describe('misskeyApi service', () => {
       const url = buildMiAuthUrl('https://misskey.io/', 'session-uuid-123');
       expect(url).toContain('https://misskey.io/miauth/session-uuid-123');
       expect(url).toContain('permission=write:notes,read:account,write:drive');
-      expect(url).toContain('name=');
+      const expectedName = encodeURIComponent(`${mizuna_options.app_name} v${mizuna_options.mizuna_version}`);
+      expect(url).toContain(`name=${expectedName}`);
     });
   });
 

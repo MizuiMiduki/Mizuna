@@ -3,6 +3,7 @@ import { createSignal, For, onMount, Show } from 'solid-js';
 import { buildMiAuthUrl, checkServerExists } from '../services/misskeyApi';
 import { useApp } from '../store/appStore';
 import { safeLocalStorage } from '../utils/storage';
+import { FloatingBackButton } from './FloatingBackButton';
 
 const SUGGESTED_SERVERS = ['misskey.io', 'misskey.systems'];
 
@@ -20,7 +21,7 @@ export function AddAccountView() {
       gsap.fromTo(
         containerRef,
         { opacity: 0, y: 14 },
-        { opacity: 1, y: 0, duration: 0.34, ease: 'power3.out' }
+        { opacity: 1, y: 0, duration: 0.34, ease: 'power3.out', clearProps: 'transform' }
       );
     }
   });
@@ -102,14 +103,6 @@ export function AddAccountView() {
           <div>
             <h2 class="mizuna-section-title">アカウントを追加</h2>
           </div>
-          <button
-            type="button"
-            class="back_inputform_floating_button mizuna-btn mizuna-btn-outline"
-            onClick={() => setCurrentView('accounts')}
-          >
-            <i>arrow_back</i>
-            <span>一覧へもどる</span>
-          </button>
         </div>
       </Show>
 
@@ -226,6 +219,13 @@ export function AddAccountView() {
           </button>
         </form>
       </section>
+
+      <Show when={accounts().length > 0}>
+        <FloatingBackButton
+          onClick={() => setCurrentView('accounts')}
+          label="一覧へもどる"
+        />
+      </Show>
     </div>
   );
 }

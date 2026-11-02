@@ -216,7 +216,7 @@ jobs:
           cp public/icon.png maintenance_staging/icon.png
 
       - name: Enable Maintenance Mode via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ steps.target_release.outputs.ftp_user }}
@@ -228,7 +228,7 @@ jobs:
       # 2. アプリ本体の差分同期 (JS, CSS, 画像などの高速転送)
       # ========================================================
       - name: Deploy dist via FTP (Differential Sync)
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ steps.target_release.outputs.ftp_user }}

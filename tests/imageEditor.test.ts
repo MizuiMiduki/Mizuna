@@ -112,6 +112,13 @@ describe('imageEditor utility', () => {
     expect(mockCtx.measureText).toHaveBeenCalledWith('DO NOT REPOST');
     expect(mockCtx.fillText).toHaveBeenCalled();
     expect(mockCtx.restore).toHaveBeenCalled();
+    expect(mockCtx.globalAlpha).toBe(0.2);
+
+    // 1% (0.01) 〜 100% (1.0) の範囲が正しく反映されること
+    applyWatermarkPatternToContext(mockCtx, 800, 600, { text: 'TEST', opacity: 0.01 });
+    expect(mockCtx.globalAlpha).toBe(0.01);
+    applyWatermarkPatternToContext(mockCtx, 800, 600, { text: 'TEST', opacity: 1.0 });
+    expect(mockCtx.globalAlpha).toBe(1.0);
   });
 
   it('applyWatermarkToContext (後方互換関数) が正常に動作すること', () => {

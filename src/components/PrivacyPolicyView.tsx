@@ -2,6 +2,7 @@ import gsap from 'gsap';
 import { onMount } from 'solid-js';
 import { mizuna_options } from '../config/mizunaOptions';
 import { useApp } from '../store/appStore';
+import { FloatingBackButton } from './FloatingBackButton';
 
 export function PrivacyPolicyView() {
   const { accounts, setCurrentView } = useApp();
@@ -12,7 +13,7 @@ export function PrivacyPolicyView() {
       gsap.fromTo(
         containerRef,
         { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out' }
+        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
       );
     }
   });
@@ -27,14 +28,6 @@ export function PrivacyPolicyView() {
         <div>
           <h2 class="mizuna-section-title">プライバシーポリシー</h2>
         </div>
-        <button
-          type="button"
-          class="mizuna-btn mizuna-btn-outline"
-          onClick={handleBack}
-        >
-          <i>arrow_back</i>
-          <span>もどる</span>
-        </button>
       </div>
 
       <div class="mizuna-privacy-content">
@@ -106,18 +99,9 @@ export function PrivacyPolicyView() {
             </a>
           </div>
         </section>
-
-        <div class="mizuna-privacy-footer-actions">
-          <button
-            type="button"
-            class="mizuna-btn mizuna-btn-primary"
-            onClick={handleBack}
-          >
-            <i>arrow_back</i>
-            <span>もどる</span>
-          </button>
-        </div>
       </div>
+
+      <FloatingBackButton onClick={handleBack} />
     </div>
   );
 }

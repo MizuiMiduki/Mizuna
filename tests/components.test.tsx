@@ -14,9 +14,13 @@ import { useApp } from '../src/store/appStore';
 import { DialogHost } from '../src/components/DialogHost';
 import { SnackbarHost } from '../src/components/SnackbarHost';
 import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
+import { safeSessionStorage, safeLocalStorage } from '../src/utils/storage';
 
 describe('UI Components', () => {
   beforeEach(async () => {
+    safeSessionStorage.clear();
+    safeLocalStorage.clear();
+    sessionStorage.clear();
     await db.open();
     await db.account.clear();
     await db.setting.clear();
@@ -32,14 +36,14 @@ describe('UI Components', () => {
   });
 
   describe('Header & FooterNav', () => {
-    it('ヘッダーにタイトルとお知らせアイコンが表示されること', () => {
+    it('ヘッダーにタイトルとお知らせアイコンが表示されること', async () => {
       render(() => (
         <AppProvider>
           <Header />
         </AppProvider>
       ));
 
-      expect(screen.getByText('Mizuna')).toBeInTheDocument();
+      expect(await screen.findByText('Mizuna')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /(お知らせ|Announcements)/ })).toBeInTheDocument();
     });
 
@@ -56,6 +60,218 @@ describe('UI Components', () => {
 
       const settingsBtn = await screen.findByRole('button', { name: /(設定|Settings)/ });
       expect(settingsBtn).toBeInTheDocument();
+    });
+
+    it('フッターナビゲーションのアクティブピルインジケーターが初期描画時に配置されること', async () => {
+      const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect;
+      HTMLElement.prototype.getBoundingClientRect = function () {
+        return {
+          width: 60,
+          height: 56,
+          top: 100,
+          left: 100,
+          bottom: 156,
+          right: 160,
+          x: 100,
+          y: 100,
+          toJSON: () => {},
+        };
+      };
+
+      try {
+        const { container } = render(() => (
+          <AppProvider>
+            <FooterNav />
+          </AppProvider>
+        ));
+
+        await screen.findByRole('button', { name: /(設定|Settings)/ });
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        const activePill = container.querySelector('.mizuna-dock-active-pill') as HTMLElement;
+        expect(activePill).toBeInTheDocument();
+        expect(activePill.style.opacity).toBe('1');
+        expect(activePill.style.width).toBe('60px');
+      } finally {
+        HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+      }
+    });
+
+    it('メニューバーのボタンを再度押しても投稿画面に戻らず、対象の画面を維持すること', async () => {
+      let currentAppView: any;
+      function TestConsumer() {
+        const { currentView } = useApp();
+        currentAppView = currentView;
+        return null;
+      }
+
+      render(() => (
+        <AppProvider>
+          <FooterNav />
+          <TestConsumer />
+        </AppProvider>
+      ));
+
+      const settingsBtn = await screen.findByRole('button', { name: /(設定|Settings)/ });
+
+      // 1回目のクリック: 設定画面へ遷移
+      fireEvent.click(settingsBtn);
+      expect(currentAppView()).toBe('settings');
+
+      // 2回目のクリック: 投稿画面（note）に戻らず settings のまま維持されること
+      fireEvent.click(settingsBtn);
+      expect(currentAppView()).toBe('settings');
+
+      // アカウントボタンも同様
+      const accountBtn = await screen.findByRole('button', { name: /(アカウント管理|Accounts)/ });
+      fireEvent.click(accountBtn);
+      expect(currentAppView()).toBe('accounts');
+
+      // 2回目のクリックでも accounts のまま維持されること
+      fireEvent.click(accountBtn);
+      expect(currentAppView()).toBe('accounts');
+    });
+
+    it('メニューバーに定義されていない画面（about, shortcuts, announcements等）ではメニューバーが表示されないこと', async () => {
+      function TestWrapper() {
+        const { forceSetCurrentView } = useApp();
+        forceSetCurrentView('about');
+        return <FooterNav />;
+      }
+
+      const { container } = render(() => (
+        <AppProvider>
+          <TestWrapper />
+        </AppProvider>
+      ));
+
+      expect(container.querySelector('.mizuna-floating-dock')).not.toBeInTheDocument();
+    });
+
+    it('メニューバーの横スワイプ操作で画面遷移できること（右スワイプで右の画面へ、左スワイプで左の画面へ）', async () => {
+      let currentAppView: any;
+      function TestConsumer() {
+        const { currentView, forceSetCurrentView } = useApp();
+        forceSetCurrentView('note');
+        currentAppView = currentView;
+        return null;
+      }
+
+      const { container } = render(() => (
+        <AppProvider>
+          <FooterNav />
+          <TestConsumer />
+        </AppProvider>
+      ));
+
+      await screen.findByRole('button', { name: /(設定|Settings)/ });
+      const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
+      expect(dock).toBeInTheDocument();
+
+      // 初期状態は note (投稿画面)
+      expect(currentAppView()).toBe('note');
+
+      // 右スワイプ (note -> settings: 右にある設定画面へ): startX: 100 -> moveX: 160 (dx: +60)
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 160, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 160, clientY: 100 }));
+
+      expect(currentAppView()).toBe('settings');
+
+      // 左スワイプ (settings -> note: 左にある投稿画面へ): startX: 200 -> moveX: 140 (dx: -60)
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 140, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 140, clientY: 100 }));
+
+      expect(currentAppView()).toBe('note');
+
+      // 再度左スワイプ (note -> accounts: 左にあるアカウント管理画面へ): startX: 200 -> moveX: 140 (dx: -60)
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 140, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 140, clientY: 100 }));
+
+      expect(currentAppView()).toBe('accounts');
+    });
+
+    it('メニューバーをアカウント一覧から設定まで大きくスワイプして直接遷移できること（大スワイプ対応）', async () => {
+      let currentAppView: any;
+      function TestConsumer() {
+        const { currentView, forceSetCurrentView } = useApp();
+        forceSetCurrentView('accounts');
+        currentAppView = currentView;
+        return null;
+      }
+
+      const { container } = render(() => (
+        <AppProvider>
+          <FooterNav />
+          <TestConsumer />
+        </AppProvider>
+      ));
+
+      await screen.findByRole('button', { name: /(設定|Settings)/ });
+      const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
+      expect(dock).toBeInTheDocument();
+
+      // 初期状態は accounts (アカウント管理画面)
+      expect(currentAppView()).toBe('accounts');
+
+      // accounts から settings へ大きく右スワイプ (dx: +140) -> 投稿画面で止まらず設定まで直接移動
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 50, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 190, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 190, clientY: 100 }));
+
+      expect(currentAppView()).toBe('settings');
+
+      // settings から accounts へ大きく左スワイプ (dx: -140) -> 投稿画面で止まらずアカウント一覧まで直接移動
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 60, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 60, clientY: 100 }));
+
+      expect(currentAppView()).toBe('accounts');
+    });
+
+    it('投稿画面（中央タブ）から外側へ大きくスワイプした際にも両端の画面で正しく停止・バウンドすること', async () => {
+      let currentAppView: any;
+      let forceSetView: any;
+      function TestConsumer() {
+        const { currentView, forceSetCurrentView } = useApp();
+        forceSetCurrentView('note');
+        currentAppView = currentView;
+        forceSetView = forceSetCurrentView;
+        return null;
+      }
+
+      const { container } = render(() => (
+        <AppProvider>
+          <FooterNav />
+          <TestConsumer />
+        </AppProvider>
+      ));
+
+      await screen.findByRole('button', { name: /(設定|Settings)/ });
+      const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
+      expect(dock).toBeInTheDocument();
+
+      expect(currentAppView()).toBe('note');
+
+      // note から右へ大きくスワイプ (dx: +200) -> 右端（settings）でバウンドして settings に着地
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 300, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 300, clientY: 100 }));
+
+      expect(currentAppView()).toBe('settings');
+
+      // 再度 note に戻す
+      forceSetView('note');
+      expect(currentAppView()).toBe('note');
+
+      // note から左へ大きくスワイプ (dx: -200) -> 左端（accounts）でバウンドして accounts に着地
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 250, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 50, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 50, clientY: 100 }));
+
+      expect(currentAppView()).toBe('accounts');
     });
   });
 
@@ -252,6 +468,36 @@ describe('UI Components', () => {
       expect(screen.getByText(/(投稿のデフォルト設定|Default Post Settings)/)).toBeInTheDocument();
       expect(screen.getAllByText(/(カスタムCSS|Custom CSS)/).length).toBeGreaterThan(0);
     });
+
+    it('設定データのエクスポートおよびインポートUIが表示されること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      expect(screen.getByText(/(設定データのエクスポート|Export Settings Data)/)).toBeInTheDocument();
+      expect(screen.getByText(/(設定データのインポート|Import Settings Data)/)).toBeInTheDocument();
+
+      const exportButtons = screen.getAllByRole('button', {
+        name: /(エクスポート|Export)/i,
+      });
+      expect(exportButtons.length).toBeGreaterThanOrEqual(2);
+      expect(document.querySelector('.export_settings_data')).toBeInTheDocument();
+      expect(document.querySelector('.import_settings_data')).toBeInTheDocument();
+    });
+
+    it('最新バージョンの確認とキャッシュクリアが独立した「その他」グループに表示されること', async () => {
+      render(() => (
+        <AppProvider>
+          <SettingsView />
+        </AppProvider>
+      ));
+
+      expect(screen.getByText(/(その他|Other)/)).toBeInTheDocument();
+      expect(screen.getByText(/(最新バージョンの確認|Check for Updates)/)).toBeInTheDocument();
+      expect(screen.getByText(/(アプリのキャッシュクリア|Clear App Cache)/)).toBeInTheDocument();
+    });
   });
 
   describe('AccountView', () => {
@@ -292,6 +538,38 @@ describe('UI Components', () => {
       // 完了ボタンをクリックして終了
       fireEvent.click(completeBtns[0]);
       expect(screen.queryByTitle('ドラッグして並べ替え')).not.toBeInTheDocument();
+    });
+
+    it('3.5.0未満のアカウントに「画像非対応」バッジが表示され、タップ時に不足権限ダイアログが表示されること', async () => {
+      // 3.5.0未満の古いアカウントを追加
+      await db.account.add({
+        token: 'tok_old_user',
+        name: '旧バージョンユーザー',
+        username: 'old_user',
+        address: 'misskey.io',
+        avatarurl: 'https://example.com/avatar_old.webp',
+        add_mizuna_versinon: '3.4.0',
+      });
+
+      render(() => (
+        <AppProvider>
+          <AccountView />
+          <DialogHost />
+        </AppProvider>
+      ));
+
+      // 画像非対応バッジが存在すること
+      const warningBadge = await screen.findByRole('button', { name: /(画像非対応|warning)/i });
+      expect(warningBadge).toBeInTheDocument();
+
+      // バッジをクリック
+      fireEvent.click(warningBadge);
+
+      // モーダルダイアログが開き、不足権限として write:drive が表示されること
+      expect(await screen.findByText('アカウント権限の確認')).toBeInTheDocument();
+      expect(screen.getByText(/write:drive/)).toBeInTheDocument();
+      expect(screen.getByText(/(ドライブへの画像アップロード権限)/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '再認証する' })).toBeInTheDocument();
     });
   });
 
@@ -420,6 +698,74 @@ describe('UI Components', () => {
       // リセット後は editState が消え、「加工をリセット」ボタンも消えること
       expect(screen.queryByRole('button', { name: /(加工をリセット|元画像に戻す)/ })).not.toBeInTheDocument();
       expect(appHook!.attachedImages()[0].editState).toBeUndefined();
+    });
+
+    it('添付画像の左上にある編集ボタンをクリックしたときに画像加工モーダルが開くこと', async () => {
+      let appHook: ReturnType<typeof useApp> | null = null;
+      function TestWrapper() {
+        appHook = useApp();
+        return (
+          <>
+            <button
+              data-testid="add-file-btn"
+              onClick={() => {
+                const fakeFile = new File(['test-bytes'], 'editor_open_test.png', {
+                  type: 'image/png',
+                });
+                appHook?.addAttachedFiles([fakeFile]);
+              }}
+            >
+              Add
+            </button>
+            <NoteView />
+          </>
+        );
+      }
+
+      render(() => (
+        <AppProvider>
+          <TestWrapper />
+        </AppProvider>
+      ));
+
+      fireEvent.click(screen.getByTestId('add-file-btn'));
+      const thumb = await screen.findByAltText('editor_open_test.png');
+      expect(thumb).toBeInTheDocument();
+
+      const editBtn = screen.getByRole('button', { name: /(画像を編集|Edit image)/i });
+      expect(editBtn).toBeInTheDocument();
+      fireEvent.click(editBtn);
+
+      // 画像加工モーダルが開き、キャンセルボタンと下部タブバーが表示されること
+      const cancelBtn = await screen.findByRole('button', { name: /(キャンセル|Cancel)/i });
+      expect(cancelBtn).toBeInTheDocument();
+      expect(document.querySelector('.mizuna-image-editor-portal')).toBeInTheDocument();
+      expect(document.querySelector('.mizuna-editor-tabs-wrap')).toBeInTheDocument();
+      expect(document.querySelector('.mizuna-editor-tabs')).toBeInTheDocument();
+    });
+
+    it('3.5.0未満の古いアカウントがアクティブな場合、画像選択ボタンが無効化 (disabled) されること', async () => {
+      // 既存アカウント（3.10.0）をクリアして、3.4.0のアカウントを設定
+      await db.account.clear();
+      await db.account.add({
+        id: 1,
+        token: 'tok_old',
+        name: '旧アカウント',
+        username: 'old',
+        address: 'misskey.io',
+        avatarurl: '',
+        add_mizuna_versinon: '3.4.0',
+      });
+
+      render(() => (
+        <AppProvider>
+          <NoteView />
+        </AppProvider>
+      ));
+
+      const selectPicBtn = await screen.findByRole('button', { name: /(画像添付非対応|写真|画像)/i });
+      expect(selectPicBtn).toBeDisabled();
+      expect(selectPicBtn).toHaveClass('is-disabled');
     });
   });
 });
