@@ -63,6 +63,7 @@ function MainContent() {
         window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 
       if (!prefersReduced) {
+        gsap.killTweensOf(mainContainerRef);
         gsap.fromTo(
           mainContainerRef,
           { opacity: 0.65, x: direction * 24 },

@@ -110,8 +110,9 @@ body {
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  padding-bottom: 108px;
+  padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
   position: relative;
+  overflow-x: hidden;
   background:
     radial-gradient(
       800px circle at 15% -10%,
@@ -2986,7 +2987,7 @@ body.dark .mizuna-custom-css-warnings {
    ========================================= */
 .mizuna-dock-wrapper {
   position: fixed;
-  bottom: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
   left: 0;
   right: 0;
   width: 100%;
@@ -2997,6 +2998,9 @@ body.dark .mizuna-custom-css-warnings {
   padding: 0 12px;
   pointer-events: none;
   box-sizing: border-box;
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+  will-change: transform;
 }
 
 .mizuna-floating-dock {
@@ -4662,7 +4666,7 @@ body.is-simple-mode .mizuna-submit-btn i {
 
 /* 10. フッターナビゲーション (Dock) */
 body.is-simple-mode .mizuna-dock-wrapper {
-  bottom: 12px !important;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 body.is-simple-mode .mizuna-floating-dock {

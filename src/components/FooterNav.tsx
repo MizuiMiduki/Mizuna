@@ -197,7 +197,8 @@ function FooterNavContent() {
     }
 
     const x = targetRect.left - dockRect.left;
-    const y = targetRect.top - dockRect.top;
+    const rawY = targetRect.top - dockRect.top;
+    const y = Number.isFinite(rawY) ? Math.max(0, rawY) : 6;
     const width = targetRect.width;
     const height = targetRect.height;
 
