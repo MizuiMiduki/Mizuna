@@ -192,6 +192,44 @@ describe('UI Components', () => {
 
       expect(currentAppView()).toBe('accounts');
     });
+
+    it('メニューバーをアカウント一覧から設定まで大きくスワイプして直接遷移できること（大スワイプ対応）', async () => {
+      let currentAppView: any;
+      function TestConsumer() {
+        const { currentView, forceSetCurrentView } = useApp();
+        forceSetCurrentView('accounts');
+        currentAppView = currentView;
+        return null;
+      }
+
+      const { container } = render(() => (
+        <AppProvider>
+          <FooterNav />
+          <TestConsumer />
+        </AppProvider>
+      ));
+
+      await screen.findByRole('button', { name: /(設定|Settings)/ });
+      const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
+      expect(dock).toBeInTheDocument();
+
+      // 初期状態は accounts (アカウント管理画面)
+      expect(currentAppView()).toBe('accounts');
+
+      // accounts から settings へ大きく右スワイプ (dx: +140) -> 投稿画面で止まらず設定まで直接移動
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 50, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 190, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 190, clientY: 100 }));
+
+      expect(currentAppView()).toBe('settings');
+
+      // settings から accounts へ大きく左スワイプ (dx: -140) -> 投稿画面で止まらずアカウント一覧まで直接移動
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 60, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 60, clientY: 100 }));
+
+      expect(currentAppView()).toBe('accounts');
+    });
   });
 
   describe('AnnouncementsView', () => {

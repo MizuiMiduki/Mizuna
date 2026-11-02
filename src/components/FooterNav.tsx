@@ -19,6 +19,9 @@ function FooterNavContent() {
   let startX = 0;
   let startY = 0;
   let startTime = 0;
+  let lastMoveX = 0;
+  let lastMoveTime = 0;
+  let currentVelocityX = 0;
   let dragDeltaX = 0;
   let hasSwiped = false;
 
@@ -38,6 +41,38 @@ function FooterNavContent() {
     animated: false,
   });
 
+  const getStepDistance = (): number => {
+    if (avatarBtnRef && noteBtnRef) {
+      const r0 = avatarBtnRef.getBoundingClientRect();
+      const r1 = noteBtnRef.getBoundingClientRect();
+      const d = (r1.left + r1.right) / 2 - (r0.left + r0.right) / 2;
+      if (d > 20) return d;
+    }
+    if (noteBtnRef && settingsBtnRef) {
+      const r1 = noteBtnRef.getBoundingClientRect();
+      const r2 = settingsBtnRef.getBoundingClientRect();
+      const d = (r2.left + r2.right) / 2 - (r1.left + r1.right) / 2;
+      if (d > 20) return d;
+    }
+    return 64;
+  };
+
+  const currentPillWidth = () => {
+    if (!isDragging()) return pillStyle().width;
+    const currentIndex = DOCK_VIEWS.indexOf(currentView());
+    const stepDistance = getStepDistance();
+    const pos = currentIndex + dragOffset() / stepDistance;
+    const wAvatar = (avatarBtnRef?.getBoundingClientRect().width || 0) > 0
+      ? avatarBtnRef!.getBoundingClientRect().width
+      : pillStyle().width;
+    const wNav = (noteBtnRef?.getBoundingClientRect().width || 0) > 0
+      ? noteBtnRef!.getBoundingClientRect().width
+      : pillStyle().width;
+    if (pos <= 0) return wAvatar;
+    if (pos >= 1) return wNav;
+    return Math.round(wAvatar + (wNav - wAvatar) * pos);
+  };
+
   const handleNavClick = (targetView: ViewType) => {
     if (hasSwiped) return;
     setCurrentView(targetView);
@@ -48,6 +83,9 @@ function FooterNavContent() {
     startX = clientX;
     startY = clientY;
     startTime = Date.now();
+    lastMoveX = clientX;
+    lastMoveTime = startTime;
+    currentVelocityX = 0;
     dragDeltaX = 0;
     setIsDragging(false);
   };
@@ -66,17 +104,27 @@ function FooterNavContent() {
 
     if (isDragging()) {
       dragDeltaX = dx;
-      const currentIndex = DOCK_VIEWS.indexOf(currentView());
-      let effectiveDx = dx;
-
-      // 両端でのラバーバンド（弾性）抵抗
-      // accounts (index 0) より左（dx < 0）
-      if (currentIndex === 0 && dx < 0) {
-        effectiveDx = dx * 0.28;
+      const now = Date.now();
+      const dt = now - lastMoveTime;
+      if (dt > 8) {
+        currentVelocityX = (clientX - lastMoveX) / dt;
+        lastMoveX = clientX;
+        lastMoveTime = now;
       }
-      // settings (index 2) より右（dx > 0）
-      else if (currentIndex === DOCK_VIEWS.length - 1 && dx > 0) {
-        effectiveDx = dx * 0.28;
+
+      const currentIndex = DOCK_VIEWS.indexOf(currentView());
+      const stepDistance = getStepDistance();
+      const maxLeft = currentIndex * stepDistance;
+      const maxRight = (DOCK_VIEWS.length - 1 - currentIndex) * stepDistance;
+
+      let effectiveDx = dx;
+      // 左端（accountsより左）でのラバーバンド抵抗
+      if (dx < -maxLeft) {
+        effectiveDx = -maxLeft + (dx - (-maxLeft)) * 0.28;
+      }
+      // 右端（settingsより右）でのラバーバンド抵抗
+      else if (dx > maxRight) {
+        effectiveDx = maxRight + (dx - maxRight) * 0.28;
       }
 
       // 指に1:1でダイレクト追従
@@ -90,26 +138,39 @@ function FooterNavContent() {
     if (startTime === 0) return;
 
     if (isDragging()) {
-      const elapsed = Math.max(1, Date.now() - startTime);
-      const vx = dragDeltaX / elapsed; // px/ms
+      const totalElapsed = Date.now() - startTime;
+      let vx = currentVelocityX;
+      // 指を止めてから離した場合、またはテスト等の極小時間（< 40ms）は速度ゼロ
+      if (Date.now() - lastMoveTime > 80 || totalElapsed < 40) {
+        vx = 0;
+      } else if (Math.abs(vx) < 0.01 && totalElapsed >= 40) {
+        vx = dragDeltaX / totalElapsed;
+      }
+      // 速度を常識的な範囲（±2.5 px/ms）にクランプ
+      vx = Math.max(-2.5, Math.min(2.5, vx));
+
       const currentIndex = DOCK_VIEWS.indexOf(currentView());
+      const stepDistance = getStepDistance();
 
-      const swipeThreshold = 22; // px
-      const velocityThreshold = 0.2; // px/ms
+      // フリック速度による慣性距離を加算
+      const momentum = Math.abs(vx) > 0.18 ? vx * 120 : 0;
+      const projectedDelta = dragDeltaX + momentum;
 
-      let targetIndex = currentIndex;
-      // 右スワイプ (dx > 0) -> 右の画面へ (accounts -> note -> settings)
-      if (dragDeltaX > swipeThreshold || vx > velocityThreshold) {
-        if (currentIndex < DOCK_VIEWS.length - 1) {
-          targetIndex = currentIndex + 1;
-        }
+      const swipeThreshold = 22; // 1画面遷移に必要な最小移動量 (px)
+      const multiStepThreshold = stepDistance * 1.35; // 2画面遷移（アカウントから設定等）に必要な閾値 (px)
+
+      let stepChange = 0;
+      if (projectedDelta >= multiStepThreshold) {
+        stepChange = 2;
+      } else if (projectedDelta >= swipeThreshold) {
+        stepChange = 1;
+      } else if (projectedDelta <= -multiStepThreshold) {
+        stepChange = -2;
+      } else if (projectedDelta <= -swipeThreshold) {
+        stepChange = -1;
       }
-      // 左スワイプ (dx < 0) -> 左の画面へ (settings -> note -> accounts)
-      else if (dragDeltaX < -swipeThreshold || vx < -velocityThreshold) {
-        if (currentIndex > 0) {
-          targetIndex = currentIndex - 1;
-        }
-      }
+
+      const targetIndex = Math.max(0, Math.min(DOCK_VIEWS.length - 1, currentIndex + stepChange));
 
       if (Math.abs(dragDeltaX) > 6) {
         hasSwiped = true;
@@ -127,6 +188,7 @@ function FooterNavContent() {
     setIsDragging(false);
     dragDeltaX = 0;
     setDragOffset(0);
+    updatePill(true);
     requestAnimationFrame(() => updatePill(true));
   };
 
@@ -286,7 +348,7 @@ function FooterNavContent() {
           class={`mizuna-dock-active-pill ${pillStyle().animated && !isDragging() ? 'is-animated' : ''}`}
           style={{
             transform: `translate3d(${pillStyle().x + dragOffset()}px, ${pillStyle().y}px, 0)`,
-            width: `${pillStyle().width}px`,
+            width: `${currentPillWidth()}px`,
             height: `${pillStyle().height}px`,
             opacity: pillStyle().opacity,
           }}
