@@ -19,7 +19,7 @@ import { initAnalytics, trackPageView } from './utils/analytics';
 const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'settings'];
 
 function MainContent() {
-  const { isInitializing, currentView, setCurrentView, settings } = useApp();
+  const { isInitializing, currentView, settings } = useApp();
   let mainContainerRef: HTMLElement | undefined;
   let prevView: ViewType = currentView();
 
@@ -78,60 +78,6 @@ function MainContent() {
     }
   });
 
-  // 画面全体の横スワイプによる画面遷移（入力欄・スライダー等の誤作動防止フィルター付き）
-  let touchStartX = 0;
-  let touchStartY = 0;
-  let touchStartTime = 0;
-
-  const handleTouchStart = (e: TouchEvent) => {
-    if (e.touches.length !== 1) return;
-    const view = currentView();
-    if (!DOCK_VIEWS.includes(view)) return;
-
-    const target = e.target as HTMLElement | null;
-    if (!target) return;
-
-    if (
-      target.closest(
-        'input, textarea, select, button, .mizuna-slider, [draggable="true"], .mizuna-lightbox, .modal, dialog, [role="dialog"], .mizuna-dock-wrapper, .mizuna-floating-dock'
-      )
-    ) {
-      return;
-    }
-
-    touchStartX = e.touches[0].clientX;
-    touchStartY = e.touches[0].clientY;
-    touchStartTime = Date.now();
-  };
-
-  const handleTouchEnd = (e: TouchEvent) => {
-    if (touchStartTime === 0) return;
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - touchStartX;
-    const dy = touch.clientY - touchStartY;
-    const elapsed = Math.max(1, Date.now() - touchStartTime);
-    touchStartTime = 0;
-
-    if (Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      const vx = dx / elapsed;
-      const view = currentView();
-      const currentIndex = DOCK_VIEWS.indexOf(view);
-      if (currentIndex === -1) return;
-
-      if (dx < 0 || vx < -0.28) {
-        // 左スワイプ -> 次の画面へ (accounts -> note -> settings)
-        if (currentIndex < DOCK_VIEWS.length - 1) {
-          setCurrentView(DOCK_VIEWS[currentIndex + 1]);
-        }
-      } else if (dx > 0 || vx > 0.28) {
-        // 右スワイプ -> 前の画面へ (settings -> note -> accounts)
-        if (currentIndex > 0) {
-          setCurrentView(DOCK_VIEWS[currentIndex - 1]);
-        }
-      }
-    }
-  };
-
   createEffect(() => {
     const mode = settings().ui_mode;
     if (typeof document !== 'undefined') {
@@ -159,11 +105,7 @@ function MainContent() {
   };
 
   return (
-    <div
-      class={appShellClasses()}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div class={appShellClasses()}>
       <Header />
 
       <main ref={mainContainerRef} class="main_column mizuna-main-container">
