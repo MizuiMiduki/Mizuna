@@ -3021,8 +3021,12 @@ body.dark .mizuna-custom-css-warnings {
   flex-shrink: 0;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: pan-y;
-  cursor: pointer;
+  touch-action: none;
+  cursor: grab;
+}
+
+.mizuna-floating-dock:active {
+  cursor: grabbing;
 }
 
 /* スライドするアクティブインジケーター（ピルハイライト） */

@@ -13,11 +13,12 @@ function FooterNavContent() {
   let noteBtnRef: HTMLButtonElement | undefined;
   let settingsBtnRef: HTMLButtonElement | undefined;
 
+  const [isDragging, setIsDragging] = createSignal(false);
   const [dragOffset, setDragOffset] = createSignal(0);
+
   let startX = 0;
   let startY = 0;
   let startTime = 0;
-  let isSwiping = false;
   let dragDeltaX = 0;
   let hasSwiped = false;
 
@@ -42,51 +43,53 @@ function FooterNavContent() {
     setCurrentView(targetView);
   };
 
-  // メニューバーのスワイプ操作処理（iOS風の横スワイプによる画面遷移）
-  const handlePointerDown = (e: PointerEvent) => {
-    if (e.button !== 0 && e.button !== undefined) return;
-    startX = e.clientX ?? (e as any).pageX ?? 0;
-    startY = e.clientY ?? (e as any).pageY ?? 0;
+  // メニューバーのスワイプ・ドラッグ操作処理（指に1:1でダイレクト追従し、左右の並びに合わせて遷移）
+  const handleStart = (clientX: number, clientY: number) => {
+    startX = clientX;
+    startY = clientY;
     startTime = Date.now();
-    isSwiping = false;
     dragDeltaX = 0;
+    setIsDragging(false);
   };
 
-  const handlePointerMove = (e: PointerEvent) => {
-    if (startTime === 0) return;
-    const currentX = e.clientX ?? (e as any).pageX ?? startX;
-    const currentY = e.clientY ?? (e as any).pageY ?? startY;
-    const dx = currentX - startX;
-    const dy = currentY - startY;
+  const handleMove = (clientX: number, clientY: number): boolean => {
+    if (startTime === 0) return false;
+    const dx = clientX - startX;
+    const dy = clientY - startY;
 
-    if (!isSwiping) {
-      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) {
-        isSwiping = true;
-        try {
-          dockRef?.setPointerCapture?.(e.pointerId);
-        } catch {}
+    if (!isDragging()) {
+      // 5px以上動き、かつ水平方向の移動が優位な場合にドラッグ開始
+      if (Math.abs(dx) > 5 && Math.abs(dx) > Math.abs(dy)) {
+        setIsDragging(true);
       }
     }
 
-    if (isSwiping) {
+    if (isDragging()) {
       dragDeltaX = dx;
       const currentIndex = DOCK_VIEWS.indexOf(currentView());
-      let dampedDx = dx;
+      let effectiveDx = dx;
+
       // 両端でのラバーバンド（弾性）抵抗
-      if ((currentIndex === 0 && dx > 0) || (currentIndex === DOCK_VIEWS.length - 1 && dx < 0)) {
-        dampedDx = dx * 0.25;
+      // accounts (index 0) より左（dx < 0）
+      if (currentIndex === 0 && dx < 0) {
+        effectiveDx = dx * 0.28;
       }
-      setDragOffset(dampedDx * 0.45);
+      // settings (index 2) より右（dx > 0）
+      else if (currentIndex === DOCK_VIEWS.length - 1 && dx > 0) {
+        effectiveDx = dx * 0.28;
+      }
+
+      // 指に1:1でダイレクト追従
+      setDragOffset(effectiveDx);
+      return true;
     }
+    return false;
   };
 
-  const handlePointerUp = (e: PointerEvent) => {
+  const handleEnd = () => {
     if (startTime === 0) return;
-    try {
-      dockRef?.releasePointerCapture?.(e.pointerId);
-    } catch {}
 
-    if (isSwiping) {
+    if (isDragging()) {
       const elapsed = Math.max(1, Date.now() - startTime);
       const vx = dragDeltaX / elapsed; // px/ms
       const currentIndex = DOCK_VIEWS.indexOf(currentView());
@@ -95,13 +98,14 @@ function FooterNavContent() {
       const velocityThreshold = 0.2; // px/ms
 
       let targetIndex = currentIndex;
-      if (dragDeltaX < -swipeThreshold || vx < -velocityThreshold) {
-        // 左スワイプ -> 次の画面へ (accounts -> note -> settings)
+      // 右スワイプ (dx > 0) -> 右の画面へ (accounts -> note -> settings)
+      if (dragDeltaX > swipeThreshold || vx > velocityThreshold) {
         if (currentIndex < DOCK_VIEWS.length - 1) {
           targetIndex = currentIndex + 1;
         }
-      } else if (dragDeltaX > swipeThreshold || vx > velocityThreshold) {
-        // 右スワイプ -> 前の画面へ (settings -> note -> accounts)
+      }
+      // 左スワイプ (dx < 0) -> 左の画面へ (settings -> note -> accounts)
+      else if (dragDeltaX < -swipeThreshold || vx < -velocityThreshold) {
         if (currentIndex > 0) {
           targetIndex = currentIndex - 1;
         }
@@ -120,10 +124,52 @@ function FooterNavContent() {
     }
 
     startTime = 0;
-    isSwiping = false;
+    setIsDragging(false);
     dragDeltaX = 0;
     setDragOffset(0);
     requestAnimationFrame(() => updatePill(true));
+  };
+
+  // タッチ操作（iOS / Android）
+  const onTouchStart = (e: TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    handleStart(e.touches[0].clientX, e.touches[0].clientY);
+  };
+
+  const onTouchMove = (e: TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const handled = handleMove(e.touches[0].clientX, e.touches[0].clientY);
+    if (handled && e.cancelable) {
+      e.preventDefault();
+    }
+  };
+
+  const onTouchEnd = () => {
+    handleEnd();
+  };
+
+  // ポインタ操作（マウス / ペン / テスト環境）
+  const onPointerDown = (e: PointerEvent) => {
+    if (e.button !== 0 && e.button !== undefined) return;
+    const clientX = e.clientX ?? (e as any).pageX ?? 0;
+    const clientY = e.clientY ?? (e as any).pageY ?? 0;
+    handleStart(clientX, clientY);
+    try {
+      dockRef?.setPointerCapture?.(e.pointerId);
+    } catch {}
+  };
+
+  const onPointerMove = (e: PointerEvent) => {
+    const clientX = e.clientX ?? (e as any).pageX ?? startX;
+    const clientY = e.clientY ?? (e as any).pageY ?? startY;
+    handleMove(clientX, clientY);
+  };
+
+  const onPointerUp = (e: PointerEvent) => {
+    try {
+      dockRef?.releasePointerCapture?.(e.pointerId);
+    } catch {}
+    handleEnd();
   };
 
   const updatePill = (enableAnimation = true) => {
@@ -225,14 +271,18 @@ function FooterNavContent() {
         class="mizuna-floating-dock"
         role="toolbar"
         aria-label="Main Navigation"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerUp}
       >
         {/* 滑らかにスライド移動する選択ハイライトインジケーター（ピル） */}
         <div
-          class={`mizuna-dock-active-pill ${pillStyle().animated && !isSwiping ? 'is-animated' : ''}`}
+          class={`mizuna-dock-active-pill ${pillStyle().animated && !isDragging() ? 'is-animated' : ''}`}
           style={{
             transform: `translate3d(${pillStyle().x + dragOffset()}px, ${pillStyle().y}px, 0)`,
             width: `${pillStyle().width}px`,
