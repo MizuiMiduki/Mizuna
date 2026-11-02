@@ -389,7 +389,9 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       setTimeout(() => {
         updateTabsScrollState();
         const activeBtn = tabsRef?.querySelector<HTMLElement>('.mizuna-editor-tab-btn.is-active');
-        activeBtn?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        if (typeof activeBtn?.scrollIntoView === 'function') {
+          activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+        }
       }, 40);
     }
   });

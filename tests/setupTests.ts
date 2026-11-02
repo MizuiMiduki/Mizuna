@@ -28,6 +28,11 @@ if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined')
   (globalThis as any).PointerEvent = MockPointerEvent;
 }
 
+// scrollIntoView mock for jsdom
+if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoView !== 'function') {
+  Element.prototype.scrollIntoView = vi.fn();
+}
+
 // 1. window.matchMedia mock
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
