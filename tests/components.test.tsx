@@ -230,6 +230,49 @@ describe('UI Components', () => {
 
       expect(currentAppView()).toBe('accounts');
     });
+
+    it('投稿画面（中央タブ）から外側へ大きくスワイプした際にも両端の画面で正しく停止・バウンドすること', async () => {
+      let currentAppView: any;
+      let forceSetView: any;
+      function TestConsumer() {
+        const { currentView, forceSetCurrentView } = useApp();
+        forceSetCurrentView('note');
+        currentAppView = currentView;
+        forceSetView = forceSetCurrentView;
+        return null;
+      }
+
+      const { container } = render(() => (
+        <AppProvider>
+          <FooterNav />
+          <TestConsumer />
+        </AppProvider>
+      ));
+
+      await screen.findByRole('button', { name: /(設定|Settings)/ });
+      const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
+      expect(dock).toBeInTheDocument();
+
+      expect(currentAppView()).toBe('note');
+
+      // note から右へ大きくスワイプ (dx: +200) -> 右端（settings）でバウンドして settings に着地
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 300, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 300, clientY: 100 }));
+
+      expect(currentAppView()).toBe('settings');
+
+      // 再度 note に戻す
+      forceSetView('note');
+      expect(currentAppView()).toBe('note');
+
+      // note から左へ大きくスワイプ (dx: -200) -> 左端（accounts）でバウンドして accounts に着地
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 250, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 50, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 50, clientY: 100 }));
+
+      expect(currentAppView()).toBe('accounts');
+    });
   });
 
   describe('AnnouncementsView', () => {

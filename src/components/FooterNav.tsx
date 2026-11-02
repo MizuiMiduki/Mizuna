@@ -41,36 +41,40 @@ function FooterNavContent() {
     animated: false,
   });
 
-  const getStepDistance = (): number => {
-    if (avatarBtnRef && noteBtnRef) {
-      const r0 = avatarBtnRef.getBoundingClientRect();
-      const r1 = noteBtnRef.getBoundingClientRect();
-      const d = (r1.left + r1.right) / 2 - (r0.left + r0.right) / 2;
-      if (d > 20) return d;
+  const getTabBoundaries = () => {
+    if (!dockRef || !avatarBtnRef || !settingsBtnRef) {
+      const step = 64;
+      return { minX: 0, maxX: step * 2, step };
     }
-    if (noteBtnRef && settingsBtnRef) {
-      const r1 = noteBtnRef.getBoundingClientRect();
-      const r2 = settingsBtnRef.getBoundingClientRect();
-      const d = (r2.left + r2.right) / 2 - (r1.left + r1.right) / 2;
-      if (d > 20) return d;
+    const dockRect = dockRef.getBoundingClientRect();
+    const minX = avatarBtnRef.getBoundingClientRect().left - dockRect.left;
+    const maxX = settingsBtnRef.getBoundingClientRect().left - dockRect.left;
+    if (maxX <= minX + 20) {
+      const step = 64;
+      return { minX: 0, maxX: step * 2, step };
     }
-    return 64;
+    const step = (maxX - minX) / 2;
+    return { minX, maxX, step };
   };
 
   const currentPillWidth = () => {
     if (!isDragging()) return pillStyle().width;
-    const currentIndex = DOCK_VIEWS.indexOf(currentView());
-    const stepDistance = getStepDistance();
-    const pos = currentIndex + dragOffset() / stepDistance;
+    const { minX, maxX } = getTabBoundaries();
+    const currentTabX = pillStyle().x;
+    const currentX = currentTabX + dragOffset();
     const wAvatar = (avatarBtnRef?.getBoundingClientRect().width || 0) > 0
       ? avatarBtnRef!.getBoundingClientRect().width
-      : pillStyle().width;
+      : 48;
     const wNav = (noteBtnRef?.getBoundingClientRect().width || 0) > 0
       ? noteBtnRef!.getBoundingClientRect().width
-      : pillStyle().width;
-    if (pos <= 0) return wAvatar;
-    if (pos >= 1) return wNav;
-    return Math.round(wAvatar + (wNav - wAvatar) * pos);
+      : 64;
+
+    if (maxX <= minX) return pillStyle().width;
+    const progress = Math.max(0, Math.min(1, (currentX - minX) / (maxX - minX)));
+    if (progress <= 0) return wAvatar;
+    if (progress >= 0.5) return wNav;
+    const t = progress / 0.5;
+    return Math.round(wAvatar + (wNav - wAvatar) * t);
   };
 
   const handleNavClick = (targetView: ViewType) => {
@@ -112,19 +116,22 @@ function FooterNavContent() {
         lastMoveTime = now;
       }
 
-      const currentIndex = DOCK_VIEWS.indexOf(currentView());
-      const stepDistance = getStepDistance();
-      const maxLeft = currentIndex * stepDistance;
-      const maxRight = (DOCK_VIEWS.length - 1 - currentIndex) * stepDistance;
+      const { minX, maxX } = getTabBoundaries();
+      const currentTabX = pillStyle().x;
+      const virtualX = currentTabX + dx;
 
       let effectiveDx = dx;
-      // 左端（accountsより左）でのラバーバンド抵抗
-      if (dx < -maxLeft) {
-        effectiveDx = -maxLeft + (dx - (-maxLeft)) * 0.28;
+      // どのタブにいても、左端（accounts）よりさらに外側へ引っ張ったときのラバーバンド弾性抵抗
+      if (virtualX < minX) {
+        const overflow = minX - virtualX;
+        const boundedX = minX - overflow * 0.28;
+        effectiveDx = boundedX - currentTabX;
       }
-      // 右端（settingsより右）でのラバーバンド抵抗
-      else if (dx > maxRight) {
-        effectiveDx = maxRight + (dx - maxRight) * 0.28;
+      // どのタブにいても、右端（settings）よりさらに外側へ引っ張ったときのラバーバンド弾性抵抗
+      else if (virtualX > maxX) {
+        const overflow = virtualX - maxX;
+        const boundedX = maxX + overflow * 0.28;
+        effectiveDx = boundedX - currentTabX;
       }
 
       // 指に1:1でダイレクト追従
@@ -150,7 +157,8 @@ function FooterNavContent() {
       vx = Math.max(-2.5, Math.min(2.5, vx));
 
       const currentIndex = DOCK_VIEWS.indexOf(currentView());
-      const stepDistance = getStepDistance();
+      const { step } = getTabBoundaries();
+      const stepDistance = step;
 
       // フリック速度による慣性距離を加算
       const momentum = Math.abs(vx) > 0.18 ? vx * 120 : 0;
