@@ -16,9 +16,7 @@ export function SettingsView() {
     exportSettings,
     importSettingsFromFile,
     hasPendingUpdate,
-    isCheckingUpdate,
     applyPendingUpdate,
-    checkForUpdate,
     showToast,
     t,
   } = useApp();
@@ -145,9 +143,8 @@ export function SettingsView() {
 
   // 7. その他（更新・キャッシュ設定）
   const showPendingUpdate = () => hasPendingUpdate() && matches(t('settings.group_other'), t('update.pending_title'), t('update.pending_desc'), 'アップデート', '更新', 'update', 'その他', 'other');
-  const showCheckUpdate = () => matches(t('settings.group_other'), t('settings.check_update'), t('settings.check_update_desc'), t('settings.check_button'), 'アップデート', '更新', 'update', 'その他', 'other');
   const showClearCache = () => matches(t('settings.group_other'), t('settings.clear_cache'), t('settings.clear_cache_desc'), t('settings.reload_button'), 'キャッシュ', 'cache', 'クリア', 'clear', 'その他', 'other');
-  const showGroupOther = () => showPendingUpdate() || showCheckUpdate() || showClearCache();
+  const showGroupOther = () => showPendingUpdate() || showClearCache();
 
   // 8. カスタムCSS
   const showCustomCss = () => matches(t('settings.group_custom_css'), t('settings.custom_css'), t('settings.custom_css_desc'), 'カスタムcss', 'custom css', 'スタイル', 'style');
@@ -909,24 +906,6 @@ export function SettingsView() {
                     >
                       <i>restart_alt</i>
                       <span>{t('update.apply_now')}</span>
-                    </button>
-                  </div>
-                </Show>
-
-                <Show when={showCheckUpdate()}>
-                  <div class="mizuna-setting-row">
-                    <div class="mizuna-setting-info">
-                      <div class="mizuna-setting-title">{t('settings.check_update')}</div>
-                      <div class="mizuna-setting-desc">{t('settings.check_update_desc')}</div>
-                    </div>
-                    <button
-                      type="button"
-                      class="mizuna-btn mizuna-btn-outline"
-                      disabled={isCheckingUpdate()}
-                      onClick={checkForUpdate}
-                    >
-                      <i class={isCheckingUpdate() ? 'is-spinning' : ''}>sync</i>
-                      <span>{isCheckingUpdate() ? t('update.checking') : t('settings.check_button')}</span>
                     </button>
                   </div>
                 </Show>

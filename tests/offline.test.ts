@@ -15,6 +15,7 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
   const indexHtmlPath = path.resolve(rootDir, 'index.html');
   const appStorePath = path.resolve(rootDir, 'src/store/appStore.tsx');
   const settingsViewPath = path.resolve(rootDir, 'src/components/SettingsView.tsx');
+  const aboutViewPath = path.resolve(rootDir, 'src/components/AboutView.tsx');
   const headerPath = path.resolve(rootDir, 'src/components/Header.tsx');
 
   it('offline.html が存在し、必要なメタタグおよび要素が含まれていること', () => {
@@ -71,9 +72,25 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toContain("event.data.type === 'SKIP_WAITING'");
     expect(content).toContain('self.skipWaiting()');
 
-    // キャッシュ戦略 (request.mode === 'navigate')
+    // GET_VERSION メッセージでバージョンを応答すること
+    expect(content).toContain("event.data.type === 'GET_VERSION'");
+    expect(content).toContain('SW_VERSION');
+
+    // /version.json は最新バージョン確認用のためキャッシュせずネットワーク直通であること
+    expect(content).toContain("url.pathname === '/version.json'");
+
+    // キャッシュ戦略 (request.mode === 'navigate') で Cache First（通信量削減）となっていること
     expect(content).toContain("mode === 'navigate'");
+    expect(content).toContain("await cache.match('/index.html')");
     expect(content).toContain('url.origin !== self.location.origin'); // 外部APIはキャッシュしない
+  });
+
+  it('public/version.json が存在し、package.json のバージョンと同期していること', () => {
+    const versionJsonPath = path.resolve(rootDir, 'public/version.json');
+    expect(fs.existsSync(versionJsonPath)).toBe(true);
+    const data = JSON.parse(fs.readFileSync(versionJsonPath, 'utf-8'));
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(rootDir, 'package.json'), 'utf-8'));
+    expect(data.version).toBe(pkg.version);
   });
 
   it('vite.config.ts に Service Worker のバージョン自動同期プラグインが設定されていること', () => {
@@ -83,10 +100,16 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(viteConfigContent).toContain('mizuna-cache-v');
   });
 
-  it('index.html に Service Worker 登録スクリプトが含まれていること', () => {
-    const content = fs.readFileSync(indexHtmlPath, 'utf-8');
-    expect(content).toContain("'serviceWorker' in navigator");
-    expect(content).toContain("navigator.serviceWorker.register('/sw.js')");
+  it('Service Worker の登録・管理が appStore で一元化され、勝手な更新ダウンロードが抑止されていること', () => {
+    const appStoreContent = fs.readFileSync(appStorePath, 'utf-8');
+    expect(appStoreContent).toContain("'serviceWorker' in navigator");
+    expect(appStoreContent).toContain('navigator.serviceWorker.getRegistration');
+    expect(appStoreContent).toContain("register?.('/sw.js'");
+    expect(appStoreContent).toContain("updateViaCache: 'all'");
+
+    // index.html から無条件の自動登録スクリプトが排除されていること
+    const indexContent = fs.readFileSync(indexHtmlPath, 'utf-8');
+    expect(indexContent).not.toContain("navigator.serviceWorker.register('/sw.js')");
   });
 
   it('appStore に PWA アップデート制御およびリリースノート自動表示機能が実装されていること', () => {
@@ -94,12 +117,15 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     const content = fs.readFileSync(appStorePath, 'utf-8');
 
     expect(content).toContain('hasPendingUpdate');
+    expect(content).toContain('checkVersionOnServer');
     expect(content).toContain('showUpdateBanner');
     expect(content).toContain('dismissUpdateBanner');
     expect(content).toContain('applyPendingUpdate');
     expect(content).toContain('checkForUpdate');
     expect(content).toContain('mizuna_show_release_notes_after_update');
     expect(content).toContain("type: 'SKIP_WAITING'");
+    expect(content).toContain("type: 'GET_VERSION'");
+    expect(content).toContain('queryWorkerVersion');
     expect(content).toContain("navigator.serviceWorker.addEventListener?.('controllerchange'");
   });
 
@@ -112,12 +138,20 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toMatch(/(今すぐ更新|update\.apply_now)/);
   });
 
-  it('SettingsView に待機中アップデートの適用と更新確認UIが実装されていること', () => {
+  it('AboutView に最新バージョンの確認ボタンが実装されていること', () => {
+    expect(fs.existsSync(aboutViewPath)).toBe(true);
+    const content = fs.readFileSync(aboutViewPath, 'utf-8');
+
+    expect(content).toContain('checkForUpdate');
+    expect(content).toContain('check_update_button');
+    expect(content).toContain('applyPendingUpdate');
+  });
+
+  it('SettingsView に待機中アップデートの適用UIが実装されていること', () => {
     expect(fs.existsSync(settingsViewPath)).toBe(true);
     const content = fs.readFileSync(settingsViewPath, 'utf-8');
 
     expect(content).toContain('hasPendingUpdate');
     expect(content).toContain('applyPendingUpdate');
-    expect(content).toContain('checkForUpdate');
   });
 });

@@ -289,7 +289,7 @@ describe('UI Components', () => {
   });
 
   describe('AboutView', () => {
-    it('AboutView にバージョン番号とクレジットが表示されること', () => {
+    it('AboutView にバージョン番号とクレジット、最新バージョンの確認ボタンが表示されること', () => {
       render(() => (
         <AppProvider>
           <AboutView />
@@ -298,6 +298,7 @@ describe('UI Components', () => {
 
       expect(screen.getByText('Mizunaについて')).toBeInTheDocument();
       expect(screen.getByText('Open Source Licenses')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /(更新を確認|Check)/i })).toBeInTheDocument();
     });
   });
 
@@ -487,7 +488,7 @@ describe('UI Components', () => {
       expect(document.querySelector('.import_settings_data')).toBeInTheDocument();
     });
 
-    it('最新バージョンの確認とキャッシュクリアが独立した「その他」グループに表示されること', async () => {
+    it('キャッシュクリアが独立した「その他」グループに表示されること（最新バージョンの確認はAboutViewに配置）', async () => {
       render(() => (
         <AppProvider>
           <SettingsView />
@@ -495,8 +496,8 @@ describe('UI Components', () => {
       ));
 
       expect(screen.getByText(/(その他|Other)/)).toBeInTheDocument();
-      expect(screen.getByText(/(最新バージョンの確認|Check for Updates)/)).toBeInTheDocument();
       expect(screen.getByText(/(アプリのキャッシュクリア|Clear App Cache)/)).toBeInTheDocument();
+      expect(screen.queryByText(/(最新バージョンの確認|Check for Updates)/)).not.toBeInTheDocument();
     });
   });
 

@@ -48,7 +48,17 @@ const OSS_LICENSES = [
 ];
 
 export function AboutView() {
-  const { accounts, setCurrentView, showToast, hasPendingUpdate, applyPendingUpdate } = useApp();
+  const {
+    accounts,
+    setCurrentView,
+    showToast,
+    hasPendingUpdate,
+    availableUpdateVersion,
+    applyPendingUpdate,
+    checkForUpdate,
+    isCheckingUpdate,
+    t,
+  } = useApp();
   let containerRef: HTMLDivElement | undefined;
 
   onMount(() => {
@@ -99,7 +109,7 @@ export function AboutView() {
             </span>
           </div>
           <Show when={hasPendingUpdate()}>
-            <div style="margin-top: 8px;">
+            <div style="margin-top: 6px;">
               <button
                 type="button"
                 class="mizuna-btn mizuna-btn-tonal"
@@ -107,19 +117,31 @@ export function AboutView() {
                 onClick={applyPendingUpdate}
               >
                 <i>system_update</i>
-                <span>最新版にアップデート</span>
+                <span>{availableUpdateVersion() ? `v${availableUpdateVersion()} に更新` : t('update.apply_now')}</span>
               </button>
             </div>
           </Show>
         </div>
-        <button
-          type="button"
-          class="mizuna_share mizuna-btn mizuna-btn-primary"
-          onClick={handleWebShare}
-        >
-          <i>share</i>
-          <span>Mizunaを共有</span>
-        </button>
+        <div class="mizuna-about-actions">
+          <button
+            type="button"
+            id="check_update_button"
+            class="mizuna-btn mizuna-btn-outline"
+            disabled={isCheckingUpdate()}
+            onClick={checkForUpdate}
+          >
+            <i class={isCheckingUpdate() ? 'is-spinning' : ''}>sync</i>
+            <span>{isCheckingUpdate() ? t('update.checking') : t('settings.check_button')}</span>
+          </button>
+          <button
+            type="button"
+            class="mizuna_share mizuna-btn mizuna-btn-primary"
+            onClick={handleWebShare}
+          >
+            <i>share</i>
+            <span>Mizunaを共有</span>
+          </button>
+        </div>
       </div>
 
       {/* 詳細情報カード */}
