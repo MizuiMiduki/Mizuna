@@ -849,8 +849,8 @@ export function NoteView() {
               onClick={() => setPreviewModalImageId(null)}
             >
               {/* トップバー: ファイル情報・WebP削減率 & 閉じるボタン */}
-              <div class="mizuna-lightbox-topbar" onClick={(e) => e.stopPropagation()}>
-                <div class="mizuna-lightbox-topbar-inner">
+              <div class="mizuna-lightbox-topbar">
+                <div class="mizuna-lightbox-topbar-inner" onClick={(e) => e.stopPropagation()}>
                   <div class="mizuna-lightbox-fileinfo">
                     <span class="mizuna-lightbox-filename" title={imgItem().name}>
                       {imgItem().name}
@@ -926,8 +926,8 @@ export function NoteView() {
 
               {/* ボトムバー: アクションボタン（加工済み時のみリセットボタンを表示） */}
               <Show when={imgItem().editState}>
-                <div class="mizuna-lightbox-bottombar" onClick={(e) => e.stopPropagation()}>
-                  <div class="mizuna-lightbox-bottombar-inner">
+                <div class="mizuna-lightbox-bottombar">
+                  <div class="mizuna-lightbox-bottombar-inner" onClick={(e) => e.stopPropagation()}>
                     <button
                       type="button"
                       class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
