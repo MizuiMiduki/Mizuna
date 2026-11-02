@@ -2774,6 +2774,13 @@ body.dark .mizuna-custom-css-warnings {
   margin: 0;
 }
 
+.mizuna-about-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .mizuna-meta-row {
   display: flex;
   align-items: center;

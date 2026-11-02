@@ -108,8 +108,8 @@ export function AboutView() {
               v{mizuna_options.mizuna_version}
             </span>
           </div>
-          <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-            <Show when={hasPendingUpdate()}>
+          <Show when={hasPendingUpdate()}>
+            <div style="margin-top: 6px;">
               <button
                 type="button"
                 class="mizuna-btn mizuna-btn-tonal"
@@ -119,28 +119,29 @@ export function AboutView() {
                 <i>system_update</i>
                 <span>{availableUpdateVersion() ? `v${availableUpdateVersion()} に更新` : t('update.apply_now')}</span>
               </button>
-            </Show>
-            <button
-              type="button"
-              id="check_update_button"
-              class="mizuna-btn mizuna-btn-outline"
-              style="padding: 0 12px; height: 32px; font-size: 0.8rem; gap: 4px;"
-              disabled={isCheckingUpdate()}
-              onClick={checkForUpdate}
-            >
-              <i class={isCheckingUpdate() ? 'is-spinning' : ''}>sync</i>
-              <span>{isCheckingUpdate() ? t('update.checking') : t('settings.check_button')}</span>
-            </button>
-          </div>
+            </div>
+          </Show>
         </div>
-        <button
-          type="button"
-          class="mizuna_share mizuna-btn mizuna-btn-primary"
-          onClick={handleWebShare}
-        >
-          <i>share</i>
-          <span>Mizunaを共有</span>
-        </button>
+        <div class="mizuna-about-actions">
+          <button
+            type="button"
+            id="check_update_button"
+            class="mizuna-btn mizuna-btn-outline"
+            disabled={isCheckingUpdate()}
+            onClick={checkForUpdate}
+          >
+            <i class={isCheckingUpdate() ? 'is-spinning' : ''}>sync</i>
+            <span>{isCheckingUpdate() ? t('update.checking') : t('settings.check_button')}</span>
+          </button>
+          <button
+            type="button"
+            class="mizuna_share mizuna-btn mizuna-btn-primary"
+            onClick={handleWebShare}
+          >
+            <i>share</i>
+            <span>Mizunaを共有</span>
+          </button>
+        </div>
       </div>
 
       {/* 詳細情報カード */}
