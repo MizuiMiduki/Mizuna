@@ -1258,7 +1258,7 @@ body {
   width: auto;
   height: auto;
   object-fit: contain;
-  border-radius: var(--mizuna-radius-xl);
+  border-radius: 0;
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
   box-shadow:
     0 24px 64px -12px rgba(0, 0, 0, 0.4),
