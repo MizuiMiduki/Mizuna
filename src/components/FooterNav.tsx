@@ -3,6 +3,8 @@ import { useApp, type ViewType } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { HoldHoverTip } from './HoldHoverTip';
 
+const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'settings'];
+
 function FooterNavContent() {
   const { accounts, currentUser, settings, currentView, setCurrentView, t } = useApp();
 
@@ -10,6 +12,14 @@ function FooterNavContent() {
   let avatarBtnRef: HTMLButtonElement | undefined;
   let noteBtnRef: HTMLButtonElement | undefined;
   let settingsBtnRef: HTMLButtonElement | undefined;
+
+  const [dragOffset, setDragOffset] = createSignal(0);
+  let startX = 0;
+  let startY = 0;
+  let startTime = 0;
+  let isSwiping = false;
+  let dragDeltaX = 0;
+  let hasSwiped = false;
 
   const [pillStyle, setPillStyle] = createSignal<{
     x: number;
@@ -28,7 +38,92 @@ function FooterNavContent() {
   });
 
   const handleNavClick = (targetView: ViewType) => {
+    if (hasSwiped) return;
     setCurrentView(targetView);
+  };
+
+  // メニューバーのスワイプ操作処理（iOS風の横スワイプによる画面遷移）
+  const handlePointerDown = (e: PointerEvent) => {
+    if (e.button !== 0 && e.button !== undefined) return;
+    startX = e.clientX ?? (e as any).pageX ?? 0;
+    startY = e.clientY ?? (e as any).pageY ?? 0;
+    startTime = Date.now();
+    isSwiping = false;
+    dragDeltaX = 0;
+  };
+
+  const handlePointerMove = (e: PointerEvent) => {
+    if (startTime === 0) return;
+    const currentX = e.clientX ?? (e as any).pageX ?? startX;
+    const currentY = e.clientY ?? (e as any).pageY ?? startY;
+    const dx = currentX - startX;
+    const dy = currentY - startY;
+
+    if (!isSwiping) {
+      if (Math.abs(dx) > 6 && Math.abs(dx) > Math.abs(dy)) {
+        isSwiping = true;
+        try {
+          dockRef?.setPointerCapture?.(e.pointerId);
+        } catch {}
+      }
+    }
+
+    if (isSwiping) {
+      dragDeltaX = dx;
+      const currentIndex = DOCK_VIEWS.indexOf(currentView());
+      let dampedDx = dx;
+      // 両端でのラバーバンド（弾性）抵抗
+      if ((currentIndex === 0 && dx > 0) || (currentIndex === DOCK_VIEWS.length - 1 && dx < 0)) {
+        dampedDx = dx * 0.25;
+      }
+      setDragOffset(dampedDx * 0.45);
+    }
+  };
+
+  const handlePointerUp = (e: PointerEvent) => {
+    if (startTime === 0) return;
+    try {
+      dockRef?.releasePointerCapture?.(e.pointerId);
+    } catch {}
+
+    if (isSwiping) {
+      const elapsed = Math.max(1, Date.now() - startTime);
+      const vx = dragDeltaX / elapsed; // px/ms
+      const currentIndex = DOCK_VIEWS.indexOf(currentView());
+
+      const swipeThreshold = 22; // px
+      const velocityThreshold = 0.2; // px/ms
+
+      let targetIndex = currentIndex;
+      if (dragDeltaX < -swipeThreshold || vx < -velocityThreshold) {
+        // 左スワイプ -> 次の画面へ (accounts -> note -> settings)
+        if (currentIndex < DOCK_VIEWS.length - 1) {
+          targetIndex = currentIndex + 1;
+        }
+      } else if (dragDeltaX > swipeThreshold || vx > velocityThreshold) {
+        // 右スワイプ -> 前の画面へ (settings -> note -> accounts)
+        if (currentIndex > 0) {
+          targetIndex = currentIndex - 1;
+        }
+      }
+
+      if (Math.abs(dragDeltaX) > 6) {
+        hasSwiped = true;
+        setTimeout(() => {
+          hasSwiped = false;
+        }, 80);
+      }
+
+      if (targetIndex !== currentIndex && targetIndex >= 0) {
+        setCurrentView(DOCK_VIEWS[targetIndex]);
+      }
+    }
+
+    startTime = 0;
+    isSwiping = false;
+    dragDeltaX = 0;
+    setDragOffset(0);
+    requestAnimationFrame(() => updatePill(true));
   };
 
   const updatePill = (enableAnimation = true) => {
@@ -125,12 +220,21 @@ function FooterNavContent() {
 
   return (
     <div class="mizuna-dock-wrapper">
-      <div ref={dockRef} class="mizuna-floating-dock" role="toolbar" aria-label="Main Navigation">
+      <div
+        ref={dockRef}
+        class="mizuna-floating-dock"
+        role="toolbar"
+        aria-label="Main Navigation"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
         {/* 滑らかにスライド移動する選択ハイライトインジケーター（ピル） */}
         <div
-          class={`mizuna-dock-active-pill ${pillStyle().animated ? 'is-animated' : ''}`}
+          class={`mizuna-dock-active-pill ${pillStyle().animated && !isSwiping ? 'is-animated' : ''}`}
           style={{
-            transform: `translate3d(${pillStyle().x}px, ${pillStyle().y}px, 0)`,
+            transform: `translate3d(${pillStyle().x + dragOffset()}px, ${pillStyle().y}px, 0)`,
             width: `${pillStyle().width}px`,
             height: `${pillStyle().height}px`,
             opacity: pillStyle().opacity,

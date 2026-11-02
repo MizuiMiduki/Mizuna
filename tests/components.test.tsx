@@ -147,6 +147,51 @@ describe('UI Components', () => {
 
       expect(container.querySelector('.mizuna-floating-dock')).not.toBeInTheDocument();
     });
+
+    it('メニューバーの横スワイプ操作で画面遷移できること（左スワイプで次へ、右スワイプで前へ）', async () => {
+      let currentAppView: any;
+      function TestConsumer() {
+        const { currentView, forceSetCurrentView } = useApp();
+        forceSetCurrentView('note');
+        currentAppView = currentView;
+        return null;
+      }
+
+      const { container } = render(() => (
+        <AppProvider>
+          <FooterNav />
+          <TestConsumer />
+        </AppProvider>
+      ));
+
+      await screen.findByRole('button', { name: /(設定|Settings)/ });
+      const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
+      expect(dock).toBeInTheDocument();
+
+      // 初期状態は note (投稿画面)
+      expect(currentAppView()).toBe('note');
+
+      // 左スワイプ (note -> settings): startX: 200 -> moveX: 140 (dx: -60)
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 140, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 140, clientY: 100 }));
+
+      expect(currentAppView()).toBe('settings');
+
+      // 右スワイプ (settings -> note): startX: 100 -> moveX: 170 (dx: +70)
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 170, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 170, clientY: 100 }));
+
+      expect(currentAppView()).toBe('note');
+
+      // 再度右スワイプ (note -> accounts): startX: 100 -> moveX: 170 (dx: +70)
+      fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
+      fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 170, clientY: 100 }));
+      fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 170, clientY: 100 }));
+
+      expect(currentAppView()).toBe('accounts');
+    });
   });
 
   describe('AnnouncementsView', () => {

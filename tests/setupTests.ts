@@ -7,6 +7,27 @@ import gsap from 'gsap';
 vi.mock('beercss', () => ({}));
 vi.mock('material-dynamic-colors', () => ({}));
 
+// PointerEvent mock for jsdom
+if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined') {
+  class MockPointerEvent extends MouseEvent {
+    pointerId: number;
+    width: number;
+    height: number;
+    pressure: number;
+    pointerType: string;
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+      this.pointerId = params.pointerId ?? 1;
+      this.width = params.width ?? 1;
+      this.height = params.height ?? 1;
+      this.pressure = params.pressure ?? 0;
+      this.pointerType = params.pointerType ?? 'touch';
+    }
+  }
+  (window as any).PointerEvent = MockPointerEvent;
+  (globalThis as any).PointerEvent = MockPointerEvent;
+}
+
 // 1. window.matchMedia mock
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

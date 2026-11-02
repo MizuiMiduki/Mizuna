@@ -1,4 +1,5 @@
 import { createEffect, Match, onMount, Show, Switch } from 'solid-js';
+import gsap from 'gsap';
 import { AboutView } from './components/AboutView';
 import { AccountView } from './components/AccountView';
 import { AddAccountView } from './components/AddAccountView';
@@ -12,11 +13,15 @@ import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { SettingsView } from './components/SettingsView';
 import { ShortcutsView } from './components/ShortcutsView';
 import { SnackbarHost } from './components/SnackbarHost';
-import { AppProvider, useApp } from './store/appStore';
+import { AppProvider, useApp, type ViewType } from './store/appStore';
 import { initAnalytics, trackPageView } from './utils/analytics';
 
+const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'settings'];
+
 function MainContent() {
-  const { isInitializing, currentView, settings } = useApp();
+  const { isInitializing, currentView, setCurrentView, settings } = useApp();
+  let mainContainerRef: HTMLElement | undefined;
+  let prevView: ViewType = currentView();
 
   onMount(() => {
     initAnalytics();
@@ -41,6 +46,91 @@ function MainContent() {
       });
     }
   });
+
+  // メニューバー画面間（アカウント・投稿・設定）の遷移時にiOS風の方向連動スライド演出
+  createEffect(() => {
+    const nextView = currentView();
+    const prev = prevView;
+    prevView = nextView;
+
+    const prevIdx = DOCK_VIEWS.indexOf(prev);
+    const nextIdx = DOCK_VIEWS.indexOf(nextView);
+
+    if (prevIdx !== -1 && nextIdx !== -1 && prevIdx !== nextIdx && mainContainerRef) {
+      const direction = nextIdx > prevIdx ? 1 : -1;
+      const prefersReduced =
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+      if (!prefersReduced) {
+        gsap.fromTo(
+          mainContainerRef,
+          { opacity: 0.65, x: direction * 24 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: 0.22,
+            ease: 'power2.out',
+            clearProps: 'transform',
+          }
+        );
+      }
+    }
+  });
+
+  // 画面全体の横スワイプによる画面遷移（入力欄・スライダー等の誤作動防止フィルター付き）
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+
+  const handleTouchStart = (e: TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const view = currentView();
+    if (!DOCK_VIEWS.includes(view)) return;
+
+    const target = e.target as HTMLElement | null;
+    if (!target) return;
+
+    if (
+      target.closest(
+        'input, textarea, select, button, .mizuna-slider, [draggable="true"], .mizuna-lightbox, .modal, dialog, [role="dialog"], .mizuna-dock-wrapper, .mizuna-floating-dock'
+      )
+    ) {
+      return;
+    }
+
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    touchStartTime = Date.now();
+  };
+
+  const handleTouchEnd = (e: TouchEvent) => {
+    if (touchStartTime === 0) return;
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    const elapsed = Math.max(1, Date.now() - touchStartTime);
+    touchStartTime = 0;
+
+    if (Math.abs(dx) > 38 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      const vx = dx / elapsed;
+      const view = currentView();
+      const currentIndex = DOCK_VIEWS.indexOf(view);
+      if (currentIndex === -1) return;
+
+      if (dx < 0 || vx < -0.28) {
+        // 左スワイプ -> 次の画面へ (accounts -> note -> settings)
+        if (currentIndex < DOCK_VIEWS.length - 1) {
+          setCurrentView(DOCK_VIEWS[currentIndex + 1]);
+        }
+      } else if (dx > 0 || vx > 0.28) {
+        // 右スワイプ -> 前の画面へ (settings -> note -> accounts)
+        if (currentIndex > 0) {
+          setCurrentView(DOCK_VIEWS[currentIndex - 1]);
+        }
+      }
+    }
+  };
 
   createEffect(() => {
     const mode = settings().ui_mode;
@@ -69,10 +159,14 @@ function MainContent() {
   };
 
   return (
-    <div class={appShellClasses()}>
+    <div
+      class={appShellClasses()}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       <Header />
 
-      <main class="main_column mizuna-main-container">
+      <main ref={mainContainerRef} class="main_column mizuna-main-container">
         <Show
           when={!isInitializing()}
           fallback={
