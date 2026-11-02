@@ -458,6 +458,20 @@ export function AppProvider(props: { children: JSX.Element }) {
     safeLocalStorage.setItem('mizuna_show_release_notes_after_update', 'true');
     showToast('最新版をダウンロードして適用しています...', 'info');
 
+    // 古いキャッシュがリロード後に残存するのを防ぐため、先行してキャッシュをクリア
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      try {
+        const keys = await window.caches.keys();
+        await Promise.all(keys.map((k) => window.caches.delete(k)));
+      } catch (e) {
+        console.warn('Cache clear error:', e);
+      }
+    }
+
+    const doReload = () => {
+      window.location.href = window.location.pathname + '?reload=' + Date.now();
+    };
+
     const worker = waitingWorker() || activeSwRegistration?.waiting;
     if (worker) {
       try {
@@ -465,53 +479,74 @@ export function AppProvider(props: { children: JSX.Element }) {
       } catch (err) {
         console.error('SKIP_WAITING postMessage error:', err);
       }
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      setTimeout(doReload, 800);
       return;
     }
 
     // 待機中ワーカーがまだダウンロードされていない場合、手動で Service Worker の更新を開始
     try {
-      const reg = activeSwRegistration || (await navigator.serviceWorker.getRegistration());
-      if (reg) {
+      if ('serviceWorker' in navigator && navigator.serviceWorker) {
         let resolved = false;
-        const onStateChange = (w: ServiceWorker) => {
-          if (w.state === 'installed') {
-            resolved = true;
-            try {
-              w.postMessage({ type: 'SKIP_WAITING' });
-            } catch {}
-            setTimeout(() => window.location.reload(), 500);
-          }
+
+        const handleInstalledWorker = (w: ServiceWorker) => {
+          if (resolved) return;
+          resolved = true;
+          try {
+            w.postMessage({ type: 'SKIP_WAITING' });
+          } catch {}
+          setTimeout(doReload, 600);
         };
 
-        reg.addEventListener?.('updatefound', () => {
-          const installing = reg.installing;
-          if (installing) {
-            installing.addEventListener('statechange', () => onStateChange(installing));
-          }
-        });
+        // updateViaCache: 'none' を指定してブラウザの HTTP キャッシュをバイパスし、確実に最新の sw.js を取得
+        const reg =
+          (await navigator.serviceWorker.register?.('/sw.js', { updateViaCache: 'none' })) ||
+          activeSwRegistration ||
+          (await navigator.serviceWorker.getRegistration?.());
 
-        if (reg.installing) {
-          reg.installing.addEventListener?.('statechange', () => onStateChange(reg.installing!));
+        if (reg) {
+          if (reg.waiting) {
+            handleInstalledWorker(reg.waiting);
+            return;
+          }
+
+          const onStateChange = (w: ServiceWorker) => {
+            if (w.state === 'installed') {
+              handleInstalledWorker(w);
+            }
+          };
+
+          reg.addEventListener?.('updatefound', () => {
+            const installing = reg.installing;
+            if (installing) {
+              installing.addEventListener('statechange', () => onStateChange(installing));
+            }
+          });
+
+          if (reg.installing) {
+            reg.installing.addEventListener?.('statechange', () => onStateChange(reg.installing!));
+          }
+
+          await reg.update?.();
+
+          if (reg.waiting) {
+            handleInstalledWorker(reg.waiting);
+            return;
+          }
+
+          // 3.5秒経ってもイベントが完了しない場合のフォールバック（キャッシュはクリア済み）
+          setTimeout(() => {
+            if (!resolved) {
+              doReload();
+            }
+          }, 3500);
+          return;
         }
-
-        await reg.update();
-
-        // 3秒経っても完了イベントが発火しない場合のフォールバック（リロード）
-        setTimeout(() => {
-          if (!resolved) {
-            window.location.reload();
-          }
-        }, 3000);
-        return;
       }
     } catch (e) {
       console.error('applyPendingUpdate error:', e);
     }
 
-    window.location.reload();
+    doReload();
   };
 
   /**

@@ -14,11 +14,21 @@ const PRECACHE_ASSETS = [
 ];
 
 // インストール: コアアセットをキャッシュ。
+// ※最新のファイルを確実にキャッシュするため cache: 'reload' でフェッチ
 // ※ユーザーが選択するまでアップデートを適用しないため、自動での self.skipWaiting() は行わない
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
+    caches.open(CACHE_NAME).then(async (cache) => {
+      for (const asset of PRECACHE_ASSETS) {
+        try {
+          const res = await fetch(asset, { cache: 'reload' });
+          if (res.ok) {
+            await cache.put(asset, res);
+          }
+        } catch (e) {
+          console.warn('Failed to precache asset:', asset, e);
+        }
+      }
     })
   );
 });
