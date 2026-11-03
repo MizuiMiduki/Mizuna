@@ -18,10 +18,10 @@ const OSS_LICENSES = [
     url: 'https://gsap.com/',
   },
   {
-    name: 'BeerCSS & Material Dynamic Colors',
+    name: 'Material Dynamic Colors',
     license: 'MIT License',
     copyright: 'Copyright (c) 2021 Everton',
-    url: 'https://www.beercss.com/',
+    url: 'https://github.com/beercss/material-dynamic-colors',
   },
   {
     name: 'Dexie.js',

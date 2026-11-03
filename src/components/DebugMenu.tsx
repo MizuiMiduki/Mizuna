@@ -4,6 +4,7 @@ import { MIZUNA_VERSION, mizuna_options } from '../config/mizunaOptions';
 import { db, DEFAULT_USER_SETTINGS, updateSettingDb } from '../db/database';
 import { fetchLatestReleaseNote } from '../services/misskeyApi';
 import { useApp, type ViewType } from '../store/appStore';
+import { applyCustomThemeColor } from '../utils/theme';
 import { safeLocalStorage } from '../utils/storage';
 import { WST_TITLE_KEY, WST_TEXT_KEY, WST_URL_KEY } from '../utils/webShare';
 
@@ -99,7 +100,7 @@ export function DebugMenu() {
   // Web Share Target シミュレート
   const simulateWebShareTarget = () => {
     const title = `Mizuna ${MIZUNA_VERSION} リリース記事`;
-    const text = 'Solid.js + GSAP + BeerCSS でモダンに生まれ変わりました！';
+    const text = 'Solid.js + GSAP でモダンに生まれ変わりました！';
     const url = 'https://mizuna.blossomsarchive.com/';
     safeLocalStorage.setItem(WST_TITLE_KEY, title);
     safeLocalStorage.setItem(WST_TEXT_KEY, text);
@@ -136,9 +137,7 @@ export function DebugMenu() {
 
   // テーマカラー直接適用
   const applyPresetColor = async (hex: string) => {
-    if (window.ui) {
-      await window.ui('theme', hex);
-    }
+    await applyCustomThemeColor(hex);
     showToast(`テーマカラーを ${hex} に変更しました`, 'info', 'Debug');
   };
 

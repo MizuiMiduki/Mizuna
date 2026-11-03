@@ -7,9 +7,21 @@ import gsap from 'gsap';
 // 非同期テストの安定化のためタイムアウトを調整
 configure({ asyncUtilTimeout: 4000 });
 
-// BeerCSS & Material Dynamic Colors mock
-vi.mock('beercss', () => ({}));
-vi.mock('material-dynamic-colors', () => ({}));
+// Material Dynamic Colors mock
+vi.mock('material-dynamic-colors', () => ({
+  default: vi.fn().mockResolvedValue({
+    light: {
+      primary: '#00658e',
+      surface: '#f9f9fc',
+      onSurface: '#191c1e',
+    },
+    dark: {
+      primary: '#85cfff',
+      surface: '#111416',
+      onSurface: '#e2e2e5',
+    },
+  }),
+}));
 
 // PointerEvent mock for jsdom
 if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined') {

@@ -139,7 +139,7 @@ export function AddAccountView() {
                 when={!isCheckingServer()}
                 fallback={
                   <>
-                    <progress class="circle small" />
+                    <div class="mizuna-spinner small" />
                     <span>接続確認中...</span>
                   </>
                 }

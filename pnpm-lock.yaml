@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      beercss:
-        specifier: ^3.11.20
-        version: 3.13.3
       dexie:
         specifier: ^4.0.11
         version: 4.4.6
@@ -623,9 +620,6 @@ packages:
     resolution: {integrity: sha512-YJs6Pz17RMNv8HoyKREtCY38E3BV1nPkWVmIb+XN1uHC1Vqt3KZCH/uJH9ZKRoiKb/icZ6tvehyee6RZNbFfRA==}
     engines: {node: '>=6.0.0'}
     hasBin: true
-
-  beercss@3.13.3:
-    resolution: {integrity: sha512-tMs2kYBiq+wYqqnE+H2wy0BBIMpzRwy3EKnR40XnE41JUFdkM1CdsCnV+RGMB0fokAQVW2WPaNIik0VPUfitLw==}
 
   browserslist@4.29.4:
     resolution: {integrity: sha512-2TcbbiwXEq+N0kD36tykpCfyyQigUXmuwNQbnPp4Xk4PX9JOqVIKjJlIDjpH7uY6tmRGoAd+apeT1p60T8wsdA==}
@@ -1646,10 +1640,6 @@ snapshots:
       solid-js: 1.9.17
 
   baseline-browser-mapping@2.11.30: {}
-
-  beercss@3.13.3:
-    dependencies:
-      material-dynamic-colors: 1.1.4
 
   browserslist@4.29.4:
     dependencies:

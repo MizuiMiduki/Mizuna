@@ -114,7 +114,7 @@ function MainContent() {
           when={!isInitializing()}
           fallback={
             <div class="mizuna-loading-center center-align middle-align">
-              <progress class="circle large" />
+              <div class="mizuna-spinner large" />
             </div>
           }
         >
