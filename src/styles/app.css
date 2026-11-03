@@ -845,6 +845,10 @@ body {
   cursor: pointer;
   border: 1px solid color-mix(in srgb, var(--outline-variant) 70%, transparent);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  touch-action: pan-x pan-y;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .mizuna-media-item img {
@@ -920,14 +924,16 @@ body {
 
 /* サムネイルのドラッグ中・ドロップターゲット状態 */
 .mizuna-media-item.is-dragging {
-  opacity: 0.35;
-  transform: scale(0.95);
+  opacity: 0.7;
+  transform: scale(1.06);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  z-index: 5;
 }
 
 .mizuna-media-item.is-drag-over {
   border-color: var(--primary);
   box-shadow: 0 0 0 2px var(--primary), 0 8px 24px color-mix(in srgb, var(--primary) 25%, transparent);
-  transform: scale(1.05);
+  transform: scale(0.95);
 }
 
 .mizuna-media-edit:active {

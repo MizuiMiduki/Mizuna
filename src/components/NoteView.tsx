@@ -156,11 +156,20 @@ export function NoteView() {
   const [draggedImageId, setDraggedImageId] = createSignal<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = createSignal<number | null>(null);
   let isDraggingItem = false;
+  let isLongPressActive = false;
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null;
   let touchThumbStartX = 0;
   let touchThumbStartY = 0;
   let touchThumbSourceId: string | null = null;
   let touchThumbSourceIndex = -1;
   let justFinishedDrag = false;
+
+  const cancelLongPress = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  };
 
   const handleImageDragStart = (e: DragEvent, id: string) => {
     if (e.dataTransfer) {
@@ -208,14 +217,30 @@ export function NoteView() {
     isDraggingItem = false;
   };
 
-  // タッチ端末でのドラッグ並べ替え
+  // タッチ端末での長押しドラッグ並べ替え（通常スクロール操作を妨げない設計）
   const handleThumbTouchStart = (e: TouchEvent, id: string, index: number) => {
     if (attachedImages().length <= 1) return;
     if (e.touches.length !== 1) return;
+    cancelLongPress();
+    isLongPressActive = false;
     touchThumbStartX = e.touches[0].clientX;
     touchThumbStartY = e.touches[0].clientY;
     touchThumbSourceId = id;
     touchThumbSourceIndex = index;
+
+    // 250ms長押しでドラッグモード開始
+    longPressTimer = setTimeout(() => {
+      isLongPressActive = true;
+      isDraggingItem = true;
+      setDraggedImageId(touchThumbSourceId);
+      try {
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate(30);
+        }
+      } catch {
+        // ignore
+      }
+    }, 250);
   };
 
   const handleThumbTouchMove = (e: TouchEvent) => {
@@ -224,25 +249,31 @@ export function NoteView() {
     const clientY = e.touches[0].clientY;
     const dx = clientX - touchThumbStartX;
     const dy = clientY - touchThumbStartY;
-    if (!isDraggingItem && Math.hypot(dx, dy) > 8) {
-      isDraggingItem = true;
-      setDraggedImageId(touchThumbSourceId);
+
+    // 長押し前に指が動いた場合はスクロール操作と判定し、タイマーを解除してネイティブスクロールを許可
+    if (!isLongPressActive) {
+      if (Math.hypot(dx, dy) > 10) {
+        cancelLongPress();
+        touchThumbSourceId = null;
+      }
+      return;
     }
-    if (isDraggingItem) {
-      if (e.cancelable) e.preventDefault();
-      const el = document.elementFromPoint(clientX, clientY);
-      const targetItem = el?.closest('.mizuna-media-item') as HTMLElement | null;
-      if (targetItem && targetItem.dataset.index !== undefined) {
-        const targetIdx = parseInt(targetItem.dataset.index, 10);
-        if (!isNaN(targetIdx)) {
-          setDragOverIndex(targetIdx);
-        }
+
+    // 長押し成立後はドラッグとして処理し、画面スクロールを停止
+    if (e.cancelable) e.preventDefault();
+    const el = document.elementFromPoint(clientX, clientY);
+    const targetItem = el?.closest('.mizuna-media-item') as HTMLElement | null;
+    if (targetItem && targetItem.dataset.index !== undefined) {
+      const targetIdx = parseInt(targetItem.dataset.index, 10);
+      if (!isNaN(targetIdx)) {
+        setDragOverIndex(targetIdx);
       }
     }
   };
 
   const handleThumbTouchEnd = () => {
-    if (isDraggingItem && touchThumbSourceId) {
+    cancelLongPress();
+    if (isLongPressActive && touchThumbSourceId) {
       const dropIdx = dragOverIndex();
       if (dropIdx !== null && dropIdx !== touchThumbSourceIndex) {
         const current = attachedImages();
@@ -258,10 +289,15 @@ export function NoteView() {
     }
     touchThumbSourceId = null;
     touchThumbSourceIndex = -1;
+    isLongPressActive = false;
     isDraggingItem = false;
     setDraggedImageId(null);
     setDragOverIndex(null);
   };
+
+  onCleanup(() => {
+    cancelLongPress();
+  });
   const [editingImageItem, setEditingImageItem] = createSignal<AttachedImageItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = createSignal(false);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = createSignal(false);
