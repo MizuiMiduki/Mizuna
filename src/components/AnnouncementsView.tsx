@@ -82,7 +82,7 @@ export function AnnouncementsView() {
       {/* ローディング表示 */}
       <Show when={isLoading() && announcements().length === 0}>
         <div class="mizuna-loading-center center-align middle-align">
-          <progress class="circle large" />
+          <div class="mizuna-spinner large" />
         </div>
       </Show>
 

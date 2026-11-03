@@ -1495,7 +1495,7 @@ export function NoteView() {
                 when={!isSending()}
                 fallback={
                   <>
-                    <progress class="circle small" />
+                    <div class="mizuna-spinner small" />
                     <span>{sendingStatus() || t('note.submitting')}</span>
                   </>
                 }

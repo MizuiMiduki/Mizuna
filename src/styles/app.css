@@ -112,7 +112,19 @@ html.dark {
   --surface-container-highest: #333537;
 }
 
-/* スピナー進捗インジケーター */
+/* ==========================================================================
+   Material Symbols Icons & Spinner Baseline
+   ========================================================================== */
+@font-face {
+  font-family: "Material Symbols Outlined";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../assets/fonts/material-symbols-outlined.woff2") format("woff2");
+}
+
+/* スピナー進捗インジケーター（純粋なdiv/spanで描画しブラウザ既定コントロールの四角いチラつきを防止） */
+.mizuna-spinner,
 progress.circle {
   display: inline-block;
   width: 24px;
@@ -121,26 +133,36 @@ progress.circle {
   border: 3px solid color-mix(in srgb, var(--primary) 22%, transparent);
   border-top-color: var(--primary);
   animation: mizuna-spin 0.8s linear infinite;
-  appearance: none;
-  background: transparent;
   box-sizing: border-box;
+  background: transparent;
+  flex-shrink: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  overflow: hidden;
 }
 
+progress.circle::-webkit-progress-bar {
+  background: transparent;
+}
+progress.circle::-webkit-progress-value {
+  background: transparent;
+}
+
+.mizuna-spinner.small,
 progress.circle.small {
   width: 18px;
   height: 18px;
   border-width: 2px;
 }
 
+.mizuna-spinner.large,
 progress.circle.large {
   width: 36px;
   height: 36px;
   border-width: 3.5px;
 }
 
-/* ==========================================================================
-   Material Symbols Icons Baseline
-   ========================================================================== */
+/* Material Symbols Icons Baseline */
 i,
 .material-symbols-outlined,
 .icon {
@@ -151,7 +173,9 @@ i,
   line-height: 1;
   letter-spacing: normal;
   text-transform: none;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   white-space: nowrap;
   word-wrap: normal;
   direction: ltr;
@@ -163,6 +187,9 @@ i,
   user-select: none;
   vertical-align: middle;
   flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  overflow: hidden;
 }
 
 /* MFM斜体などの例外を保証 */
@@ -174,6 +201,9 @@ i[style*="italic"] {
   white-space: inherit;
   user-select: auto;
   vertical-align: baseline;
+  width: auto;
+  height: auto;
+  overflow: visible;
 }
 
 * {
