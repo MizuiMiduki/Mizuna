@@ -17,7 +17,6 @@ import {
 import { useApp } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { renderMfm } from '../utils/mfm';
-import { FloatingBackButton } from './FloatingBackButton';
 import { hasHistoryPermission } from '../utils/version';
 
 type HistoryTab = 'my_notes' | 'mentions';
@@ -203,8 +202,6 @@ export function HistoryView() {
 
   return (
     <div ref={containerRef} class="mizuna-history-view">
-      <FloatingBackButton onClick={() => setCurrentView('note')} />
-
       {/* ヘッダー */}
       <div class="mizuna-section-header mizuna-history-header">
         <div class="mizuna-history-title-wrap">
