@@ -45,7 +45,49 @@ export interface NoteParam {
   visibility: 'public' | 'home' | 'followers';
   cw?: string;
   fileIds?: string[];
+  replyId?: string;
 }
+
+export interface MisskeyNoteUser {
+  id: string;
+  name: string | null;
+  username: string;
+  avatarUrl: string;
+  instance?: {
+    name?: string;
+    faviconUrl?: string;
+  };
+}
+
+export interface MisskeyFile {
+  id: string;
+  url: string;
+  thumbnailUrl?: string;
+  name: string;
+  type: string;
+  isSensitive?: boolean;
+}
+
+export interface MisskeyNote {
+  id: string;
+  createdAt: string;
+  text: string | null;
+  cw: string | null;
+  userId: string;
+  user: MisskeyNoteUser;
+  replyId?: string | null;
+  reply?: MisskeyNote | null;
+  renoteId?: string | null;
+  renote?: MisskeyNote | null;
+  visibility: 'public' | 'home' | 'followers' | 'specified';
+  files?: MisskeyFile[];
+  repliesCount?: number;
+  renoteCount?: number;
+  reactions?: Record<string, number>;
+}
+
+// ユーザーIDのインメモリキャッシュ (token -> userId)
+const userIdCache = new Map<string, string>();
 
 /**
  * サーバーサイド(PHP)を使わず、ブラウザから直接Misskeyサーバーの生存確認を行う
@@ -237,7 +279,7 @@ export async function uploadImagesToDrive(
 }
 
 /**
- * ノートを送信する
+ * ノートを送信する (リプライ対応)
  */
 export async function createMisskeyNote(
   account: AccountRecord,
@@ -245,7 +287,8 @@ export async function createMisskeyNote(
   cwContent: string | null,
   visibility: 'public' | 'home' | 'followers',
   appendFromMizuna: boolean,
-  fileIds?: string[]
+  fileIds?: string[],
+  replyId?: string
 ): Promise<void> {
   const suffix = appendFromMizuna ? '\n(from Mizuna)' : '';
   const param: NoteParam = {
@@ -262,6 +305,10 @@ export async function createMisskeyNote(
     param.fileIds = fileIds;
   }
 
+  if (replyId && replyId.length > 0) {
+    param.replyId = replyId;
+  }
+
   const res = await fetch(`https://${account.address}/api/notes/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -271,6 +318,134 @@ export async function createMisskeyNote(
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }
+}
+
+/**
+ * 自身のMisskeyアカウントIDを取得（キャッシュ対応）
+ */
+export async function fetchMyUserId(account: AccountRecord): Promise<string> {
+  const cacheKey = `${account.address}:${account.token}`;
+  const cached = userIdCache.get(cacheKey);
+  if (cached) return cached;
+
+  const res = await fetch(`https://${account.address}/api/i`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ i: account.token }),
+  });
+
+  if (!res.ok) {
+    throw new MisskeyApiError(`ユーザー情報の取得に失敗しました (HTTP ${res.status})`, {
+      status: res.status,
+      isAuthError: res.status === 401 || res.status === 403,
+    });
+  }
+
+  const data = await res.json();
+  if (!data?.id) {
+    throw new Error('ユーザーIDが見つかりませんでした');
+  }
+
+  userIdCache.set(cacheKey, data.id);
+  return data.id;
+}
+
+/**
+ * 自分の投稿履歴を取得する (Issue #129)
+ * 直近10件ずつ取得しページネーション可能
+ */
+export async function fetchUserNotes(
+  account: AccountRecord,
+  options?: { untilId?: string; sinceId?: string; limit?: number }
+): Promise<MisskeyNote[]> {
+  const userId = await fetchMyUserId(account);
+  const limit = options?.limit ?? 10;
+
+  const payload: Record<string, unknown> = {
+    i: account.token,
+    userId,
+    limit,
+    includeReplies: true,
+    includeMyRenotes: false,
+  };
+
+  if (options?.untilId) payload.untilId = options.untilId;
+  if (options?.sinceId) payload.sinceId = options.sinceId;
+
+  const res = await fetch(`https://${account.address}/api/users/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new MisskeyApiError(`投稿履歴の取得に失敗しました (HTTP ${res.status})`, {
+      status: res.status,
+    });
+  }
+
+  const notes: MisskeyNote[] = await res.json();
+  return Array.isArray(notes) ? notes : [];
+}
+
+/**
+ * 特定のノートに付いたリプライ一覧を取得する (Issue #130)
+ */
+export async function fetchNoteChildren(
+  account: AccountRecord,
+  noteId: string,
+  options?: { untilId?: string; limit?: number }
+): Promise<MisskeyNote[]> {
+  const payload: Record<string, unknown> = {
+    i: account.token,
+    noteId,
+    limit: options?.limit ?? 10,
+  };
+  if (options?.untilId) payload.untilId = options.untilId;
+
+  const res = await fetch(`https://${account.address}/api/notes/children`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new MisskeyApiError(`リプライ一覧の取得に失敗しました (HTTP ${res.status})`, {
+      status: res.status,
+    });
+  }
+
+  const children: MisskeyNote[] = await res.json();
+  return Array.isArray(children) ? children : [];
+}
+
+/**
+ * 自分宛てのリプライ/メンション一覧を取得する (Issue #130)
+ */
+export async function fetchUserMentions(
+  account: AccountRecord,
+  options?: { untilId?: string; limit?: number }
+): Promise<MisskeyNote[]> {
+  const payload: Record<string, unknown> = {
+    i: account.token,
+    limit: options?.limit ?? 10,
+  };
+  if (options?.untilId) payload.untilId = options.untilId;
+
+  const res = await fetch(`https://${account.address}/api/notes/mentions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new MisskeyApiError(`メンション一覧の取得に失敗しました (HTTP ${res.status})`, {
+      status: res.status,
+    });
+  }
+
+  const mentions: MisskeyNote[] = await res.json();
+  return Array.isArray(mentions) ? mentions : [];
 }
 
 /**

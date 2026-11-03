@@ -57,6 +57,8 @@ export function NoteView() {
     drafts,
     draftCount,
     saveCurrentAsDraft,
+    replyTargetNote,
+    cancelReply,
     showToast,
     pushModalBackHandler,
     t,
@@ -704,11 +706,13 @@ export function NoteView() {
         cwEnabled() ? rawCw : null,
         visibility(),
         endMizuna(),
-        fileIds
+        fileIds,
+        replyTargetNote()?.id
       );
 
       showToast(t('note.sent'), 'success');
       clearNoteForm(false);
+      cancelReply();
       setShowPreview(false);
       if (fileInputRef) {
         fileInputRef.value = '';
@@ -1042,6 +1046,39 @@ export function NoteView() {
             </HoldHoverTip>
           </div>
         </div>
+
+        {/* 返信先カード (リプライ時のみ表示) */}
+        <Show when={replyTargetNote()}>
+          {(target) => (
+            <div class="mizuna-reply-target-card">
+              <div class="mizuna-reply-target-main">
+                <i class="mizuna-reply-target-icon">reply</i>
+                <img
+                  src={getDisplayAvatarUrl(target().user.avatarUrl, settings().is_visible_icon)}
+                  alt=""
+                  class="mizuna-reply-target-avatar"
+                />
+                <div class="mizuna-reply-target-content">
+                  <span class="mizuna-reply-target-user">
+                    {target().user.name || target().user.username} <span class="mizuna-reply-target-handle">@{target().user.username}</span>
+                  </span>
+                  <p class="mizuna-reply-target-text">
+                    {target().cw ? `[CW] ${target().cw}` : target().text || '（添付画像またはファイル）'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="mizuna-reply-cancel-btn"
+                onClick={cancelReply}
+                title={t('history.cancel_reply')}
+                aria-label={t('history.cancel_reply')}
+              >
+                <i>close</i>
+              </button>
+            </div>
+          )}
+        </Show>
 
         {/* MFM ツールバー */}
         <div class="mizuna-composer-subbar">

@@ -9,6 +9,7 @@ import { DialogHost } from './components/DialogHost';
 import { FooterNav } from './components/FooterNav';
 import { Header } from './components/Header';
 import { NoteView } from './components/NoteView';
+import { HistoryView } from './components/HistoryView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { SettingsView } from './components/SettingsView';
 import { ShortcutsView } from './components/ShortcutsView';
@@ -16,7 +17,7 @@ import { SnackbarHost } from './components/SnackbarHost';
 import { AppProvider, useApp, type ViewType } from './store/appStore';
 import { initAnalytics, trackPageView } from './utils/analytics';
 
-const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'settings'];
+const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'history'];
 
 function MainContent() {
   const { isInitializing, currentView, settings } = useApp();
@@ -121,6 +122,9 @@ function MainContent() {
           <Switch fallback={<NoteView />}>
             <Match when={currentView() === 'note'}>
               <NoteView />
+            </Match>
+            <Match when={currentView() === 'history'}>
+              <HistoryView />
             </Match>
             <Match when={currentView() === 'accounts'}>
               <AccountView />

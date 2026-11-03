@@ -27,7 +27,13 @@ import {
   type DraftRecord,
   type DraftAttachedImage,
 } from '../db/database';
-import { checkMiAuthSession, fetchLatestAccountInfo, fetchLatestReleaseNote, MisskeyApiError } from '../services/misskeyApi';
+import {
+  checkMiAuthSession,
+  fetchLatestAccountInfo,
+  fetchLatestReleaseNote,
+  MisskeyApiError,
+  type MisskeyNote,
+} from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
 import { applyCustomCss } from '../utils/customCss';
 import { translate, type I18nKey } from '../i18n';
@@ -48,7 +54,8 @@ export type ViewType =
   | 'shortcuts'
   | 'about'
   | 'announcements'
-  | 'privacy';
+  | 'privacy'
+  | 'history';
 export type VisibilityType = 'public' | 'home' | 'followers';
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -192,6 +199,12 @@ interface AppContextValue {
   applyPendingUpdate: () => void;
   checkForUpdate: () => Promise<void>;
 
+  // リプライ制御
+  replyTargetNote: Accessor<MisskeyNote | null>;
+  setReplyTargetNote: Setter<MisskeyNote | null>;
+  startReply: (note: MisskeyNote) => void;
+  cancelReply: () => void;
+
   // 多言語対応 (i18n)
   t: (key: I18nKey, params?: Record<string, string | number>) => string;
 }
@@ -208,6 +221,7 @@ const VALID_VIEWS: ViewType[] = [
   'about',
   'announcements',
   'privacy',
+  'history',
 ];
 
 function getSavedView(): ViewType | null {
@@ -248,6 +262,9 @@ export function AppProvider(props: { children: JSX.Element }) {
   // 下書き状態
   const [drafts, setDrafts] = createSignal<DraftRecord[]>([]);
   const draftCount = () => drafts().length;
+
+  // リプライ状態 (返信先ノート)
+  const [replyTargetNote, setReplyTargetNote] = createSignal<MisskeyNote | null>(null);
 
   // トースト・ダイアログ状態
   const [toasts, setToasts] = createSignal<ToastItem[]>([]);
@@ -1330,6 +1347,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     clearWebShareTargetStorage();
     setCwText('');
     setNoteText('');
+    setReplyTargetNote(null);
     setAttachedImages((prev) => {
       prev.forEach(revokeAttachedUrls);
       return [];
@@ -1337,6 +1355,38 @@ export function AppProvider(props: { children: JSX.Element }) {
     if (showNotification) {
       showToast('フォームクリア！', 'info');
     }
+  };
+
+  const cancelReply = () => {
+    setReplyTargetNote(null);
+  };
+
+  const startReply = (note: MisskeyNote) => {
+    setReplyTargetNote(note);
+
+    // 返信先の公開範囲を引き継ぐ
+    if (note.visibility === 'followers' || note.visibility === 'home' || note.visibility === 'public') {
+      setVisibility(note.visibility);
+    }
+
+    // 返信先にCWがあればCWモードを有効化
+    if (note.cw) {
+      setCwEnabled(true);
+    }
+
+    // 自分自身への返信以外なら @username を本文の先頭に自動入力
+    const user = currentUser();
+    const isSelf = user && (user.username === note.user.username);
+    if (!isSelf && note.user.username) {
+      const handle = `@${note.user.username} `;
+      if (!noteText().includes(handle)) {
+        setNoteText((prev) => (prev ? `${handle}${prev}` : handle));
+      }
+    }
+
+    // ノート投稿画面へ遷移
+    setCurrentViewInternal('note');
+    showToast(`@${note.user.username} への返信`, 'info');
   };
 
   // ----------------------------------------------------
@@ -1979,6 +2029,10 @@ export function AppProvider(props: { children: JSX.Element }) {
     promptUpdateDialog,
     applyPendingUpdate,
     checkForUpdate,
+    replyTargetNote,
+    setReplyTargetNote,
+    startReply,
+    cancelReply,
     t,
   };
 

@@ -143,6 +143,18 @@ export function Header() {
                 <i>info</i>
               </button>
             </HoldHoverTip>
+
+            <HoldHoverTip label={t('settings.title')} sublabel="全般・表示設定 (Ctrl+Alt+,)" placement="bottom">
+              <button
+                type="button"
+                id="topbar_settings_button"
+                class={`mizuna-topbar-btn ${currentView() === 'settings' ? 'is-active' : ''}`}
+                onClick={() => toggleTopView('settings')}
+                aria-label={t('settings.title')}
+              >
+                <i>tune</i>
+              </button>
+            </HoldHoverTip>
           </div>
         </div>
       </header>
