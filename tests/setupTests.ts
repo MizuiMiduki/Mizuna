@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
 import { vi, afterEach } from 'vitest';
-import { configure } from '@testing-library/dom';
+import { configure } from '@solidjs/testing-library';
 import gsap from 'gsap';
 
 // 非同期テストの安定化のためタイムアウトを調整
