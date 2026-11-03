@@ -5993,8 +5993,34 @@ body.is-simple-mode .mizuna-lightbox-action-btn {
 }
 
 @keyframes mfm-rainbow {
-  0% { filter: hue-rotate(0deg) contrast(150%) saturate(150%); }
-  100% { filter: hue-rotate(360deg) contrast(150%) saturate(150%); }
+  0% {
+    filter: hue-rotate(0deg) contrast(150%) saturate(150%);
+    color: #ff2a2a;
+  }
+  17% {
+    filter: hue-rotate(60deg) contrast(150%) saturate(150%);
+    color: #ff9900;
+  }
+  33% {
+    filter: hue-rotate(120deg) contrast(150%) saturate(150%);
+    color: #d4dd00;
+  }
+  50% {
+    filter: hue-rotate(180deg) contrast(150%) saturate(150%);
+    color: #00dd77;
+  }
+  67% {
+    filter: hue-rotate(240deg) contrast(150%) saturate(150%);
+    color: #0088ff;
+  }
+  83% {
+    filter: hue-rotate(300deg) contrast(150%) saturate(150%);
+    color: #aa22ff;
+  }
+  100% {
+    filter: hue-rotate(360deg) contrast(150%) saturate(150%);
+    color: #ff2a2a;
+  }
 }
 
 /* MFM クラス定義 */
