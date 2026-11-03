@@ -121,6 +121,19 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       target: 'esnext',
+      cssMinify: true,
+      rollupOptions: {
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('gsap')) return 'vendor-gsap';
+              if (id.includes('dexie')) return 'vendor-db';
+              if (id.includes('mfm-js')) return 'vendor-mfm';
+              if (id.includes('solid-js')) return 'vendor-solid';
+            }
+          },
+        },
+      },
     },
     test: {
       environment: 'jsdom',

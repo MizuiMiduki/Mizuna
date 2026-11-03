@@ -92,10 +92,10 @@ export function HistoryView() {
     }
   });
 
-  const mfmOptions = (): RenderMfmOptions => ({
+  const mfmOptions = createMemo<RenderMfmOptions>(() => ({
     serverAddress: currentUser()?.address,
     serverEmojiMap: serverEmojiMap(),
-  });
+  }));
 
   const getAccountKey = () => {
     const user = currentUser();

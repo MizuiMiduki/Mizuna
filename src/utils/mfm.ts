@@ -5,16 +5,30 @@
 
 import * as mfm from 'mfm-js';
 
+const HTML_ESCAPE_RE = /[&<>"']/g;
+const HTML_ESCAPE_TEST_RE = /[&<>"']/;
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+const TIME_S_RE = /^-?[0-9.]+s$/;
+const TIME_MS_RE = /^-?[0-9.]+ms$/;
+const TIME_NUM_RE = /^-?[0-9.]+$/;
+const HEX_COLOR_RE = /^[0-9a-fA-F]{3,6}$/;
+const COLON_TRIM_RE = /^:|:$/g;
+const INLINE_EMOJI_RE = /:([a-zA-Z0-9_@.-]+):/g;
+const EMPTY_EMOJI_MAP = new Map<string, string>();
+
 /**
  * HTML特殊文字をエスケープして安全にする
  */
 export function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  if (!str || !HTML_ESCAPE_TEST_RE.test(str)) return str;
+  return str.replace(HTML_ESCAPE_RE, (ch) => HTML_ESCAPE_MAP[ch]);
 }
 
 function safeParseFloat(val: unknown): number | null {
@@ -26,13 +40,13 @@ function safeParseFloat(val: unknown): number | null {
 
 function validTime(t: string | boolean | null | undefined): string | null {
   if (t == null || typeof t === 'boolean') return null;
-  return /^-?[0-9.]+s$/.test(t) ? t : /^-?[0-9.]+ms$/.test(t) ? t : /^-?[0-9.]+$/.test(t) ? `${t}s` : null;
+  return TIME_S_RE.test(t) ? t : TIME_MS_RE.test(t) ? t : TIME_NUM_RE.test(t) ? `${t}s` : null;
 }
 
 function validColor(c: unknown): string | null {
   if (typeof c !== 'string') return null;
-  const clean = c.replace(/^#/, '');
-  return /^[0-9a-fA-F]{3,6}$/.test(clean) ? clean : null;
+  const clean = c.charCodeAt(0) === 35 /* '#' */ ? c.slice(1) : c;
+  return HEX_COLOR_RE.test(clean) ? clean : null;
 }
 
 export type EmojiSource =
@@ -49,15 +63,17 @@ export interface RenderMfmOptions {
  * 絵文字リストやマップを正規化して検索用 Map に変換する
  */
 export function normalizeEmojiMap(emojis?: EmojiSource | null): Map<string, string> {
-  const map = new Map<string, string>();
-  if (!emojis) return map;
+  if (!emojis) return EMPTY_EMOJI_MAP;
 
   if (emojis instanceof Map) {
+    if (emojis.size === 0) return EMPTY_EMOJI_MAP;
+    const map = new Map<string, string>();
     for (const [key, val] of emojis.entries()) {
       if (typeof val === 'string') {
-        const raw = key.replace(/^:|:$/g, '').toLowerCase();
+        const raw = key.replace(COLON_TRIM_RE, '').toLowerCase();
         map.set(raw, val);
-        const withoutDomain = raw.split('@')[0];
+        const atIdx = raw.indexOf('@');
+        const withoutDomain = atIdx !== -1 ? raw.slice(0, atIdx) : raw;
         if (withoutDomain && !map.has(withoutDomain)) {
           map.set(withoutDomain, val);
           map.set(`${withoutDomain}@.`, val);
@@ -68,9 +84,12 @@ export function normalizeEmojiMap(emojis?: EmojiSource | null): Map<string, stri
   }
 
   if (Array.isArray(emojis)) {
-    for (const item of emojis) {
+    if (emojis.length === 0) return EMPTY_EMOJI_MAP;
+    const map = new Map<string, string>();
+    for (let i = 0; i < emojis.length; i++) {
+      const item = emojis[i];
       if (item && item.name && item.url) {
-        const raw = item.name.replace(/^:|:$/g, '').toLowerCase();
+        const raw = item.name.replace(COLON_TRIM_RE, '').toLowerCase();
         map.set(raw, item.url);
         if (item.host) {
           map.set(`${raw}@${item.host.toLowerCase()}`, item.url);
@@ -78,21 +97,59 @@ export function normalizeEmojiMap(emojis?: EmojiSource | null): Map<string, stri
         map.set(`${raw}@.`, item.url);
       }
     }
-  } else if (typeof emojis === 'object') {
-    for (const [key, val] of Object.entries(emojis)) {
+    return map;
+  }
+
+  if (typeof emojis === 'object') {
+    const entries = Object.entries(emojis);
+    if (entries.length === 0) return EMPTY_EMOJI_MAP;
+    const map = new Map<string, string>();
+    for (let i = 0; i < entries.length; i++) {
+      const [key, val] = entries[i];
       if (typeof val === 'string') {
-        const raw = key.replace(/^:|:$/g, '').toLowerCase();
+        const raw = key.replace(COLON_TRIM_RE, '').toLowerCase();
         map.set(raw, val);
-        const withoutDomain = raw.split('@')[0];
+        const atIdx = raw.indexOf('@');
+        const withoutDomain = atIdx !== -1 ? raw.slice(0, atIdx) : raw;
         if (withoutDomain && !map.has(withoutDomain)) {
           map.set(withoutDomain, val);
           map.set(`${withoutDomain}@.`, val);
         }
       }
     }
+    return map;
   }
 
-  return map;
+  return EMPTY_EMOJI_MAP;
+}
+
+function resolveCustomEmojiImg(
+  rawName: string,
+  emojiMap: Map<string, string>,
+  options?: RenderMfmOptions
+): string | null {
+  const cleanName = rawName.replace(COLON_TRIM_RE, '').toLowerCase();
+  const atIdx = cleanName.indexOf('@');
+  const withoutHost = atIdx !== -1 ? cleanName.slice(0, atIdx) : cleanName;
+  const localKey = `${withoutHost}@.`;
+
+  let emojiUrl =
+    emojiMap.get(cleanName) ||
+    emojiMap.get(withoutHost) ||
+    emojiMap.get(localKey) ||
+    options?.serverEmojiMap?.get(cleanName) ||
+    options?.serverEmojiMap?.get(withoutHost) ||
+    options?.serverEmojiMap?.get(localKey);
+
+  // 自サーバー絵文字フォールバック (自サーバーの /emoji/name.webp)
+  if (!emojiUrl && options?.serverAddress && (atIdx === -1 || cleanName.endsWith('@.'))) {
+    emojiUrl = `https://${options.serverAddress}/emoji/${encodeURIComponent(withoutHost)}.webp`;
+  }
+
+  if (!emojiUrl) return null;
+  const escapedName = escapeHtml(rawName);
+  const escapedUrl = escapeHtml(emojiUrl);
+  return `<img class="mfm-custom-emoji" src="${escapedUrl}" alt=":${escapedName}:" title=":${escapedName}:" loading="lazy" decoding="async" onerror="this.outerHTML=':${escapedName}:'" />`;
 }
 
 /**
@@ -354,25 +411,7 @@ function renderNode(
 
     case 'emojiCode': {
       const name = node.props.name;
-      const cleanName = name.replace(/^:|:$/g, '').toLowerCase();
-      const withoutHost = cleanName.split('@')[0];
-      let emojiUrl =
-        emojiMap.get(cleanName) ||
-        emojiMap.get(withoutHost) ||
-        emojiMap.get(`${withoutHost}@.`) ||
-        options?.serverEmojiMap?.get(cleanName) ||
-        options?.serverEmojiMap?.get(withoutHost) ||
-        options?.serverEmojiMap?.get(`${withoutHost}@.`);
-
-      // 自サーバー絵文字フォールバック (自サーバーの /emoji/name.webp)
-      if (!emojiUrl && options?.serverAddress && (!cleanName.includes('@') || cleanName.endsWith('@.'))) {
-        emojiUrl = `https://${options.serverAddress}/emoji/${encodeURIComponent(withoutHost)}.webp`;
-      }
-
-      if (emojiUrl) {
-        return `<img class="mfm-custom-emoji" src="${escapeHtml(emojiUrl)}" alt=":${escapeHtml(name)}:" title=":${escapeHtml(name)}:" loading="lazy" decoding="async" onerror="this.outerHTML=':${escapeHtml(name)}:'" />`;
-      }
-      return `:${escapeHtml(name)}:`;
+      return resolveCustomEmojiImg(name, emojiMap, options) ?? `:${escapeHtml(name)}:`;
     }
 
     case 'unicodeEmoji':
@@ -419,27 +458,13 @@ export function renderInlineEmoji(
   options?: RenderMfmOptions
 ): string {
   if (!text) return '';
+  const escaped = escapeHtml(text);
+  if (!escaped.includes(':')) return escaped;
+
   const emojiMap = normalizeEmojiMap(emojis);
 
-  return escapeHtml(text).replace(/:([a-zA-Z0-9_@.-]+):/g, (match, rawName) => {
-    const cleanName = rawName.toLowerCase();
-    const withoutHost = cleanName.split('@')[0];
-    let emojiUrl =
-      emojiMap.get(cleanName) ||
-      emojiMap.get(withoutHost) ||
-      emojiMap.get(`${withoutHost}@.`) ||
-      options?.serverEmojiMap?.get(cleanName) ||
-      options?.serverEmojiMap?.get(withoutHost) ||
-      options?.serverEmojiMap?.get(`${withoutHost}@.`);
-
-    if (!emojiUrl && options?.serverAddress && (!cleanName.includes('@') || cleanName.endsWith('@.'))) {
-      emojiUrl = `https://${options.serverAddress}/emoji/${encodeURIComponent(withoutHost)}.webp`;
-    }
-
-    if (emojiUrl) {
-      return `<img class="mfm-custom-emoji" src="${escapeHtml(emojiUrl)}" alt=":${escapeHtml(rawName)}:" title=":${escapeHtml(rawName)}:" loading="lazy" decoding="async" onerror="this.outerHTML=':${escapeHtml(rawName)}:'" />`;
-    }
-    return match;
+  return escaped.replace(INLINE_EMOJI_RE, (match, rawName) => {
+    return resolveCustomEmojiImg(rawName, emojiMap, options) ?? match;
   });
 }
 

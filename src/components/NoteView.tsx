@@ -458,12 +458,14 @@ export function NoteView() {
     return `${text}\n(from Mizuna)`;
   });
 
-  const renderedNoteHtml = createMemo(() =>
-    renderMfm(previewNoteText(), null, { serverAddress: currentUser()?.address })
-  );
-  const renderedCwHtml = createMemo(() =>
-    renderMfm(cwText(), null, { serverAddress: currentUser()?.address })
-  );
+  const renderedNoteHtml = createMemo(() => {
+    if (!showPreview()) return '';
+    return renderMfm(previewNoteText(), null, { serverAddress: currentUser()?.address });
+  });
+  const renderedCwHtml = createMemo(() => {
+    if (!showPreview()) return '';
+    return renderMfm(cwText(), null, { serverAddress: currentUser()?.address });
+  });
 
   const handleInsertMfm = (prefix: string, suffix: string, placeholder = '') => {
     const isCw = lastFocusedField() === 'cw' && cwEnabled();
