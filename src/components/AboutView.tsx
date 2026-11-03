@@ -30,6 +30,20 @@ const OSS_LICENSES = [
     url: 'https://dexie.org/',
   },
   {
+    name: 'mfm-js',
+    license: 'MIT License',
+    copyright: 'Copyright (c) Marihachi / misskey-dev',
+    url: 'https://github.com/misskey-dev/mfm.js',
+    description: 'Misskey公式 MFM (Misskey Flavored Markdown) パーサー',
+  },
+  {
+    name: 'Misskey (MFM Animations & Spec)',
+    license: 'AGPL-3.0 (Reference & Compatibility)',
+    copyright: 'Copyright (c) syuilo and misskey-project',
+    url: 'https://github.com/misskey-dev/misskey',
+    description: 'MFM アニメーション仕様およびキーフレーム定義の準拠・参照',
+  },
+  {
     name: 'pulltorefreshjs',
     license: 'MIT License',
     copyright: 'Copyright (c) 2017 Rafael Soto',
@@ -257,6 +271,11 @@ export function AboutView() {
                 <span class="mizuna-oss-badge">{oss.license}</span>
               </div>
               <div class="mizuna-oss-copy">{oss.copyright}</div>
+              <Show when={oss.description}>
+                <div class="mizuna-oss-desc" style="font-size: 0.8rem; opacity: 0.75; margin-top: 4px; line-height: 1.4;">
+                  {oss.description}
+                </div>
+              </Show>
             </div>
           )}
         </For>
