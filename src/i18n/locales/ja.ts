@@ -139,6 +139,7 @@ export const ja = {
     all_cleared: 'すべての下書きを削除しました',
     images_count: '{count}枚の画像',
     save_current: '現在の入力内容を下書き保存',
+    tip_save_and_restore: '下書きの保存・呼び出し (Ctrl+Alt+S / D)',
     badge: '下書き',
   },
   history: {

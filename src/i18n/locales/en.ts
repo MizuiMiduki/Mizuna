@@ -139,6 +139,7 @@ export const en = {
     all_cleared: 'All drafts deleted',
     images_count: '{count} images',
     save_current: 'Save current note as draft',
+    tip_save_and_restore: 'Save or restore drafts (Ctrl+Alt+S / D)',
     badge: 'Draft',
   },
   history: {

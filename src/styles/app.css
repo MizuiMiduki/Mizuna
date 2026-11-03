@@ -751,6 +751,15 @@ body {
   flex-shrink: 0;
 }
 
+/* コンポーザーヘッダー右側ラッパー（公開範囲 ＆ 下書き統合ボタン） */
+.mizuna-composer-header-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* ピル型公開範囲セレクター */
 .mizuna-visibility-pills {
   display: inline-flex;
@@ -762,8 +771,60 @@ body {
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
   gap: 3px;
   flex-shrink: 0;
-  margin-left: auto;
   box-sizing: border-box;
+}
+
+/* フォーム右上の下書き統合ボタン */
+.mizuna-composer-draft-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--mizuna-seg-track-h);
+  height: var(--mizuna-seg-track-h);
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: var(--mizuna-radius-pill) !important;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent) !important;
+  background: color-mix(in srgb, var(--surface-container-highest) 70%, transparent) !important;
+  color: var(--on-surface-variant);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.2, 0, 0, 1);
+  box-sizing: border-box;
+}
+
+.mizuna-composer-draft-btn:hover {
+  background: color-mix(in srgb, var(--primary) 12%, var(--surface)) !important;
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent) !important;
+  color: var(--primary) !important;
+  transform: translateY(-1px);
+}
+
+.mizuna-composer-draft-btn:active {
+  transform: scale(0.94);
+}
+
+.mizuna-composer-draft-btn i {
+  font-size: 19px !important;
+}
+
+.mizuna-composer-draft-btn .mizuna-chip-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: var(--mizuna-radius-pill);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  line-height: 1;
 }
 
 .mizuna-vis-pill {

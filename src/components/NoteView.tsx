@@ -1009,39 +1009,59 @@ export function NoteView() {
             <i class="mizuna-author-chevron">unfold_more</i>
           </button>
 
-          {/* モダンなピル型公開範囲セレクター */}
-          <div class="mizuna-visibility-pills" role="radiogroup" aria-label={t('settings.default_visibility')}>
-            <HoldHoverTip label={t('note.visibility_public')} sublabel="全ユーザーに公開 (Ctrl+Alt+P)" placement="bottom">
+          {/* 右側グループ：公開範囲ピル ＆ 下書き統合ボタン */}
+          <div class="mizuna-composer-header-right">
+            {/* モダンなピル型公開範囲セレクター */}
+            <div class="mizuna-visibility-pills" role="radiogroup" aria-label={t('settings.default_visibility')}>
+              <HoldHoverTip label={t('note.visibility_public')} sublabel="全ユーザーに公開 (Ctrl+Alt+P)" placement="bottom">
+                <button
+                  type="button"
+                  id="visibility_public"
+                  class={`mizuna-vis-pill ${visibility() === 'public' ? 'is-active' : ''}`}
+                  onClick={(e) => selectVisibility('public', e.currentTarget)}
+                >
+                  <i>public</i>
+                  <span>{t('note.visibility_public')}</span>
+                </button>
+              </HoldHoverTip>
+              <HoldHoverTip label={t('note.visibility_home')} sublabel="ホームTLのみに表示 (Ctrl+Alt+H)" placement="bottom">
+                <button
+                  type="button"
+                  id="visibility_home"
+                  class={`mizuna-vis-pill ${visibility() === 'home' ? 'is-active' : ''}`}
+                  onClick={(e) => selectVisibility('home', e.currentTarget)}
+                >
+                  <i>home</i>
+                  <span>{t('note.visibility_home')}</span>
+                </button>
+              </HoldHoverTip>
+              <HoldHoverTip label={t('note.visibility_followers')} sublabel="フォロワーのみに表示 (Ctrl+Alt+F)" placement="bottom">
+                <button
+                  type="button"
+                  id="visibility_followers"
+                  class={`mizuna-vis-pill ${visibility() === 'followers' ? 'is-active' : ''}`}
+                  onClick={(e) => selectVisibility('followers', e.currentTarget)}
+                >
+                  <i>lock</i>
+                  <span>{t('note.visibility_followers')}</span>
+                </button>
+              </HoldHoverTip>
+            </div>
+
+            {/* 下書き（保存・呼び出し）ボタン */}
+            <HoldHoverTip label={t('draft.title')} sublabel={t('draft.tip_save_and_restore')} placement="bottom">
               <button
                 type="button"
-                id="visibility_public"
-                class={`mizuna-vis-pill ${visibility() === 'public' ? 'is-active' : ''}`}
-                onClick={(e) => selectVisibility('public', e.currentTarget)}
+                id="draft_button"
+                class={`mizuna-composer-draft-btn ${draftCount() > 0 ? 'has-badge' : ''}`}
+                onClick={() => setIsDraftsModalOpen(true)}
+                aria-label={t('draft.title')}
+                title={t('draft.title')}
               >
-                <i>public</i>
-                <span>{t('note.visibility_public')}</span>
-              </button>
-            </HoldHoverTip>
-            <HoldHoverTip label={t('note.visibility_home')} sublabel="ホームTLのみに表示 (Ctrl+Alt+H)" placement="bottom">
-              <button
-                type="button"
-                id="visibility_home"
-                class={`mizuna-vis-pill ${visibility() === 'home' ? 'is-active' : ''}`}
-                onClick={(e) => selectVisibility('home', e.currentTarget)}
-              >
-                <i>home</i>
-                <span>{t('note.visibility_home')}</span>
-              </button>
-            </HoldHoverTip>
-            <HoldHoverTip label={t('note.visibility_followers')} sublabel="フォロワーのみに表示 (Ctrl+Alt+F)" placement="bottom">
-              <button
-                type="button"
-                id="visibility_followers"
-                class={`mizuna-vis-pill ${visibility() === 'followers' ? 'is-active' : ''}`}
-                onClick={(e) => selectVisibility('followers', e.currentTarget)}
-              >
-                <i>lock</i>
-                <span>{t('note.visibility_followers')}</span>
+                <i>drafts</i>
+                <Show when={draftCount() > 0}>
+                  <span class="mizuna-chip-count">{draftCount()}</span>
+                </Show>
               </button>
             </HoldHoverTip>
           </div>
@@ -1495,36 +1515,6 @@ export function NoteView() {
                 aria-label={t('note.clear_form_tip')}
               >
                 <i>delete_sweep</i>
-              </button>
-            </HoldHoverTip>
-
-            {/* 下書き保存ボタン */}
-            <HoldHoverTip label={t('draft.save_tip')} sublabel={t('draft.save_tip_sub')} placement="top">
-              <button
-                type="button"
-                id="draft_save_button"
-                class="mizuna-tool-icon-btn"
-                onClick={() => saveCurrentAsDraft()}
-                aria-label={t('draft.save')}
-              >
-                <i>bookmark_add</i>
-              </button>
-            </HoldHoverTip>
-
-            {/* 下書き一覧ボタン */}
-            <HoldHoverTip label={t('draft.list_tip')} sublabel={t('draft.list_tip_sub')} placement="top">
-              <button
-                type="button"
-                id="draft_list_button"
-                class={`mizuna-tool-chip ${draftCount() > 0 ? 'has-badge' : ''}`}
-                onClick={() => setIsDraftsModalOpen(true)}
-                aria-label={t('draft.title')}
-              >
-                <i>drafts</i>
-                <span>{t('draft.badge')}</span>
-                <Show when={draftCount() > 0}>
-                  <span class="mizuna-chip-count">{draftCount()}</span>
-                </Show>
               </button>
             </HoldHoverTip>
           </div>

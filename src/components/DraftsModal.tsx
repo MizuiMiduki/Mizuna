@@ -181,7 +181,10 @@ export function DraftsModal(props: DraftsModalProps) {
                 type="button"
                 class="mizuna-btn mizuna-btn-primary mizuna-drafts-save-btn"
                 onClick={async () => {
-                  await saveCurrentAsDraft();
+                  const success = await saveCurrentAsDraft();
+                  if (success) {
+                    props.onClose();
+                  }
                 }}
               >
                 <i>bookmark_add</i>
