@@ -467,7 +467,10 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     });
   });
 
-  it('NoteViewの画像ボタンからMisskeyにアップロード済みの画像を選択して添付・投稿できること', async () => {
+  it('NoteViewの画像ボタンからまず追加方法を選択し、アップロード済み画像を選択した後にのみライブラリを取得して添付できること', async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockClear();
+
     render(() => (
       <AppProvider>
         <NoteView />
@@ -478,9 +481,26 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     const selectPicBtn = await screen.findByRole('button', { name: /^(画像|Image)$/ });
     fireEvent.click(selectPicBtn);
 
-    // Misskeyドライブのアップロード済み画像が表示されること
+    // ステップ1（選択肢表示）の時点では /api/drive/files がまだ呼ばれていないこと
+    const driveCallsBeforeChoice = fetchMock.mock.calls.filter(
+      (call) => typeof call[0] === 'string' && call[0].includes('/api/drive/files')
+    );
+    expect(driveCallsBeforeChoice.length).toBe(0);
+
+    // 「アップロード済みの画像から選択」をクリック
+    const chooseDriveBtn = await screen.findByRole('button', {
+      name: /(アップロード済みの画像から選択|Select Uploaded Image)/,
+    });
+    fireEvent.click(chooseDriveBtn);
+
+    // 選択肢を選んだ後に初めて Misskey ドライブの画像が取得・表示されること
     const driveImg1 = await screen.findByAltText('drive101.webp');
     expect(driveImg1).toBeInTheDocument();
+
+    const driveCallsAfterChoice = fetchMock.mock.calls.filter(
+      (call) => typeof call[0] === 'string' && call[0].includes('/api/drive/files')
+    );
+    expect(driveCallsAfterChoice.length).toBe(1);
 
     // 画像をタップして選択し、「選択した画像を追加」をクリック
     fireEvent.click(driveImg1.closest('button')!);

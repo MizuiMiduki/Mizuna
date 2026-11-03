@@ -8276,6 +8276,18 @@ body.dark .mizuna-mfm-toolbar-divider {
   gap: 16px;
 }
 
+.mizuna-drive-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mizuna-drive-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
 .mizuna-drive-upload-card {
   width: 100%;
   display: flex;
@@ -8297,6 +8309,16 @@ body.dark .mizuna-mfm-toolbar-divider {
   transform: translateY(-1px);
 }
 
+.mizuna-drive-upload-card.is-drive-choice {
+  background: color-mix(in srgb, var(--secondary, var(--primary)) 10%, var(--surface-container-high));
+  border-color: color-mix(in srgb, var(--secondary, var(--primary)) 30%, transparent);
+}
+
+.mizuna-drive-upload-card.is-drive-choice:hover {
+  background: color-mix(in srgb, var(--secondary, var(--primary)) 16%, var(--surface-container-high));
+  border-color: color-mix(in srgb, var(--secondary, var(--primary)) 45%, transparent);
+}
+
 .mizuna-drive-upload-icon {
   width: 44px;
   height: 44px;
@@ -8307,6 +8329,11 @@ body.dark .mizuna-mfm-toolbar-divider {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+.mizuna-drive-upload-icon.is-drive {
+  background: var(--secondary, var(--primary));
+  color: var(--on-secondary, #fff);
 }
 
 .mizuna-drive-upload-icon i {
