@@ -216,14 +216,9 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     const emojiImgs = document.querySelectorAll('.mfm-custom-emoji');
     expect(emojiImgs.length).toBeGreaterThanOrEqual(1);
 
-    // リアクション（👍 や :blobcat:, :local_emoji:）が表示されていること
+    // リアクション一覧は非表示であること
     const reactions = document.querySelectorAll('.mizuna-reaction-pill');
-    expect(reactions.length).toBeGreaterThanOrEqual(3);
-
-    // note.emojis にないローカル絵文字リアクションも自サーバーURLで画像タグとして描画されること
-    const localEmojiImg = document.querySelector('img[alt="local_emoji"]');
-    expect(localEmojiImg).toBeInTheDocument();
-    expect(localEmojiImg?.getAttribute('src')).toBe('https://misskey.test/emoji/local_emoji.webp');
+    expect(reactions.length).toBe(0);
   });
 
   it('リプライ確認機能（Issue #130）: リプライ一覧を展開して閲覧できること', async () => {

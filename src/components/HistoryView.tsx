@@ -26,48 +26,9 @@ import { getDisplayAvatarUrl } from '../utils/image';
 import {
   renderMfm,
   renderInlineEmoji,
-  normalizeEmojiMap,
   type RenderMfmOptions,
 } from '../utils/mfm';
 import { hasHistoryPermission } from '../utils/version';
-
-function getReactionEmojiUrl(
-  rawReaction: string,
-  note: MisskeyNote,
-  serverAddress?: string,
-  serverEmojiMap?: Map<string, string>
-): string | undefined {
-  const isCustomCode =
-    (rawReaction.startsWith(':') && rawReaction.endsWith(':')) ||
-    /^[a-zA-Z0-9_@.-]+$/.test(rawReaction);
-
-  if (!isCustomCode) {
-    return undefined;
-  }
-
-  const clean = rawReaction.replace(/^:|:$/g, '').toLowerCase();
-  const withoutHost = clean.split('@')[0];
-
-  if (note.reactionEmojis) {
-    if (note.reactionEmojis[rawReaction]) return note.reactionEmojis[rawReaction];
-    if (note.reactionEmojis[clean]) return note.reactionEmojis[clean];
-    if (note.reactionEmojis[withoutHost]) return note.reactionEmojis[withoutHost];
-    if (note.reactionEmojis[`${withoutHost}@.`]) return note.reactionEmojis[`${withoutHost}@.`];
-  }
-
-  const map = normalizeEmojiMap(note.emojis);
-  const fromNote = map.get(clean) || map.get(withoutHost) || map.get(`${withoutHost}@.`);
-  if (fromNote) return fromNote;
-
-  const fromServer = serverEmojiMap?.get(clean) || serverEmojiMap?.get(withoutHost);
-  if (fromServer) return fromServer;
-
-  if (serverAddress && (!clean.includes('@') || clean.endsWith('@.'))) {
-    return `https://${serverAddress}/emoji/${encodeURIComponent(withoutHost)}.webp`;
-  }
-
-  return undefined;
-}
 
 function formatRelativeTime(dateStr: string): string {
   const date = new Date(dateStr);
@@ -629,39 +590,6 @@ export function HistoryView() {
                         </Show>
                       </Show>
 
-                      {/* リアクション一覧 */}
-                      <Show when={note.reactions && Object.keys(note.reactions).length > 0}>
-                        <div class="mizuna-note-reactions">
-                          <For each={Object.entries(note.reactions!)}>
-                            {([rawReaction, count]) => {
-                              const emojiUrl = getReactionEmojiUrl(
-                                rawReaction,
-                                note,
-                                currentUser()?.address,
-                                serverEmojiMap()
-                              );
-                              const cleanName = rawReaction.replace(/^:|:$/g, '');
-                              return (
-                                <span class="mizuna-reaction-pill" title={`${cleanName}: ${count}`}>
-                                  <Show
-                                    when={emojiUrl}
-                                    fallback={<span>{rawReaction}</span>}
-                                  >
-                                    <img
-                                      src={emojiUrl!}
-                                      alt={cleanName}
-                                      loading="lazy"
-                                      decoding="async"
-                                    />
-                                  </Show>
-                                  <span class="mizuna-reaction-count">{count}</span>
-                                </span>
-                              );
-                            }}
-                          </For>
-                        </div>
-                      </Show>
-
                       {/* アクションバー (リプライ確認・返信・ブラウザで開く) */}
                       <div class="mizuna-note-card-actions">
                         <div class="mizuna-note-actions-left">
@@ -748,39 +676,6 @@ export function HistoryView() {
                                         class="mizuna-reply-body"
                                         innerHTML={childNote.text ? renderMfm(childNote.text, childNote.emojis, mfmOptions()) : ''}
                                       />
-
-                                      {/* リプライのリアクション一覧 */}
-                                      <Show when={childNote.reactions && Object.keys(childNote.reactions).length > 0}>
-                                        <div class="mizuna-note-reactions is-reply">
-                                          <For each={Object.entries(childNote.reactions!)}>
-                                            {([rawReaction, count]) => {
-                                              const emojiUrl = getReactionEmojiUrl(
-                                                rawReaction,
-                                                childNote,
-                                                currentUser()?.address,
-                                                serverEmojiMap()
-                                              );
-                                              const cleanName = rawReaction.replace(/^:|:$/g, '');
-                                              return (
-                                                <span class="mizuna-reaction-pill" title={`${cleanName}: ${count}`}>
-                                                  <Show
-                                                    when={emojiUrl}
-                                                    fallback={<span>{rawReaction}</span>}
-                                                  >
-                                                    <img
-                                                      src={emojiUrl!}
-                                                      alt={cleanName}
-                                                      loading="lazy"
-                                                      decoding="async"
-                                                    />
-                                                  </Show>
-                                                  <span class="mizuna-reaction-count">{count}</span>
-                                                </span>
-                                              );
-                                            }}
-                                          </For>
-                                        </div>
-                                      </Show>
 
                                       <div class="mizuna-reply-actions">
                                         {/* リプライの子リプライへ返信するボタン (Issue #131) */}
