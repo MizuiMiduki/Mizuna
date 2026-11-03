@@ -458,8 +458,12 @@ export function NoteView() {
     return `${text}\n(from Mizuna)`;
   });
 
-  const renderedNoteHtml = createMemo(() => renderMfm(previewNoteText()));
-  const renderedCwHtml = createMemo(() => renderMfm(cwText()));
+  const renderedNoteHtml = createMemo(() =>
+    renderMfm(previewNoteText(), null, { serverAddress: currentUser()?.address })
+  );
+  const renderedCwHtml = createMemo(() =>
+    renderMfm(cwText(), null, { serverAddress: currentUser()?.address })
+  );
 
   const handleInsertMfm = (prefix: string, suffix: string, placeholder = '') => {
     const isCw = lastFocusedField() === 'cw' && cwEnabled();

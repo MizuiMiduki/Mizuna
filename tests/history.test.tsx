@@ -32,6 +32,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     reactions: {
       '👍': 3,
       ':blobcat:': 5,
+      ':local_emoji:': 2,
     },
     reactionEmojis: {
       ':blobcat:': 'https://example.com/blobcat.webp',
@@ -141,6 +142,17 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
           };
         }
 
+        // /api/emojis (サーバーカスタム絵文字一覧)
+        if (url.includes('/api/emojis')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => [
+              { name: 'server_cat', url: 'https://example.com/server_cat.webp' },
+            ],
+          };
+        }
+
         // /api/users/notes (自分の投稿一覧 #129)
         if (url.includes('/api/users/notes')) {
           return {
@@ -204,9 +216,14 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     const emojiImgs = document.querySelectorAll('.mfm-custom-emoji');
     expect(emojiImgs.length).toBeGreaterThanOrEqual(1);
 
-    // リアクション（👍 や :blobcat:）が表示されていること
+    // リアクション（👍 や :blobcat:, :local_emoji:）が表示されていること
     const reactions = document.querySelectorAll('.mizuna-reaction-pill');
-    expect(reactions.length).toBeGreaterThanOrEqual(2);
+    expect(reactions.length).toBeGreaterThanOrEqual(3);
+
+    // note.emojis にないローカル絵文字リアクションも自サーバーURLで画像タグとして描画されること
+    const localEmojiImg = document.querySelector('img[alt="local_emoji"]');
+    expect(localEmojiImg).toBeInTheDocument();
+    expect(localEmojiImg?.getAttribute('src')).toBe('https://misskey.test/emoji/local_emoji.webp');
   });
 
   it('リプライ確認機能（Issue #130）: リプライ一覧を展開して閲覧できること', async () => {

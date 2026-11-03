@@ -99,6 +99,79 @@ export interface MisskeyNote {
 // ユーザーIDのインメモリキャッシュ (token -> userId)
 const userIdCache = new Map<string, string>();
 
+// サーバーカスタム絵文字のインメモリキャッシュ (address -> Map<emojiName, emojiUrl>)
+const serverEmojiCache = new Map<string, Map<string, string>>();
+
+/**
+ * インスタンスのカスタム絵文字一覧 (/api/emojis) を取得し、絵文字名からURLへのマップを返す
+ */
+export async function fetchServerEmojis(rawAddress: string): Promise<Map<string, string>> {
+  const address = rawAddress.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  if (!address || address.includes(' ') || !address.includes('.')) {
+    return new Map();
+  }
+
+  const cached = serverEmojiCache.get(address);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const res = await fetch(`https://${address}/api/emojis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    let data: any;
+    if (res.ok) {
+      data = await res.json();
+    } else {
+      const getRes = await fetch(`https://${address}/api/emojis`);
+      if (getRes.ok) {
+        data = await getRes.json();
+      }
+    }
+
+    if (data) {
+      const map = new Map<string, string>();
+      const list: MisskeyCustomEmoji[] = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.emojis)
+        ? data.emojis
+        : [];
+
+      for (const item of list) {
+        if (item && item.name && item.url) {
+          const lower = item.name.toLowerCase();
+          map.set(lower, item.url);
+          map.set(`${lower}@.`, item.url);
+          if (item.aliases && Array.isArray(item.aliases)) {
+            for (const alias of item.aliases) {
+              if (alias) {
+                const lowerAlias = alias.toLowerCase();
+                map.set(lowerAlias, item.url);
+                map.set(`${lowerAlias}@.`, item.url);
+              }
+            }
+          }
+        }
+      }
+
+      serverEmojiCache.set(address, map);
+      return map;
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch custom emojis from ${address}:`, err);
+  }
+
+  return new Map();
+}
+
+export function clearServerEmojiCache(): void {
+  serverEmojiCache.clear();
+}
+
 /**
  * サーバーサイド(PHP)を使わず、ブラウザから直接Misskeyサーバーの生存確認を行う
  * 1. Misskey API (/api/meta) にPOSTリクエストを送信 (CORS標準対応)

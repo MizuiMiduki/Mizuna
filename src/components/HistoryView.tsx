@@ -10,6 +10,7 @@ import {
 } from 'solid-js';
 import {
   fetchNoteChildren,
+  fetchServerEmojis,
   fetchUserMentions,
   fetchUserNotes,
   type MisskeyNote,
@@ -22,21 +23,50 @@ import {
   setHistoryCache,
 } from '../store/historyStore';
 import { getDisplayAvatarUrl } from '../utils/image';
-import { renderMfm, renderInlineEmoji, normalizeEmojiMap } from '../utils/mfm';
+import {
+  renderMfm,
+  renderInlineEmoji,
+  normalizeEmojiMap,
+  type RenderMfmOptions,
+} from '../utils/mfm';
 import { hasHistoryPermission } from '../utils/version';
 
-function getReactionEmojiUrl(rawReaction: string, note: MisskeyNote): string | undefined {
-  const clean = rawReaction.replace(/^:|:$/g, '');
+function getReactionEmojiUrl(
+  rawReaction: string,
+  note: MisskeyNote,
+  serverAddress?: string,
+  serverEmojiMap?: Map<string, string>
+): string | undefined {
+  const isCustomCode =
+    (rawReaction.startsWith(':') && rawReaction.endsWith(':')) ||
+    /^[a-zA-Z0-9_@.-]+$/.test(rawReaction);
+
+  if (!isCustomCode) {
+    return undefined;
+  }
+
+  const clean = rawReaction.replace(/^:|:$/g, '').toLowerCase();
   const withoutHost = clean.split('@')[0];
 
   if (note.reactionEmojis) {
     if (note.reactionEmojis[rawReaction]) return note.reactionEmojis[rawReaction];
     if (note.reactionEmojis[clean]) return note.reactionEmojis[clean];
     if (note.reactionEmojis[withoutHost]) return note.reactionEmojis[withoutHost];
+    if (note.reactionEmojis[`${withoutHost}@.`]) return note.reactionEmojis[`${withoutHost}@.`];
   }
 
   const map = normalizeEmojiMap(note.emojis);
-  return map.get(clean.toLowerCase()) || map.get(withoutHost.toLowerCase());
+  const fromNote = map.get(clean) || map.get(withoutHost) || map.get(`${withoutHost}@.`);
+  if (fromNote) return fromNote;
+
+  const fromServer = serverEmojiMap?.get(clean) || serverEmojiMap?.get(withoutHost);
+  if (fromServer) return fromServer;
+
+  if (serverAddress && (!clean.includes('@') || clean.endsWith('@.'))) {
+    return `https://${serverAddress}/emoji/${encodeURIComponent(withoutHost)}.webp`;
+  }
+
+  return undefined;
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -89,6 +119,22 @@ export function HistoryView() {
 
   // 画像プレビューモーダル
   const [previewImage, setPreviewImage] = createSignal<string | null>(null);
+
+  // サーバーカスタム絵文字マップ (/api/emojis キャッシュ)
+  const [serverEmojiMap, setServerEmojiMap] = createSignal<Map<string, string>>(new Map());
+
+  createEffect(async () => {
+    const address = currentUser()?.address;
+    if (address) {
+      const map = await fetchServerEmojis(address);
+      setServerEmojiMap(map);
+    }
+  });
+
+  const mfmOptions = (): RenderMfmOptions => ({
+    serverAddress: currentUser()?.address,
+    serverEmojiMap: serverEmojiMap(),
+  });
 
   const getAccountKey = () => {
     const user = currentUser();
@@ -484,14 +530,16 @@ export function HistoryView() {
                             <div class="mizuna-note-reply-parent-snippet">
                               <Show when={note.reply!.cw}>
                                 <span class="mizuna-cw-badge">CW</span>
-                                <span>{note.reply!.cw}</span>
+                                <span innerHTML={renderInlineEmoji(note.reply!.cw || '', note.reply!.emojis, mfmOptions())} />
                               </Show>
                               <Show when={!note.reply!.cw && note.reply!.text}>
-                                <span>
-                                  {note.reply!.text!.length > 60
+                                <span innerHTML={renderInlineEmoji(
+                                  note.reply!.text!.length > 60
                                     ? `${note.reply!.text!.slice(0, 60)}…`
-                                    : note.reply!.text}
-                                </span>
+                                    : note.reply!.text!,
+                                  note.reply!.emojis,
+                                  mfmOptions()
+                                )} />
                               </Show>
                             </div>
                           </Show>
@@ -511,7 +559,7 @@ export function HistoryView() {
                             }}
                           />
                           <div class="mizuna-note-author-info">
-                            <span class="mizuna-note-author-name" innerHTML={renderInlineEmoji(userName(), note.user.emojis)} />
+                            <span class="mizuna-note-author-name" innerHTML={renderInlineEmoji(userName(), note.user.emojis, mfmOptions())} />
                             <span class="mizuna-note-author-handle">@{note.user.username}</span>
                           </div>
                         </div>
@@ -541,7 +589,7 @@ export function HistoryView() {
                       {/* CW (閲覧注意) */}
                       <Show when={note.cw}>
                         <div class="mizuna-note-cw-block">
-                          <span class="mizuna-note-cw-text" innerHTML={renderMfm(note.cw || '', note.emojis)} />
+                          <span class="mizuna-note-cw-text" innerHTML={renderMfm(note.cw || '', note.emojis, mfmOptions())} />
                           <button
                             type="button"
                             class="mizuna-note-cw-toggle-btn"
@@ -557,7 +605,7 @@ export function HistoryView() {
                       <Show when={!note.cw || isCwOpen()}>
                         <div
                           class="mizuna-note-body"
-                          innerHTML={note.text ? renderMfm(note.text, note.emojis) : ''}
+                          innerHTML={note.text ? renderMfm(note.text, note.emojis, mfmOptions()) : ''}
                         />
 
                         {/* 添付画像 */}
@@ -586,7 +634,12 @@ export function HistoryView() {
                         <div class="mizuna-note-reactions">
                           <For each={Object.entries(note.reactions!)}>
                             {([rawReaction, count]) => {
-                              const emojiUrl = getReactionEmojiUrl(rawReaction, note);
+                              const emojiUrl = getReactionEmojiUrl(
+                                rawReaction,
+                                note,
+                                currentUser()?.address,
+                                serverEmojiMap()
+                              );
                               const cleanName = rawReaction.replace(/^:|:$/g, '');
                               return (
                                 <span class="mizuna-reaction-pill" title={`${cleanName}: ${count}`}>
@@ -683,7 +736,7 @@ export function HistoryView() {
                                           loading="lazy"
                                         />
                                         <div class="mizuna-reply-author">
-                                          <span class="mizuna-reply-name" innerHTML={renderInlineEmoji(childName(), childNote.user.emojis)} />
+                                          <span class="mizuna-reply-name" innerHTML={renderInlineEmoji(childName(), childNote.user.emojis, mfmOptions())} />
                                           <span class="mizuna-reply-handle">@{childNote.user.username}</span>
                                         </div>
                                         <time class="mizuna-reply-time">
@@ -693,7 +746,7 @@ export function HistoryView() {
 
                                       <div
                                         class="mizuna-reply-body"
-                                        innerHTML={childNote.text ? renderMfm(childNote.text, childNote.emojis) : ''}
+                                        innerHTML={childNote.text ? renderMfm(childNote.text, childNote.emojis, mfmOptions()) : ''}
                                       />
 
                                       {/* リプライのリアクション一覧 */}
@@ -701,7 +754,12 @@ export function HistoryView() {
                                         <div class="mizuna-note-reactions is-reply">
                                           <For each={Object.entries(childNote.reactions!)}>
                                             {([rawReaction, count]) => {
-                                              const emojiUrl = getReactionEmojiUrl(rawReaction, childNote);
+                                              const emojiUrl = getReactionEmojiUrl(
+                                                rawReaction,
+                                                childNote,
+                                                currentUser()?.address,
+                                                serverEmojiMap()
+                                              );
                                               const cleanName = rawReaction.replace(/^:|:$/g, '');
                                               return (
                                                 <span class="mizuna-reaction-pill" title={`${cleanName}: ${count}`}>
