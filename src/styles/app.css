@@ -6163,8 +6163,8 @@ ruby > rt {
 .mizuna-mfm-toolbar {
   display: flex;
   align-items: center;
-  gap: 3px;
-  padding: 3px 6px;
+  gap: 2px;
+  padding: 4px;
   background: rgba(0, 0, 0, 0.02);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   overflow-x: auto;
@@ -6180,13 +6180,13 @@ ruby > rt {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  height: 22px;
-  padding: 0 4px;
+  height: 26px;
+  padding: 0 6px;
   border-radius: var(--mizuna-radius-pill, 9999px);
   border: 1px solid rgba(0, 0, 0, 0.1);
   background: var(--surface, #ffffff);
   color: var(--text_color, #181c20);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
@@ -6206,7 +6206,7 @@ ruby > rt {
 }
 
 .mizuna-mfm-chip i {
-  font-size: 13px;
+  font-size: 14.5px;
 }
 
 /* 編集 / プレビュー 切り替えタブ (セグメントコントロール) */
