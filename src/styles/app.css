@@ -8254,6 +8254,230 @@ body.dark .mizuna-mfm-toolbar-divider {
   padding: 12px;
 }
 
+/* =========================================
+   Misskey ドライブ画像選択モーダル (DriveImagePickerModal)
+   ========================================= */
+.mizuna-drive-picker-portal {
+  z-index: 460;
+}
+
+.mizuna-drive-picker-modal {
+  max-width: 560px;
+  max-height: min(85vh, 680px);
+  display: flex;
+  flex-direction: column;
+}
+
+.mizuna-drive-picker-body {
+  padding: 14px 18px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.mizuna-drive-upload-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--primary) 10%, var(--surface-container-high));
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  color: var(--on-surface);
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.mizuna-drive-upload-card:hover {
+  background: color-mix(in srgb, var(--primary) 16%, var(--surface-container-high));
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent);
+  transform: translateY(-1px);
+}
+
+.mizuna-drive-upload-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: var(--on-primary, #fff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mizuna-drive-upload-icon i {
+  font-size: 1.4rem;
+}
+
+.mizuna-drive-upload-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mizuna-drive-upload-title {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.mizuna-drive-upload-sub {
+  font-size: 0.76rem;
+  color: var(--on-surface-variant);
+}
+
+.mizuna-drive-upload-arrow {
+  color: var(--primary);
+  font-size: 1.3rem;
+}
+
+.mizuna-drive-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.mizuna-drive-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mizuna-drive-section-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--on-surface);
+}
+
+.mizuna-drive-section-title i {
+  font-size: 1.1rem;
+  color: var(--primary);
+}
+
+.mizuna-drive-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface-container-high) 50%, transparent);
+  color: var(--on-surface-variant);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.mizuna-drive-status.is-error {
+  color: var(--error, #ba1a1a);
+}
+
+.mizuna-drive-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.mizuna-drive-item {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: var(--surface-container-high);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mizuna-drive-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.mizuna-drive-item:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--primary) 50%, transparent);
+}
+
+.mizuna-drive-item.is-selected {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.mizuna-drive-item.is-attached {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.mizuna-drive-select-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 9999px;
+  background: var(--primary);
+  color: var(--on-primary, #fff);
+  font-size: 0.74rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.mizuna-drive-attached-badge {
+  position: absolute;
+  inset: auto 4px 4px 4px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.68);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.mizuna-drive-more-wrap {
+  display: flex;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.mizuna-drive-more-btn {
+  height: 36px;
+  font-size: 0.8rem;
+}
+
+.mizuna-drive-picker-footer {
+  padding: 12px 18px 16px;
+  border-top: 1px solid color-mix(in srgb, var(--outline-variant) 40%, transparent);
+  background: var(--surface-container);
+}
+
+.mizuna-drive-confirm-btn {
+  width: 100%;
+  justify-content: center;
+  height: 44px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
 
 
 

@@ -32,6 +32,7 @@ import {
   fetchLatestAccountInfo,
   fetchLatestReleaseNote,
   MisskeyApiError,
+  type MisskeyFile,
   type MisskeyNote,
 } from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
@@ -103,6 +104,8 @@ export interface AttachedImageItem {
   compressedSize?: number;
   /** 編集モーダルで適用された加工ステート（再編集時に復元して継続編集が可能） */
   editState?: ImageEditState;
+  /** Misskeyドライブに既にアップロード済みのファイルID（設定時は再圧縮・再アップロード不要） */
+  driveFileId?: string;
 }
 
 // 添付画像のサムネイル生成・事前圧縮を直列化するキュー
@@ -110,7 +113,7 @@ let attachProcessQueue: Promise<void> = Promise.resolve();
 
 function revokeAttachedUrls(item: AttachedImageItem): void {
   if (item.dataUrl.startsWith('blob:')) URL.revokeObjectURL(item.dataUrl);
-  if (item.thumbUrl) URL.revokeObjectURL(item.thumbUrl);
+  if (item.thumbUrl && item.thumbUrl.startsWith('blob:')) URL.revokeObjectURL(item.thumbUrl);
 }
 
 export function visibilityNumToString(num: 1 | 2 | 3): VisibilityType {
@@ -148,6 +151,7 @@ interface AppContextValue {
   setEndMizuna: Setter<boolean>;
   attachedImages: Accessor<AttachedImageItem[]>;
   addAttachedFiles: (fileList: FileList | File[]) => void;
+  addAttachedDriveFiles: (driveFiles: MisskeyFile[]) => void;
   removeAttachedImage: (id: string) => void;
   updateAttachedImage: (id: string, file: File, editState?: ImageEditState) => void;
   revertAttachedImage: (id: string) => void;
@@ -1239,6 +1243,44 @@ export function AppProvider(props: { children: JSX.Element }) {
     });
   };
 
+  // Misskeyドライブの既存ファイルを添付画像として追加（再圧縮・再アップロード不要）
+  const addAttachedDriveFiles = (driveFiles: MisskeyFile[]) => {
+    if (!driveFiles || driveFiles.length === 0) return;
+
+    const current = attachedImages();
+    const existingDriveIds = new Set(
+      current.map((item) => item.driveFileId).filter(Boolean) as string[]
+    );
+    const uniqueIncoming = driveFiles.filter(
+      (f) => f && f.id && f.url && !existingDriveIds.has(f.id)
+    );
+    if (uniqueIncoming.length === 0) return;
+
+    if (current.length + uniqueIncoming.length > 16) {
+      showToast('画像は16枚までです', 'error', '画像選択エラー');
+      return;
+    }
+
+    const newItems: AttachedImageItem[] = uniqueIncoming.map((df) => {
+      const placeholderFile = new File([], df.name || 'drive_image.webp', {
+        type: df.type || 'image/webp',
+      });
+      return {
+        id: `drive_${df.id}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: df.name || 'drive_image.webp',
+        file: placeholderFile,
+        rawFile: placeholderFile,
+        dataUrl: df.url,
+        thumbUrl: df.thumbnailUrl || df.url,
+        originalSize: df.size ?? 0,
+        compressedSize: df.size ?? 0,
+        driveFileId: df.id,
+      };
+    });
+
+    setAttachedImages((prev) => [...prev, ...newItems].slice(0, 16));
+  };
+
   const removeAttachedImage = (id: string) => {
     setAttachedImages((prev) => {
       const target = prev.find((item) => item.id === id);
@@ -1459,6 +1501,9 @@ export function AppProvider(props: { children: JSX.Element }) {
       originalSize: img.originalSize,
       compressedSize: img.compressedSize,
       editState: img.editState,
+      driveFileId: img.driveFileId,
+      remoteUrl: img.driveFileId ? img.dataUrl : undefined,
+      remoteThumbUrl: img.driveFileId ? img.thumbUrl : undefined,
     }));
 
     try {
@@ -1514,16 +1559,20 @@ export function AppProvider(props: { children: JSX.Element }) {
           const restoredRawFile = img.rawBlob
             ? new File([img.rawBlob], img.name, { type: img.type || 'image/png' })
             : restoredFile;
-          const dataUrl = URL.createObjectURL(restoredFile);
+          const dataUrl = img.driveFileId && img.remoteUrl
+            ? img.remoteUrl
+            : URL.createObjectURL(restoredFile);
           return {
             id: `draft_img_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
             name: img.name,
             file: restoredFile,
             rawFile: restoredRawFile,
             dataUrl,
+            thumbUrl: img.driveFileId ? (img.remoteThumbUrl || img.remoteUrl) : undefined,
             originalSize: img.originalSize ?? restoredFile.size,
             compressedSize: img.compressedSize,
             editState: img.editState,
+            driveFileId: img.driveFileId,
           };
         });
         setAttachedImages(restoredItems);
@@ -2027,6 +2076,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     setEndMizuna,
     attachedImages,
     addAttachedFiles,
+    addAttachedDriveFiles,
     removeAttachedImage,
     updateAttachedImage,
     revertAttachedImage,

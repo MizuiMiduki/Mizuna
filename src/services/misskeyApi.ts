@@ -73,6 +73,8 @@ export interface MisskeyFile {
   thumbnailUrl?: string;
   name: string;
   type: string;
+  size?: number;
+  createdAt?: string;
   isSensitive?: boolean;
 }
 
@@ -226,7 +228,7 @@ export function buildMiAuthUrl(address: string, sessionId: string): string {
   const appNameWithVersion = `${mizuna_options.app_name} v${mizuna_options.mizuna_version}`;
   return `https://${cleanAddress}/miauth/${sessionId}?name=${encodeURIComponent(
     appNameWithVersion
-  )}&callback=${encodeURIComponent(callbackOrigin)}&permission=write:notes,read:account,write:drive,read:notes,read:notifications`;
+  )}&callback=${encodeURIComponent(callbackOrigin)}&permission=write:notes,read:account,write:drive,read:drive,read:notes,read:notifications`;
 }
 
 /**
@@ -553,6 +555,85 @@ export async function deleteMisskeyNote(
       isAuthError: res.status === 401 || res.status === 403,
     });
   }
+}
+
+/**
+ * Misskeyドライブにアップロード済みの画像一覧を取得する
+ * - 第一優先: `/api/drive/files` (read:drive 権限がある場合)
+ * - フォールバック: `read:drive` 未付与の既存アカウントでも利用できるよう `/api/users/notes` (withFiles: true) から添付済み画像を抽出
+ */
+export async function fetchDriveImages(
+  account: AccountRecord,
+  options?: { untilId?: string; limit?: number }
+): Promise<MisskeyFile[]> {
+  const limit = options?.limit ?? 24;
+  const payload: Record<string, unknown> = {
+    i: account.token,
+    limit,
+    type: 'image/*',
+  };
+  if (options?.untilId) {
+    payload.untilId = options.untilId;
+  }
+
+  try {
+    const res = await fetch(`https://${account.address}/api/drive/files`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const files: MisskeyFile[] = await res.json();
+      if (Array.isArray(files)) {
+        return files.filter((f) => f && f.id && f.url && (!f.type || f.type.startsWith('image/')));
+      }
+    }
+  } catch {
+    // フォールバックへ進む
+  }
+
+  // フォールバック: 自分の画像付き投稿からアップロード済みファイル一覧を抽出
+  const userId = await fetchMyUserId(account);
+  const notesPayload: Record<string, unknown> = {
+    i: account.token,
+    userId,
+    limit: 30,
+    withFiles: true,
+    includeMyRenotes: false,
+  };
+  if (options?.untilId) {
+    notesPayload.untilId = options.untilId;
+  }
+
+  const notesRes = await fetch(`https://${account.address}/api/users/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(notesPayload),
+  });
+
+  if (!notesRes.ok) {
+    throw new MisskeyApiError(`アップロード済み画像の取得に失敗しました (HTTP ${notesRes.status})`, {
+      status: notesRes.status,
+    });
+  }
+
+  const notes: MisskeyNote[] = await notesRes.json();
+  if (!Array.isArray(notes)) return [];
+
+  const seenIds = new Set<string>();
+  const collected: MisskeyFile[] = [];
+  for (const note of notes) {
+    if (Array.isArray(note.files)) {
+      for (const file of note.files) {
+        if (file && file.id && file.url && (!file.type || file.type.startsWith('image/')) && !seenIds.has(file.id)) {
+          seenIds.add(file.id);
+          collected.push(file);
+        }
+      }
+    }
+  }
+  return collected;
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   fetchLatestReleaseNote,
   fetchAnnouncements,
   formatAnnouncementDate,
+  fetchDriveImages,
   MisskeyApiError,
 } from '../src/services/misskeyApi';
 import type { AccountRecord } from '../src/db/database';
@@ -43,7 +44,7 @@ describe('misskeyApi service', () => {
       const url = buildMiAuthUrl('https://misskey.io/', 'session-uuid-123');
       expect(url).toContain('https://misskey.io/miauth/session-uuid-123');
       expect(url).toContain(
-        'permission=write:notes,read:account,write:drive,read:notes,read:notifications'
+        'permission=write:notes,read:account,write:drive,read:drive,read:notes,read:notifications'
       );
       const expectedName = encodeURIComponent(
         `${mizuna_options.app_name} v${mizuna_options.mizuna_version}`
@@ -250,6 +251,32 @@ describe('misskeyApi service', () => {
       expect(result.currentPage).toBe(1);
       expect(result.items[0].title).toBe('記事タイトル 1');
       expect(result.items[0].snippet).toBe('概要文 1');
+    });
+  });
+
+  describe('fetchDriveImages', () => {
+    const mockAccount: AccountRecord = {
+      id: 1,
+      token: 'tok_123',
+      name: 'User',
+      username: 'user',
+      address: 'misskey.io',
+      avatarurl: '',
+      add_mizuna_versinon: '4.0.0',
+    };
+
+    it('/api/drive/files からアップロード済み画像一覧を取得できること', async () => {
+      const mockDriveFiles = [
+        { id: 'df_1', url: 'https://misskey.io/files/1.webp', name: '1.webp', type: 'image/webp' },
+        { id: 'df_2', url: 'https://misskey.io/files/2.mp4', name: '2.mp4', type: 'video/mp4' },
+      ];
+      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify(mockDriveFiles), { status: 200 })
+      );
+
+      const files = await fetchDriveImages(mockAccount);
+      expect(files.length).toBe(1);
+      expect(files[0].id).toBe('df_1');
     });
   });
 });

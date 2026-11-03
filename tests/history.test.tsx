@@ -245,6 +245,32 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
           };
         }
 
+        // /api/drive/files (アップロード済みドライブ画像一覧)
+        if (url.includes('/api/drive/files')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => [
+              {
+                id: 'drive_img_101',
+                url: 'https://example.com/drive101.webp',
+                thumbnailUrl: 'https://example.com/drive101_thumb.webp',
+                name: 'drive101.webp',
+                type: 'image/webp',
+                size: 12345,
+              },
+              {
+                id: 'drive_img_102',
+                url: 'https://example.com/drive102.webp',
+                thumbnailUrl: 'https://example.com/drive102_thumb.webp',
+                name: 'drive102.webp',
+                type: 'image/webp',
+                size: 23456,
+              },
+            ],
+          };
+        }
+
         return {
           ok: true,
           status: 200,
@@ -439,6 +465,33 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
       expect(deleteCalls.length).toBe(1);
       expect(screen.queryByText(/テスト投稿1です/)).not.toBeInTheDocument();
     });
+  });
+
+  it('NoteViewの画像ボタンからMisskeyにアップロード済みの画像を選択して添付・投稿できること', async () => {
+    render(() => (
+      <AppProvider>
+        <NoteView />
+      </AppProvider>
+    ));
+
+    // 画像ボタンをクリックして選択モーダルを開く
+    const selectPicBtn = await screen.findByRole('button', { name: /^(画像|Image)$/ });
+    fireEvent.click(selectPicBtn);
+
+    // Misskeyドライブのアップロード済み画像が表示されること
+    const driveImg1 = await screen.findByAltText('drive101.webp');
+    expect(driveImg1).toBeInTheDocument();
+
+    // 画像をタップして選択し、「選択した画像を追加」をクリック
+    fireEvent.click(driveImg1.closest('button')!);
+    const confirmAddBtn = await screen.findByRole('button', {
+      name: /(選択した画像を追加|Add selected)/,
+    });
+    fireEvent.click(confirmAddBtn);
+
+    // 添付ギャラリーに drive101.webp が追加されていること
+    const attachedThumb = await screen.findByAltText('drive101.webp');
+    expect(attachedThumb).toBeInTheDocument();
   });
 
   it('4.0.0未満のアカウントでは権限不足警告画面が表示され、APIリクエストが行われないこと', async () => {

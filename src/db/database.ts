@@ -29,6 +29,9 @@ export interface DraftAttachedImage {
   originalSize: number;
   compressedSize?: number;
   editState?: ImageEditState;
+  driveFileId?: string;
+  remoteUrl?: string;
+  remoteThumbUrl?: string;
 }
 
 /**

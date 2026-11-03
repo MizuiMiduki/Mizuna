@@ -29,6 +29,7 @@ import { getCaretCoordinates } from '../utils/caretCoordinates';
 import { HoldHoverTip } from './HoldHoverTip';
 import { ImageEditorModal } from './ImageEditorModal';
 import { DraftsModal } from './DraftsModal';
+import { DriveImagePickerModal } from './DriveImagePickerModal';
 
 export function NoteView() {
   const {
@@ -65,6 +66,7 @@ export function NoteView() {
   } = useApp();
 
   const [isDraftsModalOpen, setIsDraftsModalOpen] = createSignal(false);
+  const [isDrivePickerOpen, setIsDrivePickerOpen] = createSignal(false);
   const [isInputFocused, setIsInputFocused] = createSignal(false);
   const [isSending, setIsSending] = createSignal(false);
   const [sendingStatus, setSendingStatus] = createSignal('');
@@ -698,11 +700,29 @@ export function NoteView() {
     try {
       let fileIds: string[] | undefined;
       if (images.length > 0) {
-        fileIds = await uploadImagesToDrive(
-          images.map((item) => item.compressedFile ?? item.file),
-          user,
-          (status) => setSendingStatus(status)
-        );
+        const localFiles: File[] = [];
+        for (const item of images) {
+          if (!item.driveFileId) {
+            localFiles.push(item.compressedFile ?? item.file);
+          }
+        }
+
+        let uploadedIds: string[] = [];
+        if (localFiles.length > 0) {
+          uploadedIds = await uploadImagesToDrive(
+            localFiles,
+            user,
+            (status) => setSendingStatus(status)
+          );
+        }
+
+        let uploadCursor = 0;
+        fileIds = images.map((item) => {
+          if (item.driveFileId) {
+            return item.driveFileId;
+          }
+          return uploadedIds[uploadCursor++];
+        });
       }
 
       setSendingStatus(t('note.submitting'));
@@ -1381,18 +1401,20 @@ export function NoteView() {
                       <i>zoom_in</i>
                     </div>
 
-                    <button
-                      type="button"
-                      class={`mizuna-media-edit ${item.editState ? 'is-edited' : ''}`}
-                      title={t('note.edit_image')}
-                      aria-label={t('note.edit_image')}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingImageItem(item);
-                      }}
-                    >
-                      <i>edit</i>
-                    </button>
+                    <Show when={!item.driveFileId}>
+                      <button
+                        type="button"
+                        class={`mizuna-media-edit ${item.editState ? 'is-edited' : ''}`}
+                        title={t('note.edit_image')}
+                        aria-label={t('note.edit_image')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingImageItem(item);
+                        }}
+                      >
+                        <i>edit</i>
+                      </button>
+                    </Show>
                     <button
                       type="button"
                       class="mizuna-media-remove"
@@ -1496,7 +1518,7 @@ export function NoteView() {
                     );
                     return;
                   }
-                  fileInputRef?.click();
+                  setIsDrivePickerOpen(true);
                 }}
                 aria-label={isImageSupported() ? t('note.attach_image_label') : '画像添付非対応'}
               >
@@ -1787,41 +1809,50 @@ export function NoteView() {
                     </span>
                   </div>
                   <div class="mizuna-lightbox-meta">
-                    <span class="mizuna-lightbox-raw-size">
-                      {(((previewModalImage()?.originalSize ?? 0) / 1024)).toFixed(1)} KB
-                    </span>
                     <Show
-                      when={previewModalImage()?.compressedSize}
+                      when={!previewModalImage()?.driveFileId}
                       fallback={
-                        <div class="mizuna-lightbox-compressing-wrap">
-                          <span class="mizuna-lightbox-compressing">
-                            <span class="mizuna-lightbox-compressing-spinner" />
-                            WebP圧縮中...
-                          </span>
-                          <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
-                            <div class="mizuna-lightbox-mini-bar-fill" />
-                          </div>
-                        </div>
+                        <span class="mizuna-lightbox-badge">
+                          {t('note.drive_badge_uploaded')}
+                        </span>
                       }
                     >
-                      {(compSize) => {
-                        const originalSize = previewModalImage()?.originalSize ?? 1;
-                        const savedPercent = Math.max(
-                          0,
-                          Math.round(((originalSize - compSize()) / originalSize) * 100)
-                        );
-                        return (
-                          <>
-                            <i class="mizuna-lightbox-meta-arrow">arrow_forward</i>
-                            <span class="mizuna-lightbox-webp-size">
-                              {(compSize() / 1024).toFixed(1)} KB (WebP)
+                      <span class="mizuna-lightbox-raw-size">
+                        {(((previewModalImage()?.originalSize ?? 0) / 1024)).toFixed(1)} KB
+                      </span>
+                      <Show
+                        when={previewModalImage()?.compressedSize}
+                        fallback={
+                          <div class="mizuna-lightbox-compressing-wrap">
+                            <span class="mizuna-lightbox-compressing">
+                              <span class="mizuna-lightbox-compressing-spinner" />
+                              WebP圧縮中...
                             </span>
-                            <span class="mizuna-lightbox-badge">
-                              {savedPercent}% 削減
-                            </span>
-                          </>
-                        );
-                      }}
+                            <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
+                              <div class="mizuna-lightbox-mini-bar-fill" />
+                            </div>
+                          </div>
+                        }
+                      >
+                        {(compSize) => {
+                          const originalSize = previewModalImage()?.originalSize ?? 1;
+                          const savedPercent = Math.max(
+                            0,
+                            Math.round(((originalSize - compSize()) / originalSize) * 100)
+                          );
+                          return (
+                            <>
+                              <i class="mizuna-lightbox-meta-arrow">arrow_forward</i>
+                              <span class="mizuna-lightbox-webp-size">
+                                {(compSize() / 1024).toFixed(1)} KB (WebP)
+                              </span>
+                              <span class="mizuna-lightbox-badge">
+                                {savedPercent}% 削減
+                              </span>
+                            </>
+                          );
+                        }}
+                      </Show>
                     </Show>
                   </div>
                 </div>
@@ -1874,6 +1905,13 @@ export function NoteView() {
       <DraftsModal
         isOpen={isDraftsModalOpen()}
         onClose={() => setIsDraftsModalOpen(false)}
+      />
+
+      {/* 画像追加・Misskeyドライブ選択モーダル */}
+      <DriveImagePickerModal
+        isOpen={isDrivePickerOpen()}
+        onClose={() => setIsDrivePickerOpen(false)}
+        onOpenLocalFilePicker={() => fileInputRef?.click()}
       />
     </div>
   );
