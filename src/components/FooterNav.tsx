@@ -14,6 +14,7 @@ function FooterNavContent() {
   let settingsBtnRef: HTMLButtonElement | undefined;
 
   const [isDragging, setIsDragging] = createSignal(false);
+  const [isSwiping, setIsSwiping] = createSignal(false);
   const [dragOffset, setDragOffset] = createSignal(0);
 
   let startX = 0;
@@ -78,8 +79,11 @@ function FooterNavContent() {
   };
 
   const handleNavClick = (targetView: ViewType) => {
-    if (hasSwiped) return;
+    if (hasSwiped || isSwiping()) return;
     setCurrentView(targetView);
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
   };
 
   // メニューバーのスワイプ・ドラッグ操作処理（指に1:1でダイレクト追従し、左右の並びに合わせて遷移）
@@ -182,13 +186,23 @@ function FooterNavContent() {
 
       if (Math.abs(dragDeltaX) > 6) {
         hasSwiped = true;
+        setIsSwiping(true);
         setTimeout(() => {
           hasSwiped = false;
-        }, 80);
+          setIsSwiping(false);
+        }, 300);
       }
 
       if (targetIndex !== currentIndex && targetIndex >= 0) {
         setCurrentView(DOCK_VIEWS[targetIndex]);
+      }
+
+      // スワイプによるページ遷移後、前のボタンにフォーカスや擬似ホバーが残らないよう解除
+      avatarBtnRef?.blur();
+      noteBtnRef?.blur();
+      settingsBtnRef?.blur();
+      if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
       }
     }
 
@@ -339,7 +353,9 @@ function FooterNavContent() {
     <div class="mizuna-dock-wrapper">
       <div
         ref={dockRef}
-        class="mizuna-floating-dock"
+        class={`mizuna-floating-dock ${isDragging() ? 'is-dragging' : ''} ${
+          isSwiping() ? 'is-swiping' : ''
+        }`}
         role="toolbar"
         aria-label="Main Navigation"
         onTouchStart={onTouchStart}

@@ -3225,11 +3225,21 @@ body.dark .mizuna-custom-css-warnings {
   content: none !important;
 }
 
-/* ホバー時（非アクティブ時のみ背景を軽く表示） */
-.mizuna-dock-avatar-btn:hover:not(.is-active),
-.mizuna-m3e-item:hover:not(.is-active) {
-  background: color-mix(in srgb, var(--on-surface) 6%, transparent) !important;
-  color: var(--on-surface) !important;
+/* ホバー時（非アクティブ時のみ背景を軽く表示、タッチ端末の擬似ホバー残存を防ぐため hover: hover かつ pointer: fine のみ適用） */
+@media (hover: hover) and (pointer: fine) {
+  .mizuna-floating-dock:not(.is-dragging):not(.is-swiping) .mizuna-dock-avatar-btn:hover:not(.is-active),
+  .mizuna-floating-dock:not(.is-dragging):not(.is-swiping) .mizuna-m3e-item:hover:not(.is-active) {
+    background: color-mix(in srgb, var(--on-surface) 6%, transparent) !important;
+    color: var(--on-surface) !important;
+  }
+}
+
+/* スワイプ中・スワイプ直後、またはホバー非対応デバイスではホバー背景を一切無効化 */
+.mizuna-floating-dock.is-dragging .mizuna-dock-avatar-btn,
+.mizuna-floating-dock.is-dragging .mizuna-m3e-item,
+.mizuna-floating-dock.is-swiping .mizuna-dock-avatar-btn,
+.mizuna-floating-dock.is-swiping .mizuna-m3e-item {
+  background: transparent !important;
 }
 
 .mizuna-dock-avatar-btn.is-active,
