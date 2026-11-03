@@ -69,6 +69,9 @@ export function HistoryView() {
   } = useApp();
 
   let containerRef: HTMLDivElement | undefined;
+  let refreshIconRef: HTMLElement | undefined;
+  let spinTween: gsap.core.Tween | null = null;
+  let settleTween: gsap.core.Tween | null = null;
 
   const isHistorySupported = createMemo(() =>
     hasHistoryPermission(currentUser()?.add_mizuna_versinon)
@@ -156,6 +159,59 @@ export function HistoryView() {
         { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
       );
     }
+
+    // リフレッシュアイコンの滑らかな回転・減速着地アニメーション
+    createEffect(() => {
+      const loading = isLoading();
+      if (!refreshIconRef) return;
+
+      if (loading) {
+        if (settleTween) {
+          settleTween.kill();
+          settleTween = null;
+        }
+        if (spinTween) {
+          spinTween.kill();
+        }
+        const currentRot = Number(gsap.getProperty(refreshIconRef, 'rotation')) || 0;
+        const normalizedRot = ((currentRot % 360) + 360) % 360;
+        gsap.set(refreshIconRef, { rotation: normalizedRot });
+
+        spinTween = gsap.to(refreshIconRef, {
+          rotation: normalizedRot + 360,
+          duration: 0.85,
+          ease: 'none',
+          repeat: -1,
+        });
+      } else {
+        if (spinTween) {
+          spinTween.kill();
+          spinTween = null;
+
+          const currentRot = Number(gsap.getProperty(refreshIconRef, 'rotation')) || 0;
+          const nextTarget = Math.ceil(currentRot / 360) * 360;
+          // 残り角度が少なすぎる場合はもう1周回して自然に減速させる
+          const finalTarget = (nextTarget - currentRot < 70) ? nextTarget + 360 : nextTarget;
+
+          settleTween = gsap.to(refreshIconRef, {
+            rotation: finalTarget,
+            duration: 0.45,
+            ease: 'power2.out',
+            onComplete: () => {
+              if (refreshIconRef) {
+                gsap.set(refreshIconRef, { rotation: 0 });
+              }
+              settleTween = null;
+            },
+          });
+        }
+      }
+    });
+  });
+
+  onCleanup(() => {
+    spinTween?.kill();
+    settleTween?.kill();
   });
 
   // リプライの開閉と取得 (Issue #130)
@@ -236,8 +292,9 @@ export function HistoryView() {
             disabled={isLoading() || !isHistorySupported()}
             title={t('history.refresh')}
             aria-label={t('history.refresh')}
+            aria-busy={isLoading()}
           >
-            <i class={isLoading() ? 'mizuna-spin' : ''}>refresh</i>
+            <i ref={refreshIconRef} aria-hidden="true">refresh</i>
           </button>
         </div>
       </div>
