@@ -17,8 +17,15 @@ import {
   DEFAULT_USER_SETTINGS,
   loadOrCreateSettings,
   updateSettingDb,
+  saveDraftDb,
+  getAllDraftsDb,
+  deleteDraftDb,
+  clearAllDraftsDb,
+  countDraftsDb,
   type AccountRecord,
   type SettingRecord,
+  type DraftRecord,
+  type DraftAttachedImage,
 } from '../db/database';
 import { checkMiAuthSession, fetchLatestAccountInfo, fetchLatestReleaseNote, MisskeyApiError } from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
@@ -141,6 +148,15 @@ interface AppContextValue {
   moveAttachedImage: (id: string, direction: -1 | 1) => void;
   clearNoteForm: (showNotification?: boolean) => void;
 
+  // 下書き保存・復帰
+  drafts: Accessor<DraftRecord[]>;
+  draftCount: Accessor<number>;
+  loadDrafts: () => Promise<void>;
+  saveCurrentAsDraft: () => Promise<boolean>;
+  restoreDraft: (draft: DraftRecord) => Promise<boolean>;
+  deleteDraftById: (id: number) => Promise<void>;
+  deleteAllDrafts: () => Promise<void>;
+
   // アカウント・設定操作
   switchAccount: (accountId: number) => Promise<void>;
   deleteSelectedAccounts: (accountIds: number[]) => Promise<void>;
@@ -228,6 +244,10 @@ export function AppProvider(props: { children: JSX.Element }) {
   const [visibility, setVisibility] = createSignal<VisibilityType>('public');
   const [endMizuna, setEndMizuna] = createSignal(false);
   const [attachedImages, setAttachedImages] = createSignal<AttachedImageItem[]>([]);
+
+  // 下書き状態
+  const [drafts, setDrafts] = createSignal<DraftRecord[]>([]);
+  const draftCount = () => drafts().length;
 
   // トースト・ダイアログ状態
   const [toasts, setToasts] = createSignal<ToastItem[]>([]);
@@ -988,6 +1008,9 @@ export function AppProvider(props: { children: JSX.Element }) {
 
       // リリースノート確認
       await checkNewReleaseNote(loadedSettings);
+
+      // 下書きのロード
+      await loadDrafts();
     } catch (err) {
       console.error('Initialization failed:', err);
       showToast('データベースの読み込みに失敗しました', 'error');
@@ -1313,6 +1336,184 @@ export function AppProvider(props: { children: JSX.Element }) {
     });
     if (showNotification) {
       showToast('フォームクリア！', 'info');
+    }
+  };
+
+  // ----------------------------------------------------
+  // 下書き保存・復帰操作
+  // ----------------------------------------------------
+  const loadDrafts = async () => {
+    try {
+      const list = await getAllDraftsDb();
+      setDrafts(list);
+    } catch (e) {
+      console.error('Failed to load drafts:', e);
+    }
+  };
+
+  const saveCurrentAsDraft = async (): Promise<boolean> => {
+    const text = noteText().trim();
+    const cw = cwText().trim();
+    const images = attachedImages();
+    const hasContent = text.length > 0 || cw.length > 0 || images.length > 0;
+    if (!hasContent) {
+      showToast(t('draft.empty_cannot_save'), 'warning');
+      return false;
+    }
+
+    const user = currentUser();
+    if (!user || typeof user.id !== 'number') {
+      showToast(t('note.no_account'), 'error');
+      return false;
+    }
+
+    const draftImages: DraftAttachedImage[] = images.map((img) => ({
+      name: img.name,
+      type: img.file.type || 'image/png',
+      blob: img.file,
+      rawBlob: img.rawFile,
+      originalSize: img.originalSize,
+      compressedSize: img.compressedSize,
+      editState: img.editState,
+    }));
+
+    try {
+      await saveDraftDb({
+        accountId: user.id,
+        accountUsername: user.username,
+        accountAddress: user.address,
+        accountName: user.name,
+        accountAvatarUrl: user.avatarurl,
+        text: noteText(),
+        cwText: cwText(),
+        cwEnabled: cwEnabled(),
+        visibility: visibility(),
+        endMizuna: endMizuna(),
+        images: draftImages,
+      });
+      await loadDrafts();
+      showToast(t('draft.saved'), 'success');
+      return true;
+    } catch (err) {
+      console.error('Failed to save draft:', err);
+      showToast('下書きの保存に失敗しました', 'error');
+      return false;
+    }
+  };
+
+  const executeRestoreDraft = async (draft: DraftRecord): Promise<boolean> => {
+    try {
+      const allAccounts = accounts();
+      const targetAccount = allAccounts.find((a) => a.id === draft.accountId);
+      if (targetAccount && typeof targetAccount.id === 'number') {
+        await switchAccount(targetAccount.id);
+        showToast(
+          t('draft.restore_account_switched', {
+            account: `@${targetAccount.username}@${targetAccount.address}`,
+          }),
+          'info'
+        );
+      } else {
+        showToast(t('draft.restore_account_not_found'), 'warning');
+      }
+
+      setNoteText(draft.text || '');
+      setCwText(draft.cwText || '');
+      setCwEnabled(Boolean(draft.cwEnabled));
+      setVisibility(draft.visibility || 'public');
+      setEndMizuna(Boolean(draft.endMizuna));
+
+      setAttachedImages((prev) => {
+        prev.forEach(revokeAttachedUrls);
+        return [];
+      });
+
+      if (draft.images && draft.images.length > 0) {
+        const restoredItems: AttachedImageItem[] = draft.images.map((img) => {
+          const restoredFile = new File([img.blob], img.name, { type: img.type || 'image/png' });
+          const restoredRawFile = img.rawBlob
+            ? new File([img.rawBlob], img.name, { type: img.type || 'image/png' })
+            : restoredFile;
+          const dataUrl = URL.createObjectURL(restoredFile);
+          return {
+            id: `draft_img_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            name: img.name,
+            file: restoredFile,
+            rawFile: restoredRawFile,
+            dataUrl,
+            originalSize: img.originalSize ?? restoredFile.size,
+            compressedSize: img.compressedSize,
+            editState: img.editState,
+          };
+        });
+        setAttachedImages(restoredItems);
+      }
+
+      showToast(t('draft.restored'), 'success');
+      return true;
+    } catch (err) {
+      console.error('Failed to restore draft:', err);
+      showToast('下書きの復元に失敗しました', 'error');
+      return false;
+    }
+  };
+
+  const restoreDraft = async (draft: DraftRecord): Promise<boolean> => {
+    const hasCurrentContent =
+      noteText().trim().length > 0 ||
+      cwText().trim().length > 0 ||
+      attachedImages().length > 0;
+
+    if (hasCurrentContent) {
+      return new Promise<boolean>((resolve) => {
+        openDialog({
+          title: t('draft.restore_confirm_title'),
+          icon: 'history_edu',
+          tone: 'warning',
+          contentText: t('draft.restore_confirm_desc'),
+          buttons: [
+            {
+              label: 'キャンセル',
+              variant: 'text',
+              onClick: () => {
+                closeDialog();
+                resolve(false);
+              },
+            },
+            {
+              label: t('draft.restore'),
+              variant: 'fill',
+              onClick: async () => {
+                closeDialog();
+                const success = await executeRestoreDraft(draft);
+                resolve(success);
+              },
+            },
+          ],
+        });
+      });
+    }
+
+    return executeRestoreDraft(draft);
+  };
+
+  const deleteDraftById = async (id: number): Promise<void> => {
+    try {
+      await deleteDraftDb(id);
+      await loadDrafts();
+      showToast(t('draft.deleted'), 'info');
+    } catch (e) {
+      console.error('Failed to delete draft:', e);
+    }
+  };
+
+  const deleteAllDrafts = async (): Promise<void> => {
+    try {
+      await clearAllDraftsDb();
+      await loadDrafts();
+      showToast(t('draft.all_cleared'), 'info');
+    } catch (e) {
+      console.error('Failed to clear drafts:', e);
     }
   };
 
@@ -1742,6 +1943,13 @@ export function AppProvider(props: { children: JSX.Element }) {
     reorderAttachedImages,
     moveAttachedImage,
     clearNoteForm,
+    drafts,
+    draftCount,
+    loadDrafts,
+    saveCurrentAsDraft,
+    restoreDraft,
+    deleteDraftById,
+    deleteAllDrafts,
     switchAccount,
     deleteSelectedAccounts,
     reorderAccounts,

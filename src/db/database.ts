@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import { detectBrowserLanguage } from '../i18n';
+import type { ImageEditState } from '../utils/imageEditor';
 
 /**
  * アカウント情報レコード
@@ -16,6 +17,52 @@ export interface AccountRecord {
 }
 
 export type AutoWatermarkPosition = 'none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
+/**
+ * 下書きに添付された画像データ
+ */
+export interface DraftAttachedImage {
+  name: string;
+  type: string;
+  blob: Blob;
+  rawBlob?: Blob;
+  originalSize: number;
+  compressedSize?: number;
+  editState?: ImageEditState;
+}
+
+/**
+ * 下書きレコード
+ */
+export interface DraftRecord {
+  id?: number;
+  /** 保存時のアカウントID */
+  accountId: number;
+  /** 保存時のアカウントユーザー名 */
+  accountUsername: string;
+  /** 保存時のアカウントホスト/アドレス */
+  accountAddress: string;
+  /** 保存時のアカウント表示名 */
+  accountName?: string;
+  /** 保存時のアカウントアバターURL */
+  accountAvatarUrl?: string;
+  /** ノート本文 */
+  text: string;
+  /** CWテキスト */
+  cwText?: string;
+  /** CW有効フラグ */
+  cwEnabled: boolean;
+  /** 公開範囲 (public | home | followers) */
+  visibility: 'public' | 'home' | 'followers';
+  /** 末尾に (from Mizuna) を付与するか */
+  endMizuna: boolean;
+  /** 添付画像リスト */
+  images?: DraftAttachedImage[];
+  /** 作成日時 (UNIXミリ秒) */
+  createdAt: number;
+  /** 更新日時 (UNIXミリ秒) */
+  updatedAt: number;
+}
 
 /**
  * ユーザー設定レコード
@@ -90,6 +137,7 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
 export class MizunaDatabase extends Dexie {
   account!: Table<AccountRecord, number>;
   setting!: Table<SettingRecord, number>;
+  draft!: Table<DraftRecord, number>;
 
   constructor() {
     super('MizunaDatabase');
@@ -111,6 +159,11 @@ export class MizunaDatabase extends Dexie {
     this.version(3).stores({
       setting:
         '++id, select_user, default_visibility, is_note_end_mizuna, is_visible_icon, ui_mode, is_darkmode, is_pick_theme_color, latest_theme_color, is_check_releasenote, language',
+    });
+
+    // v4 (下書き保存機能)
+    this.version(4).stores({
+      draft: '++id, accountId, createdAt, updatedAt',
     });
   }
 }
@@ -189,4 +242,74 @@ export async function checkAccountDbStatus(): Promise<0 | 1> {
   await db.open();
   const count = await db.account.count();
   return count === 0 ? 0 : 1;
+}
+
+/**
+ * 下書きを保存または更新する
+ */
+export async function saveDraftDb(
+  draft: Omit<DraftRecord, 'id' | 'createdAt' | 'updatedAt'>,
+  id?: number
+): Promise<number> {
+  await db.open();
+  const now = Date.now();
+  if (typeof id === 'number') {
+    const existing = await db.draft.get(id);
+    const createdAt = existing?.createdAt ?? now;
+    await db.draft.put({
+      ...draft,
+      id,
+      createdAt,
+      updatedAt: now,
+    });
+    return id;
+  } else {
+    const newId = await db.draft.add({
+      ...draft,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return newId;
+  }
+}
+
+/**
+ * すべての下書きを取得（更新日時の降順）
+ */
+export async function getAllDraftsDb(): Promise<DraftRecord[]> {
+  await db.open();
+  const list = await db.draft.toArray();
+  return list.sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/**
+ * 特定の下書きを取得
+ */
+export async function getDraftDb(id: number): Promise<DraftRecord | undefined> {
+  await db.open();
+  return db.draft.get(id);
+}
+
+/**
+ * 特定の下書きを削除
+ */
+export async function deleteDraftDb(id: number): Promise<void> {
+  await db.open();
+  await db.draft.delete(id);
+}
+
+/**
+ * すべての下書きを削除
+ */
+export async function clearAllDraftsDb(): Promise<void> {
+  await db.open();
+  await db.draft.clear();
+}
+
+/**
+ * 下書きの総件数を取得
+ */
+export async function countDraftsDb(): Promise<number> {
+  await db.open();
+  return db.draft.count();
 }

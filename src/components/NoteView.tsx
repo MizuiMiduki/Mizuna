@@ -28,6 +28,7 @@ import {
 import { getCaretCoordinates } from '../utils/caretCoordinates';
 import { HoldHoverTip } from './HoldHoverTip';
 import { ImageEditorModal } from './ImageEditorModal';
+import { DraftsModal } from './DraftsModal';
 
 export function NoteView() {
   const {
@@ -53,11 +54,15 @@ export function NoteView() {
     reorderAttachedImages,
     moveAttachedImage,
     clearNoteForm,
+    drafts,
+    draftCount,
+    saveCurrentAsDraft,
     showToast,
     pushModalBackHandler,
     t,
   } = useApp();
 
+  const [isDraftsModalOpen, setIsDraftsModalOpen] = createSignal(false);
   const [isInputFocused, setIsInputFocused] = createSignal(false);
   const [isSending, setIsSending] = createSignal(false);
   const [sendingStatus, setSendingStatus] = createSignal('');
@@ -775,6 +780,14 @@ export function NoteView() {
             clearNoteForm(true);
             if (fileInputRef) fileInputRef.value = '';
             break;
+          case 's':
+            event.preventDefault();
+            saveCurrentAsDraft();
+            break;
+          case 'd':
+            event.preventDefault();
+            setIsDraftsModalOpen((prev) => !prev);
+            break;
           case 'i':
             event.preventDefault();
             noteInputRef?.focus();
@@ -1447,6 +1460,36 @@ export function NoteView() {
                 <i>delete_sweep</i>
               </button>
             </HoldHoverTip>
+
+            {/* 下書き保存ボタン */}
+            <HoldHoverTip label={t('draft.save_tip')} sublabel={t('draft.save_tip_sub')} placement="top">
+              <button
+                type="button"
+                id="draft_save_button"
+                class="mizuna-tool-icon-btn"
+                onClick={() => saveCurrentAsDraft()}
+                aria-label={t('draft.save')}
+              >
+                <i>bookmark_add</i>
+              </button>
+            </HoldHoverTip>
+
+            {/* 下書き一覧ボタン */}
+            <HoldHoverTip label={t('draft.list_tip')} sublabel={t('draft.list_tip_sub')} placement="top">
+              <button
+                type="button"
+                id="draft_list_button"
+                class={`mizuna-tool-chip ${draftCount() > 0 ? 'has-badge' : ''}`}
+                onClick={() => setIsDraftsModalOpen(true)}
+                aria-label={t('draft.title')}
+              >
+                <i>drafts</i>
+                <span>{t('draft.badge')}</span>
+                <Show when={draftCount() > 0}>
+                  <span class="mizuna-chip-count">{draftCount()}</span>
+                </Show>
+              </button>
+            </HoldHoverTip>
           </div>
 
           {/* 右側：文字数リングゲージ ＆ 送信ボタン */}
@@ -1793,6 +1836,12 @@ export function NoteView() {
           />
         )}
       </Show>
+
+      {/* 下書き一覧モーダル */}
+      <DraftsModal
+        isOpen={isDraftsModalOpen()}
+        onClose={() => setIsDraftsModalOpen(false)}
+      />
     </div>
   );
 }
