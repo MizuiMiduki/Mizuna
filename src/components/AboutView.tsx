@@ -129,63 +129,52 @@ export function AboutView() {
               v{mizuna_options.mizuna_version}
             </span>
           </div>
-          <Show when={hasPendingUpdate()}>
-            <div style="margin-top: 6px;">
-              <button
-                type="button"
-                class="mizuna-btn mizuna-btn-tonal"
-                style="padding: 0 14px; height: 32px; font-size: 0.8rem; gap: 4px;"
-                onClick={applyPendingUpdate}
-              >
-                <i>system_update</i>
+          <div class="mizuna-about-update-status">
+            <button
+              type="button"
+              id="check_update_button"
+              class={`mizuna-about-update-link ${
+                updateCheckStatus() === 'update_available' || hasPendingUpdate()
+                  ? 'is-update-ready'
+                  : updateCheckStatus() === 'latest'
+                  ? 'is-up-to-date'
+                  : updateCheckStatus() === 'error'
+                  ? 'is-error'
+                  : ''
+              }`}
+              disabled={isCheckingUpdate()}
+              onClick={() => {
+                if (updateCheckStatus() === 'update_available' || hasPendingUpdate()) {
+                  applyPendingUpdate();
+                } else {
+                  checkForUpdate();
+                }
+              }}
+            >
+              <Show when={isCheckingUpdate()}>
+                <i class="is-spinning">sync</i>
+                <span>{t('update.checking')}</span>
+              </Show>
+              <Show when={!isCheckingUpdate() && (updateCheckStatus() === 'update_available' || hasPendingUpdate())}>
+                <i class="is-bounce">system_update</i>
                 <span>{availableUpdateVersion() ? `v${availableUpdateVersion()} に更新` : t('update.apply_now')}</span>
-              </button>
-            </div>
-          </Show>
+              </Show>
+              <Show when={!isCheckingUpdate() && updateCheckStatus() === 'latest' && !hasPendingUpdate()}>
+                <i class="mizuna-check-icon">check_circle</i>
+                <span>{t('update.up_to_date')}</span>
+              </Show>
+              <Show when={!isCheckingUpdate() && updateCheckStatus() === 'error' && !hasPendingUpdate()}>
+                <i class="mizuna-error-icon">error_outline</i>
+                <span>{t('update.failed')}</span>
+              </Show>
+              <Show when={!isCheckingUpdate() && updateCheckStatus() === 'idle' && !hasPendingUpdate()}>
+                <i>sync</i>
+                <span>{t('settings.check_button')}</span>
+              </Show>
+            </button>
+          </div>
         </div>
         <div class="mizuna-about-actions">
-          <button
-            type="button"
-            id="check_update_button"
-            class={`mizuna-btn ${
-              updateCheckStatus() === 'update_available' || hasPendingUpdate()
-                ? 'mizuna-btn-primary is-update-ready'
-                : updateCheckStatus() === 'latest'
-                ? 'mizuna-btn-outline is-up-to-date'
-                : updateCheckStatus() === 'error'
-                ? 'mizuna-btn-outline is-error'
-                : 'mizuna-btn-outline'
-            }`}
-            disabled={isCheckingUpdate()}
-            onClick={() => {
-              if (updateCheckStatus() === 'update_available' || hasPendingUpdate()) {
-                applyPendingUpdate();
-              } else {
-                checkForUpdate();
-              }
-            }}
-          >
-            <Show when={isCheckingUpdate()}>
-              <i class="is-spinning">sync</i>
-              <span>{t('update.checking')}</span>
-            </Show>
-            <Show when={!isCheckingUpdate() && (updateCheckStatus() === 'update_available' || hasPendingUpdate())}>
-              <i class="is-bounce">system_update</i>
-              <span>{availableUpdateVersion() ? `v${availableUpdateVersion()} に更新` : t('update.apply_now')}</span>
-            </Show>
-            <Show when={!isCheckingUpdate() && updateCheckStatus() === 'latest' && !hasPendingUpdate()}>
-              <i class="mizuna-check-icon">check_circle</i>
-              <span>{t('update.up_to_date')}</span>
-            </Show>
-            <Show when={!isCheckingUpdate() && updateCheckStatus() === 'error' && !hasPendingUpdate()}>
-              <i class="mizuna-error-icon">error_outline</i>
-              <span>{t('update.failed')}</span>
-            </Show>
-            <Show when={!isCheckingUpdate() && updateCheckStatus() === 'idle' && !hasPendingUpdate()}>
-              <i>sync</i>
-              <span>{t('settings.check_button')}</span>
-            </Show>
-          </button>
           <button
             type="button"
             class="mizuna_share mizuna-btn mizuna-btn-primary"

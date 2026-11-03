@@ -2952,30 +2952,73 @@ body.dark .mizuna-custom-css-warnings {
   flex-wrap: wrap;
 }
 
-#check_update_button {
-  transition: all 0.22s ease;
+.mizuna-about-update-status {
+  margin-top: 4px;
 }
 
-#check_update_button.is-up-to-date {
-  border-color: color-mix(in srgb, #10b981 45%, var(--outline));
+.mizuna-about-update-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  padding: 2px 6px;
+  margin-left: -6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--on-surface-variant);
+  border-radius: var(--mizuna-radius-xs);
+  cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease, opacity 0.18s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-#check_update_button.is-up-to-date .mizuna-check-icon {
+.mizuna-about-update-link i {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.mizuna-about-update-link:hover:not(:disabled) {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.mizuna-about-update-link:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.mizuna-about-update-link.is-up-to-date {
+  color: var(--on-surface-variant);
+}
+
+.mizuna-about-update-link.is-up-to-date .mizuna-check-icon {
   color: #10b981;
-  font-size: 1.18rem;
+  font-size: 1.05rem;
 }
 
-#check_update_button.is-error {
-  border-color: color-mix(in srgb, #ef4444 45%, var(--outline));
+.mizuna-about-update-link.is-up-to-date:hover {
+  color: var(--on-surface);
 }
 
-#check_update_button.is-error .mizuna-error-icon {
+.mizuna-about-update-link.is-error {
   color: #ef4444;
-  font-size: 1.18rem;
 }
 
-#check_update_button.is-update-ready {
-  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 35%, transparent);
+.mizuna-about-update-link.is-error .mizuna-error-icon {
+  color: #ef4444;
+  font-size: 1.05rem;
+}
+
+.mizuna-about-update-link.is-update-ready {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.mizuna-about-update-link.is-update-ready i {
+  color: var(--primary);
+  font-size: 1.05rem;
 }
 
 .mizuna-meta-row {
