@@ -152,15 +152,22 @@ export function NoteView() {
     }
   });
 
-  // サムネイルのドラッグ＆ドロップ並べ替えステート
+  // サムネイルのドラッグ＆ドロップ並べ替えステート（マウスおよびタッチ端末対応）
   const [draggedImageId, setDraggedImageId] = createSignal<string | null>(null);
   const [dragOverIndex, setDragOverIndex] = createSignal<number | null>(null);
+  let isDraggingItem = false;
+  let touchThumbStartX = 0;
+  let touchThumbStartY = 0;
+  let touchThumbSourceId: string | null = null;
+  let touchThumbSourceIndex = -1;
+  let justFinishedDrag = false;
 
   const handleImageDragStart = (e: DragEvent, id: string) => {
     if (e.dataTransfer) {
       e.dataTransfer.setData('text/plain', id);
       e.dataTransfer.effectAllowed = 'move';
     }
+    isDraggingItem = true;
     setDraggedImageId(id);
   };
 
@@ -188,9 +195,70 @@ export function NoteView() {
     }
     setDraggedImageId(null);
     setDragOverIndex(null);
+    isDraggingItem = false;
+    justFinishedDrag = true;
+    setTimeout(() => {
+      justFinishedDrag = false;
+    }, 150);
   };
 
   const handleImageDragEnd = () => {
+    setDraggedImageId(null);
+    setDragOverIndex(null);
+    isDraggingItem = false;
+  };
+
+  // タッチ端末でのドラッグ並べ替え
+  const handleThumbTouchStart = (e: TouchEvent, id: string, index: number) => {
+    if (attachedImages().length <= 1) return;
+    if (e.touches.length !== 1) return;
+    touchThumbStartX = e.touches[0].clientX;
+    touchThumbStartY = e.touches[0].clientY;
+    touchThumbSourceId = id;
+    touchThumbSourceIndex = index;
+  };
+
+  const handleThumbTouchMove = (e: TouchEvent) => {
+    if (!touchThumbSourceId || e.touches.length !== 1) return;
+    const clientX = e.touches[0].clientX;
+    const clientY = e.touches[0].clientY;
+    const dx = clientX - touchThumbStartX;
+    const dy = clientY - touchThumbStartY;
+    if (!isDraggingItem && Math.hypot(dx, dy) > 8) {
+      isDraggingItem = true;
+      setDraggedImageId(touchThumbSourceId);
+    }
+    if (isDraggingItem) {
+      if (e.cancelable) e.preventDefault();
+      const el = document.elementFromPoint(clientX, clientY);
+      const targetItem = el?.closest('.mizuna-media-item') as HTMLElement | null;
+      if (targetItem && targetItem.dataset.index !== undefined) {
+        const targetIdx = parseInt(targetItem.dataset.index, 10);
+        if (!isNaN(targetIdx)) {
+          setDragOverIndex(targetIdx);
+        }
+      }
+    }
+  };
+
+  const handleThumbTouchEnd = () => {
+    if (isDraggingItem && touchThumbSourceId) {
+      const dropIdx = dragOverIndex();
+      if (dropIdx !== null && dropIdx !== touchThumbSourceIndex) {
+        const current = attachedImages();
+        const nextIds = current.map((item) => item.id);
+        const [moved] = nextIds.splice(touchThumbSourceIndex, 1);
+        nextIds.splice(dropIdx, 0, moved);
+        reorderAttachedImages(nextIds);
+      }
+      justFinishedDrag = true;
+      setTimeout(() => {
+        justFinishedDrag = false;
+      }, 150);
+    }
+    touchThumbSourceId = null;
+    touchThumbSourceIndex = -1;
+    isDraggingItem = false;
     setDraggedImageId(null);
     setDragOverIndex(null);
   };
@@ -616,6 +684,7 @@ export function NoteView() {
   });
 
   const handleOpenPreview = (item: AttachedImageItem) => {
+    if (isDraggingItem || justFinishedDrag || draggedImageId()) return;
     setPreviewModalImageId(item.id);
     setTimeout(() => {
       if (modalContentRef) {
@@ -1073,12 +1142,17 @@ export function NoteView() {
                     class={`mizuna-media-item ${draggedImageId() === item.id ? 'is-dragging' : ''} ${
                       dragOverIndex() === index() ? 'is-drag-over' : ''
                     }`}
+                    data-index={index()}
                     draggable={attachedImages().length > 1}
                     onDragStart={(e) => handleImageDragStart(e, item.id)}
                     onDragOver={(e) => handleImageDragOver(e, index())}
                     onDragLeave={handleImageDragEnd}
                     onDrop={(e) => handleImageDrop(e, index())}
                     onDragEnd={handleImageDragEnd}
+                    onTouchStart={(e) => handleThumbTouchStart(e, item.id, index())}
+                    onTouchMove={handleThumbTouchMove}
+                    onTouchEnd={handleThumbTouchEnd}
+                    onTouchCancel={handleThumbTouchEnd}
                     onClick={() => handleOpenPreview(item)}
                   >
                     <Show when={item.thumbUrl}>
@@ -1096,13 +1170,6 @@ export function NoteView() {
                     <div class="mizuna-media-zoom-hint">
                       <i>zoom_in</i>
                     </div>
-
-                    {/* 複数画像時の並び順番号バッジ */}
-                    <Show when={attachedImages().length > 1}>
-                      <span class="mizuna-media-order-badge" title={`画像 ${index() + 1}`}>
-                        {index() + 1}
-                      </span>
-                    </Show>
 
                     <button
                       type="button"
@@ -1128,32 +1195,6 @@ export function NoteView() {
                     >
                       <i>close</i>
                     </button>
-
-                    {/* 左右並べ替えボタン（複数画像時） */}
-                    <Show when={attachedImages().length > 1}>
-                      <div class="mizuna-media-reorder-bar" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          class="mizuna-media-reorder-btn is-prev"
-                          disabled={index() === 0}
-                          title="前へ移動"
-                          aria-label="前へ移動"
-                          onClick={() => moveAttachedImage(item.id, -1)}
-                        >
-                          <i>chevron_left</i>
-                        </button>
-                        <button
-                          type="button"
-                          class="mizuna-media-reorder-btn is-next"
-                          disabled={index() === attachedImages().length - 1}
-                          title="次へ移動"
-                          aria-label="次へ移動"
-                          onClick={() => moveAttachedImage(item.id, 1)}
-                        >
-                          <i>chevron_right</i>
-                        </button>
-                      </div>
-                    </Show>
                   </div>
                 )}
               </For>
@@ -1539,29 +1580,6 @@ export function NoteView() {
                   </div>
 
                   <div class="mizuna-lightbox-actions">
-                    <Show when={attachedImages().length > 1}>
-                      <button
-                        type="button"
-                        class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
-                        onClick={() => moveAttachedImage(imgItem().id, -1)}
-                        disabled={currentPreviewIndex() === 0}
-                        title="画像を左へ並べ替え"
-                      >
-                        <i>arrow_back</i>
-                        <span>前へ</span>
-                      </button>
-                      <button
-                        type="button"
-                        class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
-                        onClick={() => moveAttachedImage(imgItem().id, 1)}
-                        disabled={currentPreviewIndex() === attachedImages().length - 1}
-                        title="画像を右へ並べ替え"
-                      >
-                        <i>arrow_forward</i>
-                        <span>次へ</span>
-                      </button>
-                    </Show>
-
                     <Show when={imgItem().editState}>
                       <button
                         type="button"

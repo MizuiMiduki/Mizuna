@@ -750,7 +750,7 @@ describe('UI Components', () => {
       expect(document.querySelector('.mizuna-editor-tabs')).toBeInTheDocument();
     });
 
-    it('複数画像がある場合にサムネイルの並べ替えボタンで順序変更ができ、プレビューモーダルで左右ナビゲーションボタンで別画像を閲覧できること', async () => {
+    it('サムネイルのドラッグ＆ドロップで画像の並べ替えができ、プレビューモーダルで左右ナビゲーションボタンで別画像を閲覧できること', async () => {
       let appHook: ReturnType<typeof useApp> | null = null;
       function MultiImageTestWrapper() {
         appHook = useApp();
@@ -787,24 +787,42 @@ describe('UI Components', () => {
       expect(thumbA).toBeInTheDocument();
       expect(thumbB).toBeInTheDocument();
 
-      // 画像順序バッジが表示されていること
-      expect(screen.getByTitle('画像 1')).toBeInTheDocument();
-      expect(screen.getByTitle('画像 2')).toBeInTheDocument();
+      // サムネイル上の番号バッジや移動ボタンは存在しないこと
+      expect(screen.queryByTitle('画像 1')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('次へ移動')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('前へ移動')).not.toBeInTheDocument();
 
-      // 1枚目（image_a）の「次へ移動」ボタンを押して2枚目と順序を入れ替える
-      const moveNextBtns = screen.getAllByTitle('次へ移動');
-      expect(moveNextBtns.length).toBeGreaterThan(0);
-      fireEvent.click(moveNextBtns[0]);
+      // 1枚目（image_a）の要素を2枚目（image_b）の位置へドラッグ＆ドロップして並べ替え
+      const itemA = thumbA.closest('.mizuna-media-item')!;
+      const itemB = thumbB.closest('.mizuna-media-item')!;
+
+      const dragData: Record<string, string> = {};
+      const dataTransfer = {
+        setData: (k: string, v: string) => { dragData[k] = v; },
+        getData: (k: string) => dragData[k] || '',
+        effectAllowed: 'move',
+        dropEffect: 'move',
+      };
+
+      fireEvent.dragStart(itemA, { dataTransfer });
+      fireEvent.dragOver(itemB, { dataTransfer });
+      fireEvent.drop(itemB, { dataTransfer });
 
       // 順序が image_b, image_a に入れ替わっていること
       const currentImages = appHook!.attachedImages();
       expect(currentImages[0].name).toBe('image_b.png');
       expect(currentImages[1].name).toBe('image_a.png');
 
-      // 1枚目の画像をクリックして拡大プレビューを開く
-      fireEvent.click(thumbB.closest('.mizuna-media-item')!);
+      // ドラッグ完了後のクールダウンを待機し、入れ替え後の1枚目（image_b）をクリックして拡大プレビューを開く
+      await new Promise((r) => setTimeout(r, 200));
+      const updatedThumbB = screen.getByAltText('image_b.png');
+      fireEvent.click(updatedThumbB.closest('.mizuna-media-item')!);
       expect(document.getElementById('imageModal')).toBeInTheDocument();
       expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_b.png');
+
+      // プレビューモーダル下部に並べ替えボタン（前へ/次へ）は存在しないこと
+      expect(screen.queryByTitle('画像を左へ並べ替え')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('画像を右へ並べ替え')).not.toBeInTheDocument();
 
       // プレビューモーダル内の左右ナビゲーションボタンで次の画像へ切り替える
       const nextModalBtn = screen.getByTitle(/次の画像/i);
