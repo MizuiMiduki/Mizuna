@@ -252,6 +252,7 @@ export function NoteView() {
 
       showToast(t('note.sent'), 'success');
       clearNoteForm(false);
+      setComposerMode('edit');
       if (fileInputRef) {
         fileInputRef.value = '';
       }

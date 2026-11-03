@@ -26,6 +26,40 @@ function sanitizeColor(raw: string): string | null {
 }
 
 /**
+ * アニメーションタグのオプション (.speed=0.5s, .delay=0.1s, .left 等) を解析
+ */
+function parseAnimOptions(optStr = ''): { classes: string[]; style: string } {
+  const classes: string[] = [];
+  const styles: string[] = [];
+  if (!optStr) return { classes, style: '' };
+
+  const matches = optStr.match(/\.([a-zA-Z0-9_-]+)(?:=([a-zA-Z0-9_.-]+))?/g) || [];
+  for (const m of matches) {
+    const raw = m.slice(1); // remove leading '.'
+    const [key, val] = raw.split('=');
+
+    if (key === 'speed' && val) {
+      if (/^[0-9.]+(s|ms)?$/.test(val)) {
+        const sec = val.endsWith('ms') ? val : val.endsWith('s') ? val : `${val}s`;
+        styles.push(`animation-duration: ${sec};`);
+      }
+    } else if (key === 'delay' && val) {
+      if (/^-?[0-9.]+(s|ms)?$/.test(val)) {
+        const sec = val.endsWith('ms') ? val : val.endsWith('s') ? val : `${val}s`;
+        styles.push(`animation-delay: ${sec};`);
+      }
+    } else if (key && !val) {
+      // spin の .left, .x, .y, .alternate は専用クラスを付与するため汎用 opt- は付与しない
+      if (!['left', 'x', 'y', 'alternate'].includes(key)) {
+        classes.push(`mfm-opt-${key}`);
+      }
+    }
+  }
+
+  return { classes, style: styles.join(' ') };
+}
+
+/**
  * MFM構文を含む文字列をHTML文字列に変換する
  */
 export function renderMfm(text: string): string {
@@ -59,41 +93,93 @@ export function renderMfm(text: string): string {
   );
 
   // 4. MFM エフェクトタグ（ネスト対応のため内側から最大8回置換）
-  // $[shake ...], $[bounce ...], $[spin ...], $[rainbow ...], $[tada ...], $[blur ...], $[flip ...], $[fg.color=... ...], $[bg.color=... ...]
   for (let depth = 0; depth < 8; depth++) {
     const beforeLoop = processed;
 
-    // $[shake <content>]
+    // $[shake ...]
     processed = processed.replace(
-      /\$\[shake\s+((?:(?!(\$\[|\])).)+)\]/g,
-      '<span class="mfm-shake">$1</span>'
-    );
-
-    // $[bounce <content>]
-    processed = processed.replace(
-      /\$\[bounce\s+((?:(?!(\$\[|\])).)+)\]/g,
-      '<span class="mfm-bounce">$1</span>'
-    );
-
-    // $[spin <content>] / $[spin.left ...], $[spin.x ...], $[spin.y ...]
-    processed = processed.replace(
-      /\$\[spin(?:\.([a-zA-Z0-9_-]+))?\s+((?:(?!(\$\[|\])).)+)\]/g,
+      /\$\[shake((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
       (_, opt, content) => {
-        const cls = opt ? `mfm-spin mfm-spin-${opt}` : 'mfm-spin';
-        return `<span class="${cls}">${content}</span>`;
+        const { style } = parseAnimOptions(opt);
+        const styleAttr = style ? ` style="${style}"` : '';
+        return `<span class="mfm-shake"${styleAttr}>${content}</span>`;
       }
     );
 
-    // $[rainbow <content>]
+    // $[bounce ...]
     processed = processed.replace(
-      /\$\[rainbow\s+((?:(?!(\$\[|\])).)+)\]/g,
-      '<span class="mfm-rainbow">$1</span>'
+      /\$\[bounce((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
+      (_, opt, content) => {
+        const { style } = parseAnimOptions(opt);
+        const styleAttr = style ? ` style="${style}"` : '';
+        return `<span class="mfm-bounce"${styleAttr}>${content}</span>`;
+      }
     );
 
-    // $[tada <content>]
+    // $[jump ...]
     processed = processed.replace(
-      /\$\[tada\s+((?:(?!(\$\[|\])).)+)\]/g,
-      '<span class="mfm-tada">$1</span>'
+      /\$\[jump((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
+      (_, opt, content) => {
+        const { style } = parseAnimOptions(opt);
+        const styleAttr = style ? ` style="${style}"` : '';
+        return `<span class="mfm-jump"${styleAttr}>${content}</span>`;
+      }
+    );
+
+    // $[jelly ...]
+    processed = processed.replace(
+      /\$\[jelly((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
+      (_, opt, content) => {
+        const { style } = parseAnimOptions(opt);
+        const styleAttr = style ? ` style="${style}"` : '';
+        return `<span class="mfm-jelly"${styleAttr}>${content}</span>`;
+      }
+    );
+
+    // $[twitch ...]
+    processed = processed.replace(
+      /\$\[twitch((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
+      (_, opt, content) => {
+        const { style } = parseAnimOptions(opt);
+        const styleAttr = style ? ` style="${style}"` : '';
+        return `<span class="mfm-twitch"${styleAttr}>${content}</span>`;
+      }
+    );
+
+    // $[spin ...] / $[spin.left ...], $[spin.x ...], $[spin.y ...], $[spin.alternate ...]
+    processed = processed.replace(
+      /\$\[spin((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
+      (_, opt, content) => {
+        const { classes, style } = parseAnimOptions(opt);
+        const clsList = ['mfm-spin'];
+        if (opt.includes('.left')) clsList.push('mfm-spin-left');
+        if (opt.includes('.x')) clsList.push('mfm-spin-x');
+        if (opt.includes('.y')) clsList.push('mfm-spin-y');
+        if (opt.includes('.alternate')) clsList.push('mfm-spin-alternate');
+        clsList.push(...classes);
+        const styleAttr = style ? ` style="${style}"` : '';
+        return `<span class="${clsList.join(' ')}"${styleAttr}>${content}</span>`;
+      }
+    );
+
+    // $[rainbow ...]
+    processed = processed.replace(
+      /\$\[rainbow((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
+      (_, opt, content) => {
+        const { style } = parseAnimOptions(opt);
+        const styleAttr = style ? ` style="${style}"` : '';
+        return `<span class="mfm-rainbow"${styleAttr}>${content}</span>`;
+      }
+    );
+
+    // $[tada ...]
+    processed = processed.replace(
+      /\$\[tada((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
+      (_, opt, content) => {
+        const { style } = parseAnimOptions(opt);
+        const styleAttr = style ? ` style="${style}"` : '';
+        return `<span class="mfm-tada"${styleAttr}>${content}</span>`;
+      }
     );
 
     // $[blur <content>]

@@ -20,11 +20,17 @@ describe('MFM Parser (renderMfm)', () => {
     expect(renderMfm('$[shake こんにちは]')).toBe(
       '<span class="mfm-shake">こんにちは</span>'
     );
+    expect(renderMfm('$[shake.speed=0.2s 激しい揺れ]')).toBe(
+      '<span class="mfm-shake" style="animation-duration: 0.2s;">激しい揺れ</span>'
+    );
   });
 
   it('エフェクトタグ $[bounce ...] が正しくパースされること', () => {
     expect(renderMfm('$[bounce ぴょんぴょん]')).toBe(
       '<span class="mfm-bounce">ぴょんぴょん</span>'
+    );
+    expect(renderMfm('$[bounce.speed=1s ゆっくりバウンド]')).toBe(
+      '<span class="mfm-bounce" style="animation-duration: 1s;">ゆっくりバウンド</span>'
     );
   });
 

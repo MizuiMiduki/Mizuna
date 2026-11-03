@@ -5875,21 +5875,75 @@ body.is-simple-mode .mizuna-lightbox-action-btn {
    MFM (Misskey Flavored Markdown) & Note Preview Styles (v3.14.0)
    ========================================================================== */
 
-/* エフェクトキーフレーム */
+/* エフェクトキーフレーム (Misskey 本家準拠) */
+
+/* $[shake ...] : ランダムで激しいシェイク（0.5s） */
 @keyframes mfm-shake {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  10% { transform: translate(-3px, -2px) rotate(-1deg); }
+  20% { transform: translate(-3px, 0px) rotate(1deg); }
+  30% { transform: translate(3px, 2px) rotate(0deg); }
+  40% { transform: translate(1px, -1px) rotate(1deg); }
+  50% { transform: translate(-2px, 2px) rotate(-1deg); }
+  60% { transform: translate(-3px, 1px) rotate(0deg); }
+  70% { transform: translate(3px, 1px) rotate(-1deg); }
+  80% { transform: translate(-2px, -1px) rotate(1deg); }
+  90% { transform: translate(1px, 2px) rotate(0deg); }
+  100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
+/* $[bounce ...] : 弾むボールのような伸縮バウンス（0.75s ease） */
+@keyframes mfm-bounce {
+  0%, 100% {
+    transform: scale(1, 1) translateY(0);
+  }
+  10% {
+    transform: scale(1.15, 0.85) translateY(0);
+  }
+  30% {
+    transform: scale(0.85, 1.15) translateY(-0.6em);
+  }
+  50% {
+    transform: scale(1.05, 0.95) translateY(0);
+  }
+  57% {
+    transform: scale(0.98, 1.02) translateY(-0.15em);
+  }
+  64% {
+    transform: scale(1, 1) translateY(0);
+  }
+}
+
+/* $[jump ...] : 飛び跳ねるジャンプ（0.75s） */
+@keyframes mfm-jump {
+  0% { transform: translateY(0); }
+  25% { transform: translateY(-0.55em); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(-0.25em); }
+  100% { transform: translateY(0); }
+}
+
+/* $[jelly ...] : ゼリーのようなぷるぷる伸縮（1s） */
+@keyframes mfm-jelly {
+  0%, 100% { transform: scale(1, 1); }
+  30% { transform: scale(1.25, 0.75); }
+  40% { transform: scale(0.75, 1.25); }
+  50% { transform: scale(1.15, 0.85); }
+  65% { transform: scale(0.95, 1.05); }
+  75% { transform: scale(1.05, 0.95); }
+}
+
+/* $[twitch ...] : ピクピク痙攣（0.5s） */
+@keyframes mfm-twitch {
   0% { transform: translate(0, 0); }
-  20% { transform: translate(-1.5px, 1.5px); }
-  40% { transform: translate(-1.5px, -1.5px); }
-  60% { transform: translate(1.5px, 1.5px); }
-  80% { transform: translate(1.5px, -1.5px); }
+  20% { transform: translate(-2px, 3px); }
+  40% { transform: translate(2px, -1px); }
+  60% { transform: translate(-1px, -2px); }
+  80% { transform: translate(3px, 1px); }
   100% { transform: translate(0, 0); }
 }
 
-@keyframes mfm-bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-0.42em); }
-}
-
+/* $[spin ...] : 360度回転（1.5s linear） */
 @keyframes mfm-spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
@@ -5900,14 +5954,26 @@ body.is-simple-mode .mizuna-lightbox-action-btn {
   100% { transform: rotate(-360deg); }
 }
 
+@keyframes mfm-spin-x {
+  0% { transform: perspective(128px) rotateX(0deg); }
+  100% { transform: perspective(128px) rotateX(360deg); }
+}
+
+@keyframes mfm-spin-y {
+  0% { transform: perspective(128px) rotateY(0deg); }
+  100% { transform: perspective(128px) rotateY(360deg); }
+}
+
+/* $[rainbow ...] : 虹色変化（1s linear） */
 @keyframes mfm-rainbow {
   0% { filter: hue-rotate(0deg); }
   100% { filter: hue-rotate(360deg); }
 }
 
+/* $[tada ...] : 華やかなファンファーレ（1s） */
 @keyframes mfm-tada {
   0% { transform: scale(1); }
-  10%, 20% { transform: scale(0.92) rotate(-3deg); }
+  10%, 20% { transform: scale(0.9) rotate(-3deg); }
   30%, 50%, 70%, 90% { transform: scale(1.1) rotate(3deg); }
   40%, 60%, 80% { transform: scale(1.1) rotate(-3deg); }
   100% { transform: scale(1) rotate(0); }
@@ -5916,35 +5982,66 @@ body.is-simple-mode .mizuna-lightbox-action-btn {
 /* MFM エフェクトクラス */
 .mfm-shake {
   display: inline-block;
-  animation: mfm-shake 0.4s infinite ease-in-out;
+  transform-origin: center center;
+  animation: mfm-shake 0.5s infinite;
 }
 
 .mfm-bounce {
   display: inline-block;
-  animation: mfm-bounce 0.75s infinite ease-in-out;
   transform-origin: bottom center;
+  animation: mfm-bounce 0.75s cubic-bezier(0.28, 0.84, 0.42, 1) infinite;
+}
+
+.mfm-jump {
+  display: inline-block;
+  transform-origin: bottom center;
+  animation: mfm-jump 0.75s linear infinite;
+}
+
+.mfm-jelly {
+  display: inline-block;
+  transform-origin: bottom center;
+  animation: mfm-jelly 1s infinite;
+}
+
+.mfm-twitch {
+  display: inline-block;
+  transform-origin: center center;
+  animation: mfm-twitch 0.5s infinite;
 }
 
 .mfm-spin {
   display: inline-block;
-  animation: mfm-spin 1.6s infinite linear;
   transform-origin: center center;
+  animation: mfm-spin 1.5s infinite linear;
 }
 
 .mfm-spin.mfm-spin-left {
   animation-name: mfm-spin-left;
 }
 
+.mfm-spin.mfm-spin-x {
+  animation-name: mfm-spin-x;
+}
+
+.mfm-spin.mfm-spin-y {
+  animation-name: mfm-spin-y;
+}
+
+.mfm-spin.mfm-spin-alternate {
+  animation-direction: alternate;
+}
+
 .mfm-rainbow {
   display: inline-block;
-  color: #ff3366;
-  animation: mfm-rainbow 1.8s infinite linear;
+  color: #ff2a55;
+  animation: mfm-rainbow 1s infinite linear;
 }
 
 .mfm-tada {
   display: inline-block;
-  animation: mfm-tada 1s infinite;
   transform-origin: center center;
+  animation: mfm-tada 1s infinite;
 }
 
 .mfm-blur {
