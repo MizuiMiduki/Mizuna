@@ -74,23 +74,17 @@ export function NoteView() {
     return attachedImages().findIndex((img) => img.id === id);
   });
 
-  const animateLightboxSlide = (direction: 'next' | 'prev') => {
-    if (!modalContentRef) return;
-    const fromX = direction === 'next' ? 40 : -40;
-    gsap.fromTo(
-      modalContentRef,
-      { x: fromX, opacity: 0.6 },
-      { x: 0, opacity: 1, duration: 0.2, ease: 'power2.out', clearProps: 'transform,opacity' }
-    );
-  };
+  const [lightboxDragX, setLightboxDragX] = createSignal(0);
+  const [isLightboxDragging, setIsLightboxDragging] = createSignal(false);
 
   const handlePrevPreviewImage = () => {
     const images = attachedImages();
     if (images.length <= 1) return;
     const idx = currentPreviewIndex();
     const nextIdx = idx > 0 ? idx - 1 : images.length - 1;
+    setIsLightboxDragging(false);
+    setLightboxDragX(0);
     setPreviewModalImageId(images[nextIdx].id);
-    animateLightboxSlide('prev');
   };
 
   const handleNextPreviewImage = () => {
@@ -98,19 +92,17 @@ export function NoteView() {
     if (images.length <= 1) return;
     const idx = currentPreviewIndex();
     const nextIdx = idx < images.length - 1 ? idx + 1 : 0;
+    setIsLightboxDragging(false);
+    setLightboxDragX(0);
     setPreviewModalImageId(images[nextIdx].id);
-    animateLightboxSlide('next');
   };
 
-  // ライトボックスのスワイプ操作（指の動きへのリアルタイム追従と慣性スワイプ）
+  // ライトボックスのスワイプ操作（カルーセルトラックによる指のダイレクト追従とスムーズな物理スナップ）
   let lightboxTouchStartX = 0;
   let lightboxTouchStartY = 0;
-  let lightboxTouchDeltaX = 0;
-  let lightboxTouchDeltaY = 0;
   let lightboxTouchLastX = 0;
   let lightboxTouchLastTime = 0;
   let lightboxTouchVelocityX = 0;
-  let isLightboxDragging = false;
   let isLightboxHorizontalSwipe = false;
   let hasLightboxSwiped = false;
   let lightboxSwipeResetTimer: any = null;
@@ -120,26 +112,19 @@ export function NoteView() {
     const touch = e.touches[0];
     lightboxTouchStartX = touch.clientX;
     lightboxTouchStartY = touch.clientY;
-    lightboxTouchDeltaX = 0;
-    lightboxTouchDeltaY = 0;
     lightboxTouchLastX = touch.clientX;
     lightboxTouchLastTime = Date.now();
     lightboxTouchVelocityX = 0;
-    isLightboxDragging = true;
     isLightboxHorizontalSwipe = false;
-    if (modalContentRef) {
-      gsap.killTweensOf(modalContentRef);
-    }
+    setIsLightboxDragging(true);
+    setLightboxDragX(0);
   };
 
   const handleLightboxTouchMove = (e: TouchEvent) => {
-    if (!isLightboxDragging || e.touches.length !== 1) return;
+    if (!isLightboxDragging() || e.touches.length !== 1) return;
     const touch = e.touches[0];
     const dx = touch.clientX - lightboxTouchStartX;
     const dy = touch.clientY - lightboxTouchStartY;
-    lightboxTouchDeltaX = dx;
-    lightboxTouchDeltaY = dy;
-
     const absX = Math.abs(dx);
     const absY = Math.abs(dy);
 
@@ -148,7 +133,8 @@ export function NoteView() {
       if (absX >= absY) {
         isLightboxHorizontalSwipe = true;
       } else {
-        isLightboxDragging = false;
+        setIsLightboxDragging(false);
+        setLightboxDragX(0);
         return;
       }
     }
@@ -170,49 +156,38 @@ export function NoteView() {
         hasLightboxSwiped = true;
       }
 
-      if (modalContentRef) {
-        // 画像枚数に応じたリアルタイム追従（1枚時はゴム弾性抵抗、複数枚時は1:1でダイレクト追従）
-        const moveX = attachedImages().length <= 1 ? dx * 0.25 : dx;
-        modalContentRef.style.transform = `translateX(${moveX}px)`;
+      const images = attachedImages();
+      const idx = currentPreviewIndex();
+
+      let effectiveDx = dx;
+      // 1枚のみ、または両端（先頭で右、末尾で左）に引っ張る時はラバーバンド抵抗
+      if (images.length <= 1) {
+        effectiveDx = dx * 0.25;
+      } else if (idx === 0 && dx > 0) {
+        effectiveDx = dx * 0.3;
+      } else if (idx === images.length - 1 && dx < 0) {
+        effectiveDx = dx * 0.3;
       }
+
+      setLightboxDragX(effectiveDx);
     }
   };
 
   const handleLightboxTouchEnd = () => {
-    if (!isLightboxDragging) {
-      if (modalContentRef && modalContentRef.style.transform) {
-        gsap.to(modalContentRef, {
-          x: 0,
-          opacity: 1,
-          duration: 0.18,
-          ease: 'power2.out',
-          clearProps: 'transform,opacity',
-        });
-      }
-      return;
-    }
-    isLightboxDragging = false;
+    if (!isLightboxDragging()) return;
+    setIsLightboxDragging(false);
 
-    const dx = lightboxTouchDeltaX;
+    const dx = lightboxDragX();
     const images = attachedImages();
+    const idx = currentPreviewIndex();
 
-    if (!isLightboxHorizontalSwipe || images.length <= 1 || !modalContentRef) {
-      if (modalContentRef) {
-        gsap.to(modalContentRef, {
-          x: 0,
-          opacity: 1,
-          duration: 0.2,
-          ease: 'power2.out',
-          clearProps: 'transform,opacity',
-        });
-      }
+    if (!isLightboxHorizontalSwipe || images.length <= 1) {
+      setLightboxDragX(0);
       isLightboxHorizontalSwipe = false;
-      lightboxTouchDeltaX = 0;
-      lightboxTouchDeltaY = 0;
       clearTimeout(lightboxSwipeResetTimer);
       lightboxSwipeResetTimer = setTimeout(() => {
         hasLightboxSwiped = false;
-      }, 100);
+      }, 120);
       return;
     }
 
@@ -221,79 +196,21 @@ export function NoteView() {
     const projectedX = dx + flick;
     const threshold = 40;
 
-    if (projectedX < -threshold) {
-      // 次の画像へ (左スワイプ)
-      const idx = currentPreviewIndex();
-      const nextIdx = idx < images.length - 1 ? idx + 1 : 0;
-      const targetId = images[nextIdx].id;
-
-      gsap.to(modalContentRef, {
-        x: -Math.min(window.innerWidth * 0.35, 200),
-        opacity: 0.2,
-        duration: 0.14,
-        ease: 'power2.in',
-        onComplete: () => {
-          setPreviewModalImageId(targetId);
-          if (modalContentRef) {
-            gsap.fromTo(
-              modalContentRef,
-              { x: Math.min(window.innerWidth * 0.35, 200), opacity: 0.2 },
-              {
-                x: 0,
-                opacity: 1,
-                duration: 0.18,
-                ease: 'power2.out',
-                clearProps: 'transform,opacity',
-              }
-            );
-          }
-        },
-      });
-    } else if (projectedX > threshold) {
-      // 前の画像へ (右スワイプ)
-      const idx = currentPreviewIndex();
-      const prevIdx = idx > 0 ? idx - 1 : images.length - 1;
-      const targetId = images[prevIdx].id;
-
-      gsap.to(modalContentRef, {
-        x: Math.min(window.innerWidth * 0.35, 200),
-        opacity: 0.2,
-        duration: 0.14,
-        ease: 'power2.in',
-        onComplete: () => {
-          setPreviewModalImageId(targetId);
-          if (modalContentRef) {
-            gsap.fromTo(
-              modalContentRef,
-              { x: -Math.min(window.innerWidth * 0.35, 200), opacity: 0.2 },
-              {
-                x: 0,
-                opacity: 1,
-                duration: 0.18,
-                ease: 'power2.out',
-                clearProps: 'transform,opacity',
-              }
-            );
-          }
-        },
-      });
-    } else {
-      gsap.to(modalContentRef, {
-        x: 0,
-        opacity: 1,
-        duration: 0.2,
-        ease: 'power2.out',
-        clearProps: 'transform,opacity',
-      });
+    if (projectedX < -threshold && idx < images.length - 1) {
+      // 次の画像へスムーズに遷移
+      setPreviewModalImageId(images[idx + 1].id);
+    } else if (projectedX > threshold && idx > 0) {
+      // 前の画像へスムーズに遷移
+      setPreviewModalImageId(images[idx - 1].id);
     }
 
+    // オフセットを0へ戻し、CSS cubic-bezier トランジションで目的のスライドへ吸い付く
+    setLightboxDragX(0);
     isLightboxHorizontalSwipe = false;
-    lightboxTouchDeltaX = 0;
-    lightboxTouchDeltaY = 0;
     clearTimeout(lightboxSwipeResetTimer);
     lightboxSwipeResetTimer = setTimeout(() => {
       hasLightboxSwiped = false;
-    }, 100);
+    }, 120);
   };
 
   // プレビューモーダル表示中の左右キーナビゲーション
@@ -1741,18 +1658,42 @@ export function NoteView() {
                 </button>
               </Show>
 
-              <img
-                ref={modalContentRef}
-                id="modalImage"
-                class="mizuna-lightbox-img"
-                src={previewModalImage()?.dataUrl}
-                alt={previewModalImage()?.name || ''}
-                data-name={previewModalImage()?.name || ''}
-                decoding="async"
-                draggable={false}
-                onDragStart={(e) => e.preventDefault()}
-                onClick={(e) => e.stopPropagation()}
-              />
+              {/* カルーセルトラック */}
+              <div
+                class="mizuna-lightbox-track"
+                style={{
+                  transform: `translateX(calc(${-Math.max(0, currentPreviewIndex()) * 100}% + ${lightboxDragX()}px))`,
+                  transition: isLightboxDragging() ? 'none' : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                }}
+              >
+                <For each={attachedImages()}>
+                  {(item) => (
+                    <div
+                      class="mizuna-lightbox-slide"
+                      onClick={() => {
+                        if (hasLightboxSwiped) {
+                          hasLightboxSwiped = false;
+                          return;
+                        }
+                        setPreviewModalImageId(null);
+                      }}
+                    >
+                      <img
+                        ref={item.id === previewModalImageId() ? (el) => { modalContentRef = el; } : undefined}
+                        id={item.id === previewModalImageId() ? 'modalImage' : undefined}
+                        class="mizuna-lightbox-img"
+                        src={item.dataUrl}
+                        alt={item.name || ''}
+                        data-name={item.name || ''}
+                        decoding="async"
+                        draggable={false}
+                        onDragStart={(e) => e.preventDefault()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
+                </For>
+              </div>
             </div>
 
             {/* ボトムバー: ファイル情報・WebP削減率 & リセットボタン & 閉じるボタン */}

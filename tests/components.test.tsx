@@ -882,7 +882,6 @@ describe('UI Components', () => {
 
       // スワイプ操作によるダイレクト追従と画像切り替えの検証
       const lightboxModal = document.getElementById('imageModal')!;
-      const modalImg = document.getElementById('modalImage')!;
 
       // 左へドラッグ（指の移動 dx = -80px）
       fireEvent.touchStart(lightboxModal, {
@@ -892,10 +891,11 @@ describe('UI Components', () => {
         touches: [{ clientX: 120, clientY: 100 }],
       });
 
-      // 指の移動にダイレクト追従して transform がリアルタイム更新されること
-      expect(modalImg.style.transform).toContain('translateX(-80px)');
+      // カルーセルトラックが指の移動にダイレクト追従して transform がリアルタイム更新されること
+      const track = document.querySelector('.mizuna-lightbox-track') as HTMLElement;
+      expect(track.style.transform).toContain('-80px');
 
-      // 指を離すとアニメーションを経て次の画像へ切り替わること
+      // 指を離すとスムーズに次の画像へ切り替わること
       fireEvent.touchEnd(lightboxModal);
       await vi.waitFor(() => {
         expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_a.png');
