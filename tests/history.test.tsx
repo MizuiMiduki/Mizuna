@@ -494,6 +494,43 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     expect(attachedThumb).toBeInTheDocument();
   });
 
+  it('NoteViewで投稿したノートは、/api/users/notes を再fetchせずにそのまま投稿履歴に表示されること', async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockClear();
+
+    render(() => (
+      <AppProvider>
+        <NoteView />
+        <HistoryView />
+      </AppProvider>
+    ));
+
+    // 初回表示の完了を待つ
+    expect(await screen.findByText(/テスト投稿1です/)).toBeInTheDocument();
+
+    const notesFetchCountBefore = fetchMock.mock.calls.filter(
+      (call) => typeof call[0] === 'string' && call[0].includes('/api/users/notes')
+    ).length;
+
+    // NoteView のテキストエリアに入力して投稿
+    const textarea = document.querySelector('.note_content') as HTMLTextAreaElement;
+    expect(textarea).toBeInTheDocument();
+    fireEvent.input(textarea, { target: { value: '新規投稿即時反映テスト！' } });
+
+    const submitBtn = document.querySelector('.note_submit') as HTMLButtonElement;
+    expect(submitBtn).toBeInTheDocument();
+    fireEvent.click(submitBtn);
+
+    // 投稿した内容が HistoryView に即座に表示されること
+    expect(await screen.findByText(/新規投稿即時反映テスト！/)).toBeInTheDocument();
+
+    // /api/users/notes の呼び出し回数が増えていないこと（再fetchなし）
+    const notesFetchCountAfter = fetchMock.mock.calls.filter(
+      (call) => typeof call[0] === 'string' && call[0].includes('/api/users/notes')
+    ).length;
+    expect(notesFetchCountAfter).toBe(notesFetchCountBefore);
+  });
+
   it('4.0.0未満のアカウントでは権限不足警告画面が表示され、APIリクエストが行われないこと', async () => {
     // 3.15.0のアカウントに更新
     await db.account.clear();

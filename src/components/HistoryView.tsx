@@ -22,7 +22,9 @@ import { useApp } from '../store/appStore';
 import {
   type HistoryTab,
   type RepliesState,
+  getAccountCacheKey,
   getHistoryCache,
+  historyCacheVersion,
   setHistoryCache,
 } from '../store/historyStore';
 import { getDisplayAvatarUrl } from '../utils/image';
@@ -285,11 +287,7 @@ export function HistoryView() {
     serverEmojiMap: serverEmojiMap(),
   }));
 
-  const getAccountKey = () => {
-    const user = currentUser();
-    if (!user) return '';
-    return user.id || `${user.address}@${user.username}`;
-  };
+  const getAccountKey = () => getAccountCacheKey(currentUser());
 
   const syncCache = (updated?: {
     notes?: MisskeyNote[];
@@ -371,8 +369,9 @@ export function HistoryView() {
     }
   };
 
-  // タブまたはアカウント切り替え時にキャッシュを確認。キャッシュがあれば復元し、なければ初回フェッチ
+  // タブ・アカウント切り替え、またはノート投稿によるキャッシュ更新時に確認。キャッシュがあれば復元し、なければ初回フェッチ
   createEffect(() => {
+    historyCacheVersion();
     const tab = activeTab();
     const user = currentUser();
     if (!user || !isHistorySupported()) return;

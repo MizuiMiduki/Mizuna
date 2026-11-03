@@ -9,12 +9,16 @@ import {
   onMount,
   Show,
 } from 'solid-js';
-import { createMisskeyNote, uploadImagesToDrive } from '../services/misskeyApi';
+import { createMisskeyNote, uploadImagesToDrive, type MisskeyFile } from '../services/misskeyApi';
 import {
   useApp,
   type AttachedImageItem,
   type VisibilityType,
 } from '../store/appStore';
+import {
+  getAccountCacheKey,
+  prependNoteToHistoryCache,
+} from '../store/historyStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { type ImageEditState } from '../utils/imageEditor';
 import { comparisonVersion, hasDrivePermission } from '../utils/version';
@@ -726,15 +730,31 @@ export function NoteView() {
       }
 
       setSendingStatus(t('note.submitting'));
-      await createMisskeyNote(
+      const fallbackFiles: MisskeyFile[] = images.map((item, idx) => ({
+        id: fileIds?.[idx] || item.driveFileId || item.id,
+        url: item.dataUrl,
+        thumbnailUrl: item.thumbUrl || item.dataUrl,
+        name: item.name,
+        type: item.file.type || 'image/webp',
+        size: item.compressedSize ?? item.originalSize,
+      }));
+
+      const createdNote = await createMisskeyNote(
         user,
         rawNote,
         cwEnabled() ? rawCw : null,
         visibility(),
         endMizuna(),
         fileIds,
-        replyTargetNote()?.id
+        replyTargetNote()?.id,
+        {
+          replyNote: replyTargetNote(),
+          files: fallbackFiles,
+        }
       );
+
+      // fetch を行わずに投稿履歴の先頭にそのまま反映する
+      prependNoteToHistoryCache(getAccountCacheKey(user), createdNote);
 
       showToast(t('note.sent'), 'success');
       clearNoteForm(false);

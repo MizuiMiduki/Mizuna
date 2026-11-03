@@ -364,7 +364,7 @@ export async function uploadImagesToDrive(
 }
 
 /**
- * ノートを送信する (リプライ対応)
+ * ノートを送信する (リプライ対応・作成されたノートオブジェクトを返す)
  */
 export async function createMisskeyNote(
   account: AccountRecord,
@@ -373,12 +373,17 @@ export async function createMisskeyNote(
   visibility: 'public' | 'home' | 'followers',
   appendFromMizuna: boolean,
   fileIds?: string[],
-  replyId?: string
-): Promise<void> {
+  replyId?: string,
+  extra?: {
+    replyNote?: MisskeyNote | null;
+    files?: MisskeyFile[];
+  }
+): Promise<MisskeyNote> {
   const suffix = appendFromMizuna ? '\n(from Mizuna)' : '';
+  const finalText = noteContent + suffix;
   const param: NoteParam = {
     i: account.token,
-    text: noteContent + suffix,
+    text: finalText,
     visibility,
   };
 
@@ -403,6 +408,46 @@ export async function createMisskeyNote(
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }
+
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch {
+    // JSON でない場合はフォールバック
+  }
+
+  const rawCreated = data?.createdNote ?? data ?? {};
+  const createdNote: MisskeyNote = {
+    id: rawCreated.id || `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: rawCreated.createdAt || new Date().toISOString(),
+    text: rawCreated.text !== undefined ? rawCreated.text : finalText,
+    cw:
+      rawCreated.cw !== undefined
+        ? rawCreated.cw
+        : cwContent && cwContent.length > 0
+        ? cwContent
+        : null,
+    userId: rawCreated.userId || String(account.id ?? account.username),
+    user: rawCreated.user?.username
+      ? rawCreated.user
+      : {
+          id: String(account.id ?? account.username),
+          name: account.name || account.username,
+          username: account.username,
+          avatarUrl: account.avatarurl,
+        },
+    visibility: rawCreated.visibility || visibility,
+    replyId: rawCreated.replyId !== undefined ? rawCreated.replyId : replyId || null,
+    reply: rawCreated.reply !== undefined ? rawCreated.reply : extra?.replyNote ?? null,
+    files:
+      Array.isArray(rawCreated.files) && rawCreated.files.length > 0
+        ? rawCreated.files
+        : extra?.files ?? [],
+    repliesCount: rawCreated.repliesCount ?? 0,
+    emojis: rawCreated.emojis,
+  };
+
+  return createdNote;
 }
 
 /**
