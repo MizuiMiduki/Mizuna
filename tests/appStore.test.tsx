@@ -200,6 +200,32 @@ describe('appStore', () => {
       expect(result.dialogConfig()).toBeNull();
     });
 
+    it('closeDialog を二重に呼んでも history.back() が1回だけで下層モーダルが閉じないこと', () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      let modalClosed = false;
+      result.pushModalBackHandler(() => {
+        modalClosed = true;
+      });
+
+      const backSpy = vi.spyOn(window.history, 'back');
+
+      result.openDialog({
+        title: '削除確認',
+        contentText: '削除しますか？',
+        buttons: [{ label: 'キャンセル' }],
+      });
+
+      result.closeDialog();
+      result.closeDialog();
+
+      expect(backSpy.mock.calls.length).toBeLessThanOrEqual(1);
+      expect(modalClosed).toBe(false);
+      backSpy.mockRestore();
+    });
+
     it('アカウントの並べ替え (reorderAccounts) が正常に反映され保存されること', async () => {
       const id2 = await db.account.add({
         token: 'tok_test_2',

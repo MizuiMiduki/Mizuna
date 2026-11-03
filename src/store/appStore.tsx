@@ -336,6 +336,8 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   const closeDialog = () => {
+    // 既に閉じている場合は何もしない（二重呼び出しで history.back() が重複し、下層モーダルまで閉じるのを防ぐ）
+    if (!dialogConfig()) return;
     setDialogConfig(null);
     if (!isDialogPoppedByPopState && typeof window !== 'undefined' && window.history.state?.isDialog) {
       ignoreNextPopState = true;
