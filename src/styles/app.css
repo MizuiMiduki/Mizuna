@@ -6277,7 +6277,8 @@ ruby > rt {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 8px;
+  padding: 4px 10px;
+  min-height: 40px;
   background: rgba(0, 0, 0, 0.02);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
 }
@@ -6299,7 +6300,7 @@ ruby > rt {
 
 .mizuna-mfm-toolbar-divider {
   width: 1px;
-  height: 18px;
+  height: 22px;
   background: rgba(0, 0, 0, 0.12);
   flex-shrink: 0;
 }
@@ -6309,11 +6310,14 @@ body.dark .mizuna-mfm-toolbar-divider {
 }
 
 .mizuna-mfm-preview-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
   padding: 0 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
@@ -6327,14 +6331,29 @@ body.dark .mizuna-mfm-toolbar-divider {
   transition: all 0.18s ease;
 }
 
+/* タップ・クリック可能領域を拡大して押しやすくする */
+.mizuna-mfm-preview-btn::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: -6px;
+  right: -6px;
+}
+
 .mizuna-mfm-preview-btn i {
-  font-size: 16px;
+  font-size: 20px;
   line-height: 1;
 }
 
 .mizuna-mfm-preview-btn:hover {
   border-color: var(--primary, #2b8cbe);
   color: var(--primary, #2b8cbe);
+  background: color-mix(in srgb, var(--primary, #2b8cbe) 8%, var(--surface, #ffffff));
+}
+
+.mizuna-mfm-preview-btn:active {
+  transform: scale(0.92);
 }
 
 .mizuna-mfm-preview-btn.is-active {
