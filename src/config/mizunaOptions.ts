@@ -14,7 +14,7 @@ export interface MizunaShare {
   url: string;
 }
 
-export const MIZUNA_VERSION = '3.13.1';
+export const MIZUNA_VERSION = '3.14.0';
 
 /**
  * Canary / 本番の手動強制切り替えフラグ

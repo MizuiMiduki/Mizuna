@@ -20,6 +20,9 @@ importers:
       material-dynamic-colors:
         specifier: ^1.1.2
         version: 1.1.4
+      mfm-js:
+        specifier: ^0.28.0
+        version: 0.28.0
       pulltorefreshjs:
         specifier: ^0.1.22
         version: 0.1.22
@@ -347,6 +350,9 @@ packages:
 
   '@material/material-color-utilities@0.3.0':
     resolution: {integrity: sha512-ztmtTd6xwnuh2/xu+Vb01btgV8SQWYCaK56CkRK8gEkWe5TuDyBcYJ0wgkMRn+2VcE9KUmhvkz+N9GHrqw/C0g==}
+
+  '@misskey-dev/emoji-data@17.0.3':
+    resolution: {integrity: sha512-RmW0C2A1Zxn7DTYVCOhMDyCyyXYJLBc5GIEuhcufaqF0Gxw9+gIwaitCI3OUWnR928XnDwvvaizhJSjvIEF+2Q==}
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     resolution: {integrity: sha512-oTXEIha4SsuXdTA4Iyskj0kpdx2yVXdhd75c2v3xGrHFfVMsbhTPZU/nMPL4sWKo4pBHm3aucLaqGlF696dTyQ==}
@@ -865,6 +871,9 @@ packages:
   merge-anything@5.1.7:
     resolution: {integrity: sha512-eRtbOb1N5iyH0tkQDAoQ4Ipsp/5qSR79Dzrz8hEPxRX10RWWR/iQXdoKmBSRCThY1Fh5EhISDtpSc93fpxUniQ==}
     engines: {node: '>=12.13'}
+
+  mfm-js@0.28.0:
+    resolution: {integrity: sha512-Ym54M3C1F5rqsqawi8BYEc/uCcbAlewSLiwLmJgB0Eow6QPJxm8I+pGjtRqJXf+BqoFyDFchr+dtFwesS22NHw==}
 
   mime-db@1.52.0:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
@@ -1421,6 +1430,8 @@ snapshots:
 
   '@material/material-color-utilities@0.3.0': {}
 
+  '@misskey-dev/emoji-data@17.0.3': {}
+
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
@@ -1895,6 +1906,10 @@ snapshots:
   merge-anything@5.1.7:
     dependencies:
       is-what: 4.1.16
+
+  mfm-js@0.28.0:
+    dependencies:
+      '@misskey-dev/emoji-data': 17.0.3
 
   mime-db@1.52.0: {}
 

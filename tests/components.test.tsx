@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@solidjs/testing-library';
 import { AppProvider } from '../src/store/appStore';
 import { Header } from '../src/components/Header';
@@ -24,7 +24,12 @@ describe('UI Components', () => {
     await db.open();
     await db.account.clear();
     await db.setting.clear();
-    await db.setting.put({ ...DEFAULT_USER_SETTINGS, id: 1, language: 'ja_jp' });
+    await db.setting.put({
+      ...DEFAULT_USER_SETTINGS,
+      id: 1,
+      language: 'ja_jp',
+      is_check_releasenote: '3.14.0',
+    });
     await db.account.add({
       token: 'tok_test',
       name: 'テストユーザー',
@@ -299,6 +304,45 @@ describe('UI Components', () => {
       expect(screen.getByText('Mizunaについて')).toBeInTheDocument();
       expect(screen.getByText('Open Source Licenses')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /(更新を確認|Check)/i })).toBeInTheDocument();
+    });
+
+    it('AboutView の更新確認ボタンを押したとき、トーストを出さずにボタン内が「最新です」に切り替わること', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url.toString();
+        if (urlStr.includes('version.json')) {
+          return {
+            ok: true,
+            json: async () => ({ version: '3.14.0' }),
+          } as Response;
+        }
+        return originalFetch(url);
+      });
+
+      render(() => (
+        <AppProvider>
+          <AboutView />
+        </AppProvider>
+      ));
+
+      const checkBtn = screen.getByRole('button', { name: /(更新を確認|Check)/i });
+      // 確認前は「最新です」になっていないこと
+      expect(screen.queryByText(/(最新です|Up to date)/i)).not.toBeInTheDocument();
+
+      fireEvent.click(checkBtn);
+
+      // トースト「アップデートを確認中...」は表示されないこと
+      expect(screen.queryByText('アップデートを確認中...')).not.toBeInTheDocument();
+
+      // ボタン内が「最新です」に変わること
+      const upToDateBtn = await screen.findByRole('button', { name: /(最新です|Up to date)/i });
+      expect(upToDateBtn).toBeInTheDocument();
+      expect(document.querySelector('.mizuna-check-icon')).toBeInTheDocument();
+
+      // トースト「最新のバージョンを使用しています」も表示されないこと
+      expect(screen.queryByText(/最新のバージョンを使用しています/)).not.toBeInTheDocument();
+
+      globalThis.fetch = originalFetch;
     });
   });
 
@@ -745,6 +789,119 @@ describe('UI Components', () => {
       expect(document.querySelector('.mizuna-editor-tabs')).toBeInTheDocument();
     });
 
+    it('サムネイルのドラッグ＆ドロップで画像の並べ替えができ、プレビューモーダルで左右ナビゲーションボタンで別画像を閲覧できること', async () => {
+      let appHook: ReturnType<typeof useApp> | null = null;
+      function MultiImageTestWrapper() {
+        appHook = useApp();
+        return (
+          <>
+            <button
+              data-testid="add-multi-files-btn"
+              onClick={() => {
+                const fileA = new File(['a'], 'image_a.png', { type: 'image/png' });
+                const fileB = new File(['b'], 'image_b.png', { type: 'image/png' });
+                appHook?.addAttachedFiles([fileA, fileB]);
+              }}
+            >
+              Add Multi
+            </button>
+            <NoteView />
+          </>
+        );
+      }
+
+      render(() => (
+        <AppProvider>
+          <MultiImageTestWrapper />
+        </AppProvider>
+      ));
+
+      fireEvent.click(screen.getByTestId('add-multi-files-btn'));
+      await screen.findByAltText('image_a.png');
+      await screen.findByAltText('image_b.png');
+      // 非同期のWebP圧縮等完了後のDOM要素を取得
+      await new Promise((r) => setTimeout(r, 100));
+      const thumbA = screen.getByAltText('image_a.png');
+      const thumbB = screen.getByAltText('image_b.png');
+      expect(thumbA).toBeInTheDocument();
+      expect(thumbB).toBeInTheDocument();
+
+      // サムネイル上の番号バッジや移動ボタンは存在しないこと
+      expect(screen.queryByTitle('画像 1')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('次へ移動')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('前へ移動')).not.toBeInTheDocument();
+
+      // 1枚目（image_a）の要素を2枚目（image_b）の位置へドラッグ＆ドロップして並べ替え
+      const itemA = thumbA.closest('.mizuna-media-item')!;
+      const itemB = thumbB.closest('.mizuna-media-item')!;
+
+      const dragData: Record<string, string> = {};
+      const dataTransfer = {
+        setData: (k: string, v: string) => { dragData[k] = v; },
+        getData: (k: string) => dragData[k] || '',
+        effectAllowed: 'move',
+        dropEffect: 'move',
+      };
+
+      fireEvent.dragStart(itemA, { dataTransfer });
+      fireEvent.dragOver(itemB, { dataTransfer });
+      fireEvent.drop(itemB, { dataTransfer });
+
+      // 順序が image_b, image_a に入れ替わっていること
+      const currentImages = appHook!.attachedImages();
+      expect(currentImages[0].name).toBe('image_b.png');
+      expect(currentImages[1].name).toBe('image_a.png');
+
+      // サムネイル並べ替えによってフォーム全体にドラッグオーバー枠線（.is-dragging）が付着していないこと
+      expect(document.querySelector('.mizuna-studio-composer.is-dragging')).not.toBeInTheDocument();
+
+      // ドラッグ完了後のクールダウンを待機し、入れ替え後の1枚目（image_b）をクリックして拡大プレビューを開く
+      await new Promise((r) => setTimeout(r, 200));
+      const updatedThumbB = screen.getByAltText('image_b.png');
+      fireEvent.click(updatedThumbB.closest('.mizuna-media-item')!);
+      expect(document.getElementById('imageModal')).toBeInTheDocument();
+      expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_b.png');
+
+      // プレビューモーダル下部に並べ替えボタン（前へ/次へ）は存在しないこと
+      expect(screen.queryByTitle('画像を左へ並べ替え')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('画像を右へ並べ替え')).not.toBeInTheDocument();
+
+      // プレビューモーダル内の左右ナビゲーションボタンで次の画像へ切り替える
+      const nextModalBtn = screen.getByTitle(/次の画像/i);
+      expect(nextModalBtn).toBeInTheDocument();
+      fireEvent.click(nextModalBtn);
+
+      // プレビュー表示が image_a.png に切り替わること
+      expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_a.png');
+
+      // 前の画像ボタンで戻る
+      const prevModalBtn = screen.getByTitle(/前の画像/i);
+      expect(prevModalBtn).toBeInTheDocument();
+      fireEvent.click(prevModalBtn);
+      expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_b.png');
+
+      // スワイプ操作によるダイレクト追従と画像切り替えの検証
+      const lightboxModal = document.getElementById('imageModal')!;
+
+      // 左へドラッグ（指の移動 dx = -80px）
+      fireEvent.touchStart(lightboxModal, {
+        touches: [{ clientX: 200, clientY: 100 }],
+      });
+      fireEvent.touchMove(lightboxModal, {
+        touches: [{ clientX: 120, clientY: 100 }],
+      });
+
+      // カルーセルトラックが指の移動にダイレクト追従して transform がリアルタイム更新されること
+      const track = document.querySelector('.mizuna-lightbox-track') as HTMLElement;
+      expect(track.style.transform).toContain('-80px');
+
+      // 指を離すとスムーズに次の画像へ切り替わること
+      fireEvent.touchEnd(lightboxModal);
+      await vi.waitFor(() => {
+        expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_a.png');
+      });
+    });
+
     it('3.5.0未満の古いアカウントがアクティブな場合、画像選択ボタンが無効化 (disabled) されること', async () => {
       // 既存アカウント（3.10.0）をクリアして、3.4.0のアカウントを設定
       await db.account.clear();
@@ -767,6 +924,75 @@ describe('UI Components', () => {
       const selectPicBtn = await screen.findByRole('button', { name: /(画像添付非対応|写真|画像)/i });
       expect(selectPicBtn).toBeDisabled();
       expect(selectPicBtn).toHaveClass('is-disabled');
+    });
+
+    it('MFMツールバーからタグを挿入でき、リアルタイムプレビューをトグルして入力しながら確認できること', async () => {
+      render(() => (
+        <AppProvider>
+          <NoteView />
+        </AppProvider>
+      ));
+
+      // MFM ツールバーが存在すること
+      expect(screen.getByRole('toolbar', { name: 'MFM Insertion Toolbar' })).toBeInTheDocument();
+
+      // 揺らすボタンをクリック
+      const shakeBtn = screen.getByRole('button', { name: /(揺らす|Shake)/i });
+      fireEvent.click(shakeBtn);
+
+      const textarea = screen.getByPlaceholderText(/(いまどうしてる？|What's happening)/i) as HTMLTextAreaElement;
+      expect(textarea.value).toContain('$[shake text]');
+
+      // プレビュートグルボタンをクリック
+      const previewBtn = screen.getByRole('button', { name: /(プレビュー|Preview)/i });
+      fireEvent.click(previewBtn);
+
+      // プレビューエリアが表示され、テキストエリアも同時に表示されていること（入力しながら確認可能）
+      expect(document.querySelector('.mizuna-preview-area')).toBeInTheDocument();
+      expect(document.querySelector('.mizuna-main-textarea')).toBeInTheDocument();
+      expect(document.querySelector('.mfm-shake')).toBeInTheDocument();
+      expect(document.querySelector('.mfm-shake')?.textContent).toBe('text');
+
+      // プレビュー表示中に入力内容を変更すると、プレビューがリアルタイム更新されること
+      fireEvent.input(textarea, { target: { value: '$[shake リアルタイム更新]' } });
+      expect(document.querySelector('.mfm-shake')?.textContent).toBe('リアルタイム更新');
+
+      // from Mizuna トグルを有効にした場合、本文プレビュー要素内に (from Mizuna) が含まれること
+      const endMizunaBtn = document.getElementById('note_end_mizuna_checkbox') as HTMLButtonElement;
+      fireEvent.click(endMizunaBtn);
+      expect(document.querySelector('.mizuna-preview-content')?.textContent).toContain('(from Mizuna)');
+
+      // トグルボタンを再度押すとプレビューエリアが非表示になること
+      fireEvent.click(previewBtn);
+      expect(document.querySelector('.mizuna-preview-area')).not.toBeInTheDocument();
+      expect(document.querySelector('.mizuna-main-textarea')).toBeInTheDocument();
+    });
+
+    it('テキストエリアで $[ と入力したときにMFM予測変換ポップアップが表示され、Enterまたはクリックで補完されること', async () => {
+      render(() => (
+        <AppProvider>
+          <NoteView />
+        </AppProvider>
+      ));
+
+      const textarea = screen.getByPlaceholderText(/(いまどうしてる？|What's happening)/i) as HTMLTextAreaElement;
+
+      // $[ と入力
+      fireEvent.input(textarea, { target: { value: '$[' } });
+
+      // 予測変換ポップアップが表示されていること
+      const popup = screen.getByRole('listbox', { name: 'MFM Suggestions' });
+      expect(popup).toBeInTheDocument();
+
+      // shake 候補が存在すること
+      expect(screen.getByText('$[shake]')).toBeInTheDocument();
+
+      // Enterキーで一番目の候補（shake）を選択確定
+      fireEvent.keyDown(textarea, { key: 'Enter' });
+
+      // ポップアップが消え、テキストエリアに $[shake テキスト] が展開されること
+      expect(document.querySelector('.mizuna-mfm-autocomplete-popup')).not.toBeInTheDocument();
+      expect(textarea.value).toBe('$[shake テキスト]');
     });
   });
 });

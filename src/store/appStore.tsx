@@ -137,6 +137,8 @@ interface AppContextValue {
   removeAttachedImage: (id: string) => void;
   updateAttachedImage: (id: string, file: File, editState?: ImageEditState) => void;
   revertAttachedImage: (id: string) => void;
+  reorderAttachedImages: (newOrderedIds: string[]) => void;
+  moveAttachedImage: (id: string, direction: -1 | 1) => void;
   clearNoteForm: (showNotification?: boolean) => void;
 
   // アカウント・設定操作
@@ -166,6 +168,8 @@ interface AppContextValue {
   hasPendingUpdate: Accessor<boolean>;
   availableUpdateVersion: Accessor<string | null>;
   isCheckingUpdate: Accessor<boolean>;
+  updateCheckStatus: Accessor<'idle' | 'checking' | 'latest' | 'update_available' | 'error'>;
+  resetUpdateCheckStatus: () => void;
   showUpdateBanner: Accessor<boolean>;
   dismissUpdateBanner: () => void;
   promptUpdateDialog: (worker?: ServiceWorker | null, forceDialog?: boolean) => void;
@@ -312,6 +316,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   const [hasPendingUpdate, setHasPendingUpdate] = createSignal(false);
   const [availableUpdateVersion, setAvailableUpdateVersion] = createSignal<string | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = createSignal(false);
+  const [updateCheckStatus, setUpdateCheckStatus] = createSignal<'idle' | 'checking' | 'latest' | 'update_available' | 'error'>('idle');
   const [isApplyingUpdate, setIsApplyingUpdate] = createSignal(false);
   const [showUpdateBanner, setShowUpdateBanner] = createSignal(false);
   let activeSwRegistration: ServiceWorkerRegistration | null = null;
@@ -358,7 +363,7 @@ export function AppProvider(props: { children: JSX.Element }) {
       const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-cache' });
       if (!res.ok) {
         if (!silent) {
-          showToast(translate('update.failed', undefined, settings().language as any), 'error');
+          setUpdateCheckStatus('error');
         }
         return false;
       }
@@ -370,6 +375,7 @@ export function AppProvider(props: { children: JSX.Element }) {
           setHasPendingUpdate(true);
           setShowUpdateBanner(true);
           if (!silent) {
+            setUpdateCheckStatus('update_available');
             promptUpdateDialog(null, true);
           }
           return true;
@@ -377,14 +383,14 @@ export function AppProvider(props: { children: JSX.Element }) {
           setHasPendingUpdate(false);
           setShowUpdateBanner(false);
           if (!silent) {
-            showToast(translate('update.up_to_date', undefined, settings().language as any), 'info');
+            setUpdateCheckStatus('latest');
           }
           return false;
         }
       }
     } catch {
       if (!silent) {
-        showToast(translate('update.failed', undefined, settings().language as any), 'error');
+        setUpdateCheckStatus('error');
       }
     }
     return false;
@@ -456,7 +462,11 @@ export function AppProvider(props: { children: JSX.Element }) {
 
     // アップデート適用直後フラグを保存（リロード後にリリースノートを自動表示するため）
     safeLocalStorage.setItem('mizuna_show_release_notes_after_update', 'true');
-    showToast('最新版をダウンロードして適用しています...', 'info');
+    showToast('最新版を適用しています...', 'info');
+
+    const doReload = () => {
+      window.location.reload();
+    };
 
     const worker = waitingWorker() || activeSwRegistration?.waiting;
     if (worker) {
@@ -465,53 +475,74 @@ export function AppProvider(props: { children: JSX.Element }) {
       } catch (err) {
         console.error('SKIP_WAITING postMessage error:', err);
       }
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
+      setTimeout(doReload, 600);
       return;
     }
 
     // 待機中ワーカーがまだダウンロードされていない場合、手動で Service Worker の更新を開始
     try {
-      const reg = activeSwRegistration || (await navigator.serviceWorker.getRegistration());
-      if (reg) {
+      if ('serviceWorker' in navigator && navigator.serviceWorker) {
         let resolved = false;
-        const onStateChange = (w: ServiceWorker) => {
-          if (w.state === 'installed') {
-            resolved = true;
-            try {
-              w.postMessage({ type: 'SKIP_WAITING' });
-            } catch {}
-            setTimeout(() => window.location.reload(), 500);
-          }
+
+        const handleInstalledWorker = (w: ServiceWorker) => {
+          if (resolved) return;
+          resolved = true;
+          try {
+            w.postMessage({ type: 'SKIP_WAITING' });
+          } catch {}
+          setTimeout(doReload, 500);
         };
 
-        reg.addEventListener?.('updatefound', () => {
-          const installing = reg.installing;
-          if (installing) {
-            installing.addEventListener('statechange', () => onStateChange(installing));
-          }
-        });
+        // updateViaCache: 'none' を指定してブラウザの HTTP キャッシュをバイパスし、確実に最新の sw.js を取得
+        const reg =
+          (await navigator.serviceWorker.register?.('/sw.js', { updateViaCache: 'none' })) ||
+          activeSwRegistration ||
+          (await navigator.serviceWorker.getRegistration?.());
 
-        if (reg.installing) {
-          reg.installing.addEventListener?.('statechange', () => onStateChange(reg.installing!));
+        if (reg) {
+          if (reg.waiting) {
+            handleInstalledWorker(reg.waiting);
+            return;
+          }
+
+          const onStateChange = (w: ServiceWorker) => {
+            if (w.state === 'installed') {
+              handleInstalledWorker(w);
+            }
+          };
+
+          reg.addEventListener?.('updatefound', () => {
+            const installing = reg.installing;
+            if (installing) {
+              installing.addEventListener('statechange', () => onStateChange(installing));
+            }
+          });
+
+          if (reg.installing) {
+            reg.installing.addEventListener?.('statechange', () => onStateChange(reg.installing!));
+          }
+
+          await reg.update?.();
+
+          if (reg.waiting) {
+            handleInstalledWorker(reg.waiting);
+            return;
+          }
+
+          // 3秒経ってもイベントが完了しない場合のフォールバック（リロード）
+          setTimeout(() => {
+            if (!resolved) {
+              doReload();
+            }
+          }, 3000);
+          return;
         }
-
-        await reg.update();
-
-        // 3秒経っても完了イベントが発火しない場合のフォールバック（リロード）
-        setTimeout(() => {
-          if (!resolved) {
-            window.location.reload();
-          }
-        }, 3000);
-        return;
       }
     } catch (e) {
       console.error('applyPendingUpdate error:', e);
     }
 
-    window.location.reload();
+    doReload();
   };
 
   /**
@@ -520,13 +551,17 @@ export function AppProvider(props: { children: JSX.Element }) {
   const checkForUpdate = async () => {
     if (isCheckingUpdate()) return;
     setIsCheckingUpdate(true);
-    showToast(translate('update.checking', undefined, settings().language as any), 'info');
+    setUpdateCheckStatus('checking');
 
     try {
       await checkVersionOnServer(false);
     } finally {
       setIsCheckingUpdate(false);
     }
+  };
+
+  const resetUpdateCheckStatus = () => {
+    setUpdateCheckStatus('idle');
   };
 
   const setCurrentView = (view: ViewType) => {
@@ -1240,6 +1275,34 @@ export function AppProvider(props: { children: JSX.Element }) {
     });
   };
 
+  const reorderAttachedImages = (newOrderedIds: string[]) => {
+    setAttachedImages((prev) => {
+      const map = new Map(prev.map((item) => [item.id, item]));
+      const next: AttachedImageItem[] = [];
+      for (const id of newOrderedIds) {
+        const item = map.get(id);
+        if (item) next.push(item);
+      }
+      for (const item of prev) {
+        if (!next.some((x) => x.id === item.id)) next.push(item);
+      }
+      return next;
+    });
+  };
+
+  const moveAttachedImage = (id: string, direction: -1 | 1) => {
+    setAttachedImages((prev) => {
+      const index = prev.findIndex((item) => item.id === id);
+      if (index === -1) return prev;
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= prev.length) return prev;
+      const next = [...prev];
+      const [removed] = next.splice(index, 1);
+      next.splice(newIndex, 0, removed);
+      return next;
+    });
+  };
+
   const clearNoteForm = (showNotification = true) => {
     clearWebShareTargetStorage();
     setCwText('');
@@ -1676,6 +1739,8 @@ export function AppProvider(props: { children: JSX.Element }) {
     removeAttachedImage,
     updateAttachedImage,
     revertAttachedImage,
+    reorderAttachedImages,
+    moveAttachedImage,
     clearNoteForm,
     switchAccount,
     deleteSelectedAccounts,
@@ -1699,6 +1764,8 @@ export function AppProvider(props: { children: JSX.Element }) {
     hasPendingUpdate,
     availableUpdateVersion,
     isCheckingUpdate,
+    updateCheckStatus,
+    resetUpdateCheckStatus,
     showUpdateBanner,
     dismissUpdateBanner,
     promptUpdateDialog,

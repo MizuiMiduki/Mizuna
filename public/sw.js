@@ -1,6 +1,6 @@
 // Mizuna Service Worker - App Cache & Controlled Update
-const SW_VERSION = '3.13.1';
-const CACHE_NAME = 'mizuna-cache-v3.13.1';
+const SW_VERSION = '3.14.0';
+const CACHE_NAME = 'mizuna-cache-v3.14.0';
 const OFFLINE_URL = '/offline.html';
 
 // 事前キャッシュするコアアセット
@@ -13,12 +13,14 @@ const PRECACHE_ASSETS = [
   OFFLINE_URL,
 ];
 
-// インストール: コアアセットをキャッシュ。
+// インストール: コアアセットをキャッシュ
 // ※ユーザーが選択するまでアップデートを適用しないため、自動での self.skipWaiting() は行わない
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
+      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
+        console.warn('Precache partial fallback warning:', err);
+      });
     })
   );
 });
@@ -88,9 +90,9 @@ self.addEventListener('fetch', (event) => {
       (async () => {
         const cache = await caches.open(CACHE_NAME);
 
-        // まず現在のバージョンキャッシュから HTML を探す（通信量 0 で即座に表示）
-        const cachedResponse =
-          (await cache.match(request)) ||
+        // 1. まず現在のバージョンキャッシュから HTML を探す（クエリ付きでも ignoreSearch で確実にヒット）
+        let cachedResponse =
+          (await cache.match(request, { ignoreSearch: true })) ||
           (await cache.match('/index.html')) ||
           (await cache.match('/'));
 
@@ -98,7 +100,17 @@ self.addEventListener('fetch', (event) => {
           return cachedResponse;
         }
 
-        // キャッシュにない場合（初回インストール時など）のみネットワークから取得
+        // 2. なければ過去バージョンのキャッシュも含めて全キャッシュを検索（真っ白画面を絶対に防止）
+        cachedResponse =
+          (await caches.match(request, { ignoreSearch: true })) ||
+          (await caches.match('/index.html')) ||
+          (await caches.match('/'));
+
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        // 3. キャッシュにない場合（初回インストール時など）のみネットワークから取得
         try {
           const networkResponse = await fetch(request);
           if (networkResponse && networkResponse.status === 200) {
@@ -106,11 +118,17 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         } catch (error) {
-          // オフライン時: キャッシュされた最新HTML、またはオフライン専用画面を返却
+          // オフライン時: キャッシュされたオフライン画面を返却
           const offlineFallback =
             (await cache.match(OFFLINE_URL)) ||
             (await caches.match(OFFLINE_URL));
-          return offlineFallback || Response.error();
+          if (offlineFallback) return offlineFallback;
+
+          // 最後の安全策: 空画面/エラー画面にならず、即時再読み込みできる軽量HTMLを返す
+          return new Response(
+            '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mizuna</title><style>body{font-family:sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafe;color:#181c20;text-align:center;padding:20px;}button{padding:12px 24px;border-radius:999px;border:none;background:#2b8cbe;color:#fff;font-weight:bold;cursor:pointer;margin-top:16px;}</style></head><body><h2>Mizuna</h2><p>接続を確認して再読み込みしてください</p><button onclick="location.reload()">再読み込み</button></body></html>',
+            { headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+          );
         }
       })()
     );
@@ -122,25 +140,33 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
-      const cachedResponse = await cache.match(request);
+
+      // 1. まず現在のバージョンキャッシュから探す
+      let cachedResponse = await cache.match(request);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      // 2. 全キャッシュを検索（アップデート直後などで別バージョンのキャッシュにある場合も活用）
+      cachedResponse = await caches.match(request);
       if (cachedResponse) {
         return cachedResponse;
       }
 
       try {
         const networkResponse = await fetch(request);
-        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
-          const responseToCache = networkResponse.clone();
-          cache.put(request, responseToCache);
+        if (networkResponse && networkResponse.status === 200) {
+          cache.put(request, networkResponse.clone());
         }
         return networkResponse;
       } catch (error) {
         // オフライン時の事前キャッシュフォールバック（例: /icon.png）
-        if (PRECACHE_ASSETS.includes(url.pathname)) {
-          const fallback = await cache.match(url.pathname);
-          if (fallback) return fallback;
-        }
-        return Response.error();
+        const fallback =
+          (await cache.match(url.pathname)) ||
+          (await caches.match(url.pathname));
+        if (fallback) return fallback;
+
+        return new Response('', { status: 408, statusText: 'Request Timed Out' });
       }
     })()
   );

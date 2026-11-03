@@ -461,6 +461,7 @@ body {
    ※ 入力中のGPU再描画・バッテリー消費を抑えるため backdrop-filter を使用せず高品位ソリッドサーフェスを採用
    ========================================= */
 .mizuna-studio-composer {
+  position: relative;
   background: var(--surface-container-low);
   border-radius: var(--mizuna-radius-xl);
   border: 1px solid color-mix(in srgb, var(--primary) 22%, color-mix(in srgb, var(--outline-variant) 55%, transparent));
@@ -693,7 +694,83 @@ body {
 
 /* メインテキストエディタ */
 .mizuna-editor-body {
+  position: relative;
   padding: 18px 20px 12px;
+}
+
+/* MFM 予測変換（オートコンプリート）サジェストポップアップ */
+.mizuna-mfm-autocomplete-popup {
+  position: absolute;
+  /* top, left はカーソル（入力位置）直下に動的配置 */
+  width: max-content;
+  min-width: 110px;
+  max-width: min(180px, calc(100% - 24px));
+  z-index: 100;
+  background: var(--surface, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  border-radius: var(--mizuna-radius-md, 10px);
+  box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 130px;
+  backdrop-filter: blur(12px);
+  animation: mizuna-popup-appear 0.12s cubic-bezier(0.2, 0, 0, 1);
+  pointer-events: auto;
+}
+
+@keyframes mizuna-popup-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.mizuna-mfm-ac-list {
+  overflow-y: auto;
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 124px;
+  scrollbar-width: thin;
+}
+
+.mizuna-mfm-ac-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+  user-select: none;
+}
+
+.mizuna-mfm-ac-item.is-selected {
+  background: color-mix(in srgb, var(--primary, #2b8cbe) 15%, transparent);
+}
+
+.mizuna-mfm-ac-item:hover {
+  background: color-mix(in srgb, var(--primary, #2b8cbe) 10%, transparent);
+}
+
+.mizuna-mfm-ac-icon {
+  font-size: 14px;
+  color: var(--primary, #2b8cbe);
+  flex-shrink: 0;
+}
+
+.mizuna-mfm-ac-tag {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--primary, #2b8cbe);
+  white-space: nowrap;
 }
 
 .mizuna-main-textarea {
@@ -768,6 +845,10 @@ body {
   cursor: pointer;
   border: 1px solid color-mix(in srgb, var(--outline-variant) 70%, transparent);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  touch-action: pan-x pan-y;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .mizuna-media-item img {
@@ -839,6 +920,20 @@ body {
     color: #fff !important;
     transform: scale(1.1);
   }
+}
+
+/* サムネイルのドラッグ中・ドロップターゲット状態 */
+.mizuna-media-item.is-dragging {
+  opacity: 0.7;
+  transform: scale(1.06);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  z-index: 5;
+}
+
+.mizuna-media-item.is-drag-over {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary), 0 8px 24px color-mix(in srgb, var(--primary) 25%, transparent);
+  transform: scale(0.95);
 }
 
 .mizuna-media-edit:active {
@@ -1235,12 +1330,14 @@ body {
   user-select: none;
   -webkit-user-select: none;
   overflow: hidden;
+  touch-action: none;
   animation: mizuna-lightbox-fade-in 0.22s ease-out;
 }
 
 /* メイン画像ステージ */
 .mizuna-lightbox-stage {
   flex: 1;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1249,6 +1346,29 @@ body {
   padding: max(20px, calc(14px + env(safe-area-inset-top, 0px))) 16px 10px;
   box-sizing: border-box;
   overflow: hidden;
+  cursor: zoom-out;
+  touch-action: none;
+}
+
+.mizuna-lightbox-track {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  height: 100%;
+  align-items: center;
+  touch-action: none;
+  will-change: transform;
+}
+
+.mizuna-lightbox-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0 4px;
   cursor: zoom-out;
 }
 
@@ -1264,7 +1384,66 @@ body {
     0 24px 64px -12px rgba(0, 0, 0, 0.4),
     0 4px 16px rgba(0, 0, 0, 0.12);
   cursor: default;
-  animation: mizuna-lightbox-img-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: auto;
+}
+
+/* 複数画像プレビュー時の左右ナビゲーションボタン（位置がブレず固定） */
+.mizuna-lightbox-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  z-index: 10;
+  border-radius: 50% !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  background: rgba(15, 20, 25, 0.68) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #ffffff !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+.mizuna-lightbox-nav-btn i {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.mizuna-lightbox-nav-btn.is-prev {
+  left: max(14px, env(safe-area-inset-left, 0px));
+}
+
+.mizuna-lightbox-nav-btn.is-next {
+  right: max(14px, env(safe-area-inset-right, 0px));
+}
+
+@media (hover: hover) {
+  .mizuna-lightbox-nav-btn:hover {
+    background: var(--primary) !important;
+    color: var(--on-primary) !important;
+    transform: translateY(-50%) scale(1.08);
+  }
+}
+
+.mizuna-lightbox-nav-btn:active {
+  transform: translateY(-50%) scale(0.92);
 }
 
 /* ボトムバー (フローティング アイランド コントロールバー) */
@@ -1282,6 +1461,7 @@ body {
 .mizuna-lightbox-bottombar-inner {
   width: 100%;
   max-width: 680px;
+  min-height: 60px;
   pointer-events: auto;
   display: flex;
   align-items: center;
@@ -1305,6 +1485,27 @@ body {
   gap: 3px;
   min-width: 0;
   flex: 1;
+}
+
+.mizuna-lightbox-filename-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mizuna-lightbox-order-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 38%, transparent);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .mizuna-lightbox-filename {
@@ -2781,6 +2982,75 @@ body.dark .mizuna-custom-css-warnings {
   flex-wrap: wrap;
 }
 
+.mizuna-about-update-status {
+  margin-top: 4px;
+}
+
+.mizuna-about-update-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: none;
+  padding: 2px 6px;
+  margin-left: -6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--on-surface-variant);
+  border-radius: var(--mizuna-radius-xs);
+  cursor: pointer;
+  transition: color 0.18s ease, background-color 0.18s ease, opacity 0.18s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mizuna-about-update-link i {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.mizuna-about-update-link:hover:not(:disabled) {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+}
+
+.mizuna-about-update-link:disabled {
+  cursor: default;
+  opacity: 0.85;
+}
+
+.mizuna-about-update-link.is-up-to-date {
+  color: var(--on-surface-variant);
+}
+
+.mizuna-about-update-link.is-up-to-date .mizuna-check-icon {
+  color: #10b981;
+  font-size: 1.05rem;
+}
+
+.mizuna-about-update-link.is-up-to-date:hover {
+  color: var(--on-surface);
+}
+
+.mizuna-about-update-link.is-error {
+  color: #ef4444;
+}
+
+.mizuna-about-update-link.is-error .mizuna-error-icon {
+  color: #ef4444;
+  font-size: 1.05rem;
+}
+
+.mizuna-about-update-link.is-update-ready {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.mizuna-about-update-link.is-update-ready i {
+  color: var(--primary);
+  font-size: 1.05rem;
+}
+
 .mizuna-meta-row {
   display: flex;
   align-items: center;
@@ -3148,11 +3418,21 @@ body.dark .mizuna-custom-css-warnings {
   content: none !important;
 }
 
-/* ホバー時（非アクティブ時のみ背景を軽く表示） */
-.mizuna-dock-avatar-btn:hover:not(.is-active),
-.mizuna-m3e-item:hover:not(.is-active) {
-  background: color-mix(in srgb, var(--on-surface) 6%, transparent) !important;
-  color: var(--on-surface) !important;
+/* ホバー時（非アクティブ時のみ背景を軽く表示、タッチ端末の擬似ホバー残存を防ぐため hover: hover かつ pointer: fine のみ適用） */
+@media (hover: hover) and (pointer: fine) {
+  .mizuna-floating-dock:not(.is-dragging):not(.is-swiping) .mizuna-dock-avatar-btn:hover:not(.is-active),
+  .mizuna-floating-dock:not(.is-dragging):not(.is-swiping) .mizuna-m3e-item:hover:not(.is-active) {
+    background: color-mix(in srgb, var(--on-surface) 6%, transparent) !important;
+    color: var(--on-surface) !important;
+  }
+}
+
+/* スワイプ中・スワイプ直後、またはホバー非対応デバイスではホバー背景を一切無効化 */
+.mizuna-floating-dock.is-dragging .mizuna-dock-avatar-btn,
+.mizuna-floating-dock.is-dragging .mizuna-m3e-item,
+.mizuna-floating-dock.is-swiping .mizuna-dock-avatar-btn,
+.mizuna-floating-dock.is-swiping .mizuna-m3e-item {
+  background: transparent !important;
 }
 
 .mizuna-dock-avatar-btn.is-active,
@@ -5870,6 +6150,608 @@ body.is-simple-mode .mizuna-lightbox-action-btn {
   border-color: var(--primary, #38bdf8);
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent);
 }
+
+/* ==========================================================================
+   MFM (Misskey Flavored Markdown) & Note Preview Styles (v3.14.0)
+   ========================================================================== */
+
+/* エフェクトキーフレーム (Misskey 本家準拠) */
+
+/* ==========================================================================
+   MFM (Misskey Flavored Markdown) Official Keyframes & Styles
+   Misskey公式 (misskey-dev/misskey) 完全準拠
+   ========================================================================== */
+
+@keyframes global-tada {
+  from {
+    transform: scale3d(1, 1, 1);
+  }
+  10%,
+  20% {
+    transform: scale3d(0.91, 0.91, 0.91) rotate3d(0, 0, 1, -2deg);
+  }
+  30%,
+  70% {
+    transform: scale3d(1.09, 1.09, 1.09) rotate3d(0, 0, 1, 2deg);
+  }
+  50%,
+  90% {
+    transform: scale3d(1.09, 1.09, 1.09) rotate3d(0, 0, 1, -2deg);
+  }
+  to {
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes mfm-rubberBand {
+  from { transform: scale3d(1, 1, 1); }
+  30% { transform: scale3d(1.25, 0.75, 1); }
+  40% { transform: scale3d(0.75, 1.25, 1); }
+  50% { transform: scale3d(1.15, 0.85, 1); }
+  65% { transform: scale3d(0.95, 1.05, 1); }
+  75% { transform: scale3d(1.05, 0.95, 1); }
+  to { transform: scale3d(1, 1, 1); }
+}
+
+@keyframes mfm-twitch {
+  0% { transform: translate(7px, -2px); }
+  5% { transform: translate(-3px, 1px); }
+  10% { transform: translate(-7px, -1px); }
+  15% { transform: translate(0px, -1px); }
+  20% { transform: translate(-8px, 6px); }
+  25% { transform: translate(-4px, -3px); }
+  30% { transform: translate(-4px, -6px); }
+  35% { transform: translate(-8px, -8px); }
+  40% { transform: translate(4px, 6px); }
+  45% { transform: translate(-3px, 1px); }
+  50% { transform: translate(2px, -10px); }
+  55% { transform: translate(-7px, 0px); }
+  60% { transform: translate(-2px, 4px); }
+  65% { transform: translate(3px, -8px); }
+  70% { transform: translate(6px, 7px); }
+  75% { transform: translate(-7px, -2px); }
+  80% { transform: translate(-7px, -8px); }
+  85% { transform: translate(9px, 3px); }
+  90% { transform: translate(-3px, -2px); }
+  95% { transform: translate(-10px, 2px); }
+  100% { transform: translate(-2px, -6px); }
+}
+
+@keyframes mfm-shake {
+  0% { transform: translate(-3px, -1px) rotate(-8deg); }
+  5% { transform: translate(0px, -1px) rotate(-10deg); }
+  10% { transform: translate(1px, -3px) rotate(0deg); }
+  15% { transform: translate(1px, 1px) rotate(11deg); }
+  20% { transform: translate(-2px, 1px) rotate(1deg); }
+  25% { transform: translate(-1px, -2px) rotate(-2deg); }
+  30% { transform: translate(-1px, 2px) rotate(-3deg); }
+  35% { transform: translate(2px, 1px) rotate(6deg); }
+  40% { transform: translate(-2px, -3px) rotate(-9deg); }
+  45% { transform: translate(0px, -1px) rotate(-12deg); }
+  50% { transform: translate(1px, 2px) rotate(10deg); }
+  55% { transform: translate(0px, -3px) rotate(8deg); }
+  60% { transform: translate(1px, -1px) rotate(8deg); }
+  65% { transform: translate(0px, -1px) rotate(-7deg); }
+  70% { transform: translate(-1px, -3px) rotate(6deg); }
+  75% { transform: translate(0px, -2px) rotate(4deg); }
+  80% { transform: translate(-2px, -1px) rotate(3deg); }
+  85% { transform: translate(1px, -3px) rotate(-10deg); }
+  90% { transform: translate(1px, 0px) rotate(3deg); }
+  95% { transform: translate(-2px, 0px) rotate(-3deg); }
+  100% { transform: translate(2px, 1px) rotate(2deg); }
+}
+
+@keyframes mfm-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes mfm-spinX {
+  0% { transform: perspective(128px) rotateX(0deg); }
+  100% { transform: perspective(128px) rotateX(360deg); }
+}
+
+@keyframes mfm-spinY {
+  0% { transform: perspective(128px) rotateY(0deg); }
+  100% { transform: perspective(128px) rotateY(360deg); }
+}
+
+@keyframes mfm-jump {
+  0% { transform: translateY(0); }
+  25% { transform: translateY(-16px); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(-8px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes mfm-bounce {
+  0% { transform: translateY(0) scale(1, 1); }
+  25% { transform: translateY(-16px) scale(1, 1); }
+  50% { transform: translateY(0) scale(1, 1); }
+  75% { transform: translateY(0) scale(1.5, 0.75); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+
+@keyframes mfm-rainbow {
+  0% {
+    filter: hue-rotate(0deg) contrast(150%) saturate(150%);
+    color: #ff2a2a;
+  }
+  17% {
+    filter: hue-rotate(60deg) contrast(150%) saturate(150%);
+    color: #ff9900;
+  }
+  33% {
+    filter: hue-rotate(120deg) contrast(150%) saturate(150%);
+    color: #d4dd00;
+  }
+  50% {
+    filter: hue-rotate(180deg) contrast(150%) saturate(150%);
+    color: #00dd77;
+  }
+  67% {
+    filter: hue-rotate(240deg) contrast(150%) saturate(150%);
+    color: #0088ff;
+  }
+  83% {
+    filter: hue-rotate(300deg) contrast(150%) saturate(150%);
+    color: #aa22ff;
+  }
+  100% {
+    filter: hue-rotate(360deg) contrast(150%) saturate(150%);
+    color: #ff2a2a;
+  }
+}
+
+/* MFM クラス定義 */
+._mfm_blur_ {
+  filter: blur(6px);
+  transition: filter 0.3s;
+  cursor: pointer;
+}
+
+._mfm_blur_:hover,
+._mfm_blur_:focus,
+._mfm_blur_:active {
+  filter: blur(0px);
+}
+
+.mfm-x2 {
+  --mfm-zoom-size: 200%;
+  font-size: var(--mfm-zoom-size);
+}
+
+.mfm-x3 {
+  --mfm-zoom-size: 400%;
+  font-size: var(--mfm-zoom-size);
+}
+
+.mfm-x4 {
+  --mfm-zoom-size: 600%;
+  font-size: var(--mfm-zoom-size);
+}
+
+/* 後方互換クラス（HTML直書き用フォールバック） */
+.mfm-shake {
+  display: inline-block;
+  transform-origin: center center;
+  animation: mfm-shake 0.5s ease infinite;
+}
+
+.mfm-bounce {
+  display: inline-block;
+  transform-origin: center bottom;
+  animation: mfm-bounce 0.75s linear infinite;
+}
+
+.mfm-jump {
+  display: inline-block;
+  transform-origin: bottom center;
+  animation: mfm-jump 0.75s linear infinite;
+}
+
+.mfm-jelly {
+  display: inline-block;
+  transform-origin: center center;
+  animation: mfm-rubberBand 1s linear infinite both;
+}
+
+.mfm-twitch {
+  display: inline-block;
+  transform-origin: center center;
+  animation: mfm-twitch 0.5s ease infinite;
+}
+
+.mfm-spin {
+  display: inline-block;
+  transform-origin: center center;
+  animation: mfm-spin 1.5s linear infinite;
+}
+
+.mfm-rainbow {
+  display: inline-block;
+  animation: mfm-rainbow 1s linear infinite;
+}
+
+.mfm-tada {
+  display: inline-block;
+  font-size: 150%;
+  transform-origin: center center;
+  animation: global-tada 1s linear infinite both;
+}
+
+.mfm-blur {
+  display: inline-block;
+  filter: blur(6px);
+  transition: filter 0.3s ease;
+  cursor: pointer;
+  user-select: none;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 0 4px;
+  border-radius: 4px;
+}
+
+.mfm-blur:hover,
+.mfm-blur:focus,
+.mfm-blur:active {
+  filter: blur(0);
+  background: transparent;
+  user-select: auto;
+}
+
+.mfm-flip {
+  display: inline-block;
+  transform: scaleX(-1);
+}
+
+.mfm-flip-v {
+  display: inline-block;
+  transform: scaleY(-1);
+}
+
+.mfm-fg,
+.mfm-bg {
+  display: inline;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.mfm-code-block {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.88em;
+  line-height: 1.45;
+  overflow-x: auto;
+  margin: 8px 0;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.mfm-inline-code {
+  background: rgba(0, 0, 0, 0.08);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.mfm-quote {
+  margin: 6px 0;
+  padding: 4px 0 4px 12px;
+  border-left: 3px solid var(--primary, #2b8cbe);
+  opacity: 0.88;
+  font-style: normal;
+}
+
+.mfm-link {
+  color: var(--primary, #2b8cbe);
+  text-decoration: underline;
+  word-break: break-all;
+}
+
+.mfm-mention,
+.mfm-hashtag {
+  color: var(--primary, #2b8cbe);
+  font-weight: 500;
+}
+
+ruby {
+  ruby-align: center;
+}
+
+ruby > rt {
+  font-size: 0.65em;
+  opacity: 0.85;
+}
+
+/* MFM ツールバー (入力補助) */
+.mizuna-composer-subbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  min-height: 40px;
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.mizuna-mfm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mizuna-mfm-toolbar::-webkit-scrollbar {
+  display: none;
+}
+
+.mizuna-mfm-toolbar-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+body.dark .mizuna-mfm-toolbar-divider {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mizuna-mfm-preview-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: var(--surface, #ffffff);
+  color: var(--text_color, #181c20);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+/* タップ・クリック可能領域を拡大して押しやすくする */
+.mizuna-mfm-preview-btn::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: -6px;
+  right: -6px;
+}
+
+.mizuna-mfm-preview-btn i {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.mizuna-mfm-preview-btn:hover {
+  border-color: var(--primary, #2b8cbe);
+  color: var(--primary, #2b8cbe);
+  background: color-mix(in srgb, var(--primary, #2b8cbe) 8%, var(--surface, #ffffff));
+}
+
+.mizuna-mfm-preview-btn:active {
+  transform: scale(0.92);
+}
+
+.mizuna-mfm-preview-btn.is-active {
+  background: color-mix(in srgb, var(--primary, #2b8cbe) 15%, var(--surface, #ffffff));
+  border-color: var(--primary, #2b8cbe);
+  color: var(--primary, #2b8cbe);
+  font-weight: 700;
+}
+
+.mizuna-mfm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 26px;
+  padding: 0 8px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: var(--surface, #ffffff);
+  color: var(--text_color, #181c20);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+.mizuna-mfm-chip:hover {
+  background: color-mix(in srgb, var(--primary, #2b8cbe) 10%, #ffffff);
+  border-color: var(--primary, #2b8cbe);
+  color: var(--primary, #2b8cbe);
+  transform: translateY(-1px);
+}
+
+.mizuna-mfm-chip:active {
+  transform: scale(0.96);
+}
+
+.mizuna-mfm-chip i {
+  font-size: 14.5px;
+}
+
+/* 編集 / プレビュー 切り替えタブ (セグメントコントロール) */
+.mizuna-composer-mode-tabs {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 3px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  gap: 2px;
+}
+
+.mizuna-composer-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  border: none;
+  background: transparent;
+  color: var(--text_color, #181c20);
+  opacity: 0.7;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.mizuna-composer-tab.is-active {
+  background: var(--surface, #ffffff);
+  color: var(--primary, #2b8cbe);
+  opacity: 1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.mizuna-composer-tab i {
+  font-size: 15px;
+}
+
+/* リアルタイムMFMプレビュー枠 */
+.mizuna-preview-area {
+  margin: 10px 16px 14px;
+  padding: 12px 14px;
+  border-radius: var(--mizuna-radius-md, 12px);
+  background: rgba(0, 0, 0, 0.025);
+  border: 1.5px dashed rgba(0, 0, 0, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+:root[data-theme='dark'] .mizuna-preview-area,
+.dark .mizuna-preview-area {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.mizuna-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme='dark'] .mizuna-preview-header,
+.dark .mizuna-preview-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.mizuna-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary, #2b8cbe);
+}
+
+.mizuna-preview-badge i {
+  font-size: 15px;
+}
+
+.mizuna-preview-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text_secondary, #666);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mizuna-preview-close-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.mizuna-preview-close-btn i {
+  font-size: 16px;
+}
+
+.mizuna-preview-cw-card {
+  padding: 10px 14px;
+  border-radius: var(--mizuna-radius-md, 12px);
+  background: rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mizuna-preview-cw-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text_color, #181c20);
+  word-break: break-all;
+}
+
+.mizuna-preview-cw-text i {
+  font-size: 18px;
+  color: #ea580c;
+  flex-shrink: 0;
+}
+
+.mizuna-preview-cw-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: var(--surface, #ffffff);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mizuna-preview-content {
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: var(--text_color, #181c20);
+  word-break: break-word;
+}
+
+.mizuna-preview-empty {
+  font-size: 0.88rem;
+  color: rgba(0, 0, 0, 0.4);
+  font-style: italic;
+}
+
 
 
 

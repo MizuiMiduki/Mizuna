@@ -1,7 +1,7 @@
 {
   "name": "mizuna",
   "private": true,
-  "version": "3.13.1",
+  "version": "3.14.0",
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "scripts": {
@@ -17,6 +17,7 @@
     "dexie": "^4.0.11",
     "gsap": "^3.12.7",
     "material-dynamic-colors": "^1.1.2",
+    "mfm-js": "^0.28.0",
     "pulltorefreshjs": "^0.1.22",
     "solid-js": "^1.9.4"
   },

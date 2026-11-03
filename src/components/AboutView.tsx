@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { For, onMount, Show } from 'solid-js';
+import { For, onMount, onCleanup, Show } from 'solid-js';
 import { mizuna_options, mizuna_share } from '../config/mizunaOptions';
 import { useApp } from '../store/appStore';
 import { FloatingBackButton } from './FloatingBackButton';
@@ -30,6 +30,20 @@ const OSS_LICENSES = [
     url: 'https://dexie.org/',
   },
   {
+    name: 'mfm-js',
+    license: 'MIT License',
+    copyright: 'Copyright (c) Marihachi / misskey-dev',
+    url: 'https://github.com/misskey-dev/mfm.js',
+    description: 'Misskey公式 MFM (Misskey Flavored Markdown) パーサー',
+  },
+  {
+    name: 'Misskey (MFM Animations & Spec)',
+    license: 'AGPL-3.0 (Reference & Compatibility)',
+    copyright: 'Copyright (c) syuilo and misskey-project',
+    url: 'https://github.com/misskey-dev/misskey',
+    description: 'MFM アニメーション仕様およびキーフレーム定義の準拠・参照',
+  },
+  {
     name: 'pulltorefreshjs',
     license: 'MIT License',
     copyright: 'Copyright (c) 2017 Rafael Soto',
@@ -57,11 +71,14 @@ export function AboutView() {
     applyPendingUpdate,
     checkForUpdate,
     isCheckingUpdate,
+    updateCheckStatus,
+    resetUpdateCheckStatus,
     t,
   } = useApp();
   let containerRef: HTMLDivElement | undefined;
 
   onMount(() => {
+    resetUpdateCheckStatus();
     if (containerRef) {
       gsap.fromTo(
         containerRef,
@@ -69,6 +86,10 @@ export function AboutView() {
         { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
       );
     }
+  });
+
+  onCleanup(() => {
+    resetUpdateCheckStatus();
   });
 
   const handleBack = () => {
@@ -108,31 +129,52 @@ export function AboutView() {
               v{mizuna_options.mizuna_version}
             </span>
           </div>
-          <Show when={hasPendingUpdate()}>
-            <div style="margin-top: 6px;">
-              <button
-                type="button"
-                class="mizuna-btn mizuna-btn-tonal"
-                style="padding: 0 14px; height: 32px; font-size: 0.8rem; gap: 4px;"
-                onClick={applyPendingUpdate}
-              >
-                <i>system_update</i>
+          <div class="mizuna-about-update-status">
+            <button
+              type="button"
+              id="check_update_button"
+              class={`mizuna-about-update-link ${
+                updateCheckStatus() === 'update_available' || hasPendingUpdate()
+                  ? 'is-update-ready'
+                  : updateCheckStatus() === 'latest'
+                  ? 'is-up-to-date'
+                  : updateCheckStatus() === 'error'
+                  ? 'is-error'
+                  : ''
+              }`}
+              disabled={isCheckingUpdate()}
+              onClick={() => {
+                if (updateCheckStatus() === 'update_available' || hasPendingUpdate()) {
+                  applyPendingUpdate();
+                } else {
+                  checkForUpdate();
+                }
+              }}
+            >
+              <Show when={isCheckingUpdate()}>
+                <i class="is-spinning">sync</i>
+                <span>{t('update.checking')}</span>
+              </Show>
+              <Show when={!isCheckingUpdate() && (updateCheckStatus() === 'update_available' || hasPendingUpdate())}>
+                <i class="is-bounce">system_update</i>
                 <span>{availableUpdateVersion() ? `v${availableUpdateVersion()} に更新` : t('update.apply_now')}</span>
-              </button>
-            </div>
-          </Show>
+              </Show>
+              <Show when={!isCheckingUpdate() && updateCheckStatus() === 'latest' && !hasPendingUpdate()}>
+                <i class="mizuna-check-icon">check_circle</i>
+                <span>{t('update.up_to_date')}</span>
+              </Show>
+              <Show when={!isCheckingUpdate() && updateCheckStatus() === 'error' && !hasPendingUpdate()}>
+                <i class="mizuna-error-icon">error_outline</i>
+                <span>{t('update.failed')}</span>
+              </Show>
+              <Show when={!isCheckingUpdate() && updateCheckStatus() === 'idle' && !hasPendingUpdate()}>
+                <i>sync</i>
+                <span>{t('settings.check_button')}</span>
+              </Show>
+            </button>
+          </div>
         </div>
         <div class="mizuna-about-actions">
-          <button
-            type="button"
-            id="check_update_button"
-            class="mizuna-btn mizuna-btn-outline"
-            disabled={isCheckingUpdate()}
-            onClick={checkForUpdate}
-          >
-            <i class={isCheckingUpdate() ? 'is-spinning' : ''}>sync</i>
-            <span>{isCheckingUpdate() ? t('update.checking') : t('settings.check_button')}</span>
-          </button>
           <button
             type="button"
             class="mizuna_share mizuna-btn mizuna-btn-primary"
@@ -257,6 +299,11 @@ export function AboutView() {
                 <span class="mizuna-oss-badge">{oss.license}</span>
               </div>
               <div class="mizuna-oss-copy">{oss.copyright}</div>
+              <Show when={oss.description}>
+                <div class="mizuna-oss-desc" style="font-size: 0.8rem; opacity: 0.75; margin-top: 4px; line-height: 1.4;">
+                  {oss.description}
+                </div>
+              </Show>
             </div>
           )}
         </For>

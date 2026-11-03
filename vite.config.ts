@@ -109,6 +109,11 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       conditions: mode === 'test' ? ['development', 'browser'] : [],
+      alias: {
+        'solid-js/web': path.resolve(__dirname, 'node_modules/solid-js/web'),
+        'solid-js': path.resolve(__dirname, 'node_modules/solid-js'),
+      },
+      dedupe: ['solid-js', 'solid-js/web'],
     },
     server: {
       port: 3000,
@@ -121,9 +126,16 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       globals: true,
       setupFiles: ['./tests/setupTests.ts'],
+      deps: {
+        optimizer: {
+          web: {
+            include: ['solid-js', 'solid-js/web', '@solidjs/testing-library'],
+          },
+        },
+      },
       server: {
         deps: {
-          inline: [/solid-js/],
+          inline: [/solid-js/, /@solidjs\/testing-library/],
         },
       },
     },
