@@ -1,7 +1,7 @@
 {
   "name": "mizuna",
   "private": true,
-  "version": "3.14.0",
+  "version": "3.15.0",
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "scripts": {
@@ -13,7 +13,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "beercss": "^3.11.20",
     "dexie": "^4.0.11",
     "gsap": "^3.12.7",
     "material-dynamic-colors": "^1.1.2",

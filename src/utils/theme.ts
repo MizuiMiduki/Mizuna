@@ -1,5 +1,4 @@
-import 'beercss';
-import 'material-dynamic-colors';
+import materialDynamicColors from 'material-dynamic-colors';
 import { type SettingRecord, updateSettingDb } from '../db/database';
 import { normalizeMisskeyAvatarUrl } from './image';
 import { safeLocalStorage } from './storage';
@@ -15,8 +14,20 @@ interface ExtractedPalette {
 
 // アバターURLごとの抽出済みカラーパレットキャッシュ（通信・Canvas演算の節約）
 const memoryPaletteCache = new Map<string, ExtractedPalette>();
-let lastAppliedBeerMode: 'light' | 'dark' | null = null;
+let lastAppliedThemeMode: 'light' | 'dark' | null = null;
 let lastAppliedThemeHex: string | null = null;
+let currentDynamicTheme: any = null;
+
+function applyDynamicColorTokens(tokens: Record<string, any>): void {
+  if (typeof document === 'undefined') return;
+  const target = document.documentElement;
+  for (const [key, value] of Object.entries(tokens)) {
+    if (typeof value === 'string') {
+      const kebab = key.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
+      target.style.setProperty(`--${kebab}`, value);
+    }
+  }
+}
 
 function getCachedPalette(avatarUrl: string): ExtractedPalette | null {
   const inMem = memoryPaletteCache.get(avatarUrl);
@@ -51,12 +62,6 @@ function setCachedPalette(avatarUrl: string, palette: ExtractedPalette): void {
     safeLocalStorage.setItem(PALETTE_CACHE_STORAGE_KEY, JSON.stringify(parsed));
   } catch {
     // ストレージ書き込み失敗時は無視
-  }
-}
-
-declare global {
-  interface Window {
-    ui?: (command?: string | Element, value?: unknown) => unknown;
   }
 }
 
@@ -278,7 +283,7 @@ async function extractPaletteClientOnly(
 }
 
 /**
- * 設定と現在のアカウントアイコンに基づいてBeerCSSのモード・テーマカラーおよびCSS変数を適用する
+ * 設定と現在のアカウントアイコンに基づいてライト/ダークモードおよびMaterial 3テーマカラーCSS変数を適用する
  */
 export async function applyThemeAndMode(
   settings: SettingRecord,
@@ -292,16 +297,13 @@ export async function applyThemeAndMode(
   const isDark =
     settings.is_darkmode === 3 || (settings.is_darkmode === 2 && prefersDark);
 
-  const beerMode = isDark ? 'dark' : 'light';
+  const activeMode: 'light' | 'dark' = isDark ? 'dark' : 'light';
 
-  if (lastAppliedBeerMode !== beerMode) {
-    if (typeof window !== 'undefined' && window.ui) {
-      await window.ui('mode', beerMode);
-    } else if (typeof document !== 'undefined') {
-      document.body.classList.remove('light', 'dark');
-      document.body.classList.add(beerMode);
-    }
-    lastAppliedBeerMode = beerMode;
+  if (typeof document !== 'undefined') {
+    document.body.classList.remove('light', 'dark');
+    document.body.classList.add(activeMode);
+    document.documentElement.classList.remove('light', 'dark');
+    document.documentElement.classList.add(activeMode);
   }
 
   // 2. テーマカラーの適用
@@ -311,10 +313,12 @@ export async function applyThemeAndMode(
 
   if (!settings.is_visible_icon || !settings.is_pick_theme_color) {
     themeHex = DEFAULT_MIZUNA_HEX;
-    document.documentElement.style.setProperty('--main_color', isDark ? 'darkblue' : 'lightblue');
-    document.documentElement.style.setProperty('--background_color', isDark ? '#101418' : '#f8fafe');
-    document.documentElement.style.setProperty('--text_color', isDark ? '#e0e3e8' : '#181c20');
-    document.documentElement.style.setProperty('--button_text_color', isDark ? '#ffffff' : '#181c20');
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty('--main_color', isDark ? 'darkblue' : 'lightblue');
+      document.documentElement.style.setProperty('--background_color', isDark ? '#101418' : '#f8fafe');
+      document.documentElement.style.setProperty('--text_color', isDark ? '#e0e3e8' : '#181c20');
+      document.documentElement.style.setProperty('--button_text_color', isDark ? '#ffffff' : '#181c20');
+    }
 
     if (!settings.is_visible_icon) {
       updatedLatestColors = ['lightblue', 'black', 'black'];
@@ -322,7 +326,7 @@ export async function applyThemeAndMode(
     }
   } else {
     // キャッシュ済みの色をまず即座に適用
-    if (settings.latest_theme_color?.[0]) {
+    if (settings.latest_theme_color?.[0] && typeof document !== 'undefined') {
       themeHex = parseColorToHex(settings.latest_theme_color[0]);
       document.documentElement.style.setProperty('--main_color', settings.latest_theme_color[0]);
       document.documentElement.style.setProperty('--text_color', settings.latest_theme_color[1] ?? 'black');
@@ -342,12 +346,14 @@ export async function applyThemeAndMode(
           extracted.darkRgb,
           extracted.darkRgb,
         ];
-        document.documentElement.style.setProperty('--main_color', extracted.lightRgb);
-        document.documentElement.style.setProperty('--text_color', extracted.darkRgb);
-        document.documentElement.style.setProperty(
-          '--button_text_color',
-          isDark ? 'white' : extracted.darkRgb
-        );
+        if (typeof document !== 'undefined') {
+          document.documentElement.style.setProperty('--main_color', extracted.lightRgb);
+          document.documentElement.style.setProperty('--text_color', extracted.darkRgb);
+          document.documentElement.style.setProperty(
+            '--button_text_color',
+            isDark ? 'white' : extracted.darkRgb
+          );
+        }
         if (
           settings.latest_theme_color?.[0] !== nextColors[0] ||
           settings.latest_theme_color?.[1] !== nextColors[1]
@@ -361,15 +367,40 @@ export async function applyThemeAndMode(
     }
   }
 
-  // テーマカラーが変化したときのみ Material Dynamic Colors の再計算を実行（CPU/DOM負荷の軽減）
-  if (typeof window !== 'undefined' && window.ui && lastAppliedThemeHex !== themeHex) {
+  // テーマカラーまたはモード変更時に Material Dynamic Colors のトークンを直接DOMへ適用
+  if (lastAppliedThemeHex !== themeHex || lastAppliedThemeMode !== activeMode || !currentDynamicTheme) {
     try {
-      await window.ui('theme', themeHex);
+      if (typeof materialDynamicColors === 'function') {
+        const theme = await materialDynamicColors(themeHex);
+        if (theme && theme[activeMode]) {
+          currentDynamicTheme = theme;
+          applyDynamicColorTokens(theme[activeMode]);
+        }
+      }
       lastAppliedThemeHex = themeHex;
+      lastAppliedThemeMode = activeMode;
     } catch (e) {
-      console.warn('BeerCSS theme update skipped:', e);
+      console.warn('Material dynamic colors update skipped:', e);
     }
   }
 
   return updatedLatestColors;
+}
+
+/**
+ * デバッグ用またはカスタム指定されたテーマカラーを直接適用する
+ */
+export async function applyCustomThemeColor(hex: string, isDark?: boolean): Promise<void> {
+  const mode = (isDark !== undefined ? isDark : document.body.classList.contains('dark')) ? 'dark' : 'light';
+  try {
+    if (typeof materialDynamicColors === 'function') {
+      const theme = await (materialDynamicColors as any)(hex);
+      if (theme && theme[mode]) {
+        applyDynamicColorTokens(theme[mode]);
+      }
+    }
+    lastAppliedThemeHex = hex;
+  } catch (e) {
+    console.warn('Custom theme color update skipped:', e);
+  }
 }

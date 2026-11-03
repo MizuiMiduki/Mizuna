@@ -43,6 +43,7 @@ describe('comparisonVersion', () => {
       expect(hasDrivePermission('3.13.0')).toBe(true);
       expect(hasDrivePermission('3.13.1')).toBe(true);
       expect(hasDrivePermission('3.14.0')).toBe(true);
+      expect(hasDrivePermission('3.15.0')).toBe(true);
       expect(hasDrivePermission('4.0.0')).toBe(true);
     });
   });
@@ -57,6 +58,7 @@ describe('comparisonVersion', () => {
       expect(getMissingPermissions('3.5.0')).toEqual([]);
       expect(getMissingPermissions('3.13.0')).toEqual([]);
       expect(getMissingPermissions('3.14.0')).toEqual([]);
+      expect(getMissingPermissions('3.15.0')).toEqual([]);
     });
   });
 });
