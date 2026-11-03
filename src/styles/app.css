@@ -3837,7 +3837,7 @@ html.ui-size-large .mizuna-m3e-label {
   position: fixed;
   top: 74px;
   right: 16px;
-  z-index: 400;
+  z-index: 20000;
   display: flex;
   flex-direction: column;
   gap: 10px;
