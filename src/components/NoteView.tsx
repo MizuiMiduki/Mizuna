@@ -610,6 +610,20 @@ export function NoteView() {
               <span>{t('note.mfm_tag_ruby')}</span>
             </button>
           </div>
+          <div class="mizuna-mfm-toolbar-divider" />
+          <HoldHoverTip label={t('note.preview_tab_preview')} sublabel={t('note.preview_toggle_tip')} placement="bottom">
+            <button
+              type="button"
+              id="preview_toggle_button"
+              class={`mizuna-mfm-preview-btn ${showPreview() ? 'is-active' : ''}`}
+              onClick={() => setShowPreview((prev) => !prev)}
+              aria-pressed={showPreview()}
+              title={t('note.preview_tab_preview')}
+            >
+              <i>{showPreview() ? 'visibility_off' : 'preview'}</i>
+              <span>{t('note.preview_tab_preview')}</span>
+            </button>
+          </HoldHoverTip>
         </div>
 
         {/* CW（閲覧注意）折りたたみ入力欄 */}
@@ -824,20 +838,6 @@ export function NoteView() {
               >
                 <i>auto_awesome</i>
                 <span>Mizuna</span>
-              </button>
-            </HoldHoverTip>
-
-            {/* プレビュー切り替え */}
-            <HoldHoverTip label={t('note.preview_tab_preview')} sublabel={t('note.preview_toggle_tip')} placement="top">
-              <button
-                type="button"
-                id="preview_toggle_button"
-                class={`mizuna-tool-chip ${showPreview() ? 'is-active' : ''}`}
-                onClick={() => setShowPreview((prev) => !prev)}
-                aria-pressed={showPreview()}
-              >
-                <i>{showPreview() ? 'visibility_off' : 'preview'}</i>
-                <span>{t('note.preview_tab_preview')}</span>
               </button>
             </HoldHoverTip>
 

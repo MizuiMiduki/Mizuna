@@ -6160,13 +6160,21 @@ ruby > rt {
 }
 
 /* MFM ツールバー (入力補助) */
+.mizuna-composer-subbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
 .mizuna-mfm-toolbar {
   display: flex;
   align-items: center;
   gap: 3px;
-  padding: 4px 6px;
-  background: rgba(0, 0, 0, 0.02);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex: 1;
+  min-width: 0;
   overflow-x: auto;
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;
@@ -6174,6 +6182,53 @@ ruby > rt {
 
 .mizuna-mfm-toolbar::-webkit-scrollbar {
   display: none;
+}
+
+.mizuna-mfm-toolbar-divider {
+  width: 1px;
+  height: 18px;
+  background: rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+body.dark .mizuna-mfm-toolbar-divider {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mizuna-mfm-preview-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 9px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  background: var(--surface, #ffffff);
+  color: var(--text_color, #181c20);
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.18s ease;
+}
+
+.mizuna-mfm-preview-btn i {
+  font-size: 14.5px;
+}
+
+.mizuna-mfm-preview-btn:hover {
+  border-color: var(--primary, #2b8cbe);
+  color: var(--primary, #2b8cbe);
+}
+
+.mizuna-mfm-preview-btn.is-active {
+  background: color-mix(in srgb, var(--primary, #2b8cbe) 15%, var(--surface, #ffffff));
+  border-color: var(--primary, #2b8cbe);
+  color: var(--primary, #2b8cbe);
+  font-weight: 700;
 }
 
 .mizuna-mfm-chip {
