@@ -252,7 +252,7 @@ export function HistoryView() {
               </button>
               <button
                 type="button"
-                class="mizuna-btn mizuna-btn-secondary"
+                class="mizuna-btn mizuna-btn-outline"
                 onClick={() => setCurrentView('accounts')}
               >
                 <i>manage_accounts</i>

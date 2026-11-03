@@ -1399,14 +1399,16 @@ body {
   color: var(--on-primary-container) !important;
 }
 
-.mizuna-btn-outline {
+.mizuna-btn-outline,
+.mizuna-btn-secondary {
   border: 1px solid color-mix(in srgb, var(--outline-variant) 85%, transparent) !important;
   background: color-mix(in srgb, var(--surface-container-low) 80%, transparent) !important;
   color: var(--on-surface) !important;
 }
 
 @media (hover: hover) {
-  .mizuna-btn-outline:hover {
+  .mizuna-btn-outline:hover,
+  .mizuna-btn-secondary:hover {
     border-color: var(--primary) !important;
     background: color-mix(in srgb, var(--primary) 8%, transparent) !important;
   }
@@ -7640,8 +7642,15 @@ body.dark .mizuna-mfm-toolbar-divider {
 
 .mizuna-history-perm-actions {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 250px;
+  margin: 0 auto;
+}
+
+.mizuna-history-perm-actions .mizuna-btn {
+  width: 100%;
   justify-content: center;
 }
 
