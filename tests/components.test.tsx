@@ -326,6 +326,9 @@ describe('UI Components', () => {
       ));
 
       const checkBtn = screen.getByRole('button', { name: /(更新を確認|Check)/i });
+      // 確認前は「最新です」になっていないこと
+      expect(screen.queryByText(/(最新です|Up to date)/i)).not.toBeInTheDocument();
+
       fireEvent.click(checkBtn);
 
       // トースト「アップデートを確認中...」は表示されないこと

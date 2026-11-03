@@ -169,6 +169,7 @@ interface AppContextValue {
   availableUpdateVersion: Accessor<string | null>;
   isCheckingUpdate: Accessor<boolean>;
   updateCheckStatus: Accessor<'idle' | 'checking' | 'latest' | 'update_available' | 'error'>;
+  resetUpdateCheckStatus: () => void;
   showUpdateBanner: Accessor<boolean>;
   dismissUpdateBanner: () => void;
   promptUpdateDialog: (worker?: ServiceWorker | null, forceDialog?: boolean) => void;
@@ -373,15 +374,17 @@ export function AppProvider(props: { children: JSX.Element }) {
           setAvailableUpdateVersion(data.version);
           setHasPendingUpdate(true);
           setShowUpdateBanner(true);
-          setUpdateCheckStatus('update_available');
           if (!silent) {
+            setUpdateCheckStatus('update_available');
             promptUpdateDialog(null, true);
           }
           return true;
         } else {
           setHasPendingUpdate(false);
           setShowUpdateBanner(false);
-          setUpdateCheckStatus('latest');
+          if (!silent) {
+            setUpdateCheckStatus('latest');
+          }
           return false;
         }
       }
@@ -555,6 +558,10 @@ export function AppProvider(props: { children: JSX.Element }) {
     } finally {
       setIsCheckingUpdate(false);
     }
+  };
+
+  const resetUpdateCheckStatus = () => {
+    setUpdateCheckStatus('idle');
   };
 
   const setCurrentView = (view: ViewType) => {
@@ -1758,6 +1765,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     availableUpdateVersion,
     isCheckingUpdate,
     updateCheckStatus,
+    resetUpdateCheckStatus,
     showUpdateBanner,
     dismissUpdateBanner,
     promptUpdateDialog,

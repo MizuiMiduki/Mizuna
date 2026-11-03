@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { For, onMount, Show } from 'solid-js';
+import { For, onMount, onCleanup, Show } from 'solid-js';
 import { mizuna_options, mizuna_share } from '../config/mizunaOptions';
 import { useApp } from '../store/appStore';
 import { FloatingBackButton } from './FloatingBackButton';
@@ -72,11 +72,13 @@ export function AboutView() {
     checkForUpdate,
     isCheckingUpdate,
     updateCheckStatus,
+    resetUpdateCheckStatus,
     t,
   } = useApp();
   let containerRef: HTMLDivElement | undefined;
 
   onMount(() => {
+    resetUpdateCheckStatus();
     if (containerRef) {
       gsap.fromTo(
         containerRef,
@@ -84,6 +86,10 @@ export function AboutView() {
         { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
       );
     }
+  });
+
+  onCleanup(() => {
+    resetUpdateCheckStatus();
   });
 
   const handleBack = () => {
