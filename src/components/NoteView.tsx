@@ -76,11 +76,11 @@ export function NoteView() {
 
   const animateLightboxSlide = (direction: 'next' | 'prev') => {
     if (!modalContentRef) return;
-    const fromX = direction === 'next' ? 36 : -36;
+    const fromX = direction === 'next' ? 40 : -40;
     gsap.fromTo(
       modalContentRef,
-      { x: fromX },
-      { x: 0, duration: 0.18, ease: 'power2.out', clearProps: 'transform' }
+      { x: fromX, opacity: 0.6 },
+      { x: 0, opacity: 1, duration: 0.2, ease: 'power2.out', clearProps: 'transform,opacity' }
     );
   };
 
@@ -102,37 +102,198 @@ export function NoteView() {
     animateLightboxSlide('next');
   };
 
+  // ライトボックスのスワイプ操作（指の動きへのリアルタイム追従と慣性スワイプ）
   let lightboxTouchStartX = 0;
   let lightboxTouchStartY = 0;
   let lightboxTouchDeltaX = 0;
   let lightboxTouchDeltaY = 0;
+  let lightboxTouchLastX = 0;
+  let lightboxTouchLastTime = 0;
+  let lightboxTouchVelocityX = 0;
+  let isLightboxDragging = false;
+  let isLightboxHorizontalSwipe = false;
+  let hasLightboxSwiped = false;
+  let lightboxSwipeResetTimer: any = null;
 
   const handleLightboxTouchStart = (e: TouchEvent) => {
     if (e.touches.length !== 1) return;
-    lightboxTouchStartX = e.touches[0].clientX;
-    lightboxTouchStartY = e.touches[0].clientY;
+    const touch = e.touches[0];
+    lightboxTouchStartX = touch.clientX;
+    lightboxTouchStartY = touch.clientY;
     lightboxTouchDeltaX = 0;
     lightboxTouchDeltaY = 0;
+    lightboxTouchLastX = touch.clientX;
+    lightboxTouchLastTime = Date.now();
+    lightboxTouchVelocityX = 0;
+    isLightboxDragging = true;
+    isLightboxHorizontalSwipe = false;
+    if (modalContentRef) {
+      gsap.killTweensOf(modalContentRef);
+    }
   };
 
   const handleLightboxTouchMove = (e: TouchEvent) => {
-    if (e.touches.length !== 1) return;
-    lightboxTouchDeltaX = e.touches[0].clientX - lightboxTouchStartX;
-    lightboxTouchDeltaY = e.touches[0].clientY - lightboxTouchStartY;
+    if (!isLightboxDragging || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - lightboxTouchStartX;
+    const dy = touch.clientY - lightboxTouchStartY;
+    lightboxTouchDeltaX = dx;
+    lightboxTouchDeltaY = dy;
+
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    // 初動判定（水平スワイプか垂直操作か）
+    if (!isLightboxHorizontalSwipe && (absX > 6 || absY > 6)) {
+      if (absX >= absY) {
+        isLightboxHorizontalSwipe = true;
+      } else {
+        isLightboxDragging = false;
+        return;
+      }
+    }
+
+    if (isLightboxHorizontalSwipe) {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+
+      const now = Date.now();
+      const dt = now - lightboxTouchLastTime;
+      if (dt > 10) {
+        lightboxTouchVelocityX = (touch.clientX - lightboxTouchLastX) / dt;
+        lightboxTouchLastX = touch.clientX;
+        lightboxTouchLastTime = now;
+      }
+
+      if (absX > 10) {
+        hasLightboxSwiped = true;
+      }
+
+      if (modalContentRef) {
+        // 画像枚数に応じたリアルタイム追従（1枚時はゴム弾性抵抗、複数枚時は1:1でダイレクト追従）
+        const moveX = attachedImages().length <= 1 ? dx * 0.25 : dx;
+        modalContentRef.style.transform = `translateX(${moveX}px)`;
+      }
+    }
   };
 
   const handleLightboxTouchEnd = () => {
-    const absX = Math.abs(lightboxTouchDeltaX);
-    const absY = Math.abs(lightboxTouchDeltaY);
-    if (absX > 38 && absX > absY * 1.2) {
-      if (lightboxTouchDeltaX < 0) {
-        handleNextPreviewImage();
-      } else {
-        handlePrevPreviewImage();
+    if (!isLightboxDragging) {
+      if (modalContentRef && modalContentRef.style.transform) {
+        gsap.to(modalContentRef, {
+          x: 0,
+          opacity: 1,
+          duration: 0.18,
+          ease: 'power2.out',
+          clearProps: 'transform,opacity',
+        });
       }
+      return;
     }
+    isLightboxDragging = false;
+
+    const dx = lightboxTouchDeltaX;
+    const images = attachedImages();
+
+    if (!isLightboxHorizontalSwipe || images.length <= 1 || !modalContentRef) {
+      if (modalContentRef) {
+        gsap.to(modalContentRef, {
+          x: 0,
+          opacity: 1,
+          duration: 0.2,
+          ease: 'power2.out',
+          clearProps: 'transform,opacity',
+        });
+      }
+      isLightboxHorizontalSwipe = false;
+      lightboxTouchDeltaX = 0;
+      lightboxTouchDeltaY = 0;
+      clearTimeout(lightboxSwipeResetTimer);
+      lightboxSwipeResetTimer = setTimeout(() => {
+        hasLightboxSwiped = false;
+      }, 100);
+      return;
+    }
+
+    // フリック速度に応じた慣性判定
+    const flick = Math.abs(lightboxTouchVelocityX) > 0.25 ? lightboxTouchVelocityX * 120 : 0;
+    const projectedX = dx + flick;
+    const threshold = 40;
+
+    if (projectedX < -threshold) {
+      // 次の画像へ (左スワイプ)
+      const idx = currentPreviewIndex();
+      const nextIdx = idx < images.length - 1 ? idx + 1 : 0;
+      const targetId = images[nextIdx].id;
+
+      gsap.to(modalContentRef, {
+        x: -Math.min(window.innerWidth * 0.35, 200),
+        opacity: 0.2,
+        duration: 0.14,
+        ease: 'power2.in',
+        onComplete: () => {
+          setPreviewModalImageId(targetId);
+          if (modalContentRef) {
+            gsap.fromTo(
+              modalContentRef,
+              { x: Math.min(window.innerWidth * 0.35, 200), opacity: 0.2 },
+              {
+                x: 0,
+                opacity: 1,
+                duration: 0.18,
+                ease: 'power2.out',
+                clearProps: 'transform,opacity',
+              }
+            );
+          }
+        },
+      });
+    } else if (projectedX > threshold) {
+      // 前の画像へ (右スワイプ)
+      const idx = currentPreviewIndex();
+      const prevIdx = idx > 0 ? idx - 1 : images.length - 1;
+      const targetId = images[prevIdx].id;
+
+      gsap.to(modalContentRef, {
+        x: Math.min(window.innerWidth * 0.35, 200),
+        opacity: 0.2,
+        duration: 0.14,
+        ease: 'power2.in',
+        onComplete: () => {
+          setPreviewModalImageId(targetId);
+          if (modalContentRef) {
+            gsap.fromTo(
+              modalContentRef,
+              { x: -Math.min(window.innerWidth * 0.35, 200), opacity: 0.2 },
+              {
+                x: 0,
+                opacity: 1,
+                duration: 0.18,
+                ease: 'power2.out',
+                clearProps: 'transform,opacity',
+              }
+            );
+          }
+        },
+      });
+    } else {
+      gsap.to(modalContentRef, {
+        x: 0,
+        opacity: 1,
+        duration: 0.2,
+        ease: 'power2.out',
+        clearProps: 'transform,opacity',
+      });
+    }
+
+    isLightboxHorizontalSwipe = false;
     lightboxTouchDeltaX = 0;
     lightboxTouchDeltaY = 0;
+    clearTimeout(lightboxSwipeResetTimer);
+    lightboxSwipeResetTimer = setTimeout(() => {
+      hasLightboxSwiped = false;
+    }, 100);
   };
 
   // プレビューモーダル表示中の左右キーナビゲーション
@@ -1529,15 +1690,28 @@ export function NoteView() {
           <div
             id="imageModal"
             class="mizuna-lightbox"
-            onClick={() => setPreviewModalImageId(null)}
+            onClick={() => {
+              if (hasLightboxSwiped) {
+                hasLightboxSwiped = false;
+                return;
+              }
+              setPreviewModalImageId(null);
+            }}
             onTouchStart={handleLightboxTouchStart}
             onTouchMove={handleLightboxTouchMove}
             onTouchEnd={handleLightboxTouchEnd}
+            onTouchCancel={handleLightboxTouchEnd}
           >
             {/* メイン画像ステージ */}
             <div
               class="mizuna-lightbox-stage"
-              onClick={() => setPreviewModalImageId(null)}
+              onClick={() => {
+                if (hasLightboxSwiped) {
+                  hasLightboxSwiped = false;
+                  return;
+                }
+                setPreviewModalImageId(null);
+              }}
             >
               {/* 複数画像プレビュー時の左右ナビゲーションボタン（画像ステージ内に配置して縦位置を固定・安定化） */}
               <Show when={attachedImages().length > 1}>
@@ -1575,6 +1749,8 @@ export function NoteView() {
                 alt={previewModalImage()?.name || ''}
                 data-name={previewModalImage()?.name || ''}
                 decoding="async"
+                draggable={false}
+                onDragStart={(e) => e.preventDefault()}
                 onClick={(e) => e.stopPropagation()}
               />
             </div>

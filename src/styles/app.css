@@ -1330,6 +1330,7 @@ body {
   user-select: none;
   -webkit-user-select: none;
   overflow: hidden;
+  touch-action: none;
   animation: mizuna-lightbox-fade-in 0.22s ease-out;
 }
 
@@ -1346,6 +1347,7 @@ body {
   box-sizing: border-box;
   overflow: hidden;
   cursor: zoom-out;
+  touch-action: none;
 }
 
 .mizuna-lightbox-img {
@@ -1360,6 +1362,11 @@ body {
     0 24px 64px -12px rgba(0, 0, 0, 0.4),
     0 4px 16px rgba(0, 0, 0, 0.12);
   cursor: default;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform;
 }
 
 /* 複数画像プレビュー時の左右ナビゲーションボタン（位置がブレず固定） */
