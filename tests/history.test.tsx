@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@solidjs/testing-library';
 import { AppProvider, useApp } from '../src/store/appStore';
+import { clearHistoryCache } from '../src/store/historyStore';
 import { HistoryView } from '../src/components/HistoryView';
 import { NoteView } from '../src/components/NoteView';
 import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
@@ -103,6 +104,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
   };
 
   beforeEach(async () => {
+    clearHistoryCache();
     await db.open();
     await db.account.clear();
     await db.setting.clear();
@@ -328,5 +330,56 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
       typeof call[0] === 'string' && (call[0].includes('/api/users/notes') || call[0].includes('/api/notes/mentions'))
     );
     expect(notesCalls.length).toBe(0);
+  });
+
+  it('一度フェッチした後は画面遷移で再マウントされてもfetchせず、手動リフレッシュ時にのみfetchすること', async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockClear();
+
+    // 1回目のマウント（初回表示）
+    const { unmount } = render(() => (
+      <AppProvider>
+        <HistoryView />
+      </AppProvider>
+    ));
+
+    expect(await screen.findByText(/テスト投稿1です/)).toBeInTheDocument();
+
+    // 初回フェッチで /api/users/notes が呼ばれたことを確認
+    const initialCallCount = fetchMock.mock.calls.filter((call) =>
+      typeof call[0] === 'string' && call[0].includes('/api/users/notes')
+    ).length;
+    expect(initialCallCount).toBeGreaterThan(0);
+
+    // 別の画面へ遷移したと仮定してアンマウント
+    unmount();
+
+    // 2回目のマウント（画面に戻ってきたとき）
+    render(() => (
+      <AppProvider>
+        <HistoryView />
+      </AppProvider>
+    ));
+
+    // キャッシュから瞬時に復元されること
+    expect(await screen.findByText(/テスト投稿1です/)).toBeInTheDocument();
+
+    // 2回目以降は /api/users/notes の呼び出し回数が増えていないこと（不要な通信なし）
+    const secondCallCount = fetchMock.mock.calls.filter((call) =>
+      typeof call[0] === 'string' && call[0].includes('/api/users/notes')
+    ).length;
+    expect(secondCallCount).toBe(initialCallCount);
+
+    // 「最新に更新」ボタンをクリックして手動リロード
+    const refreshBtn = screen.getByRole('button', { name: /(最新に更新|Refresh)/ });
+    fireEvent.click(refreshBtn);
+
+    // 手動リロードによりフェッチが実行されること
+    await vi.waitFor(() => {
+      const thirdCallCount = fetchMock.mock.calls.filter((call) =>
+        typeof call[0] === 'string' && call[0].includes('/api/users/notes')
+      ).length;
+      expect(thirdCallCount).toBeGreaterThan(initialCallCount);
+    });
   });
 });

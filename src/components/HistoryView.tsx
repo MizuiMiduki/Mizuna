@@ -15,6 +15,12 @@ import {
   type MisskeyNote,
 } from '../services/misskeyApi';
 import { useApp } from '../store/appStore';
+import {
+  type HistoryTab,
+  type RepliesState,
+  getHistoryCache,
+  setHistoryCache,
+} from '../store/historyStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { renderMfm, renderInlineEmoji, normalizeEmojiMap } from '../utils/mfm';
 import { hasHistoryPermission } from '../utils/version';
@@ -31,15 +37,6 @@ function getReactionEmojiUrl(rawReaction: string, note: MisskeyNote): string | u
 
   const map = normalizeEmojiMap(note.emojis);
   return map.get(clean.toLowerCase()) || map.get(withoutHost.toLowerCase());
-}
-
-type HistoryTab = 'my_notes' | 'mentions';
-
-interface RepliesState {
-  loading: boolean;
-  list: MisskeyNote[];
-  loaded: boolean;
-  isOpen: boolean;
 }
 
 function formatRelativeTime(dateStr: string): string {
@@ -93,11 +90,38 @@ export function HistoryView() {
   // 画像プレビューモーダル
   const [previewImage, setPreviewImage] = createSignal<string | null>(null);
 
+  const getAccountKey = () => {
+    const user = currentUser();
+    if (!user) return '';
+    return user.id || `${user.address}@${user.username}`;
+  };
+
+  const syncCache = (updated?: {
+    notes?: MisskeyNote[];
+    hasMore?: boolean;
+    repliesMap?: Record<string, RepliesState>;
+    expandedCwMap?: Record<string, boolean>;
+  }) => {
+    const key = getAccountKey();
+    if (!key) return;
+    setHistoryCache(key, activeTab(), {
+      notes: updated?.notes ?? notes(),
+      hasMore: updated?.hasMore ?? hasMore(),
+      repliesMap: updated?.repliesMap ?? repliesMap(),
+      expandedCwMap: updated?.expandedCwMap ?? expandedCwMap(),
+      isLoaded: true,
+    });
+  };
+
   const toggleCw = (noteId: string) => {
-    setExpandedCwMap((prev) => ({
-      ...prev,
-      [noteId]: !prev[noteId],
-    }));
+    setExpandedCwMap((prev) => {
+      const next = {
+        ...prev,
+        [noteId]: !prev[noteId],
+      };
+      syncCache({ expandedCwMap: next });
+      return next;
+    });
   };
 
   const loadNotes = async (reset = false) => {
@@ -123,15 +147,25 @@ export function HistoryView() {
         fetched = await fetchUserMentions(user, { limit: 10, untilId });
       }
 
-      if (fetched.length < 10) {
+      const nextHasMore = fetched.length >= 10;
+      if (!nextHasMore) {
         setHasMore(false);
       }
 
+      let newNotes: MisskeyNote[];
       if (reset) {
+        newNotes = fetched;
         setNotes(fetched);
       } else {
-        setNotes((prev) => [...prev, ...fetched]);
+        newNotes = [...currentNotes, ...fetched];
+        setNotes(newNotes);
       }
+
+      // キャッシュを更新（ページ遷移しても再取得不要にする）
+      syncCache({
+        notes: newNotes,
+        hasMore: nextHasMore,
+      });
     } catch (err) {
       console.error('Failed to fetch history:', err);
       setErrorMessage(t('history.error_load'));
@@ -142,13 +176,29 @@ export function HistoryView() {
     }
   };
 
-  // タブまたはアカウント変更時にリロード
+  // タブまたはアカウント切り替え時にキャッシュを確認。キャッシュがあれば復元し、なければ初回フェッチ
   createEffect(() => {
-    activeTab();
-    currentUser()?.id;
-    setRepliesMap({});
-    setExpandedCwMap({});
-    loadNotes(true);
+    const tab = activeTab();
+    const user = currentUser();
+    if (!user || !isHistorySupported()) return;
+
+    const key = getAccountKey();
+    const cached = getHistoryCache(key, tab);
+
+    if (cached && cached.isLoaded) {
+      // キャッシュが存在する場合は復元し、API 通信はスキップ
+      setNotes(cached.notes);
+      setHasMore(cached.hasMore);
+      setRepliesMap(cached.repliesMap);
+      setExpandedCwMap(cached.expandedCwMap);
+      setErrorMessage(null);
+    } else {
+      // キャッシュがない場合のみ初回フェッチ
+      setNotes([]);
+      setRepliesMap({});
+      setExpandedCwMap({});
+      loadNotes(true);
+    }
   });
 
   onMount(() => {
@@ -222,19 +272,21 @@ export function HistoryView() {
     const current = repliesMap()[noteId];
     if (current?.isOpen) {
       // 閉じる
-      setRepliesMap((prev) => ({
-        ...prev,
-        [noteId]: { ...prev[noteId], isOpen: false },
-      }));
+      setRepliesMap((prev) => {
+        const next = { ...prev, [noteId]: { ...prev[noteId], isOpen: false } };
+        syncCache({ repliesMap: next });
+        return next;
+      });
       return;
     }
 
     if (current?.loaded) {
       // すでに取得済みなら開くだけ
-      setRepliesMap((prev) => ({
-        ...prev,
-        [noteId]: { ...prev[noteId], isOpen: true },
-      }));
+      setRepliesMap((prev) => {
+        const next = { ...prev, [noteId]: { ...prev[noteId], isOpen: true } };
+        syncCache({ repliesMap: next });
+        return next;
+      });
       return;
     }
 
@@ -246,17 +298,25 @@ export function HistoryView() {
 
     try {
       const children = await fetchNoteChildren(user, noteId, { limit: 10 });
-      setRepliesMap((prev) => ({
-        ...prev,
-        [noteId]: { loading: false, list: children, loaded: true, isOpen: true },
-      }));
+      setRepliesMap((prev) => {
+        const next = {
+          ...prev,
+          [noteId]: { loading: false, list: children, loaded: true, isOpen: true },
+        };
+        syncCache({ repliesMap: next });
+        return next;
+      });
     } catch (err) {
       console.error('Failed to fetch replies:', err);
       showToast('リプライの取得に失敗しました', 'error');
-      setRepliesMap((prev) => ({
-        ...prev,
-        [noteId]: { loading: false, list: [], loaded: true, isOpen: true },
-      }));
+      setRepliesMap((prev) => {
+        const next = {
+          ...prev,
+          [noteId]: { loading: false, list: [], loaded: true, isOpen: true },
+        };
+        syncCache({ repliesMap: next });
+        return next;
+      });
     }
   };
 
