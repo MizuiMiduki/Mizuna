@@ -800,10 +800,10 @@ export function NoteView() {
               class={`mizuna-mfm-preview-btn ${showPreview() ? 'is-active' : ''}`}
               onClick={() => setShowPreview((prev) => !prev)}
               aria-pressed={showPreview()}
+              aria-label={t('note.preview_tab_preview')}
               title={t('note.preview_tab_preview')}
             >
               <i>{showPreview() ? 'visibility_off' : 'preview'}</i>
-              <span>{t('note.preview_tab_preview')}</span>
             </button>
           </HoldHoverTip>
         </div>

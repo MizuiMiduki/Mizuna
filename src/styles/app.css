@@ -6311,17 +6311,16 @@ body.dark .mizuna-mfm-toolbar-divider {
 .mizuna-mfm-preview-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  width: 26px;
   height: 26px;
-  padding: 0 9px !important;
+  padding: 0 !important;
   margin: 0 !important;
   box-sizing: border-box !important;
   border-radius: var(--mizuna-radius-pill, 9999px);
   border: 1px solid rgba(0, 0, 0, 0.14);
   background: var(--surface, #ffffff);
   color: var(--text_color, #181c20);
-  font-size: 0.74rem;
-  font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
@@ -6329,7 +6328,8 @@ body.dark .mizuna-mfm-toolbar-divider {
 }
 
 .mizuna-mfm-preview-btn i {
-  font-size: 14.5px;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .mizuna-mfm-preview-btn:hover {
