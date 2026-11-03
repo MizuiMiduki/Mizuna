@@ -747,10 +747,6 @@ export function NoteView() {
           {/* MFM 予測変換（オートコンプリート）サジェストポップアップ */}
           <Show when={acActive() && acSuggestions().length > 0}>
             <div class="mizuna-mfm-autocomplete-popup" role="listbox" aria-label="MFM Suggestions">
-              <div class="mizuna-mfm-ac-header">
-                <span>MFM予測変換</span>
-                <span class="mizuna-mfm-ac-hint">↑↓で選択 / Enterで決定 / Escで閉じる</span>
-              </div>
               <div class="mizuna-mfm-ac-list">
                 <For each={acSuggestions()}>
                   {(item, index) => (

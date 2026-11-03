@@ -700,26 +700,28 @@ body {
 /* MFM 予測変換（オートコンプリート）サジェストポップアップ */
 .mizuna-mfm-autocomplete-popup {
   position: absolute;
-  top: 10px;
-  left: 16px;
-  right: 16px;
+  top: 6px;
+  left: 14px;
+  width: max-content;
+  min-width: 180px;
+  max-width: min(260px, 85vw);
   z-index: 100;
   background: var(--surface, #ffffff);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
-  border-radius: var(--mizuna-radius-md, 14px);
-  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+  border-radius: var(--mizuna-radius-md, 10px);
+  box-shadow: 0 6px 20px -2px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  max-height: 240px;
+  max-height: 130px;
   backdrop-filter: blur(12px);
-  animation: mizuna-popup-appear 0.15s cubic-bezier(0.2, 0, 0, 1);
+  animation: mizuna-popup-appear 0.12s cubic-bezier(0.2, 0, 0, 1);
 }
 
 @keyframes mizuna-popup-appear {
   from {
     opacity: 0;
-    transform: translateY(-6px) scale(0.98);
+    transform: translateY(-4px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -727,47 +729,24 @@ body {
   }
 }
 
-.mizuna-mfm-ac-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 12px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--primary, #2b8cbe);
-  background: rgba(0, 0, 0, 0.03);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
-
-body.dark .mizuna-mfm-ac-header {
-  background: rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.mizuna-mfm-ac-hint {
-  font-size: 0.68rem;
-  font-weight: normal;
-  opacity: 0.65;
-  color: var(--text_color, #181c20);
-}
-
 .mizuna-mfm-ac-list {
   overflow-y: auto;
-  padding: 4px;
+  padding: 3px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: 200px;
+  gap: 1px;
+  max-height: 124px;
+  scrollbar-width: thin;
 }
 
 .mizuna-mfm-ac-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border-radius: 8px;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.12s ease;
   user-select: none;
 }
 
@@ -780,23 +759,23 @@ body.dark .mizuna-mfm-ac-header {
 }
 
 .mizuna-mfm-ac-icon {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--primary, #2b8cbe);
   flex-shrink: 0;
 }
 
 .mizuna-mfm-ac-tag {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   color: var(--primary, #2b8cbe);
   white-space: nowrap;
 }
 
 .mizuna-mfm-ac-desc {
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   color: var(--text_color, #181c20);
-  opacity: 0.75;
+  opacity: 0.7;
   margin-left: auto;
   white-space: nowrap;
   overflow: hidden;
