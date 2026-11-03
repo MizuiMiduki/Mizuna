@@ -6163,8 +6163,8 @@ ruby > rt {
 .mizuna-mfm-toolbar {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px;
+  gap: 3px;
+  padding: 4px 6px;
   background: rgba(0, 0, 0, 0.02);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   overflow-x: auto;
@@ -6179,9 +6179,11 @@ ruby > rt {
 .mizuna-mfm-chip {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   height: 26px;
-  padding: 0 6px;
+  padding: 0 8px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
   border-radius: var(--mizuna-radius-pill, 9999px);
   border: 1px solid rgba(0, 0, 0, 0.1);
   background: var(--surface, #ffffff);
