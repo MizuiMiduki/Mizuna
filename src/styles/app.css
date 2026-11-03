@@ -6370,22 +6370,6 @@ ruby > rt {
   font-style: italic;
 }
 
-.mizuna-preview-footer-note {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px dashed rgba(0, 0, 0, 0.1);
-  font-size: 0.76rem;
-  color: var(--primary, #2b8cbe);
-  opacity: 0.85;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.mizuna-preview-footer-note i {
-  font-size: 14px;
-}
-
 
 
 

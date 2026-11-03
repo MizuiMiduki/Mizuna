@@ -107,7 +107,14 @@ export function NoteView() {
   const noteLength = createMemo(() => noteText().length);
   const cwLength = createMemo(() => cwText().length);
 
-  const renderedNoteHtml = createMemo(() => renderMfm(noteText()));
+  const previewNoteText = createMemo(() => {
+    const text = noteText();
+    if (!endMizuna()) return text;
+    if (!text) return '(from Mizuna)';
+    return `${text}\n(from Mizuna)`;
+  });
+
+  const renderedNoteHtml = createMemo(() => renderMfm(previewNoteText()));
   const renderedCwHtml = createMemo(() => renderMfm(cwText()));
 
   const handleInsertMfm = (prefix: string, suffix: string, placeholder = '') => {
@@ -698,17 +705,10 @@ export function NoteView() {
               }
             >
               <Show
-                when={noteText().length > 0}
+                when={previewNoteText().length > 0}
                 fallback={<div class="mizuna-preview-empty">{t('note.preview_empty')}</div>}
               >
                 <div class="mizuna-preview-content" innerHTML={renderedNoteHtml()} />
-              </Show>
-
-              <Show when={endMizuna()}>
-                <div class="mizuna-preview-footer-note">
-                  <i>auto_awesome</i>
-                  <span>(from Mizuna)</span>
-                </div>
               </Show>
             </Show>
           </div>

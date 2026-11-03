@@ -805,6 +805,11 @@ describe('UI Components', () => {
       fireEvent.input(textarea, { target: { value: '$[shake リアルタイム更新]' } });
       expect(document.querySelector('.mfm-shake')?.textContent).toBe('リアルタイム更新');
 
+      // from Mizuna トグルを有効にした場合、本文プレビュー要素内に (from Mizuna) が含まれること
+      const endMizunaBtn = document.getElementById('note_end_mizuna_checkbox') as HTMLButtonElement;
+      fireEvent.click(endMizunaBtn);
+      expect(document.querySelector('.mizuna-preview-content')?.textContent).toContain('(from Mizuna)');
+
       // トグルボタンを再度押すとプレビューエリアが非表示になること
       fireEvent.click(previewBtn);
       expect(document.querySelector('.mizuna-preview-area')).not.toBeInTheDocument();
