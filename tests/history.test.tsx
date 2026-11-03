@@ -54,6 +54,37 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     files: [],
   };
 
+  const mockNote3Reply: MisskeyNote = {
+    id: 'note_003_reply',
+    createdAt: new Date(Date.now() - 1800000).toISOString(),
+    text: 'これはリプライとして送ったノートです',
+    cw: null,
+    userId: 'user_001',
+    user: {
+      id: 'user_001',
+      name: 'テストユーザー',
+      username: 'test_user',
+      avatarUrl: 'https://example.com/avatar.webp',
+    },
+    replyId: 'note_parent_999',
+    reply: {
+      id: 'note_parent_999',
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+      text: '親ノートのテキストです',
+      cw: null,
+      userId: 'user_other',
+      user: {
+        id: 'user_other',
+        name: '相手のユーザー',
+        username: 'other_user',
+        avatarUrl: 'https://example.com/other.webp',
+      },
+      visibility: 'public',
+    },
+    visibility: 'public',
+    files: [],
+  };
+
   const mockReplyNote: MisskeyNote = {
     id: 'reply_001',
     createdAt: new Date().toISOString(),
@@ -113,7 +144,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
           return {
             ok: true,
             status: 200,
-            json: async () => [mockNote1, mockNote2WithCw],
+            json: async () => [mockNote1, mockNote2WithCw, mockNote3Reply],
           };
         }
 
@@ -228,6 +259,26 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     expect(replyCard).toBeInTheDocument();
     expect(replyCard?.textContent).toContain('テストユーザー');
     expect(replyCard?.textContent).toContain('テスト投稿1です');
+  });
+
+  it('リプライとして送信されたノートにはリプライバナーおよび返信先ユーザー情報が表示されること', async () => {
+    const { container } = render(() => (
+      <AppProvider>
+        <HistoryView />
+      </AppProvider>
+    ));
+
+    expect(await screen.findByText(/これはリプライとして送ったノートです/)).toBeInTheDocument();
+
+    // リプライバナーと返信先ユーザー情報が表示されること
+    const replyBanner = container.querySelector('.mizuna-note-reply-banner');
+    expect(replyBanner).toBeInTheDocument();
+    expect(replyBanner?.textContent).toContain('@other_user');
+    expect(replyBanner?.textContent).toContain('親ノートのテキストです');
+
+    // リプライピルバッジが表示されること
+    const replyPill = container.querySelector('.mizuna-note-reply-pill');
+    expect(replyPill).toBeInTheDocument();
   });
 
   it('4.0.0未満のアカウントでは権限不足警告画面が表示され、APIリクエストが行われないこと', async () => {

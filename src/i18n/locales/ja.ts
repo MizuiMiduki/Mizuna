@@ -155,6 +155,8 @@ export const ja = {
     empty_title: '投稿履歴がありません',
     empty_desc: 'まだノートを投稿していないか、サーバーから取得できませんでした',
     replies_count: 'リプライ {count}件',
+    reply_badge: 'リプライ',
+    reply_to_user: '@{user} への返信',
     show_replies: 'リプライを表示',
     hide_replies: 'リプライを隠す',
     loading_replies: 'リプライを読み込み中...',

@@ -7746,9 +7746,73 @@ body.dark .mizuna-mfm-toolbar-divider {
   transition: all 0.2s ease;
 }
 
+.mizuna-note-card.is-reply {
+  border-left: 4px solid var(--primary);
+  background: color-mix(in srgb, var(--primary) 2.5%, var(--surface-container));
+}
+
 .mizuna-note-card:hover {
   border-color: color-mix(in srgb, var(--primary) 35%, transparent);
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.07);
+}
+
+/* リプライ先バナー */
+.mizuna-note-reply-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 9%, var(--surface-container-high) 91%);
+  border: 1px solid color-mix(in srgb, var(--primary) 22%, transparent);
+}
+
+.mizuna-note-reply-banner-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+.mizuna-note-reply-icon {
+  font-size: 1rem;
+}
+
+.mizuna-note-reply-banner-user {
+  color: var(--primary);
+}
+
+.mizuna-note-reply-parent-snippet {
+  font-size: 0.78rem;
+  color: var(--on-surface-variant);
+  padding-left: 8px;
+  border-left: 2px solid color-mix(in srgb, var(--primary) 40%, transparent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mizuna-note-reply-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  color: var(--primary);
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, transparent);
+}
+
+.mizuna-note-reply-pill i {
+  font-size: 0.85rem;
 }
 
 .mizuna-note-card-header {

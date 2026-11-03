@@ -403,7 +403,41 @@ export function HistoryView() {
                   const repliesCount = () => note.repliesCount ?? 0;
 
                   return (
-                    <article class="mizuna-note-card">
+                    <article class={`mizuna-note-card ${note.replyId || note.reply ? 'is-reply' : ''}`}>
+                      {/* リプライ先バナー（リプライで送られたノートの場合） */}
+                      <Show when={note.replyId || note.reply}>
+                        <div class="mizuna-note-reply-banner">
+                          <div class="mizuna-note-reply-banner-head">
+                            <i class="mizuna-note-reply-icon">reply</i>
+                            <Show
+                              when={note.reply?.user}
+                              fallback={<span>{t('history.reply_badge')}</span>}
+                            >
+                              {(replyUser) => (
+                                <span class="mizuna-note-reply-banner-user">
+                                  {t('history.reply_to_user', { user: `@${replyUser().username}` })}
+                                </span>
+                              )}
+                            </Show>
+                          </div>
+                          <Show when={note.reply && (note.reply.text || note.reply.cw)}>
+                            <div class="mizuna-note-reply-parent-snippet">
+                              <Show when={note.reply!.cw}>
+                                <span class="mizuna-cw-badge">CW</span>
+                                <span>{note.reply!.cw}</span>
+                              </Show>
+                              <Show when={!note.reply!.cw && note.reply!.text}>
+                                <span>
+                                  {note.reply!.text!.length > 60
+                                    ? `${note.reply!.text!.slice(0, 60)}…`
+                                    : note.reply!.text}
+                                </span>
+                              </Show>
+                            </div>
+                          </Show>
+                        </div>
+                      </Show>
+
                       {/* ノートヘッダー */}
                       <div class="mizuna-note-card-header">
                         <div class="mizuna-note-author">
@@ -423,6 +457,12 @@ export function HistoryView() {
                         </div>
 
                         <div class="mizuna-note-meta-right">
+                          <Show when={note.replyId || note.reply}>
+                            <span class="mizuna-note-reply-pill" title={t('history.reply_badge')}>
+                              <i>reply</i>
+                              <span>{t('history.reply_badge')}</span>
+                            </span>
+                          </Show>
                           <span class={`mizuna-note-vis-badge visibility-${note.visibility}`}>
                             <i>
                               {note.visibility === 'public'

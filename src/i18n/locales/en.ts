@@ -155,6 +155,8 @@ export const en = {
     empty_title: 'No post history',
     empty_desc: 'You have not posted any notes yet or could not fetch from server',
     replies_count: '{count} replies',
+    reply_badge: 'Reply',
+    reply_to_user: 'Replying to @{user}',
     show_replies: 'Show replies',
     hide_replies: 'Hide replies',
     loading_replies: 'Loading replies...',
