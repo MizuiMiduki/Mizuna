@@ -19,6 +19,12 @@ import { getDisplayAvatarUrl } from '../utils/image';
 import { type ImageEditState } from '../utils/imageEditor';
 import { comparisonVersion, hasDrivePermission } from '../utils/version';
 import { renderMfm, insertMfmTag } from '../utils/mfm';
+import {
+  type MfmSuggestion,
+  getMfmTriggerInfo,
+  filterMfmSuggestions,
+  applyMfmSuggestion,
+} from '../utils/mfmAutocomplete';
 import { HoldHoverTip } from './HoldHoverTip';
 import { ImageEditorModal } from './ImageEditorModal';
 
@@ -64,6 +70,15 @@ export function NoteView() {
   const [showPreview, setShowPreview] = createSignal(false);
   const [previewCwRevealed, setPreviewCwRevealed] = createSignal(false);
   const [lastFocusedField, setLastFocusedField] = createSignal<'note' | 'cw'>('note');
+
+  // MFM 予測変換（オートコンプリート）ステート
+  const [acActive, setAcActive] = createSignal(false);
+  const [acQuery, setAcQuery] = createSignal('');
+  const [acStartPos, setAcStartPos] = createSignal(-1);
+  const [acIndex, setAcIndex] = createSignal(0);
+  const [acField, setAcField] = createSignal<'note' | 'cw'>('note');
+
+  const acSuggestions = createMemo(() => filterMfmSuggestions(acQuery()));
 
   // Androidの戻るボタン対応：画像加工モーダル・プレビュー・アカウントピッカーを戻る操作で安全に閉じる
   createEffect(() => {
@@ -141,6 +156,72 @@ export function NoteView() {
       targetRef.focus();
       targetRef.setSelectionRange(newCursorStart, newCursorEnd);
     }, 0);
+  };
+
+  const handleCheckAutocomplete = (field: 'note' | 'cw', text: string, targetEl: HTMLTextAreaElement) => {
+    const cursorPos = targetEl.selectionStart ?? text.length;
+    const { active, query, startPos } = getMfmTriggerInfo(text, cursorPos);
+    if (active) {
+      setAcActive(true);
+      setAcQuery(query);
+      setAcStartPos(startPos);
+      setAcIndex(0);
+      setAcField(field);
+    } else {
+      setAcActive(false);
+    }
+  };
+
+  const handleApplySuggestion = (
+    field: 'note' | 'cw',
+    suggestion: MfmSuggestion,
+    targetRef: HTMLTextAreaElement,
+    currentText: string,
+    setText: (v: string) => void
+  ) => {
+    const cursorPos = targetRef.selectionStart ?? currentText.length;
+    const { newText, newCursorPos } = applyMfmSuggestion(
+      currentText,
+      acStartPos(),
+      cursorPos,
+      suggestion
+    );
+    setText(newText);
+    setAcActive(false);
+
+    setTimeout(() => {
+      targetRef.focus();
+      targetRef.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleTextareaKeyDown = (
+    e: KeyboardEvent,
+    field: 'note' | 'cw',
+    text: string,
+    setText: (v: string) => void,
+    targetRef: HTMLTextAreaElement | undefined
+  ) => {
+    if (!acActive() || acField() !== field) return;
+    const list = acSuggestions();
+    if (list.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setAcIndex((prev) => (prev + 1) % list.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setAcIndex((prev) => (prev - 1 + list.length) % list.length);
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      const selected = list[acIndex()];
+      if (selected && targetRef) {
+        handleApplySuggestion(field, selected, targetRef, text, setText);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setAcActive(false);
+    }
   };
 
   const noteProgressPercent = createMemo(() =>
@@ -638,12 +719,19 @@ export function NoteView() {
                 rows={1}
                 placeholder={t('note.cw_placeholder')}
                 value={cwText()}
-                onInput={(e) => setCwText(e.currentTarget.value)}
+                onInput={(e) => {
+                  setCwText(e.currentTarget.value);
+                  handleCheckAutocomplete('cw', e.currentTarget.value, e.currentTarget);
+                }}
+                onKeyDown={(e) => handleTextareaKeyDown(e, 'cw', cwText(), setCwText, cwInputRef)}
                 onFocus={() => {
                   setIsInputFocused(true);
                   setLastFocusedField('cw');
                 }}
-                onBlur={() => setIsInputFocused(false)}
+                onBlur={() => {
+                  setIsInputFocused(false);
+                  setTimeout(() => setAcActive(false), 200);
+                }}
               />
               <div class={`mizuna-cw-counter ${cwCountStatus()}`}>
                 <span class="mizuna-zero-pad">{cwZeroPadding()}</span>
@@ -656,6 +744,42 @@ export function NoteView() {
 
         {/* メインテキストエリア */}
         <div class="mizuna-editor-body">
+          {/* MFM 予測変換（オートコンプリート）サジェストポップアップ */}
+          <Show when={acActive() && acSuggestions().length > 0}>
+            <div class="mizuna-mfm-autocomplete-popup" role="listbox" aria-label="MFM Suggestions">
+              <div class="mizuna-mfm-ac-header">
+                <span>MFM予測変換</span>
+                <span class="mizuna-mfm-ac-hint">↑↓で選択 / Enterで決定 / Escで閉じる</span>
+              </div>
+              <div class="mizuna-mfm-ac-list">
+                <For each={acSuggestions()}>
+                  {(item, index) => (
+                    <div
+                      class={`mizuna-mfm-ac-item ${index() === acIndex() ? 'is-selected' : ''}`}
+                      role="option"
+                      aria-selected={index() === acIndex()}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                      }}
+                      onClick={() => {
+                        const targetRef = acField() === 'cw' ? cwInputRef : noteInputRef;
+                        const text = acField() === 'cw' ? cwText() : noteText();
+                        const setText = acField() === 'cw' ? setCwText : setNoteText;
+                        if (targetRef) {
+                          handleApplySuggestion(acField(), item, targetRef, text, setText);
+                        }
+                      }}
+                    >
+                      <i class="mizuna-mfm-ac-icon">{item.icon}</i>
+                      <span class="mizuna-mfm-ac-tag">$[{item.label}]</span>
+                      <span class="mizuna-mfm-ac-desc">{item.desc}</span>
+                    </div>
+                  )}
+                </For>
+              </div>
+            </div>
+          </Show>
+
           <textarea
             ref={noteInputRef}
             class="note_content mizuna-main-textarea"
@@ -663,12 +787,19 @@ export function NoteView() {
             rows={6}
             placeholder={t('note.placeholder')}
             value={noteText()}
-            onInput={(e) => setNoteText(e.currentTarget.value)}
+            onInput={(e) => {
+              setNoteText(e.currentTarget.value);
+              handleCheckAutocomplete('note', e.currentTarget.value, e.currentTarget);
+            }}
+            onKeyDown={(e) => handleTextareaKeyDown(e, 'note', noteText(), setNoteText, noteInputRef)}
             onFocus={() => {
               setIsInputFocused(true);
               setLastFocusedField('note');
             }}
-            onBlur={() => setIsInputFocused(false)}
+            onBlur={() => {
+              setIsInputFocused(false);
+              setTimeout(() => setAcActive(false), 200);
+            }}
             onPaste={handlePaste}
           />
         </div>

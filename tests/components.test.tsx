@@ -815,5 +815,32 @@ describe('UI Components', () => {
       expect(document.querySelector('.mizuna-preview-area')).not.toBeInTheDocument();
       expect(document.querySelector('.mizuna-main-textarea')).toBeInTheDocument();
     });
+
+    it('テキストエリアで $[ と入力したときにMFM予測変換ポップアップが表示され、Enterまたはクリックで補完されること', async () => {
+      render(() => (
+        <AppProvider>
+          <NoteView />
+        </AppProvider>
+      ));
+
+      const textarea = screen.getByPlaceholderText(/(いまどうしてる？|What's happening)/i) as HTMLTextAreaElement;
+
+      // $[ と入力
+      fireEvent.input(textarea, { target: { value: '$[' } });
+
+      // 予測変換ポップアップが表示されていること
+      const popup = screen.getByRole('listbox', { name: 'MFM Suggestions' });
+      expect(popup).toBeInTheDocument();
+
+      // shake 候補が存在すること
+      expect(screen.getByText('$[shake]')).toBeInTheDocument();
+
+      // Enterキーで一番目の候補（shake）を選択確定
+      fireEvent.keyDown(textarea, { key: 'Enter' });
+
+      // ポップアップが消え、テキストエリアに $[shake テキスト] が展開されること
+      expect(document.querySelector('.mizuna-mfm-autocomplete-popup')).not.toBeInTheDocument();
+      expect(textarea.value).toBe('$[shake テキスト]');
+    });
   });
 });
