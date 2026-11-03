@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderMfm, insertMfmTag, escapeHtml } from '../src/utils/mfm';
+import { renderMfm, renderInlineEmoji, insertMfmTag, escapeHtml } from '../src/utils/mfm';
 
 describe('MFM Parser (renderMfm)', () => {
   it('空文字の場合は空文字を返すこと', () => {
@@ -116,6 +116,32 @@ describe('MFM Parser (renderMfm)', () => {
     expect(rendered).toContain('class="mfm-shake"');
     expect(rendered).toContain('class="mfm-rainbow"');
     expect(rendered).toContain('ネスト');
+  });
+
+  it('カスタム絵文字が渡された場合、<img> タグに変換されること', () => {
+    const emojis = [
+      { name: 'blobcat', url: 'https://example.com/blobcat.webp' },
+      { name: 'verified', url: 'https://example.com/verified.png' },
+    ];
+    const rendered = renderMfm('こんにちは :blobcat: さん :verified:', emojis);
+    expect(rendered).toContain('<img class="mfm-custom-emoji"');
+    expect(rendered).toContain('src="https://example.com/blobcat.webp"');
+    expect(rendered).toContain('src="https://example.com/verified.png"');
+    expect(rendered).toContain('alt=":blobcat:"');
+
+    // マップにない絵文字はそのままテキストで返ること
+    const notFound = renderMfm('謎の絵文字 :unknown_emoji:', emojis);
+    expect(notFound).toContain(':unknown_emoji:');
+    expect(notFound).not.toContain('src=');
+  });
+
+  it('renderInlineEmoji でインラインのカスタム絵文字が <img> タグに変換されること', () => {
+    const emojis = {
+      blobcat: 'https://example.com/blobcat.webp',
+    };
+    const rendered = renderInlineEmoji('ユーザー名 :blobcat:', emojis);
+    expect(rendered).toContain('<img class="mfm-custom-emoji"');
+    expect(rendered).toContain('src="https://example.com/blobcat.webp"');
   });
 });
 

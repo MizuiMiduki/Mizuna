@@ -10,18 +10,31 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
   const mockNote1: MisskeyNote = {
     id: 'note_001',
     createdAt: new Date().toISOString(),
-    text: 'テスト投稿1です #mizuna',
+    text: 'テスト投稿1です :blobcat: #mizuna',
     cw: null,
     userId: 'user_001',
     user: {
       id: 'user_001',
-      name: 'テストユーザー',
+      name: 'テストユーザー :verified:',
       username: 'test_user',
       avatarUrl: 'https://example.com/avatar.webp',
+      emojis: [
+        { name: 'verified', url: 'https://example.com/verified.png' },
+      ],
     },
     visibility: 'public',
     repliesCount: 2,
     files: [],
+    emojis: [
+      { name: 'blobcat', url: 'https://example.com/blobcat.webp' },
+    ],
+    reactions: {
+      '👍': 3,
+      ':blobcat:': 5,
+    },
+    reactionEmojis: {
+      ':blobcat:': 'https://example.com/blobcat.webp',
+    },
   };
 
   const mockNote2WithCw: MisskeyNote = {
@@ -153,6 +166,14 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     // 取得されたノートの本文が表示されること
     expect(await screen.findByText(/テスト投稿1です/)).toBeInTheDocument();
     expect(screen.getByText('閲覧注意の注釈')).toBeInTheDocument();
+
+    // カスタム絵文字 (:blobcat: や :verified:) が <img> として描画されていること
+    const emojiImgs = document.querySelectorAll('.mfm-custom-emoji');
+    expect(emojiImgs.length).toBeGreaterThanOrEqual(1);
+
+    // リアクション（👍 や :blobcat:）が表示されていること
+    const reactions = document.querySelectorAll('.mizuna-reaction-pill');
+    expect(reactions.length).toBeGreaterThanOrEqual(2);
   });
 
   it('リプライ確認機能（Issue #130）: リプライ一覧を展開して閲覧できること', async () => {

@@ -6688,6 +6688,19 @@ body.is-simple-mode .mizuna-lightbox-action-btn {
   font-size: 0.9em;
 }
 
+.mfm-custom-emoji {
+  height: 1.3em;
+  width: auto;
+  vertical-align: -0.25em;
+  display: inline-block;
+  object-fit: contain;
+  margin: 0 0.12em;
+}
+
+.mfm-unicode-emoji {
+  font-family: "Twemoji", "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+}
+
 .mfm-quote {
   margin: 6px 0;
   padding: 4px 0 4px 12px;
@@ -7904,6 +7917,51 @@ body.dark .mizuna-mfm-toolbar-divider {
 
 .mizuna-note-file-item:hover img {
   transform: scale(1.03);
+}
+
+/* リアクション表示 */
+.mizuna-note-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+  margin-bottom: 8px;
+}
+
+.mizuna-note-reactions.is-reply {
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+
+.mizuna-reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--mizuna-radius-pill);
+  background: color-mix(in srgb, var(--surface-container-high) 65%, transparent);
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--on-surface);
+  line-height: 1.2;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.mizuna-reaction-pill img {
+  height: 1.25em;
+  width: auto;
+  max-width: 24px;
+  max-height: 24px;
+  vertical-align: middle;
+  object-fit: contain;
+  display: inline-block;
+}
+
+.mizuna-reaction-count {
+  font-size: 0.76rem;
+  color: var(--on-surface-variant);
+  font-weight: 700;
 }
 
 /* アクションボタンバー */

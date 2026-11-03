@@ -48,11 +48,19 @@ export interface NoteParam {
   replyId?: string;
 }
 
+export interface MisskeyCustomEmoji {
+  name: string;
+  url: string;
+  host?: string | null;
+  aliases?: string[];
+}
+
 export interface MisskeyNoteUser {
   id: string;
   name: string | null;
   username: string;
   avatarUrl: string;
+  emojis?: MisskeyCustomEmoji[] | Record<string, string>;
   instance?: {
     name?: string;
     faviconUrl?: string;
@@ -84,6 +92,8 @@ export interface MisskeyNote {
   repliesCount?: number;
   renoteCount?: number;
   reactions?: Record<string, number>;
+  reactionEmojis?: Record<string, string>;
+  emojis?: MisskeyCustomEmoji[] | Record<string, string>;
 }
 
 // ユーザーIDのインメモリキャッシュ (token -> userId)

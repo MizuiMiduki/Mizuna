@@ -16,8 +16,22 @@ import {
 } from '../services/misskeyApi';
 import { useApp } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
-import { renderMfm } from '../utils/mfm';
+import { renderMfm, renderInlineEmoji, normalizeEmojiMap } from '../utils/mfm';
 import { hasHistoryPermission } from '../utils/version';
+
+function getReactionEmojiUrl(rawReaction: string, note: MisskeyNote): string | undefined {
+  const clean = rawReaction.replace(/^:|:$/g, '');
+  const withoutHost = clean.split('@')[0];
+
+  if (note.reactionEmojis) {
+    if (note.reactionEmojis[rawReaction]) return note.reactionEmojis[rawReaction];
+    if (note.reactionEmojis[clean]) return note.reactionEmojis[clean];
+    if (note.reactionEmojis[withoutHost]) return note.reactionEmojis[withoutHost];
+  }
+
+  const map = normalizeEmojiMap(note.emojis);
+  return map.get(clean.toLowerCase()) || map.get(withoutHost.toLowerCase());
+}
 
 type HistoryTab = 'my_notes' | 'mentions';
 
@@ -346,7 +360,7 @@ export function HistoryView() {
                             }}
                           />
                           <div class="mizuna-note-author-info">
-                            <span class="mizuna-note-author-name">{userName()}</span>
+                            <span class="mizuna-note-author-name" innerHTML={renderInlineEmoji(userName(), note.user.emojis)} />
                             <span class="mizuna-note-author-handle">@{note.user.username}</span>
                           </div>
                         </div>
@@ -370,7 +384,7 @@ export function HistoryView() {
                       {/* CW (閲覧注意) */}
                       <Show when={note.cw}>
                         <div class="mizuna-note-cw-block">
-                          <span class="mizuna-note-cw-text">{note.cw}</span>
+                          <span class="mizuna-note-cw-text" innerHTML={renderMfm(note.cw || '', note.emojis)} />
                           <button
                             type="button"
                             class="mizuna-note-cw-toggle-btn"
@@ -386,7 +400,7 @@ export function HistoryView() {
                       <Show when={!note.cw || isCwOpen()}>
                         <div
                           class="mizuna-note-body"
-                          innerHTML={note.text ? renderMfm(note.text) : ''}
+                          innerHTML={note.text ? renderMfm(note.text, note.emojis) : ''}
                         />
 
                         {/* 添付画像 */}
@@ -408,6 +422,34 @@ export function HistoryView() {
                             </For>
                           </div>
                         </Show>
+                      </Show>
+
+                      {/* リアクション一覧 */}
+                      <Show when={note.reactions && Object.keys(note.reactions).length > 0}>
+                        <div class="mizuna-note-reactions">
+                          <For each={Object.entries(note.reactions!)}>
+                            {([rawReaction, count]) => {
+                              const emojiUrl = getReactionEmojiUrl(rawReaction, note);
+                              const cleanName = rawReaction.replace(/^:|:$/g, '');
+                              return (
+                                <span class="mizuna-reaction-pill" title={`${cleanName}: ${count}`}>
+                                  <Show
+                                    when={emojiUrl}
+                                    fallback={<span>{rawReaction}</span>}
+                                  >
+                                    <img
+                                      src={emojiUrl!}
+                                      alt={cleanName}
+                                      loading="lazy"
+                                      decoding="async"
+                                    />
+                                  </Show>
+                                  <span class="mizuna-reaction-count">{count}</span>
+                                </span>
+                              );
+                            }}
+                          </For>
+                        </div>
                       </Show>
 
                       {/* アクションバー (リプライ確認・返信・ブラウザで開く) */}
@@ -484,7 +526,7 @@ export function HistoryView() {
                                           loading="lazy"
                                         />
                                         <div class="mizuna-reply-author">
-                                          <span class="mizuna-reply-name">{childName()}</span>
+                                          <span class="mizuna-reply-name" innerHTML={renderInlineEmoji(childName(), childNote.user.emojis)} />
                                           <span class="mizuna-reply-handle">@{childNote.user.username}</span>
                                         </div>
                                         <time class="mizuna-reply-time">
@@ -494,8 +536,36 @@ export function HistoryView() {
 
                                       <div
                                         class="mizuna-reply-body"
-                                        innerHTML={childNote.text ? renderMfm(childNote.text) : ''}
+                                        innerHTML={childNote.text ? renderMfm(childNote.text, childNote.emojis) : ''}
                                       />
+
+                                      {/* リプライのリアクション一覧 */}
+                                      <Show when={childNote.reactions && Object.keys(childNote.reactions).length > 0}>
+                                        <div class="mizuna-note-reactions is-reply">
+                                          <For each={Object.entries(childNote.reactions!)}>
+                                            {([rawReaction, count]) => {
+                                              const emojiUrl = getReactionEmojiUrl(rawReaction, childNote);
+                                              const cleanName = rawReaction.replace(/^:|:$/g, '');
+                                              return (
+                                                <span class="mizuna-reaction-pill" title={`${cleanName}: ${count}`}>
+                                                  <Show
+                                                    when={emojiUrl}
+                                                    fallback={<span>{rawReaction}</span>}
+                                                  >
+                                                    <img
+                                                      src={emojiUrl!}
+                                                      alt={cleanName}
+                                                      loading="lazy"
+                                                      decoding="async"
+                                                    />
+                                                  </Show>
+                                                  <span class="mizuna-reaction-count">{count}</span>
+                                                </span>
+                                              );
+                                            }}
+                                          </For>
+                                        </div>
+                                      </Show>
 
                                       <div class="mizuna-reply-actions">
                                         {/* リプライの子リプライへ返信するボタン (Issue #131) */}
