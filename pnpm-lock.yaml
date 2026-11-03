@@ -17,6 +17,9 @@ importers:
       material-dynamic-colors:
         specifier: ^1.1.2
         version: 1.1.4
+      material-symbols:
+        specifier: ^0.48.2
+        version: 0.48.2
       mfm-js:
         specifier: ^0.28.0
         version: 0.28.0
@@ -857,6 +860,9 @@ packages:
   material-dynamic-colors@1.1.4:
     resolution: {integrity: sha512-0HnLNoxDC/+pCTfhOgvSeqQKXO8n6PLO1D3IwtYr0Gg2SR2pGxft5nNngajVvtEADzXtxWvinmTdig+lUJqkxg==}
     hasBin: true
+
+  material-symbols@0.48.2:
+    resolution: {integrity: sha512-HepjQnrny9CsxBuTofUJsHS1Il41l3oa9ZiLHTnrKJKZbIyDvXHZJBD1ffLEO/5lSKdb8v2filRW59IPsO65yA==}
 
   math-intrinsics@1.1.0:
     resolution: {integrity: sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g==}
@@ -1890,6 +1896,8 @@ snapshots:
   material-dynamic-colors@1.1.4:
     dependencies:
       '@material/material-color-utilities': 0.3.0
+
+  material-symbols@0.48.2: {}
 
   math-intrinsics@1.1.0: {}
 

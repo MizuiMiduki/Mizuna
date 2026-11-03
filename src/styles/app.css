@@ -138,6 +138,44 @@ progress.circle.large {
   border-width: 3.5px;
 }
 
+/* ==========================================================================
+   Material Symbols Icons Baseline
+   ========================================================================== */
+i,
+.material-symbols-outlined,
+.icon {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga';
+  -webkit-font-feature-settings: 'liga';
+  user-select: none;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* MFM斜体などの例外を保証 */
+i[style*="oblique"],
+i[style*="italic"] {
+  font-family: inherit;
+  font-feature-settings: normal;
+  -webkit-font-feature-settings: normal;
+  white-space: inherit;
+  user-select: auto;
+  vertical-align: baseline;
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
   -webkit-font-smoothing: antialiased;

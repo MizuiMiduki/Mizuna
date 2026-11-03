@@ -1,5 +1,6 @@
 /* @refresh reload */
 import { render } from 'solid-js/web';
+import 'material-symbols/outlined.css';
 import App from './App';
 import './styles/app.css';
 
