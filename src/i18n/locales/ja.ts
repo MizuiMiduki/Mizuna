@@ -109,7 +109,7 @@ export const ja = {
     image_picker_title: '画像の追加',
     image_picker_sub: '追加方法を選択してください',
     upload_from_device: '新しくアップロード',
-    upload_from_device_sub: '端末のライブラリ・ファイルから選択（自動でWebPへ軽量化）',
+    upload_from_device_sub: '端末のライブラリ・ファイルから選択',
     select_from_drive: 'アップロード済みの画像から選択',
     select_from_drive_sub: 'Misskeyドライブ上の既存画像を取得して選択',
     drive_section_title: 'Misskeyにアップロード済みの画像',

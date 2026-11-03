@@ -109,7 +109,7 @@ export const en = {
     image_picker_title: 'Add Images',
     image_picker_sub: 'Choose how to add images',
     upload_from_device: 'Upload New Image',
-    upload_from_device_sub: 'Select from device files (auto-compressed to WebP)',
+    upload_from_device_sub: 'Select from device files',
     select_from_drive: 'Select Uploaded Image',
     select_from_drive_sub: 'Fetch and select from existing Misskey Drive images',
     drive_section_title: 'Uploaded Images on Misskey',
