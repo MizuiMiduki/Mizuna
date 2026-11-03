@@ -3986,6 +3986,11 @@ html.ui-size-large .mizuna-m3e-label {
   padding: 20px;
 }
 
+/* 確認ダイアログは通常モーダル(450)や加工モーダル(10000)よりも上位レイヤーに表示 */
+.mizuna-dialog-portal {
+  z-index: 15000;
+}
+
 .mizuna-modal-backdrop {
   position: fixed;
   inset: 0;
