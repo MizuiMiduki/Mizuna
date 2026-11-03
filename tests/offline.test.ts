@@ -122,7 +122,6 @@ describe('PWA Offline Screen, Cache & Update Management', () => {
     expect(content).toContain('dismissUpdateBanner');
     expect(content).toContain('applyPendingUpdate');
     expect(content).toContain("updateViaCache: 'none'");
-    expect(content).toContain('window.caches.delete');
     expect(content).toContain('checkForUpdate');
     expect(content).toContain('mizuna_show_release_notes_after_update');
     expect(content).toContain("type: 'SKIP_WAITING'");

@@ -456,20 +456,10 @@ export function AppProvider(props: { children: JSX.Element }) {
 
     // アップデート適用直後フラグを保存（リロード後にリリースノートを自動表示するため）
     safeLocalStorage.setItem('mizuna_show_release_notes_after_update', 'true');
-    showToast('最新版をダウンロードして適用しています...', 'info');
-
-    // 古いキャッシュがリロード後に残存するのを防ぐため、先行してキャッシュをクリア
-    if (typeof window !== 'undefined' && 'caches' in window) {
-      try {
-        const keys = await window.caches.keys();
-        await Promise.all(keys.map((k) => window.caches.delete(k)));
-      } catch (e) {
-        console.warn('Cache clear error:', e);
-      }
-    }
+    showToast('最新版を適用しています...', 'info');
 
     const doReload = () => {
-      window.location.href = window.location.pathname + '?reload=' + Date.now();
+      window.location.reload();
     };
 
     const worker = waitingWorker() || activeSwRegistration?.waiting;
@@ -479,7 +469,7 @@ export function AppProvider(props: { children: JSX.Element }) {
       } catch (err) {
         console.error('SKIP_WAITING postMessage error:', err);
       }
-      setTimeout(doReload, 800);
+      setTimeout(doReload, 600);
       return;
     }
 
@@ -494,7 +484,7 @@ export function AppProvider(props: { children: JSX.Element }) {
           try {
             w.postMessage({ type: 'SKIP_WAITING' });
           } catch {}
-          setTimeout(doReload, 600);
+          setTimeout(doReload, 500);
         };
 
         // updateViaCache: 'none' を指定してブラウザの HTTP キャッシュをバイパスし、確実に最新の sw.js を取得
@@ -533,12 +523,12 @@ export function AppProvider(props: { children: JSX.Element }) {
             return;
           }
 
-          // 3.5秒経ってもイベントが完了しない場合のフォールバック（キャッシュはクリア済み）
+          // 3秒経ってもイベントが完了しない場合のフォールバック（リロード）
           setTimeout(() => {
             if (!resolved) {
               doReload();
             }
-          }, 3500);
+          }, 3000);
           return;
         }
       }
