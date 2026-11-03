@@ -156,6 +156,7 @@ export const ja = {
     empty_desc: 'まだノートを投稿していないか、サーバーから取得できませんでした',
     replies_count: 'リプライ {count}件',
     reply_badge: 'リプライ',
+    renote_badge: 'リノート',
     reply_to_user: '@{user} への返信',
     show_replies: 'リプライを表示',
     hide_replies: 'リプライを隠す',

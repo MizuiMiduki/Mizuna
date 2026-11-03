@@ -7820,6 +7820,37 @@ body.dark .mizuna-mfm-toolbar-divider {
   font-size: 0.85rem;
 }
 
+/* リノート元の抜粋 */
+.mizuna-note-renote-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--surface-container-high) 70%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--outline-variant) 70%, transparent);
+}
+
+.mizuna-note-renote-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--on-surface-variant);
+}
+
+.mizuna-note-renote-head i {
+  font-size: 1rem;
+}
+
+.mizuna-note-renote-excerpt {
+  font-size: 0.85rem;
+  color: var(--on-surface-variant);
+  overflow-wrap: anywhere;
+}
+
 .mizuna-note-card-header {
   display: flex;
   align-items: center;

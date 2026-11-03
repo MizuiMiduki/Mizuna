@@ -156,6 +156,7 @@ export const en = {
     empty_desc: 'You have not posted any notes yet or could not fetch from server',
     replies_count: '{count} replies',
     reply_badge: 'Reply',
+    renote_badge: 'Renote',
     reply_to_user: 'Replying to @{user}',
     show_replies: 'Show replies',
     hide_replies: 'Hide replies',

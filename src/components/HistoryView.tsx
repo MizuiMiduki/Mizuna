@@ -564,10 +564,44 @@ export function HistoryView() {
 
                       {/* ノート本文 */}
                       <Show when={!note.cw || isCwOpen()}>
-                        <div
-                          class="mizuna-note-body"
-                          innerHTML={note.text ? renderMfm(note.text, note.emojis, mfmOptions()) : ''}
-                        />
+                        <Show when={note.text}>
+                          <div
+                            class="mizuna-note-body"
+                            innerHTML={renderMfm(note.text!, note.emojis, mfmOptions())}
+                          />
+                        </Show>
+
+                        {/* リノート元の抜粋（本文のみ・一部抜粋） */}
+                        <Show when={note.renote}>
+                          {(rn) => {
+                            const excerpt = () => {
+                              const src = rn().cw || rn().text || '';
+                              return src.length > 80 ? `${src.slice(0, 80)}…` : src;
+                            };
+                            return (
+                              <div class="mizuna-note-renote-block">
+                                <div class="mizuna-note-renote-head">
+                                  <i>repeat</i>
+                                  <span>{t('history.renote_badge')}</span>
+                                  <span
+                                    class="mizuna-note-renote-user"
+                                    innerHTML={renderInlineEmoji(
+                                      rn().user.name || rn().user.username,
+                                      rn().user.emojis,
+                                      mfmOptions()
+                                    )}
+                                  />
+                                </div>
+                                <Show when={excerpt()}>
+                                  <div
+                                    class="mizuna-note-renote-excerpt"
+                                    innerHTML={renderInlineEmoji(excerpt(), rn().emojis, mfmOptions())}
+                                  />
+                                </Show>
+                              </div>
+                            );
+                          }}
+                        </Show>
 
                         {/* 添付画像 */}
                         <Show when={note.files && note.files.length > 0}>

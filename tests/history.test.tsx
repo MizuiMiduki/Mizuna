@@ -87,6 +87,37 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     files: [],
   };
 
+  const mockNote4Renote: MisskeyNote = {
+    id: 'note_004_renote',
+    createdAt: new Date(Date.now() - 900000).toISOString(),
+    text: null,
+    cw: null,
+    userId: 'user_001',
+    user: {
+      id: 'user_001',
+      name: 'テストユーザー',
+      username: 'test_user',
+      avatarUrl: 'https://example.com/avatar.webp',
+    },
+    renoteId: 'note_orig',
+    renote: {
+      id: 'note_orig',
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+      text: 'リノート元の本文です。'.repeat(20),
+      cw: null,
+      userId: 'user_other',
+      user: {
+        id: 'user_other',
+        name: '元の投稿者',
+        username: 'orig_user',
+        avatarUrl: 'https://example.com/orig.webp',
+      },
+      visibility: 'public',
+    },
+    visibility: 'public',
+    files: [],
+  };
+
   const mockReplyNote: MisskeyNote = {
     id: 'reply_001',
     createdAt: new Date().toISOString(),
@@ -158,7 +189,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
           return {
             ok: true,
             status: 200,
-            json: async () => [mockNote1, mockNote2WithCw, mockNote3Reply],
+            json: async () => [mockNote1, mockNote2WithCw, mockNote3Reply, mockNote4Renote],
           };
         }
 
@@ -293,6 +324,25 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     // リプライピルバッジが表示されること
     const replyPill = container.querySelector('.mizuna-note-reply-pill');
     expect(replyPill).toBeInTheDocument();
+  });
+
+  it('リノートしたノートはリノート元の本文が一部抜粋で表示されること', async () => {
+    const { container } = render(() => (
+      <AppProvider>
+        <HistoryView />
+      </AppProvider>
+    ));
+
+    expect(await screen.findByText(/テスト投稿1です/)).toBeInTheDocument();
+
+    const block = container.querySelector('.mizuna-note-renote-block');
+    expect(block).toBeInTheDocument();
+    expect(block?.textContent).toContain('元の投稿者');
+    const excerpt = container.querySelector('.mizuna-note-renote-excerpt')?.textContent ?? '';
+    expect(excerpt).toContain('リノート元の本文です。');
+    // 長文は抜粋（80文字 + …）に切り詰められていること
+    expect(excerpt.length).toBeLessThanOrEqual(81);
+    expect(excerpt.endsWith('…')).toBe(true);
   });
 
   it('4.0.0未満のアカウントでは権限不足警告画面が表示され、APIリクエストが行われないこと', async () => {
