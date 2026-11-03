@@ -702,31 +702,63 @@ export function AppProvider(props: { children: JSX.Element }) {
 
     try {
       const data = await checkMiAuthSession(address, sessionId);
-      if (!data.ok || !data.token || !data.user) {
+      const user = data.user;
+      const token = data.token;
+      if (!data.ok || !token || !user) {
         showToast('アカウント認証に失敗しました', 'error');
         window.history.replaceState({}, document.title, '/');
         return false;
       }
 
       const cleanAddress = address.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
-      const newId = await db.account.put({
-        token: data.token,
-        name: data.user.name || data.user.username,
-        username: data.user.username,
-        address: cleanAddress,
-        avatarurl: data.user.avatarUrl,
-        add_mizuna_versinon: MIZUNA_VERSION,
-      });
 
-      // 追加したアカウントをアクティブにする
-      if (typeof newId === 'number') {
-        await updateSettingDb({ select_user: newId });
-        setSettings((prev) => ({ ...prev, select_user: newId }));
+      // 既存アカウントの存在チェック (同一サーバー・同一ユーザー名)
+      const existingAccounts = await db.account.toArray();
+      const existingAccount = existingAccounts.find(
+        (acc) =>
+          acc.username.toLowerCase() === user.username.toLowerCase() &&
+          acc.address.toLowerCase() === cleanAddress.toLowerCase()
+      );
+
+      let targetId: number | undefined;
+      const isExisting = Boolean(existingAccount && existingAccount.id !== undefined);
+
+      if (isExisting && existingAccount?.id !== undefined) {
+        // 同一アカウントが存在する場合は、トークンや最新バージョン情報を上書き更新
+        await db.account.update(existingAccount.id, {
+          token,
+          name: user.name || user.username,
+          avatarurl: user.avatarUrl,
+          add_mizuna_versinon: MIZUNA_VERSION,
+        });
+        targetId = existingAccount.id;
+      } else {
+        // 新規アカウントとして追加
+        const newId = await db.account.add({
+          token,
+          name: user.name || user.username,
+          username: user.username,
+          address: cleanAddress,
+          avatarurl: user.avatarUrl,
+          add_mizuna_versinon: MIZUNA_VERSION,
+        });
+        if (typeof newId === 'number') {
+          targetId = newId;
+        }
+      }
+
+      // 追加・更新したアカウントをアクティブにする
+      if (typeof targetId === 'number') {
+        await updateSettingDb({ select_user: targetId });
+        setSettings((prev) => ({ ...prev, select_user: targetId }));
       }
 
       safeLocalStorage.removeItem('add_server_address');
       window.history.replaceState({}, document.title, '/');
-      showToast('アカウントを追加しました！', 'success');
+      showToast(
+        isExisting ? 'アカウント情報を更新しました！' : 'アカウントを追加しました！',
+        'success'
+      );
       return true;
     } catch (err) {
       console.error('MiAuth check error:', err);
@@ -1934,16 +1966,24 @@ export function AppProvider(props: { children: JSX.Element }) {
                 add_mizuna_versinon: String(item.add_mizuna_versinon ?? MIZUNA_VERSION),
               }));
 
+              const allExistingAccounts = await db.account.toArray();
               const recordsToInsert: AccountRecord[] = [];
               for (const record of sanitized) {
                 if (!record.token || !record.username || !record.address) continue;
-                const exists = await db.account
-                  .where({
-                    username: record.username,
-                    address: record.address,
-                  })
-                  .count();
-                if (exists === 0) {
+                const existing = allExistingAccounts.find(
+                  (acc) =>
+                    acc.username.toLowerCase() === record.username.toLowerCase() &&
+                    acc.address.toLowerCase() === record.address.toLowerCase()
+                );
+                if (existing && existing.id !== undefined) {
+                  // 同一アカウントが存在する場合はトークンや最新情報を上書き
+                  await db.account.update(existing.id, {
+                    token: record.token,
+                    name: record.name,
+                    avatarurl: record.avatarurl,
+                    add_mizuna_versinon: record.add_mizuna_versinon,
+                  });
+                } else if (!existing) {
                   recordsToInsert.push(record);
                 }
               }
