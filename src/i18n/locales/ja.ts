@@ -163,6 +163,10 @@ export const ja = {
     cancel_reply: '返信を解除',
     open_in_browser: 'Misskeyで開く',
     error_load: '投稿の取得に失敗しました',
+    permission_required_title: '投稿履歴の閲覧権限がありません',
+    permission_required_desc: 'このアカウントは v4.0.0 未満（v{version}）で追加されたため、ノート閲覧権限（read:notes）が付与されていません。投稿履歴やリプライを確認するには、アカウントを再認証してください。',
+    reauth_button: 'アカウントを再認証する',
+    account_badge_history_unsupported: '履歴非対応',
   },
   settings: {
     title: '設定',

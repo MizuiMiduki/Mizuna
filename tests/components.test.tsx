@@ -633,6 +633,38 @@ describe('UI Components', () => {
       expect(screen.getByText(/(ドライブへの画像アップロード権限)/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '再認証する' })).toBeInTheDocument();
     });
+
+    it('4.0.0未満のアカウントに「履歴非対応」バッジが表示され、タップ時に不足権限ダイアログが表示されること', async () => {
+      // 3.15.0のアカウント（write:drive はあるが read:notes はない）を追加
+      await db.account.add({
+        token: 'tok_v315',
+        name: '3.15.0ユーザー',
+        username: 'user_v315',
+        address: 'misskey.io',
+        avatarurl: 'https://example.com/avatar_v315.webp',
+        add_mizuna_versinon: '3.15.0',
+      });
+
+      render(() => (
+        <AppProvider>
+          <AccountView />
+          <DialogHost />
+        </AppProvider>
+      ));
+
+      // 履歴非対応バッジが存在すること（初期アカウントと合わせて複数存在）
+      const historyBadges = await screen.findAllByRole('button', { name: /(履歴非対応|lock)/i });
+      expect(historyBadges.length).toBeGreaterThanOrEqual(1);
+
+      // バッジをクリック
+      fireEvent.click(historyBadges[0]);
+
+      // モーダルダイアログが開き、不足権限として read:notes が表示されること
+      expect(await screen.findByText('アカウント権限の確認')).toBeInTheDocument();
+      expect(screen.getByText(/read:notes/)).toBeInTheDocument();
+      expect(screen.getByText(/(投稿履歴・リプライ閲覧権限)/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '再認証する' })).toBeInTheDocument();
+    });
   });
 
   describe('NoteView - 画像プレビューと圧縮表示のリアルタイム更新', () => {

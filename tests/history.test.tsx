@@ -72,7 +72,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
       username: 'test_user',
       address: 'misskey.test',
       avatarurl: 'https://example.com/avatar.webp',
-      add_mizuna_versinon: '3.15.0',
+      add_mizuna_versinon: '4.0.0',
     });
 
     // fetch のモック
@@ -207,5 +207,54 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     expect(replyCard).toBeInTheDocument();
     expect(replyCard?.textContent).toContain('テストユーザー');
     expect(replyCard?.textContent).toContain('テスト投稿1です');
+  });
+
+  it('4.0.0未満のアカウントでは権限不足警告画面が表示され、APIリクエストが行われないこと', async () => {
+    // 3.15.0のアカウントに更新
+    await db.account.clear();
+    await db.account.add({
+      id: 1,
+      token: 'tok_test',
+      name: 'テストユーザー',
+      username: 'test_user',
+      address: 'misskey.test',
+      avatarurl: 'https://example.com/avatar.webp',
+      add_mizuna_versinon: '3.15.0',
+    });
+
+    let currentAppView: any;
+    function TestConsumer() {
+      const { currentView } = useApp();
+      currentAppView = currentView;
+      return null;
+    }
+
+    render(() => (
+      <AppProvider>
+        <HistoryView />
+        <TestConsumer />
+      </AppProvider>
+    ));
+
+    // 権限不足の警告画面が表示されること
+    expect(
+      await screen.findByRole('heading', {
+        name: /(投稿履歴の閲覧権限がありません|History permission required|Permission Required to View History)/i,
+      })
+    ).toBeInTheDocument();
+    expect(await screen.findByText(/3\.15\.0/)).toBeInTheDocument();
+
+    // 再認証ボタンが表示され、クリックでアカウント追加画面へ遷移すること
+    const reauthBtn = screen.getByRole('button', { name: /(アカウントを再認証する|Re-authenticate Account)/ });
+    expect(reauthBtn).toBeInTheDocument();
+    fireEvent.click(reauthBtn);
+    expect(currentAppView()).toBe('add_account');
+
+    // fetchで /api/users/notes や /api/notes/mentions が呼ばれていないこと
+    const fetchMock = vi.mocked(fetch);
+    const notesCalls = fetchMock.mock.calls.filter((call) =>
+      typeof call[0] === 'string' && (call[0].includes('/api/users/notes') || call[0].includes('/api/notes/mentions'))
+    );
+    expect(notesCalls.length).toBe(0);
   });
 });

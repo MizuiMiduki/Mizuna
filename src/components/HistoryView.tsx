@@ -18,6 +18,7 @@ import { useApp } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { renderMfm } from '../utils/mfm';
 import { FloatingBackButton } from './FloatingBackButton';
+import { hasHistoryPermission } from '../utils/version';
 
 type HistoryTab = 'my_notes' | 'mentions';
 
@@ -56,6 +57,10 @@ export function HistoryView() {
 
   let containerRef: HTMLDivElement | undefined;
 
+  const isHistorySupported = createMemo(() =>
+    hasHistoryPermission(currentUser()?.add_mizuna_versinon)
+  );
+
   const [activeTab, setActiveTab] = createSignal<HistoryTab>('my_notes');
   const [notes, setNotes] = createSignal<MisskeyNote[]>([]);
   const [isLoading, setIsLoading] = createSignal(false);
@@ -81,7 +86,7 @@ export function HistoryView() {
 
   const loadNotes = async (reset = false) => {
     const user = currentUser();
-    if (!user) return;
+    if (!user || !isHistorySupported()) return;
 
     if (reset) {
       setIsLoading(true);
@@ -217,7 +222,7 @@ export function HistoryView() {
             type="button"
             class="mizuna-tool-icon-btn"
             onClick={() => loadNotes(true)}
-            disabled={isLoading()}
+            disabled={isLoading() || !isHistorySupported()}
             title={t('history.refresh')}
             aria-label={t('history.refresh')}
           >
@@ -226,303 +231,338 @@ export function HistoryView() {
         </div>
       </div>
 
-      {/* タブ切り替え */}
-      <div class="mizuna-history-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          class={`mizuna-history-tab ${activeTab() === 'my_notes' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('my_notes')}
-          aria-selected={activeTab() === 'my_notes'}
-        >
-          <i>person</i>
-          <span>{t('history.tab_my_notes')}</span>
-        </button>
-
-        <button
-          type="button"
-          role="tab"
-          class={`mizuna-history-tab ${activeTab() === 'mentions' ? 'is-active' : ''}`}
-          onClick={() => setActiveTab('mentions')}
-          aria-selected={activeTab() === 'mentions'}
-        >
-          <i>alternate_email</i>
-          <span>{t('history.tab_mentions')}</span>
-        </button>
-      </div>
-
-      {/* 投稿一覧 */}
-      <div class="mizuna-history-content">
-        <Show when={isLoading()}>
-          <div class="mizuna-history-loading">
-            <div class="mizuna-spinner" />
-            <span>{t('history.loading')}</span>
-          </div>
-        </Show>
-
-        <Show when={!isLoading() && errorMessage()}>
-          <div class="mizuna-history-error">
-            <i>error_outline</i>
-            <p>{errorMessage()}</p>
-            <button
-              type="button"
-              class="mizuna-btn mizuna-btn-primary"
-              onClick={() => loadNotes(true)}
-            >
-              {t('history.refresh')}
-            </button>
-          </div>
-        </Show>
-
-        <Show when={!isLoading() && !errorMessage() && notes().length === 0}>
-          <div class="mizuna-history-empty">
-            <div class="mizuna-history-empty-icon">
-              <i>edit_note</i>
+      <Show
+        when={isHistorySupported()}
+        fallback={
+          <div class="mizuna-history-perm-warning">
+            <div class="mizuna-history-perm-icon">
+              <i>lock_person</i>
             </div>
-            <p class="mizuna-history-empty-title">{t('history.empty_title')}</p>
-            <p class="mizuna-history-empty-desc">{t('history.empty_desc')}</p>
+            <h3 class="mizuna-history-perm-title">{t('history.permission_required_title')}</h3>
+            <p class="mizuna-history-perm-desc">
+              {t('history.permission_required_desc', {
+                version: currentUser()?.add_mizuna_versinon || '?',
+              })}
+            </p>
+            <div class="mizuna-history-perm-actions">
+              <button
+                type="button"
+                class="mizuna-btn mizuna-btn-primary"
+                onClick={() => setCurrentView('add_account')}
+              >
+                <i>key</i>
+                <span>{t('history.reauth_button')}</span>
+              </button>
+              <button
+                type="button"
+                class="mizuna-btn mizuna-btn-secondary"
+                onClick={() => setCurrentView('accounts')}
+              >
+                <i>manage_accounts</i>
+                <span>アカウント管理</span>
+              </button>
+            </div>
           </div>
-        </Show>
+        }
+      >
+        {/* タブ切り替え */}
+        <div class="mizuna-history-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            class={`mizuna-history-tab ${activeTab() === 'my_notes' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('my_notes')}
+            aria-selected={activeTab() === 'my_notes'}
+          >
+            <i>person</i>
+            <span>{t('history.tab_my_notes')}</span>
+          </button>
 
-        <Show when={!isLoading() && notes().length > 0}>
-          <div class="mizuna-history-list">
-            <For each={notes()}>
-              {(note) => {
-                const avatarUrl = () =>
-                  getDisplayAvatarUrl(note.user.avatarUrl, settings().is_visible_icon);
-                const userName = () => note.user.name || note.user.username;
-                const isCwOpen = () => Boolean(expandedCwMap()[note.id]);
-                const replyState = () => repliesMap()[note.id];
-                const repliesCount = () => note.repliesCount ?? 0;
+          <button
+            type="button"
+            role="tab"
+            class={`mizuna-history-tab ${activeTab() === 'mentions' ? 'is-active' : ''}`}
+            onClick={() => setActiveTab('mentions')}
+            aria-selected={activeTab() === 'mentions'}
+          >
+            <i>alternate_email</i>
+            <span>{t('history.tab_mentions')}</span>
+          </button>
+        </div>
 
-                return (
-                  <article class="mizuna-note-card">
-                    {/* ノートヘッダー */}
-                    <div class="mizuna-note-card-header">
-                      <div class="mizuna-note-author">
-                        <img
-                          src={avatarUrl()}
-                          alt=""
-                          class="mizuna-note-avatar"
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).src = '/icon.png';
-                          }}
-                        />
-                        <div class="mizuna-note-author-info">
-                          <span class="mizuna-note-author-name">{userName()}</span>
-                          <span class="mizuna-note-author-handle">@{note.user.username}</span>
+        {/* 投稿一覧 */}
+        <div class="mizuna-history-content">
+          <Show when={isLoading()}>
+            <div class="mizuna-history-loading">
+              <div class="mizuna-spinner" />
+              <span>{t('history.loading')}</span>
+            </div>
+          </Show>
+
+          <Show when={!isLoading() && errorMessage()}>
+            <div class="mizuna-history-error">
+              <i>error_outline</i>
+              <p>{errorMessage()}</p>
+              <button
+                type="button"
+                class="mizuna-btn mizuna-btn-primary"
+                onClick={() => loadNotes(true)}
+              >
+                {t('history.refresh')}
+              </button>
+            </div>
+          </Show>
+
+          <Show when={!isLoading() && !errorMessage() && notes().length === 0}>
+            <div class="mizuna-history-empty">
+              <div class="mizuna-history-empty-icon">
+                <i>edit_note</i>
+              </div>
+              <p class="mizuna-history-empty-title">{t('history.empty_title')}</p>
+              <p class="mizuna-history-empty-desc">{t('history.empty_desc')}</p>
+            </div>
+          </Show>
+
+          <Show when={!isLoading() && notes().length > 0}>
+            <div class="mizuna-history-list">
+              <For each={notes()}>
+                {(note) => {
+                  const avatarUrl = () =>
+                    getDisplayAvatarUrl(note.user.avatarUrl, settings().is_visible_icon);
+                  const userName = () => note.user.name || note.user.username;
+                  const isCwOpen = () => Boolean(expandedCwMap()[note.id]);
+                  const replyState = () => repliesMap()[note.id];
+                  const repliesCount = () => note.repliesCount ?? 0;
+
+                  return (
+                    <article class="mizuna-note-card">
+                      {/* ノートヘッダー */}
+                      <div class="mizuna-note-card-header">
+                        <div class="mizuna-note-author">
+                          <img
+                            src={avatarUrl()}
+                            alt=""
+                            class="mizuna-note-avatar"
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = '/icon.png';
+                            }}
+                          />
+                          <div class="mizuna-note-author-info">
+                            <span class="mizuna-note-author-name">{userName()}</span>
+                            <span class="mizuna-note-author-handle">@{note.user.username}</span>
+                          </div>
+                        </div>
+
+                        <div class="mizuna-note-meta-right">
+                          <span class={`mizuna-note-vis-badge visibility-${note.visibility}`}>
+                            <i>
+                              {note.visibility === 'public'
+                                ? 'public'
+                                : note.visibility === 'home'
+                                ? 'home'
+                                : 'lock'}
+                            </i>
+                          </span>
+                          <time class="mizuna-note-time" datetime={note.createdAt} title={new Date(note.createdAt).toLocaleString()}>
+                            {formatRelativeTime(note.createdAt)}
+                          </time>
                         </div>
                       </div>
 
-                      <div class="mizuna-note-meta-right">
-                        <span class={`mizuna-note-vis-badge visibility-${note.visibility}`}>
-                          <i>
-                            {note.visibility === 'public'
-                              ? 'public'
-                              : note.visibility === 'home'
-                              ? 'home'
-                              : 'lock'}
-                          </i>
-                        </span>
-                        <time class="mizuna-note-time" datetime={note.createdAt} title={new Date(note.createdAt).toLocaleString()}>
-                          {formatRelativeTime(note.createdAt)}
-                        </time>
-                      </div>
-                    </div>
-
-                    {/* CW (閲覧注意) */}
-                    <Show when={note.cw}>
-                      <div class="mizuna-note-cw-block">
-                        <span class="mizuna-note-cw-text">{note.cw}</span>
-                        <button
-                          type="button"
-                          class="mizuna-note-cw-toggle-btn"
-                          onClick={() => toggleCw(note.id)}
-                        >
-                          <i>{isCwOpen() ? 'expand_less' : 'expand_more'}</i>
-                          <span>{isCwOpen() ? t('note.preview_cw_hide') : t('note.preview_cw_show')}</span>
-                        </button>
-                      </div>
-                    </Show>
-
-                    {/* ノート本文 */}
-                    <Show when={!note.cw || isCwOpen()}>
-                      <div
-                        class="mizuna-note-body"
-                        innerHTML={note.text ? renderMfm(note.text) : ''}
-                      />
-
-                      {/* 添付画像 */}
-                      <Show when={note.files && note.files.length > 0}>
-                        <div class={`mizuna-note-files-grid count-${Math.min(note.files!.length, 4)}`}>
-                          <For each={note.files}>
-                            {(file) => (
-                              <div
-                                class="mizuna-note-file-item"
-                                onClick={() => setPreviewImage(file.url)}
-                              >
-                                <img
-                                  src={file.thumbnailUrl || file.url}
-                                  alt={file.name}
-                                  loading="lazy"
-                                />
-                              </div>
-                            )}
-                          </For>
+                      {/* CW (閲覧注意) */}
+                      <Show when={note.cw}>
+                        <div class="mizuna-note-cw-block">
+                          <span class="mizuna-note-cw-text">{note.cw}</span>
+                          <button
+                            type="button"
+                            class="mizuna-note-cw-toggle-btn"
+                            onClick={() => toggleCw(note.id)}
+                          >
+                            <i>{isCwOpen() ? 'expand_less' : 'expand_more'}</i>
+                            <span>{isCwOpen() ? t('note.preview_cw_hide') : t('note.preview_cw_show')}</span>
+                          </button>
                         </div>
                       </Show>
-                    </Show>
 
-                    {/* アクションバー (リプライ確認・返信・ブラウザで開く) */}
-                    <div class="mizuna-note-card-actions">
-                      <div class="mizuna-note-actions-left">
-                        {/* リプライ確認ボタン (Issue #130) */}
-                        <button
-                          type="button"
-                          class={`mizuna-note-action-chip ${replyState()?.isOpen ? 'is-active' : ''}`}
-                          onClick={() => toggleReplies(note.id)}
-                          title={t('history.show_replies')}
-                        >
-                          <i>chat_bubble_outline</i>
-                          <span>
-                            {repliesCount() > 0 ? repliesCount() : t('history.show_replies')}
-                          </span>
-                        </button>
+                      {/* ノート本文 */}
+                      <Show when={!note.cw || isCwOpen()}>
+                        <div
+                          class="mizuna-note-body"
+                          innerHTML={note.text ? renderMfm(note.text) : ''}
+                        />
 
-                        {/* 返信ボタン (Issue #131) */}
-                        <button
-                          type="button"
-                          class="mizuna-note-action-chip"
-                          onClick={() => handleReplyClick(note)}
-                          title={t('history.reply_to')}
-                        >
-                          <i>reply</i>
-                          <span>{t('history.reply_to')}</span>
-                        </button>
-                      </div>
-
-                      <div class="mizuna-note-actions-right">
-                        <button
-                          type="button"
-                          class="mizuna-note-action-icon-btn"
-                          onClick={() => openNoteInBrowser(note.id)}
-                          title={t('history.open_in_browser')}
-                        >
-                          <i>open_in_new</i>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* リプライ一覧展開エリア (Issue #130) */}
-                    <Show when={replyState()?.isOpen}>
-                      <div class="mizuna-replies-thread">
-                        <Show when={replyState()?.loading}>
-                          <div class="mizuna-replies-loading">
-                            <div class="mizuna-spinner small" />
-                            <span>{t('history.loading_replies')}</span>
-                          </div>
-                        </Show>
-
-                        <Show when={!replyState()?.loading && replyState()?.list.length === 0}>
-                          <div class="mizuna-replies-empty">
-                            <span>{t('history.no_replies')}</span>
-                          </div>
-                        </Show>
-
-                        <Show when={!replyState()?.loading && (replyState()?.list.length ?? 0) > 0}>
-                          <div class="mizuna-replies-list">
-                            <For each={replyState()?.list}>
-                              {(childNote) => {
-                                const childAvatar = () =>
-                                  getDisplayAvatarUrl(childNote.user.avatarUrl, settings().is_visible_icon);
-                                const childName = () => childNote.user.name || childNote.user.username;
-
-                                return (
-                                  <div class="mizuna-reply-item">
-                                    <div class="mizuna-reply-header">
-                                      <img
-                                        src={childAvatar()}
-                                        alt=""
-                                        class="mizuna-reply-avatar"
-                                        loading="lazy"
-                                      />
-                                      <div class="mizuna-reply-author">
-                                        <span class="mizuna-reply-name">{childName()}</span>
-                                        <span class="mizuna-reply-handle">@{childNote.user.username}</span>
-                                      </div>
-                                      <time class="mizuna-reply-time">
-                                        {formatRelativeTime(childNote.createdAt)}
-                                      </time>
-                                    </div>
-
-                                    <div
-                                      class="mizuna-reply-body"
-                                      innerHTML={childNote.text ? renderMfm(childNote.text) : ''}
-                                    />
-
-                                    <div class="mizuna-reply-actions">
-                                      {/* リプライの子リプライへ返信するボタン (Issue #131) */}
-                                      <button
-                                        type="button"
-                                        class="mizuna-reply-action-btn"
-                                        onClick={() => handleReplyClick(childNote)}
-                                      >
-                                        <i>reply</i>
-                                        <span>{t('history.reply_to')}</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        class="mizuna-reply-action-icon-btn"
-                                        onClick={() => openNoteInBrowser(childNote.id)}
-                                        title={t('history.open_in_browser')}
-                                      >
-                                        <i>open_in_new</i>
-                                      </button>
-                                    </div>
-                                  </div>
-                                );
-                              }}
+                        {/* 添付画像 */}
+                        <Show when={note.files && note.files.length > 0}>
+                          <div class={`mizuna-note-files-grid count-${Math.min(note.files!.length, 4)}`}>
+                            <For each={note.files}>
+                              {(file) => (
+                                <div
+                                  class="mizuna-note-file-item"
+                                  onClick={() => setPreviewImage(file.url)}
+                                >
+                                  <img
+                                    src={file.thumbnailUrl || file.url}
+                                    alt={file.name}
+                                    loading="lazy"
+                                  />
+                                </div>
+                              )}
                             </For>
                           </div>
                         </Show>
-                      </div>
-                    </Show>
-                  </article>
-                );
-              }}
-            </For>
+                      </Show>
 
-            {/* ページネーション: さらに読み込む (Issue #129) */}
-            <div class="mizuna-history-pagination">
-              <Show
-                when={hasMore()}
-                fallback={<div class="mizuna-history-nomore">{t('history.no_more')}</div>}
-              >
-                <button
-                  type="button"
-                  class="mizuna-btn mizuna-btn-secondary mizuna-history-loadmore-btn"
-                  onClick={() => loadNotes(false)}
-                  disabled={isLoadingMore()}
+                      {/* アクションバー (リプライ確認・返信・ブラウザで開く) */}
+                      <div class="mizuna-note-card-actions">
+                        <div class="mizuna-note-actions-left">
+                          {/* リプライ確認ボタン (Issue #130) */}
+                          <button
+                            type="button"
+                            class={`mizuna-note-action-chip ${replyState()?.isOpen ? 'is-active' : ''}`}
+                            onClick={() => toggleReplies(note.id)}
+                            title={t('history.show_replies')}
+                          >
+                            <i>chat_bubble_outline</i>
+                            <span>
+                              {repliesCount() > 0 ? repliesCount() : t('history.show_replies')}
+                            </span>
+                          </button>
+
+                          {/* 返信ボタン (Issue #131) */}
+                          <button
+                            type="button"
+                            class="mizuna-note-action-chip"
+                            onClick={() => handleReplyClick(note)}
+                            title={t('history.reply_to')}
+                          >
+                            <i>reply</i>
+                            <span>{t('history.reply_to')}</span>
+                          </button>
+                        </div>
+
+                        <div class="mizuna-note-actions-right">
+                          <button
+                            type="button"
+                            class="mizuna-note-action-icon-btn"
+                            onClick={() => openNoteInBrowser(note.id)}
+                            title={t('history.open_in_browser')}
+                          >
+                            <i>open_in_new</i>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* リプライ一覧展開エリア (Issue #130) */}
+                      <Show when={replyState()?.isOpen}>
+                        <div class="mizuna-replies-thread">
+                          <Show when={replyState()?.loading}>
+                            <div class="mizuna-replies-loading">
+                              <div class="mizuna-spinner small" />
+                              <span>{t('history.loading_replies')}</span>
+                            </div>
+                          </Show>
+
+                          <Show when={!replyState()?.loading && replyState()?.list.length === 0}>
+                            <div class="mizuna-replies-empty">
+                              <span>{t('history.no_replies')}</span>
+                            </div>
+                          </Show>
+
+                          <Show when={!replyState()?.loading && (replyState()?.list.length ?? 0) > 0}>
+                            <div class="mizuna-replies-list">
+                              <For each={replyState()?.list}>
+                                {(childNote) => {
+                                  const childAvatar = () =>
+                                    getDisplayAvatarUrl(childNote.user.avatarUrl, settings().is_visible_icon);
+                                  const childName = () => childNote.user.name || childNote.user.username;
+
+                                  return (
+                                    <div class="mizuna-reply-item">
+                                      <div class="mizuna-reply-header">
+                                        <img
+                                          src={childAvatar()}
+                                          alt=""
+                                          class="mizuna-reply-avatar"
+                                          loading="lazy"
+                                        />
+                                        <div class="mizuna-reply-author">
+                                          <span class="mizuna-reply-name">{childName()}</span>
+                                          <span class="mizuna-reply-handle">@{childNote.user.username}</span>
+                                        </div>
+                                        <time class="mizuna-reply-time">
+                                          {formatRelativeTime(childNote.createdAt)}
+                                        </time>
+                                      </div>
+
+                                      <div
+                                        class="mizuna-reply-body"
+                                        innerHTML={childNote.text ? renderMfm(childNote.text) : ''}
+                                      />
+
+                                      <div class="mizuna-reply-actions">
+                                        {/* リプライの子リプライへ返信するボタン (Issue #131) */}
+                                        <button
+                                          type="button"
+                                          class="mizuna-reply-action-btn"
+                                          onClick={() => handleReplyClick(childNote)}
+                                        >
+                                          <i>reply</i>
+                                          <span>{t('history.reply_to')}</span>
+                                        </button>
+                                        <button
+                                          type="button"
+                                          class="mizuna-reply-action-icon-btn"
+                                          onClick={() => openNoteInBrowser(childNote.id)}
+                                          title={t('history.open_in_browser')}
+                                        >
+                                          <i>open_in_new</i>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  );
+                                }}
+                              </For>
+                            </div>
+                          </Show>
+                        </div>
+                      </Show>
+                    </article>
+                  );
+                }}
+              </For>
+
+              {/* ページネーション: さらに読み込む (Issue #129) */}
+              <div class="mizuna-history-pagination">
+                <Show
+                  when={hasMore()}
+                  fallback={<div class="mizuna-history-nomore">{t('history.no_more')}</div>}
                 >
-                  <Show
-                    when={!isLoadingMore()}
-                    fallback={
-                      <>
-                        <div class="mizuna-spinner small" />
-                        <span>{t('history.loading_more')}</span>
-                      </>
-                    }
+                  <button
+                    type="button"
+                    class="mizuna-btn mizuna-btn-secondary mizuna-history-loadmore-btn"
+                    onClick={() => loadNotes(false)}
+                    disabled={isLoadingMore()}
                   >
-                    <i>expand_more</i>
-                    <span>{t('history.load_more')}</span>
-                  </Show>
-                </button>
-              </Show>
+                    <Show
+                      when={!isLoadingMore()}
+                      fallback={
+                        <>
+                          <div class="mizuna-spinner small" />
+                          <span>{t('history.loading_more')}</span>
+                        </>
+                      }
+                    >
+                      <i>expand_more</i>
+                      <span>{t('history.load_more')}</span>
+                    </Show>
+                  </button>
+                </Show>
+              </div>
             </div>
-          </div>
-        </Show>
-      </div>
+          </Show>
+        </div>
+      </Show>
 
       {/* 画像プレビュー用ライトボックス */}
       <Show when={previewImage()}>

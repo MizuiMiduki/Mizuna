@@ -143,7 +143,7 @@ export function buildMiAuthUrl(address: string, sessionId: string): string {
   const appNameWithVersion = `${mizuna_options.app_name} v${mizuna_options.mizuna_version}`;
   return `https://${cleanAddress}/miauth/${sessionId}?name=${encodeURIComponent(
     appNameWithVersion
-  )}&callback=${encodeURIComponent(callbackOrigin)}&permission=write:notes,read:account,write:drive`;
+  )}&callback=${encodeURIComponent(callbackOrigin)}&permission=write:notes,read:account,write:drive,read:notes`;
 }
 
 /**

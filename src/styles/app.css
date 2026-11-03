@@ -2177,6 +2177,21 @@ body {
   color: #f59e0b;
 }
 
+.mizuna-perm-warning-badge.history {
+  background: color-mix(in srgb, #8b5cf6 16%, var(--surface));
+  color: #7c3aed;
+  border-color: color-mix(in srgb, #8b5cf6 45%, transparent);
+}
+
+.mizuna-perm-warning-badge.history:hover {
+  background: color-mix(in srgb, #8b5cf6 28%, var(--surface));
+  border-color: #8b5cf6;
+}
+
+.mizuna-perm-warning-badge.history i {
+  color: #8b5cf6;
+}
+
 .mizuna-ver-tag {
   font-size: 0.72rem;
   font-weight: 700;
@@ -7577,6 +7592,57 @@ body.dark .mizuna-mfm-toolbar-divider {
   color: var(--on-surface-variant);
   margin: 0;
   max-width: 320px;
+}
+
+.mizuna-history-perm-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 24px;
+  text-align: center;
+  margin: 24px auto;
+  max-width: 500px;
+  border-radius: var(--mizuna-radius-xl, 24px);
+  background: color-mix(in srgb, var(--surface-container-high) 60%, transparent);
+  border: 1px dashed color-mix(in srgb, #f59e0b 45%, var(--outline-variant));
+}
+
+.mizuna-history-perm-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: color-mix(in srgb, #f59e0b 16%, var(--surface));
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.mizuna-history-perm-icon i {
+  font-size: 2.2rem;
+}
+
+.mizuna-history-perm-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--on-surface);
+  margin: 0 0 8px;
+}
+
+.mizuna-history-perm-desc {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: var(--on-surface-variant);
+  margin: 0 0 20px;
+}
+
+.mizuna-history-perm-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
 }
 
 /* ノートカード一覧 */
