@@ -512,10 +512,6 @@ export function NoteView() {
         {/* MFM ツールバー */}
         <div class="mizuna-composer-subbar">
           <div class="mizuna-mfm-toolbar" role="toolbar" aria-label="MFM Insertion Toolbar">
-            <span class="mizuna-mfm-toolbar-label">
-              <i>auto_fix_high</i>
-              {t('note.mfm_toolbar_label')}
-            </span>
             <button
               type="button"
               class="mizuna-mfm-chip"
