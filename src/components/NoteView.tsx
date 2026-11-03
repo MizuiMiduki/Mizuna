@@ -25,6 +25,7 @@ import {
   filterMfmSuggestions,
   applyMfmSuggestion,
 } from '../utils/mfmAutocomplete';
+import { getCaretCoordinates } from '../utils/caretCoordinates';
 import { HoldHoverTip } from './HoldHoverTip';
 import { ImageEditorModal } from './ImageEditorModal';
 
@@ -77,6 +78,7 @@ export function NoteView() {
   const [acStartPos, setAcStartPos] = createSignal(-1);
   const [acIndex, setAcIndex] = createSignal(0);
   const [acField, setAcField] = createSignal<'note' | 'cw'>('note');
+  const [acPos, setAcPos] = createSignal<{ top: number; left: number }>({ top: 90, left: 16 });
 
   const acSuggestions = createMemo(() => filterMfmSuggestions(acQuery()));
 
@@ -109,6 +111,7 @@ export function NoteView() {
   });
 
   let viewContainerRef: HTMLDivElement | undefined;
+  let composerRef: HTMLElement | undefined;
   let cwSectionRef: HTMLDivElement | undefined;
   let cwInputRef: HTMLTextAreaElement | undefined;
   let noteInputRef: HTMLTextAreaElement | undefined;
@@ -158,6 +161,47 @@ export function NoteView() {
     }, 0);
   };
 
+  const updateAutocompletePosition = (targetEl: HTMLTextAreaElement, triggerPos: number) => {
+    if (!composerRef) return;
+    try {
+      const caret = getCaretCoordinates(targetEl, triggerPos);
+      const targetRect = targetEl.getBoundingClientRect();
+      const composerRect = composerRef.getBoundingClientRect();
+
+      if (composerRect.width === 0 || composerRect.height === 0) {
+        setAcPos({ top: 90, left: 16 });
+        return;
+      }
+
+      // Exact pixel position of the trigger character inside the composer card
+      const caretTopInComposer = targetRect.top - composerRect.top + (caret.top - targetEl.scrollTop);
+      const caretLeftInComposer = targetRect.left - composerRect.left + (caret.left - targetEl.scrollLeft);
+      const lineHeight = caret.height || 26;
+
+      const popupHeight = 132;
+      const popupWidth = 240;
+
+      // Determine vertical placement: below by default, or above if close to bottom
+      let top: number;
+      const spaceBelow = composerRect.height - (caretTopInComposer + lineHeight);
+      if (spaceBelow >= popupHeight + 8 || caretTopInComposer < popupHeight + 8) {
+        // Position below the line being typed (with a 4px cushion)
+        top = caretTopInComposer + lineHeight + 4;
+      } else {
+        // Position above the line being typed (with a 4px cushion)
+        top = Math.max(6, caretTopInComposer - popupHeight - 4);
+      }
+
+      // Horizontal clamp within composer bounds
+      const maxLeft = Math.max(8, composerRect.width - popupWidth - 12);
+      const left = Math.max(8, Math.min(caretLeftInComposer, maxLeft));
+
+      setAcPos({ top, left });
+    } catch {
+      setAcPos({ top: 90, left: 16 });
+    }
+  };
+
   const handleCheckAutocomplete = (field: 'note' | 'cw', text: string, targetEl: HTMLTextAreaElement) => {
     const cursorPos = targetEl.selectionStart ?? text.length;
     const { active, query, startPos } = getMfmTriggerInfo(text, cursorPos);
@@ -167,6 +211,7 @@ export function NoteView() {
       setAcStartPos(startPos);
       setAcIndex(0);
       setAcField(field);
+      updateAutocompletePosition(targetEl, startPos);
     } else {
       setAcActive(false);
     }
@@ -424,8 +469,21 @@ export function NoteView() {
       }
     };
 
+    const handleResize = () => {
+      if (acActive()) {
+        const targetEl = acField() === 'cw' ? cwInputRef : noteInputRef;
+        if (targetEl) {
+          updateAutocompletePosition(targetEl, acStartPos());
+        }
+      }
+    };
+
     document.addEventListener('keydown', handleKeyDown);
-    onCleanup(() => document.removeEventListener('keydown', handleKeyDown));
+    window.addEventListener('resize', handleResize);
+    onCleanup(() => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    });
   });
 
   const handleOpenPreview = (item: AttachedImageItem) => {
@@ -531,10 +589,53 @@ export function NoteView() {
     >
       {/* 統合型コンポーザーカード */}
       <section
+        ref={composerRef}
         class={`mizuna-studio-composer ${isInputFocused() ? 'is-focused' : ''} ${
           isDraggingOver() ? 'is-dragging' : ''
         }`}
       >
+        {/* MFM 予測変換（オートコンプリート）サジェストポップアップ */}
+        <Show when={acActive() && acSuggestions().length > 0}>
+          <div
+            class="mizuna-mfm-autocomplete-popup"
+            role="listbox"
+            aria-label="MFM Suggestions"
+            style={{
+              top: `${acPos().top}px`,
+              left: `${acPos().left}px`,
+            }}
+          >
+            <div class="mizuna-mfm-ac-list">
+              <For each={acSuggestions()}>
+                {(item, index) => (
+                  <div
+                    class={`mizuna-mfm-ac-item ${index() === acIndex() ? 'is-selected' : ''}`}
+                    role="option"
+                    aria-selected={index() === acIndex()}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                    }}
+                    onClick={() => {
+                      const targetRef = acField() === 'cw' ? cwInputRef : noteInputRef;
+                      const text = acField() === 'cw' ? cwText() : noteText();
+                      const setText = acField() === 'cw' ? setCwText : setNoteText;
+                      if (targetRef) {
+                        handleApplySuggestion(acField(), item, targetRef, text, setText);
+                      }
+                    }}
+                  >
+                    <i class="mizuna-mfm-ac-icon">{item.icon}</i>
+                    <span class="mizuna-mfm-ac-tag">$[{item.label}]</span>
+                    <span class="mizuna-mfm-ac-desc">{item.desc}</span>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
         {/* コンポーザー上部：投稿者情報 ＆ 公開範囲ピルセレクター */}
         <div class="mizuna-composer-header">
           <button
@@ -732,6 +833,11 @@ export function NoteView() {
                   setIsInputFocused(false);
                   setTimeout(() => setAcActive(false), 200);
                 }}
+                onScroll={() => {
+                  if (acActive() && cwInputRef) {
+                    updateAutocompletePosition(cwInputRef, acStartPos());
+                  }
+                }}
               />
               <div class={`mizuna-cw-counter ${cwCountStatus()}`}>
                 <span class="mizuna-zero-pad">{cwZeroPadding()}</span>
@@ -744,38 +850,6 @@ export function NoteView() {
 
         {/* メインテキストエリア */}
         <div class="mizuna-editor-body">
-          {/* MFM 予測変換（オートコンプリート）サジェストポップアップ */}
-          <Show when={acActive() && acSuggestions().length > 0}>
-            <div class="mizuna-mfm-autocomplete-popup" role="listbox" aria-label="MFM Suggestions">
-              <div class="mizuna-mfm-ac-list">
-                <For each={acSuggestions()}>
-                  {(item, index) => (
-                    <div
-                      class={`mizuna-mfm-ac-item ${index() === acIndex() ? 'is-selected' : ''}`}
-                      role="option"
-                      aria-selected={index() === acIndex()}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                      }}
-                      onClick={() => {
-                        const targetRef = acField() === 'cw' ? cwInputRef : noteInputRef;
-                        const text = acField() === 'cw' ? cwText() : noteText();
-                        const setText = acField() === 'cw' ? setCwText : setNoteText;
-                        if (targetRef) {
-                          handleApplySuggestion(acField(), item, targetRef, text, setText);
-                        }
-                      }}
-                    >
-                      <i class="mizuna-mfm-ac-icon">{item.icon}</i>
-                      <span class="mizuna-mfm-ac-tag">$[{item.label}]</span>
-                      <span class="mizuna-mfm-ac-desc">{item.desc}</span>
-                    </div>
-                  )}
-                </For>
-              </div>
-            </div>
-          </Show>
-
           <textarea
             ref={noteInputRef}
             class="note_content mizuna-main-textarea"
@@ -786,6 +860,11 @@ export function NoteView() {
             onInput={(e) => {
               setNoteText(e.currentTarget.value);
               handleCheckAutocomplete('note', e.currentTarget.value, e.currentTarget);
+            }}
+            onScroll={() => {
+              if (acActive() && noteInputRef) {
+                updateAutocompletePosition(noteInputRef, acStartPos());
+              }
             }}
             onKeyDown={(e) => handleTextareaKeyDown(e, 'note', noteText(), setNoteText, noteInputRef)}
             onFocus={() => {

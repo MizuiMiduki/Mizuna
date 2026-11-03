@@ -461,6 +461,7 @@ body {
    ※ 入力中のGPU再描画・バッテリー消費を抑えるため backdrop-filter を使用せず高品位ソリッドサーフェスを採用
    ========================================= */
 .mizuna-studio-composer {
+  position: relative;
   background: var(--surface-container-low);
   border-radius: var(--mizuna-radius-xl);
   border: 1px solid color-mix(in srgb, var(--primary) 22%, color-mix(in srgb, var(--outline-variant) 55%, transparent));
@@ -700,11 +701,10 @@ body {
 /* MFM 予測変換（オートコンプリート）サジェストポップアップ */
 .mizuna-mfm-autocomplete-popup {
   position: absolute;
-  top: 6px;
-  left: 14px;
+  /* top, left はカーソル（入力位置）直下に動的配置 */
   width: max-content;
   min-width: 180px;
-  max-width: min(260px, 85vw);
+  max-width: min(260px, calc(100% - 24px));
   z-index: 100;
   background: var(--surface, #ffffff);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
@@ -716,6 +716,7 @@ body {
   max-height: 130px;
   backdrop-filter: blur(12px);
   animation: mizuna-popup-appear 0.12s cubic-bezier(0.2, 0, 0, 1);
+  pointer-events: auto;
 }
 
 @keyframes mizuna-popup-appear {
