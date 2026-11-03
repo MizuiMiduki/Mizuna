@@ -482,7 +482,7 @@ export function HistoryView() {
                             >
                               {(replyUser) => (
                                 <span class="mizuna-note-reply-banner-user">
-                                  {t('history.reply_to_user', { user: `@${replyUser().username}` })}
+                                  {t('history.reply_to_user', { user: replyUser().username })}
                                 </span>
                               )}
                             </Show>

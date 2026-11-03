@@ -319,6 +319,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     const replyBanner = container.querySelector('.mizuna-note-reply-banner');
     expect(replyBanner).toBeInTheDocument();
     expect(replyBanner?.textContent).toContain('@other_user');
+    expect(replyBanner?.textContent).not.toContain('@@');
     expect(replyBanner?.textContent).toContain('親ノートのテキストです');
 
     // リプライピルバッジが表示されること
