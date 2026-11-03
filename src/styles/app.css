@@ -162,6 +162,15 @@ progress.circle.large {
   border-width: 3.5px;
 }
 
+@keyframes mizuna-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Material Symbols Icons Baseline */
 i,
 .material-symbols-outlined,
