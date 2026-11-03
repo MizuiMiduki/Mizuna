@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@solidjs/testing-library';
 import { AppProvider } from '../src/store/appStore';
 import { Header } from '../src/components/Header';
@@ -304,6 +304,42 @@ describe('UI Components', () => {
       expect(screen.getByText('Mizunaについて')).toBeInTheDocument();
       expect(screen.getByText('Open Source Licenses')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /(更新を確認|Check)/i })).toBeInTheDocument();
+    });
+
+    it('AboutView の更新確認ボタンを押したとき、トーストを出さずにボタン内が「最新です」に切り替わること', async () => {
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = vi.fn().mockImplementation(async (url: string | URL | Request) => {
+        const urlStr = typeof url === 'string' ? url : url.toString();
+        if (urlStr.includes('version.json')) {
+          return {
+            ok: true,
+            json: async () => ({ version: '3.14.0' }),
+          } as Response;
+        }
+        return originalFetch(url);
+      });
+
+      render(() => (
+        <AppProvider>
+          <AboutView />
+        </AppProvider>
+      ));
+
+      const checkBtn = screen.getByRole('button', { name: /(更新を確認|Check)/i });
+      fireEvent.click(checkBtn);
+
+      // トースト「アップデートを確認中...」は表示されないこと
+      expect(screen.queryByText('アップデートを確認中...')).not.toBeInTheDocument();
+
+      // ボタン内が「最新です」に変わること
+      const upToDateBtn = await screen.findByRole('button', { name: /(最新です|Up to date)/i });
+      expect(upToDateBtn).toBeInTheDocument();
+      expect(document.querySelector('.mizuna-check-icon')).toBeInTheDocument();
+
+      // トースト「最新のバージョンを使用しています」も表示されないこと
+      expect(screen.queryByText(/最新のバージョンを使用しています/)).not.toBeInTheDocument();
+
+      globalThis.fetch = originalFetch;
     });
   });
 

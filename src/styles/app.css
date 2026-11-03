@@ -2946,6 +2946,32 @@ body.dark .mizuna-custom-css-warnings {
   flex-wrap: wrap;
 }
 
+#check_update_button {
+  transition: all 0.22s ease;
+}
+
+#check_update_button.is-up-to-date {
+  border-color: color-mix(in srgb, #10b981 45%, var(--outline));
+}
+
+#check_update_button.is-up-to-date .mizuna-check-icon {
+  color: #10b981;
+  font-size: 1.18rem;
+}
+
+#check_update_button.is-error {
+  border-color: color-mix(in srgb, #ef4444 45%, var(--outline));
+}
+
+#check_update_button.is-error .mizuna-error-icon {
+  color: #ef4444;
+  font-size: 1.18rem;
+}
+
+#check_update_button.is-update-ready {
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+
 .mizuna-meta-row {
   display: flex;
   align-items: center;

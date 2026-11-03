@@ -45,7 +45,7 @@ export const en = {
     found_desc: 'A new version has been downloaded. Restart now to apply?',
     later: 'Later',
     apply: 'Apply Now',
-    up_to_date: 'You are using the latest version',
+    up_to_date: 'Up to date',
     failed: 'Failed to check for updates',
     not_supported: 'Your browser does not support Service Worker',
     not_registered: 'Service Worker is not registered',

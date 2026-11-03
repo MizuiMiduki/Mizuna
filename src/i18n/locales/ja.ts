@@ -45,7 +45,7 @@ export const ja = {
     found_desc: 'ダウンロード済みの新しいアップデートがあります。今すぐ再起動して適用しますか？',
     later: 'あとで',
     apply: '今すぐ適用',
-    up_to_date: '最新のバージョンを使用しています',
+    up_to_date: '最新です',
     failed: 'アップデートの確認に失敗しました',
     not_supported: 'お使いの環境はService Workerに対応していません',
     not_registered: 'Service Workerが登録されていません',

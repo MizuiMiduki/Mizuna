@@ -168,6 +168,7 @@ interface AppContextValue {
   hasPendingUpdate: Accessor<boolean>;
   availableUpdateVersion: Accessor<string | null>;
   isCheckingUpdate: Accessor<boolean>;
+  updateCheckStatus: Accessor<'idle' | 'checking' | 'latest' | 'update_available' | 'error'>;
   showUpdateBanner: Accessor<boolean>;
   dismissUpdateBanner: () => void;
   promptUpdateDialog: (worker?: ServiceWorker | null, forceDialog?: boolean) => void;
@@ -314,6 +315,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   const [hasPendingUpdate, setHasPendingUpdate] = createSignal(false);
   const [availableUpdateVersion, setAvailableUpdateVersion] = createSignal<string | null>(null);
   const [isCheckingUpdate, setIsCheckingUpdate] = createSignal(false);
+  const [updateCheckStatus, setUpdateCheckStatus] = createSignal<'idle' | 'checking' | 'latest' | 'update_available' | 'error'>('idle');
   const [isApplyingUpdate, setIsApplyingUpdate] = createSignal(false);
   const [showUpdateBanner, setShowUpdateBanner] = createSignal(false);
   let activeSwRegistration: ServiceWorkerRegistration | null = null;
@@ -360,7 +362,7 @@ export function AppProvider(props: { children: JSX.Element }) {
       const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-cache' });
       if (!res.ok) {
         if (!silent) {
-          showToast(translate('update.failed', undefined, settings().language as any), 'error');
+          setUpdateCheckStatus('error');
         }
         return false;
       }
@@ -371,6 +373,7 @@ export function AppProvider(props: { children: JSX.Element }) {
           setAvailableUpdateVersion(data.version);
           setHasPendingUpdate(true);
           setShowUpdateBanner(true);
+          setUpdateCheckStatus('update_available');
           if (!silent) {
             promptUpdateDialog(null, true);
           }
@@ -378,15 +381,13 @@ export function AppProvider(props: { children: JSX.Element }) {
         } else {
           setHasPendingUpdate(false);
           setShowUpdateBanner(false);
-          if (!silent) {
-            showToast(translate('update.up_to_date', undefined, settings().language as any), 'info');
-          }
+          setUpdateCheckStatus('latest');
           return false;
         }
       }
     } catch {
       if (!silent) {
-        showToast(translate('update.failed', undefined, settings().language as any), 'error');
+        setUpdateCheckStatus('error');
       }
     }
     return false;
@@ -547,7 +548,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   const checkForUpdate = async () => {
     if (isCheckingUpdate()) return;
     setIsCheckingUpdate(true);
-    showToast(translate('update.checking', undefined, settings().language as any), 'info');
+    setUpdateCheckStatus('checking');
 
     try {
       await checkVersionOnServer(false);
@@ -1756,6 +1757,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     hasPendingUpdate,
     availableUpdateVersion,
     isCheckingUpdate,
+    updateCheckStatus,
     showUpdateBanner,
     dismissUpdateBanner,
     promptUpdateDialog,
