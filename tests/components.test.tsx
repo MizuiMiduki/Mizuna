@@ -792,7 +792,7 @@ describe('UI Components', () => {
       expect(textarea.value).toContain('$[shake text]');
 
       // プレビュートグルボタンをクリック
-      const previewBtn = screen.getByRole('button', { name: /(MFMプレビュー|MFM Preview)/i });
+      const previewBtn = screen.getByRole('button', { name: /(プレビュー|Preview)/i });
       fireEvent.click(previewBtn);
 
       // プレビューエリアが表示され、テキストエリアも同時に表示されていること（入力しながら確認可能）

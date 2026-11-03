@@ -83,7 +83,7 @@ export const ja = {
     cw_tip: 'コンテンツワーニング (CW)',
     cw_tip_sub: '閲覧注意の注釈を追加 (Ctrl+Alt+W)',
     preview_tab_edit: '編集',
-    preview_tab_preview: 'MFMプレビュー',
+    preview_tab_preview: 'プレビュー',
     preview_toggle_tip: 'MFMのレンダリング結果を確認',
     preview_empty: '入力したノートがここにプレビューされます',
     preview_cw_show: '見る',

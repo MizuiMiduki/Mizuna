@@ -83,7 +83,7 @@ export const en = {
     cw_tip: 'Content warning (CW)',
     cw_tip_sub: 'Add warning note (Ctrl+Alt+W)',
     preview_tab_edit: 'Edit',
-    preview_tab_preview: 'MFM Preview',
+    preview_tab_preview: 'Preview',
     preview_toggle_tip: 'Check rendered MFM preview',
     preview_empty: 'Your note will be previewed here with MFM applied',
     preview_cw_show: 'Show',
