@@ -227,6 +227,10 @@ describe('Drafts feature', () => {
       expect(result.cwEnabled()).toBe(true);
       expect(result.visibility()).toBe('home');
       expect(result.endMizuna()).toBe(false);
+
+      // トースト通知が過剰に出ず、「復元しました」の1件のみであること
+      expect(result.toasts().length).toBe(1);
+      expect(result.toasts()[0].message).toMatch(/(復元しました|Draft restored)/);
     });
 
     it('下書きを削除できること', async () => {

@@ -165,7 +165,7 @@ interface AppContextValue {
   deleteAllDrafts: () => Promise<void>;
 
   // アカウント・設定操作
-  switchAccount: (accountId: number) => Promise<void>;
+  switchAccount: (accountId: number, silent?: boolean) => Promise<void>;
   deleteSelectedAccounts: (accountIds: number[]) => Promise<void>;
   reorderAccounts: (newOrderedIds: number[]) => Promise<void>;
   updateSettings: (changes: Partial<SettingRecord>) => Promise<void>;
@@ -1488,15 +1488,9 @@ export function AppProvider(props: { children: JSX.Element }) {
       const allAccounts = accounts();
       const targetAccount = allAccounts.find((a) => a.id === draft.accountId);
       if (targetAccount && typeof targetAccount.id === 'number') {
-        await switchAccount(targetAccount.id);
-        showToast(
-          t('draft.restore_account_switched', {
-            account: `@${targetAccount.username}@${targetAccount.address}`,
-          }),
-          'info'
-        );
-      } else {
-        showToast(t('draft.restore_account_not_found'), 'warning');
+        if (currentUser()?.id !== targetAccount.id) {
+          await switchAccount(targetAccount.id, true);
+        }
       }
 
       setNoteText(draft.text || '');
@@ -1599,7 +1593,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
   };
 
-  const switchAccount = async (accountId: number) => {
+  const switchAccount = async (accountId: number, silent = false) => {
     await updateSettingDb({ select_user: accountId });
     const nextSettings = { ...settings(), select_user: accountId };
     setSettings(nextSettings);
@@ -1607,7 +1601,9 @@ export function AppProvider(props: { children: JSX.Element }) {
     const target = accounts().find((a) => a.id === accountId) ?? null;
     setCurrentUser(target);
     await applyThemeAndMode(nextSettings, target?.avatarurl, target?.address);
-    showToast('アカウントを切り替えました', 'success');
+    if (!silent) {
+      showToast('アカウントを切り替えました', 'success');
+    }
   };
 
   const deleteSelectedAccounts = async (accountIds: number[]) => {
