@@ -76,11 +76,11 @@ export function NoteView() {
 
   const animateLightboxSlide = (direction: 'next' | 'prev') => {
     if (!modalContentRef) return;
-    const fromX = direction === 'next' ? 44 : -44;
+    const fromX = direction === 'next' ? 36 : -36;
     gsap.fromTo(
       modalContentRef,
-      { opacity: 0.2, x: fromX, scale: 0.95 },
-      { opacity: 1, x: 0, scale: 1, duration: 0.22, ease: 'power2.out', clearProps: 'transform' }
+      { x: fromX },
+      { x: 0, duration: 0.18, ease: 'power2.out', clearProps: 'transform' }
     );
   };
 
@@ -1467,19 +1467,23 @@ export function NoteView() {
         </Portal>
       </Show>
 
-      {/* 画像拡大プレビューモーダル */}
-      <Show when={previewModalImage()}>
-        {(imgItem) => (
-          <Portal>
+      {/* 画像拡大プレビューモーダル（画像切り替え時にアンマウントせずチカチカやボタンのガタつきを防止） */}
+      <Show when={Boolean(previewModalImageId() && previewModalImage())}>
+        <Portal>
+          <div
+            id="imageModal"
+            class="mizuna-lightbox"
+            onClick={() => setPreviewModalImageId(null)}
+            onTouchStart={handleLightboxTouchStart}
+            onTouchMove={handleLightboxTouchMove}
+            onTouchEnd={handleLightboxTouchEnd}
+          >
+            {/* メイン画像ステージ */}
             <div
-              id="imageModal"
-              class="mizuna-lightbox"
+              class="mizuna-lightbox-stage"
               onClick={() => setPreviewModalImageId(null)}
-              onTouchStart={handleLightboxTouchStart}
-              onTouchMove={handleLightboxTouchMove}
-              onTouchEnd={handleLightboxTouchEnd}
             >
-              {/* 複数画像プレビュー時の左右ナビゲーションボタン */}
+              {/* 複数画像プレビュー時の左右ナビゲーションボタン（画像ステージ内に配置して縦位置を固定・安定化） */}
               <Show when={attachedImages().length > 1}>
                 <button
                   type="button"
@@ -1507,104 +1511,100 @@ export function NoteView() {
                 </button>
               </Show>
 
-              {/* メイン画像ステージ */}
-              <div
-                class="mizuna-lightbox-stage"
-                onClick={() => setPreviewModalImageId(null)}
-              >
-                <img
-                  ref={modalContentRef}
-                  id="modalImage"
-                  class="mizuna-lightbox-img"
-                  src={imgItem().dataUrl}
-                  alt={imgItem().name}
-                  data-name={imgItem().name}
-                  decoding="async"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
+              <img
+                ref={modalContentRef}
+                id="modalImage"
+                class="mizuna-lightbox-img"
+                src={previewModalImage()?.dataUrl}
+                alt={previewModalImage()?.name || ''}
+                data-name={previewModalImage()?.name || ''}
+                decoding="async"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
 
-              {/* ボトムバー: ファイル情報・WebP削減率 & リセットボタン & 閉じるボタン */}
-              <div class="mizuna-lightbox-bottombar">
-                <div class="mizuna-lightbox-bottombar-inner" onClick={(e) => e.stopPropagation()}>
-                  <div class="mizuna-lightbox-fileinfo">
-                    <div class="mizuna-lightbox-filename-row">
-                      <Show when={attachedImages().length > 1}>
-                        <span class="mizuna-lightbox-order-badge">
-                          {currentPreviewIndex() + 1} / {attachedImages().length}
-                        </span>
-                      </Show>
-                      <span class="mizuna-lightbox-filename" title={imgItem().name}>
-                        {imgItem().name}
+            {/* ボトムバー: ファイル情報・WebP削減率 & リセットボタン & 閉じるボタン */}
+            <div class="mizuna-lightbox-bottombar">
+              <div class="mizuna-lightbox-bottombar-inner" onClick={(e) => e.stopPropagation()}>
+                <div class="mizuna-lightbox-fileinfo">
+                  <div class="mizuna-lightbox-filename-row">
+                    <Show when={attachedImages().length > 1}>
+                      <span class="mizuna-lightbox-order-badge">
+                        {currentPreviewIndex() + 1} / {attachedImages().length}
                       </span>
-                    </div>
-                    <div class="mizuna-lightbox-meta">
-                      <span class="mizuna-lightbox-raw-size">
-                        {(imgItem().originalSize / 1024).toFixed(1)} KB
-                      </span>
-                      <Show
-                        when={imgItem().compressedSize}
-                        fallback={
-                          <div class="mizuna-lightbox-compressing-wrap">
-                            <span class="mizuna-lightbox-compressing">
-                              <span class="mizuna-lightbox-compressing-spinner" />
-                              WebP圧縮中...
-                            </span>
-                            <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
-                              <div class="mizuna-lightbox-mini-bar-fill" />
-                            </div>
-                          </div>
-                        }
-                      >
-                        {(compSize) => {
-                          const savedPercent = Math.max(
-                            0,
-                            Math.round(
-                              ((imgItem().originalSize - compSize()) / imgItem().originalSize) * 100
-                            )
-                          );
-                          return (
-                            <>
-                              <i class="mizuna-lightbox-meta-arrow">arrow_forward</i>
-                              <span class="mizuna-lightbox-webp-size">
-                                {(compSize() / 1024).toFixed(1)} KB (WebP)
-                              </span>
-                              <span class="mizuna-lightbox-badge">
-                                {savedPercent}% 削減
-                              </span>
-                            </>
-                          );
-                        }}
-                      </Show>
-                    </div>
-                  </div>
-
-                  <div class="mizuna-lightbox-actions">
-                    <Show when={imgItem().editState}>
-                      <button
-                        type="button"
-                        class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
-                        onClick={() => handleResetImage(imgItem().id)}
-                      >
-                        <i>restart_alt</i>
-                        <span>加工をリセット</span>
-                      </button>
                     </Show>
+                    <span class="mizuna-lightbox-filename" title={previewModalImage()?.name}>
+                      {previewModalImage()?.name}
+                    </span>
+                  </div>
+                  <div class="mizuna-lightbox-meta">
+                    <span class="mizuna-lightbox-raw-size">
+                      {(((previewModalImage()?.originalSize ?? 0) / 1024)).toFixed(1)} KB
+                    </span>
+                    <Show
+                      when={previewModalImage()?.compressedSize}
+                      fallback={
+                        <div class="mizuna-lightbox-compressing-wrap">
+                          <span class="mizuna-lightbox-compressing">
+                            <span class="mizuna-lightbox-compressing-spinner" />
+                            WebP圧縮中...
+                          </span>
+                          <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
+                            <div class="mizuna-lightbox-mini-bar-fill" />
+                          </div>
+                        </div>
+                      }
+                    >
+                      {(compSize) => {
+                        const originalSize = previewModalImage()?.originalSize ?? 1;
+                        const savedPercent = Math.max(
+                          0,
+                          Math.round(((originalSize - compSize()) / originalSize) * 100)
+                        );
+                        return (
+                          <>
+                            <i class="mizuna-lightbox-meta-arrow">arrow_forward</i>
+                            <span class="mizuna-lightbox-webp-size">
+                              {(compSize() / 1024).toFixed(1)} KB (WebP)
+                            </span>
+                            <span class="mizuna-lightbox-badge">
+                              {savedPercent}% 削減
+                            </span>
+                          </>
+                        );
+                      }}
+                    </Show>
+                  </div>
+                </div>
 
+                <div class="mizuna-lightbox-actions">
+                  <Show when={previewModalImage()?.editState}>
                     <button
                       type="button"
-                      class="circle mizuna-lightbox-close-icon-btn"
-                      onClick={() => setPreviewModalImageId(null)}
-                      aria-label="閉じる"
+                      class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
+                      onClick={() => {
+                        const img = previewModalImage();
+                        if (img) handleResetImage(img.id);
+                      }}
                     >
-                      <i>close</i>
+                      <i>restart_alt</i>
+                      <span>加工をリセット</span>
                     </button>
-                  </div>
+                  </Show>
+
+                  <button
+                    type="button"
+                    class="circle mizuna-lightbox-close-icon-btn"
+                    onClick={() => setPreviewModalImageId(null)}
+                    aria-label="閉じる"
+                  >
+                    <i>close</i>
+                  </button>
                 </div>
               </div>
             </div>
-          </Portal>
-        )}
+          </div>
+        </Portal>
       </Show>
 
       {/* 画像加工モーダル */}

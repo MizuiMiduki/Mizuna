@@ -1330,6 +1330,7 @@ body {
 /* メイン画像ステージ */
 .mizuna-lightbox-stage {
   flex: 1;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1353,10 +1354,9 @@ body {
     0 24px 64px -12px rgba(0, 0, 0, 0.4),
     0 4px 16px rgba(0, 0, 0, 0.12);
   cursor: default;
-  animation: mizuna-lightbox-img-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* 複数画像プレビュー時の左右ナビゲーションボタン */
+/* 複数画像プレビュー時の左右ナビゲーションボタン（位置がブレず固定） */
 .mizuna-lightbox-nav-btn {
   position: absolute;
   top: 50%;
@@ -1364,6 +1364,7 @@ body {
   width: 44px !important;
   height: 44px !important;
   min-width: 44px !important;
+  min-height: 44px !important;
   padding: 0 !important;
   margin: 0 !important;
   border-radius: 50% !important;
@@ -1379,6 +1380,9 @@ body {
   z-index: 10;
   transition: background-color 0.18s ease, transform 0.18s ease;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
 }
 
 .mizuna-lightbox-nav-btn i {
@@ -1421,6 +1425,7 @@ body {
 .mizuna-lightbox-bottombar-inner {
   width: 100%;
   max-width: 680px;
+  min-height: 60px;
   pointer-events: auto;
   display: flex;
   align-items: center;
