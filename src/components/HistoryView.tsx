@@ -523,15 +523,7 @@ export function HistoryView() {
     <div ref={containerRef} class="mizuna-history-view">
       {/* ヘッダー */}
       <div class="mizuna-section-header mizuna-history-header">
-        <div class="mizuna-history-title-wrap">
-          <div class="mizuna-history-title-icon">
-            <i>history</i>
-          </div>
-          <div>
-            <h2 class="mizuna-section-title">{t('history.title')}</h2>
-            <p class="mizuna-section-desc">{t('history.sub')}</p>
-          </div>
-        </div>
+        <h2 class="mizuna-section-title">{t('history.title')}</h2>
 
         <div class="mizuna-history-header-actions">
           <button

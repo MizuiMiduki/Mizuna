@@ -7543,28 +7543,6 @@ body.dark .mizuna-mfm-toolbar-divider {
   margin-bottom: 16px;
 }
 
-.mizuna-history-title-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.mizuna-history-title-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--primary) 14%, transparent);
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.mizuna-history-title-icon i {
-  font-size: 1.45rem;
-}
-
 .mizuna-history-header-actions {
   display: flex;
   align-items: center;
