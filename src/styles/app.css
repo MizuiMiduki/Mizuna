@@ -8264,29 +8264,6 @@ body.dark .mizuna-mfm-toolbar-divider {
   padding: 12px;
 }
 
-/* ライトボックス */
-.mizuna-history-lightbox {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  cursor: zoom-out;
-}
-
-.mizuna-history-lightbox-img {
-  max-width: 95vw;
-  max-height: 90vh;
-  object-fit: contain;
-  border-radius: 12px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
-}
-
 
 
 

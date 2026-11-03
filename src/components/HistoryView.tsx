@@ -8,11 +8,13 @@ import {
   onMount,
   Show,
 } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import {
   fetchNoteChildren,
   fetchServerEmojis,
   fetchUserMentions,
   fetchUserNotes,
+  type MisskeyFile,
   type MisskeyNote,
 } from '../services/misskeyApi';
 import { useApp } from '../store/appStore';
@@ -53,6 +55,7 @@ export function HistoryView() {
     startReply,
     setCurrentView,
     showToast,
+    pushModalBackHandler,
     t,
   } = useApp();
 
@@ -78,8 +81,187 @@ export function HistoryView() {
   // CW展開状態 (noteId -> boolean)
   const [expandedCwMap, setExpandedCwMap] = createSignal<Record<string, boolean>>({});
 
-  // 画像プレビューモーダル
-  const [previewImage, setPreviewImage] = createSignal<string | null>(null);
+  // 画像プレビューモーダル（投稿単位のカルーセル・スワイプ対応）
+  const [previewFiles, setPreviewFiles] = createSignal<MisskeyFile[]>([]);
+  const [previewIndex, setPreviewIndex] = createSignal<number>(-1);
+  const [lightboxDragX, setLightboxDragX] = createSignal(0);
+  const [isLightboxDragging, setIsLightboxDragging] = createSignal(false);
+
+  const isPreviewOpen = createMemo(() => previewIndex() >= 0 && previewFiles().length > 0);
+  const currentPreviewFile = createMemo(() => {
+    const idx = previewIndex();
+    const files = previewFiles();
+    if (idx < 0 || idx >= files.length) return null;
+    return files[idx] ?? null;
+  });
+
+  const openPreview = (files: MisskeyFile[], index: number) => {
+    if (!files || files.length === 0) return;
+    setIsLightboxDragging(false);
+    setLightboxDragX(0);
+    setPreviewFiles(files);
+    setPreviewIndex(Math.max(0, Math.min(index, files.length - 1)));
+  };
+
+  const closePreview = () => {
+    setIsLightboxDragging(false);
+    setLightboxDragX(0);
+    setPreviewIndex(-1);
+    setPreviewFiles([]);
+  };
+
+  const handlePrevPreviewImage = () => {
+    const files = previewFiles();
+    if (files.length <= 1) return;
+    const idx = previewIndex();
+    const nextIdx = idx > 0 ? idx - 1 : files.length - 1;
+    setIsLightboxDragging(false);
+    setLightboxDragX(0);
+    setPreviewIndex(nextIdx);
+  };
+
+  const handleNextPreviewImage = () => {
+    const files = previewFiles();
+    if (files.length <= 1) return;
+    const idx = previewIndex();
+    const nextIdx = idx < files.length - 1 ? idx + 1 : 0;
+    setIsLightboxDragging(false);
+    setLightboxDragX(0);
+    setPreviewIndex(nextIdx);
+  };
+
+  // ライトボックスのスワイプ操作（指のダイレクト追従と物理スナップ）
+  let lightboxTouchStartX = 0;
+  let lightboxTouchStartY = 0;
+  let lightboxTouchLastX = 0;
+  let lightboxTouchLastTime = 0;
+  let lightboxTouchVelocityX = 0;
+  let isLightboxHorizontalSwipe = false;
+  let hasLightboxSwiped = false;
+  let lightboxSwipeResetTimer: ReturnType<typeof setTimeout> | undefined;
+
+  const handleLightboxTouchStart = (e: TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    lightboxTouchStartX = touch.clientX;
+    lightboxTouchStartY = touch.clientY;
+    lightboxTouchLastX = touch.clientX;
+    lightboxTouchLastTime = Date.now();
+    lightboxTouchVelocityX = 0;
+    isLightboxHorizontalSwipe = false;
+    setIsLightboxDragging(true);
+    setLightboxDragX(0);
+  };
+
+  const handleLightboxTouchMove = (e: TouchEvent) => {
+    if (!isLightboxDragging() || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - lightboxTouchStartX;
+    const dy = touch.clientY - lightboxTouchStartY;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    if (!isLightboxHorizontalSwipe && (absX > 6 || absY > 6)) {
+      if (absX >= absY) {
+        isLightboxHorizontalSwipe = true;
+      } else {
+        setIsLightboxDragging(false);
+        setLightboxDragX(0);
+        return;
+      }
+    }
+
+    if (isLightboxHorizontalSwipe) {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+
+      const now = Date.now();
+      const dt = now - lightboxTouchLastTime;
+      if (dt > 10) {
+        lightboxTouchVelocityX = (touch.clientX - lightboxTouchLastX) / dt;
+        lightboxTouchLastX = touch.clientX;
+        lightboxTouchLastTime = now;
+      }
+
+      if (absX > 10) {
+        hasLightboxSwiped = true;
+      }
+
+      const files = previewFiles();
+      const idx = previewIndex();
+
+      let effectiveDx = dx;
+      if (files.length <= 1) {
+        effectiveDx = dx * 0.25;
+      } else if (idx === 0 && dx > 0) {
+        effectiveDx = dx * 0.3;
+      } else if (idx === files.length - 1 && dx < 0) {
+        effectiveDx = dx * 0.3;
+      }
+
+      setLightboxDragX(effectiveDx);
+    }
+  };
+
+  const handleLightboxTouchEnd = () => {
+    if (!isLightboxDragging()) return;
+    setIsLightboxDragging(false);
+
+    const dx = lightboxDragX();
+    const files = previewFiles();
+    const idx = previewIndex();
+
+    if (!isLightboxHorizontalSwipe || files.length <= 1) {
+      setLightboxDragX(0);
+      isLightboxHorizontalSwipe = false;
+      clearTimeout(lightboxSwipeResetTimer);
+      lightboxSwipeResetTimer = setTimeout(() => {
+        hasLightboxSwiped = false;
+      }, 120);
+      return;
+    }
+
+    const flick = Math.abs(lightboxTouchVelocityX) > 0.25 ? lightboxTouchVelocityX * 120 : 0;
+    const projectedX = dx + flick;
+    const threshold = 40;
+
+    if (projectedX < -threshold && idx < files.length - 1) {
+      setPreviewIndex(idx + 1);
+    } else if (projectedX > threshold && idx > 0) {
+      setPreviewIndex(idx - 1);
+    }
+
+    setLightboxDragX(0);
+    isLightboxHorizontalSwipe = false;
+    clearTimeout(lightboxSwipeResetTimer);
+    lightboxSwipeResetTimer = setTimeout(() => {
+      hasLightboxSwiped = false;
+    }, 120);
+  };
+
+  createEffect(() => {
+    if (isPreviewOpen()) {
+      const cleanupBack = pushModalBackHandler(() => closePreview());
+      const handleLightboxKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          handlePrevPreviewImage();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          handleNextPreviewImage();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          closePreview();
+        }
+      };
+      window.addEventListener('keydown', handleLightboxKeyDown);
+      onCleanup(() => {
+        cleanupBack();
+        window.removeEventListener('keydown', handleLightboxKeyDown);
+      });
+    }
+  });
 
   // サーバーカスタム絵文字マップ (/api/emojis キャッシュ)
   const [serverEmojiMap, setServerEmojiMap] = createSignal<Map<string, string>>(new Map());
@@ -607,10 +789,10 @@ export function HistoryView() {
                         <Show when={note.files && note.files.length > 0}>
                           <div class={`mizuna-note-files-grid count-${Math.min(note.files!.length, 4)}`}>
                             <For each={note.files}>
-                              {(file) => (
+                              {(file, fileIdx) => (
                                 <div
                                   class="mizuna-note-file-item"
-                                  onClick={() => setPreviewImage(file.url)}
+                                  onClick={() => openPreview(note.files!, fileIdx())}
                                 >
                                   <img
                                     src={file.thumbnailUrl || file.url}
@@ -711,6 +893,25 @@ export function HistoryView() {
                                         innerHTML={childNote.text ? renderMfm(childNote.text, childNote.emojis, mfmOptions()) : ''}
                                       />
 
+                                      <Show when={childNote.files && childNote.files.length > 0}>
+                                        <div class={`mizuna-note-files-grid count-${Math.min(childNote.files!.length, 4)}`}>
+                                          <For each={childNote.files}>
+                                            {(file, fileIdx) => (
+                                              <div
+                                                class="mizuna-note-file-item"
+                                                onClick={() => openPreview(childNote.files!, fileIdx())}
+                                              >
+                                                <img
+                                                  src={file.thumbnailUrl || file.url}
+                                                  alt={file.name}
+                                                  loading="lazy"
+                                                />
+                                              </div>
+                                            )}
+                                          </For>
+                                        </div>
+                                      </Show>
+
                                       <div class="mizuna-reply-actions">
                                         {/* リプライの子リプライへ返信するボタン (Issue #131) */}
                                         <button
@@ -775,16 +976,127 @@ export function HistoryView() {
         </div>
       </Show>
 
-      {/* 画像プレビュー用ライトボックス */}
-      <Show when={previewImage()}>
-        {(src) => (
+      {/* 画像拡大プレビューモーダル（投稿単位のカルーセル・スワイプ対応） */}
+      <Show when={isPreviewOpen()}>
+        <Portal>
           <div
-            class="mizuna-history-lightbox"
-            onClick={() => setPreviewImage(null)}
+            class="mizuna-lightbox"
+            onClick={() => {
+              if (hasLightboxSwiped) {
+                hasLightboxSwiped = false;
+                return;
+              }
+              closePreview();
+            }}
+            onTouchStart={handleLightboxTouchStart}
+            onTouchMove={handleLightboxTouchMove}
+            onTouchEnd={handleLightboxTouchEnd}
+            onTouchCancel={handleLightboxTouchEnd}
           >
-            <img src={src()} alt="" class="mizuna-history-lightbox-img" />
+            {/* メイン画像ステージ */}
+            <div
+              class="mizuna-lightbox-stage"
+              onClick={() => {
+                if (hasLightboxSwiped) {
+                  hasLightboxSwiped = false;
+                  return;
+                }
+                closePreview();
+              }}
+            >
+              {/* 複数画像プレビュー時の左右ナビゲーションボタン */}
+              <Show when={previewFiles().length > 1}>
+                <button
+                  type="button"
+                  class="mizuna-lightbox-nav-btn is-prev"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevPreviewImage();
+                  }}
+                  aria-label="前の画像"
+                  title="前の画像 (←)"
+                >
+                  <i>chevron_left</i>
+                </button>
+                <button
+                  type="button"
+                  class="mizuna-lightbox-nav-btn is-next"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextPreviewImage();
+                  }}
+                  aria-label="次の画像"
+                  title="次の画像 (→)"
+                >
+                  <i>chevron_right</i>
+                </button>
+              </Show>
+
+              {/* カルーセルトラック */}
+              <div
+                class="mizuna-lightbox-track"
+                style={{
+                  transform: `translateX(calc(${-Math.max(0, previewIndex()) * 100}% + ${lightboxDragX()}px))`,
+                  transition: isLightboxDragging() ? 'none' : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                }}
+              >
+                <For each={previewFiles()}>
+                  {(file) => (
+                    <div
+                      class="mizuna-lightbox-slide"
+                      onClick={() => {
+                        if (hasLightboxSwiped) {
+                          hasLightboxSwiped = false;
+                          return;
+                        }
+                        closePreview();
+                      }}
+                    >
+                      <img
+                        class="mizuna-lightbox-img"
+                        src={file.url}
+                        alt={file.name || ''}
+                        decoding="async"
+                        draggable={false}
+                        onDragStart={(e) => e.preventDefault()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
+                </For>
+              </div>
+            </div>
+
+            {/* ボトムバー: 枚数インジケーター・ファイル名 & 閉じるボタン */}
+            <div class="mizuna-lightbox-bottombar">
+              <div class="mizuna-lightbox-bottombar-inner" onClick={(e) => e.stopPropagation()}>
+                <div class="mizuna-lightbox-fileinfo">
+                  <div class="mizuna-lightbox-filename-row">
+                    <Show when={previewFiles().length > 1}>
+                      <span class="mizuna-lightbox-order-badge">
+                        {previewIndex() + 1} / {previewFiles().length}
+                      </span>
+                    </Show>
+                    <span class="mizuna-lightbox-filename" title={currentPreviewFile()?.name}>
+                      {currentPreviewFile()?.name || ''}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="mizuna-lightbox-actions">
+                  <button
+                    type="button"
+                    class="circle mizuna-lightbox-close-icon-btn"
+                    onClick={() => closePreview()}
+                    aria-label="閉じる"
+                  >
+                    <i>close</i>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
-        )}
+        </Portal>
       </Show>
     </div>
   );

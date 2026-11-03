@@ -25,7 +25,22 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     },
     visibility: 'public',
     repliesCount: 2,
-    files: [],
+    files: [
+      {
+        id: 'file_1',
+        url: 'https://example.com/photo1.webp',
+        thumbnailUrl: 'https://example.com/photo1_thumb.webp',
+        name: 'photo1.webp',
+        type: 'image/webp',
+      },
+      {
+        id: 'file_2',
+        url: 'https://example.com/photo2.webp',
+        thumbnailUrl: 'https://example.com/photo2_thumb.webp',
+        name: 'photo2.webp',
+        type: 'image/webp',
+      },
+    ],
     emojis: [
       { name: 'blobcat', url: 'https://example.com/blobcat.webp' },
     ],
@@ -344,6 +359,43 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     // 長文は抜粋（80文字 + …）に切り詰められていること
     expect(excerpt.length).toBeLessThanOrEqual(81);
     expect(excerpt.endsWith('…')).toBe(true);
+  });
+
+  it('投稿の添付画像をタップすると投稿単位のカルーセルライトボックスが開き、スワイプやナビゲーションで切り替えられること', async () => {
+    const { container } = render(() => (
+      <AppProvider>
+        <HistoryView />
+      </AppProvider>
+    ));
+
+    expect(await screen.findByText(/テスト投稿1です/)).toBeInTheDocument();
+
+    const fileItems = container.querySelectorAll('.mizuna-note-file-item');
+    expect(fileItems.length).toBe(2);
+
+    // 1枚目の画像をタップしてプレビューを開く
+    fireEvent.click(fileItems[0]);
+
+    const lightbox = document.querySelector('.mizuna-lightbox');
+    expect(lightbox).toBeInTheDocument();
+    expect(document.querySelector('.mizuna-lightbox-order-badge')?.textContent).toBe('1 / 2');
+    expect(document.querySelector('.mizuna-lightbox-filename')?.textContent).toBe('photo1.webp');
+
+    // 次の画像ボタンで2枚目へ切り替え
+    const nextBtn = document.querySelector('.mizuna-lightbox-nav-btn.is-next') as HTMLButtonElement;
+    expect(nextBtn).toBeInTheDocument();
+    fireEvent.click(nextBtn);
+
+    expect(document.querySelector('.mizuna-lightbox-order-badge')?.textContent).toBe('2 / 2');
+    expect(document.querySelector('.mizuna-lightbox-filename')?.textContent).toBe('photo2.webp');
+
+    // 右スワイプ操作で1枚目へ戻る
+    fireEvent.touchStart(lightbox!, { touches: [{ clientX: 100, clientY: 200 }] });
+    fireEvent.touchMove(lightbox!, { touches: [{ clientX: 220, clientY: 202 }] });
+    fireEvent.touchEnd(lightbox!);
+
+    expect(document.querySelector('.mizuna-lightbox-order-badge')?.textContent).toBe('1 / 2');
+    expect(document.querySelector('.mizuna-lightbox-filename')?.textContent).toBe('photo1.webp');
   });
 
   it('4.0.0未満のアカウントでは権限不足警告画面が表示され、APIリクエストが行われないこと', async () => {
