@@ -61,7 +61,7 @@ export function NoteView() {
   const [editingImageItem, setEditingImageItem] = createSignal<AttachedImageItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = createSignal(false);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = createSignal(false);
-  const [composerMode, setComposerMode] = createSignal<'edit' | 'preview'>('edit');
+  const [showPreview, setShowPreview] = createSignal(false);
   const [previewCwRevealed, setPreviewCwRevealed] = createSignal(false);
   const [lastFocusedField, setLastFocusedField] = createSignal<'note' | 'cw'>('note');
 
@@ -252,7 +252,7 @@ export function NoteView() {
 
       showToast(t('note.sent'), 'success');
       clearNoteForm(false);
-      setComposerMode('edit');
+      setShowPreview(false);
       if (fileInputRef) {
         fileInputRef.value = '';
       }
@@ -300,7 +300,7 @@ export function NoteView() {
             break;
           case 'k':
             event.preventDefault();
-            setComposerMode((prev) => (prev === 'edit' ? 'preview' : 'edit'));
+            setShowPreview((prev) => !prev);
             break;
           case 'm':
             event.preventDefault();
@@ -509,180 +509,180 @@ export function NoteView() {
           </div>
         </div>
 
-        {/* 編集 / プレビュー切り替え ＆ MFM ツールバー */}
+        {/* MFM ツールバー */}
         <div class="mizuna-composer-subbar">
-          <Show
-            when={composerMode() === 'edit'}
-            fallback={
-              <div class="mizuna-mfm-toolbar">
-                <span class="mizuna-mfm-toolbar-label">
-                  <i>visibility</i>
-                  {t('note.preview_tab_preview')}
-                </span>
+          <div class="mizuna-mfm-toolbar" role="toolbar" aria-label="MFM Insertion Toolbar">
+            <span class="mizuna-mfm-toolbar-label">
+              <i>auto_fix_high</i>
+              {t('note.mfm_toolbar_label')}
+            </span>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[shake ', ']', 'text')}
+              title="揺らす ($[shake ...])"
+            >
+              <i>vibration</i>
+              <span>{t('note.mfm_tag_shake')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[bounce ', ']', 'text')}
+              title="跳ねる ($[bounce ...])"
+            >
+              <i>sports_baseball</i>
+              <span>{t('note.mfm_tag_bounce')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[spin ', ']', 'text')}
+              title="回転 ($[spin ...])"
+            >
+              <i>rotate_right</i>
+              <span>{t('note.mfm_tag_spin')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[rainbow ', ']', 'text')}
+              title="虹色 ($[rainbow ...])"
+            >
+              <i>palette</i>
+              <span>{t('note.mfm_tag_rainbow')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[tada ', ']', 'text')}
+              title="祝砲 ($[tada ...])"
+            >
+              <i>celebration</i>
+              <span>{t('note.mfm_tag_tada')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[blur ', ']', 'text')}
+              title="ぼかし ($[blur ...])"
+            >
+              <i>blur_on</i>
+              <span>{t('note.mfm_tag_blur')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('**', '**', 'bold')}
+              title="太字 (**...**)"
+            >
+              <i>format_bold</i>
+              <span>{t('note.mfm_tag_bold')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('~~', '~~', 'strike')}
+              title="打消 (~~...~~)"
+            >
+              <i>format_strikethrough</i>
+              <span>{t('note.mfm_tag_strike')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[fg.color=ff0000 ', ']', 'text')}
+              title="文字色 ($[fg.color=ff0000 ...])"
+            >
+              <i>format_color_text</i>
+              <span>{t('note.mfm_tag_color')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[ruby ', ' かんじ]', '漢字')}
+              title="ルビ ($[ruby 漢字 かんじ])"
+            >
+              <i>translate</i>
+              <span>{t('note.mfm_tag_ruby')}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* CW（閲覧注意）折りたたみ入力欄 */}
+        <Show when={cwEnabled()}>
+          <div ref={cwSectionRef} class="mizuna-cw-box">
+            <div class="mizuna-cw-inner">
+              <i class="mizuna-cw-icon">visibility_off</i>
+              <textarea
+                ref={cwInputRef}
+                class="cw_content mizuna-cw-textarea"
+                maxLength={100}
+                rows={1}
+                placeholder={t('note.cw_placeholder')}
+                value={cwText()}
+                onInput={(e) => setCwText(e.currentTarget.value)}
+                onFocus={() => {
+                  setIsInputFocused(true);
+                  setLastFocusedField('cw');
+                }}
+                onBlur={() => setIsInputFocused(false)}
+              />
+              <div class={`mizuna-cw-counter ${cwCountStatus()}`}>
+                <span class="mizuna-zero-pad">{cwZeroPadding()}</span>
+                <span id="cw_charCount">{cwLength()}</span>
+                <span class="mizuna-counter-slash">/100</span>
               </div>
-            }
-          >
-            <div class="mizuna-mfm-toolbar" role="toolbar" aria-label="MFM Insertion Toolbar">
-              <span class="mizuna-mfm-toolbar-label">
-                <i>auto_fix_high</i>
-                {t('note.mfm_toolbar_label')}
+            </div>
+          </div>
+        </Show>
+
+        {/* メインテキストエリア */}
+        <div class="mizuna-editor-body">
+          <textarea
+            ref={noteInputRef}
+            class="note_content mizuna-main-textarea"
+            maxLength={3000}
+            rows={6}
+            placeholder={t('note.placeholder')}
+            value={noteText()}
+            onInput={(e) => setNoteText(e.currentTarget.value)}
+            onFocus={() => {
+              setIsInputFocused(true);
+              setLastFocusedField('note');
+            }}
+            onBlur={() => setIsInputFocused(false)}
+            onPaste={handlePaste}
+          />
+
+          <Show when={endMizuna()}>
+            <div class="mizuna-editor-subrow">
+              <span class="mizuna-suffix-badge">
+                <i>auto_awesome</i>
+                {t('note.suffix_notice')}
               </span>
-              <button
-                type="button"
-                class="mizuna-mfm-chip"
-                onClick={() => handleInsertMfm('$[shake ', ']', 'text')}
-                title="揺らす ($[shake ...])"
-              >
-                <i>vibration</i>
-                <span>{t('note.mfm_tag_shake')}</span>
-              </button>
-              <button
-                type="button"
-                class="mizuna-mfm-chip"
-                onClick={() => handleInsertMfm('$[bounce ', ']', 'text')}
-                title="跳ねる ($[bounce ...])"
-              >
-                <i>sports_baseball</i>
-                <span>{t('note.mfm_tag_bounce')}</span>
-              </button>
-              <button
-                type="button"
-                class="mizuna-mfm-chip"
-                onClick={() => handleInsertMfm('$[spin ', ']', 'text')}
-                title="回転 ($[spin ...])"
-              >
-                <i>rotate_right</i>
-                <span>{t('note.mfm_tag_spin')}</span>
-              </button>
-              <button
-                type="button"
-                class="mizuna-mfm-chip"
-                onClick={() => handleInsertMfm('$[rainbow ', ']', 'text')}
-                title="虹色 ($[rainbow ...])"
-              >
-                <i>palette</i>
-                <span>{t('note.mfm_tag_rainbow')}</span>
-              </button>
-              <button
-                type="button"
-                class="mizuna-mfm-chip"
-                onClick={() => handleInsertMfm('$[tada ', ']', 'text')}
-                title="祝砲 ($[tada ...])"
-              >
-                <i>celebration</i>
-                <span>{t('note.mfm_tag_tada')}</span>
-              </button>
-              <button
-                type="button"
-                class="mizuna-mfm-chip"
-                onClick={() => handleInsertMfm('$[blur ', ']', 'text')}
-                title="ぼかし ($[blur ...])"
-              >
-                <i>blur_on</i>
-                <span>{t('note.mfm_tag_blur')}</span>
-              </button>
-              <button
-                type="button"
-                class="mizuna-mfm-chip"
-                onClick={() => handleInsertMfm('**', '**', 'bold')}
-                title="太字 (**...**)"
-              >
-                <i>format_bold</i>
-                <span>{t('note.mfm_tag_bold')}</span>
-              </button>
-              <button
-                type="button"
-                class="mizuna-mfm-chip"
-                onClick={() => handleInsertMfm('~~', '~~', 'strike')}
-                title="打消 (~~...~~)"
-              >
-                <i>format_strikethrough</i>
-                <span>{t('note.mfm_tag_strike')}</span>
-              </button>
-              <button
-                type="button"
-                class="mizuna-mfm-chip"
-                onClick={() => handleInsertMfm('$[fg.color=ff0000 ', ']', 'text')}
-                title="文字色 ($[fg.color=ff0000 ...])"
-              >
-                <i>format_color_text</i>
-                <span>{t('note.mfm_tag_color')}</span>
-              </button>
-              <button
-                type="button"
-                class="mizuna-mfm-chip"
-                onClick={() => handleInsertMfm('$[ruby ', ' かんじ]', '漢字')}
-                title="ルビ ($[ruby 漢字 かんじ])"
-              >
-                <i>translate</i>
-                <span>{t('note.mfm_tag_ruby')}</span>
-              </button>
             </div>
           </Show>
         </div>
 
-        {/* 編集モード時の入力エリア */}
-        <Show when={composerMode() === 'edit'}>
-          {/* CW（閲覧注意）折りたたみ入力欄 */}
-          <Show when={cwEnabled()}>
-            <div ref={cwSectionRef} class="mizuna-cw-box">
-              <div class="mizuna-cw-inner">
-                <i class="mizuna-cw-icon">visibility_off</i>
-                <textarea
-                  ref={cwInputRef}
-                  class="cw_content mizuna-cw-textarea"
-                  maxLength={100}
-                  rows={1}
-                  placeholder={t('note.cw_placeholder')}
-                  value={cwText()}
-                  onInput={(e) => setCwText(e.currentTarget.value)}
-                  onFocus={() => {
-                    setIsInputFocused(true);
-                    setLastFocusedField('cw');
-                  }}
-                  onBlur={() => setIsInputFocused(false)}
-                />
-                <div class={`mizuna-cw-counter ${cwCountStatus()}`}>
-                  <span class="mizuna-zero-pad">{cwZeroPadding()}</span>
-                  <span id="cw_charCount">{cwLength()}</span>
-                  <span class="mizuna-counter-slash">/100</span>
-                </div>
-              </div>
-            </div>
-          </Show>
-
-          {/* メインテキストエリア */}
-          <div class="mizuna-editor-body">
-            <textarea
-              ref={noteInputRef}
-              class="note_content mizuna-main-textarea"
-              maxLength={3000}
-              rows={6}
-              placeholder={t('note.placeholder')}
-              value={noteText()}
-              onInput={(e) => setNoteText(e.currentTarget.value)}
-              onFocus={() => {
-                setIsInputFocused(true);
-                setLastFocusedField('note');
-              }}
-              onBlur={() => setIsInputFocused(false)}
-              onPaste={handlePaste}
-            />
-
-            <Show when={endMizuna()}>
-              <div class="mizuna-editor-subrow">
-                <span class="mizuna-suffix-badge">
-                  <i>auto_awesome</i>
-                  {t('note.suffix_notice')}
-                </span>
-              </div>
-            </Show>
-          </div>
-        </Show>
-
-        {/* プレビューモード時の表示エリア */}
-        <Show when={composerMode() === 'preview'}>
+        {/* リアルタイムMFMプレビュー枠（トグル表示） */}
+        <Show when={showPreview()}>
           <div class="mizuna-preview-area">
+            <div class="mizuna-preview-header">
+              <span class="mizuna-preview-badge">
+                <i>visibility</i>
+                {t('note.preview_tab_preview')}
+              </span>
+              <button
+                type="button"
+                class="mizuna-preview-close-btn"
+                onClick={() => setShowPreview(false)}
+                title="プレビューを閉じる"
+              >
+                <i>close</i>
+              </button>
+            </div>
+
             {/* CW注釈エリア */}
             <Show when={cwEnabled()}>
               <div class="mizuna-preview-cw-card">
@@ -845,11 +845,12 @@ export function NoteView() {
               <button
                 type="button"
                 id="preview_toggle_button"
-                class={`mizuna-tool-chip ${composerMode() === 'preview' ? 'is-active' : ''}`}
-                onClick={() => setComposerMode((prev) => (prev === 'edit' ? 'preview' : 'edit'))}
+                class={`mizuna-tool-chip ${showPreview() ? 'is-active' : ''}`}
+                onClick={() => setShowPreview((prev) => !prev)}
+                aria-pressed={showPreview()}
               >
-                <i>{composerMode() === 'preview' ? 'edit' : 'preview'}</i>
-                <span>{composerMode() === 'preview' ? t('note.preview_tab_edit') : t('note.preview_tab_preview')}</span>
+                <i>{showPreview() ? 'visibility_off' : 'preview'}</i>
+                <span>{t('note.preview_tab_preview')}</span>
               </button>
             </HoldHoverTip>
 

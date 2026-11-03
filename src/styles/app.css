@@ -6264,13 +6264,72 @@ ruby > rt {
   font-size: 15px;
 }
 
-/* プレビュービューエリア */
+/* リアルタイムMFMプレビュー枠 */
 .mizuna-preview-area {
-  min-height: 160px;
-  padding: 16px;
+  margin: 10px 16px 14px;
+  padding: 12px 14px;
+  border-radius: var(--mizuna-radius-md, 12px);
+  background: rgba(0, 0, 0, 0.025);
+  border: 1.5px dashed rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+}
+
+:root[data-theme='dark'] .mizuna-preview-area,
+.dark .mizuna-preview-area {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.mizuna-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+:root[data-theme='dark'] .mizuna-preview-header,
+.dark .mizuna-preview-header {
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.mizuna-preview-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--primary, #2b8cbe);
+}
+
+.mizuna-preview-badge i {
+  font-size: 15px;
+}
+
+.mizuna-preview-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text_secondary, #666);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mizuna-preview-close-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.mizuna-preview-close-btn i {
+  font-size: 16px;
 }
 
 .mizuna-preview-cw-card {

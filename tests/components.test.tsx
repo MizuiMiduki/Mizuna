@@ -774,7 +774,7 @@ describe('UI Components', () => {
       expect(selectPicBtn).toHaveClass('is-disabled');
     });
 
-    it('MFMツールバーからタグを挿入でき、プレビューでレンダリング結果を確認できること', async () => {
+    it('MFMツールバーからタグを挿入でき、リアルタイムプレビューをトグルして入力しながら確認できること', async () => {
       render(() => (
         <AppProvider>
           <NoteView />
@@ -791,18 +791,23 @@ describe('UI Components', () => {
       const textarea = screen.getByPlaceholderText(/(いまどうしてる？|What's happening)/i) as HTMLTextAreaElement;
       expect(textarea.value).toContain('$[shake text]');
 
-      // プレビュー切り替えボタンをクリック
+      // プレビュートグルボタンをクリック
       const previewBtn = screen.getByRole('button', { name: /(MFMプレビュー|MFM Preview)/i });
       fireEvent.click(previewBtn);
 
-      // プレビューエリアが表示され、mfm-shake クラスが付与された要素が存在すること
+      // プレビューエリアが表示され、テキストエリアも同時に表示されていること（入力しながら確認可能）
       expect(document.querySelector('.mizuna-preview-area')).toBeInTheDocument();
+      expect(document.querySelector('.mizuna-main-textarea')).toBeInTheDocument();
       expect(document.querySelector('.mfm-shake')).toBeInTheDocument();
       expect(document.querySelector('.mfm-shake')?.textContent).toBe('text');
 
-      // 編集に戻るボタンをクリック
-      const editBtn = screen.getByRole('button', { name: /(編集|Edit)/i });
-      fireEvent.click(editBtn);
+      // プレビュー表示中に入力内容を変更すると、プレビューがリアルタイム更新されること
+      fireEvent.input(textarea, { target: { value: '$[shake リアルタイム更新]' } });
+      expect(document.querySelector('.mfm-shake')?.textContent).toBe('リアルタイム更新');
+
+      // トグルボタンを再度押すとプレビューエリアが非表示になること
+      fireEvent.click(previewBtn);
+      expect(document.querySelector('.mizuna-preview-area')).not.toBeInTheDocument();
       expect(document.querySelector('.mizuna-main-textarea')).toBeInTheDocument();
     });
   });
