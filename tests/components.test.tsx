@@ -852,6 +852,9 @@ describe('UI Components', () => {
       expect(currentImages[0].name).toBe('image_b.png');
       expect(currentImages[1].name).toBe('image_a.png');
 
+      // サムネイル並べ替えによってフォーム全体にドラッグオーバー枠線（.is-dragging）が付着していないこと
+      expect(document.querySelector('.mizuna-studio-composer.is-dragging')).not.toBeInTheDocument();
+
       // ドラッグ完了後のクールダウンを待機し、入れ替え後の1枚目（image_b）をクリックして拡大プレビューを開く
       await new Promise((r) => setTimeout(r, 200));
       const updatedThumbB = screen.getByAltText('image_b.png');

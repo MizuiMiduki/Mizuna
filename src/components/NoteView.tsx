@@ -172,6 +172,8 @@ export function NoteView() {
   };
 
   const handleImageDragStart = (e: DragEvent, id: string) => {
+    e.stopPropagation();
+    setIsDraggingOver(false);
     if (e.dataTransfer) {
       e.dataTransfer.setData('text/plain', id);
       e.dataTransfer.effectAllowed = 'move';
@@ -182,6 +184,8 @@ export function NoteView() {
 
   const handleImageDragOver = (e: DragEvent, index: number) => {
     e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
     if (e.dataTransfer) {
       e.dataTransfer.dropEffect = 'move';
     }
@@ -191,6 +195,7 @@ export function NoteView() {
   const handleImageDrop = (e: DragEvent, dropIndex: number) => {
     e.preventDefault();
     e.stopPropagation();
+    setIsDraggingOver(false);
     const sourceId = e.dataTransfer?.getData('text/plain') || draggedImageId();
     if (sourceId) {
       const current = attachedImages();
@@ -215,6 +220,7 @@ export function NoteView() {
     setDraggedImageId(null);
     setDragOverIndex(null);
     isDraggingItem = false;
+    setIsDraggingOver(false);
   };
 
   // タッチ端末での長押しドラッグ並べ替え（通常スクロール操作を妨げない設計）
@@ -222,6 +228,7 @@ export function NoteView() {
     if (attachedImages().length <= 1) return;
     if (e.touches.length !== 1) return;
     cancelLongPress();
+    setIsDraggingOver(false);
     isLongPressActive = false;
     touchThumbStartX = e.touches[0].clientX;
     touchThumbStartY = e.touches[0].clientY;
@@ -273,6 +280,7 @@ export function NoteView() {
 
   const handleThumbTouchEnd = () => {
     cancelLongPress();
+    setIsDraggingOver(false);
     if (isLongPressActive && touchThumbSourceId) {
       const dropIdx = dragOverIndex();
       if (dropIdx !== null && dropIdx !== touchThumbSourceIndex) {
@@ -815,11 +823,23 @@ export function NoteView() {
       ref={viewContainerRef}
       class="mizuna-note-view"
       onDragOver={(e) => {
+        // 内部サムネイルの並べ替え中や、外部からのファイルドラッグではない場合はフォーム全体の枠線を出さない
+        if (draggedImageId() || isDraggingItem || !e.dataTransfer?.types?.includes('Files')) {
+          return;
+        }
         e.preventDefault();
         setIsDraggingOver(true);
       }}
-      onDragLeave={() => setIsDraggingOver(false)}
-      onDrop={handleDrop}
+      onDragLeave={(e) => {
+        if (!e.relatedTarget || !e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsDraggingOver(false);
+        }
+      }}
+      onDrop={(e) => {
+        setIsDraggingOver(false);
+        if (draggedImageId() || isDraggingItem) return;
+        handleDrop(e);
+      }}
     >
       {/* 統合型コンポーザーカード */}
       <section
