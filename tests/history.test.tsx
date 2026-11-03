@@ -4,6 +4,7 @@ import { AppProvider, useApp } from '../src/store/appStore';
 import { clearHistoryCache } from '../src/store/historyStore';
 import { HistoryView } from '../src/components/HistoryView';
 import { NoteView } from '../src/components/NoteView';
+import { DialogHost } from '../src/components/DialogHost';
 import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
 import type { MisskeyNote } from '../src/services/misskeyApi';
 
@@ -235,6 +236,15 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
           };
         }
 
+        // /api/notes/delete (既存投稿の削除)
+        if (url.includes('/api/notes/delete')) {
+          return {
+            ok: true,
+            status: 204,
+            json: async () => ({}),
+          };
+        }
+
         return {
           ok: true,
           status: 200,
@@ -396,6 +406,39 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
 
     expect(document.querySelector('.mizuna-lightbox-order-badge')?.textContent).toBe('1 / 2');
     expect(document.querySelector('.mizuna-lightbox-filename')?.textContent).toBe('photo1.webp');
+  });
+
+  it('自分の既存投稿の削除ボタンを押すと確認ダイアログが表示され、削除確定でAPI呼び出しと一覧からの削除が行われること', async () => {
+    render(() => (
+      <AppProvider>
+        <HistoryView />
+        <DialogHost />
+      </AppProvider>
+    ));
+
+    expect(await screen.findByText(/テスト投稿1です/)).toBeInTheDocument();
+
+    // 削除ボタンをクリック
+    const deleteBtns = screen.getAllByTitle(/(投稿を削除|Delete note)/);
+    expect(deleteBtns.length).toBeGreaterThan(0);
+    fireEvent.click(deleteBtns[0]);
+
+    // 確認ダイアログが表示されること
+    expect(await screen.findByText(/(投稿の削除|Delete Note)/)).toBeInTheDocument();
+
+    // 「削除する」ボタンをクリック
+    const confirmBtn = screen.getByRole('button', { name: /^(削除する|Delete)$/ });
+    fireEvent.click(confirmBtn);
+
+    // /api/notes/delete が呼ばれ、一覧から該当ノートが消えること
+    await vi.waitFor(() => {
+      const fetchMock = vi.mocked(fetch);
+      const deleteCalls = fetchMock.mock.calls.filter(
+        (call) => typeof call[0] === 'string' && call[0].includes('/api/notes/delete')
+      );
+      expect(deleteCalls.length).toBe(1);
+      expect(screen.queryByText(/テスト投稿1です/)).not.toBeInTheDocument();
+    });
   });
 
   it('4.0.0未満のアカウントでは権限不足警告画面が表示され、APIリクエストが行われないこと', async () => {

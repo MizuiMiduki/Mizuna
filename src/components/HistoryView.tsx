@@ -10,6 +10,7 @@ import {
 } from 'solid-js';
 import { Portal } from 'solid-js/web';
 import {
+  deleteMisskeyNote,
   fetchNoteChildren,
   fetchServerEmojis,
   fetchUserMentions,
@@ -53,8 +54,12 @@ export function HistoryView() {
     currentUser,
     settings,
     startReply,
+    replyTargetNote,
+    cancelReply,
     setCurrentView,
     showToast,
+    openDialog,
+    closeDialog,
     pushModalBackHandler,
     t,
   } = useApp();
@@ -74,6 +79,7 @@ export function HistoryView() {
   const [isLoadingMore, setIsLoadingMore] = createSignal(false);
   const [hasMore, setHasMore] = createSignal(true);
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
+  const [deletingNoteId, setDeletingNoteId] = createSignal<string | null>(null);
 
   // ノートごとのリプライ展開状態 (noteId -> RepliesState)
   const [repliesMap, setRepliesMap] = createSignal<Record<string, RepliesState>>({});
@@ -519,6 +525,76 @@ export function HistoryView() {
     window.open(`https://${user.address}/notes/${noteId}`, '_blank', 'noopener,noreferrer');
   };
 
+  const isOwnNote = (target: MisskeyNote) => {
+    const user = currentUser();
+    if (!user) return false;
+    return activeTab() === 'my_notes' || target.user.username === user.username;
+  };
+
+  const executeDeleteNote = async (noteId: string) => {
+    const user = currentUser();
+    if (!user || deletingNoteId()) return;
+
+    setDeletingNoteId(noteId);
+    try {
+      await deleteMisskeyNote(user, noteId);
+
+      const nextNotes = notes().filter((n) => n.id !== noteId);
+      setNotes(nextNotes);
+
+      const prevReplies = repliesMap();
+      const nextReplies: Record<string, RepliesState> = {};
+      for (const [parentId, state] of Object.entries(prevReplies)) {
+        if (parentId === noteId) continue;
+        nextReplies[parentId] = {
+          ...state,
+          list: state.list.filter((child) => child.id !== noteId),
+        };
+      }
+      setRepliesMap(nextReplies);
+
+      syncCache({
+        notes: nextNotes,
+        repliesMap: nextReplies,
+      });
+
+      if (replyTargetNote()?.id === noteId) {
+        cancelReply();
+      }
+
+      showToast(t('history.deleted'), 'info');
+    } catch (err) {
+      console.error('Failed to delete note:', err);
+      showToast(t('history.error_delete'), 'error');
+    } finally {
+      setDeletingNoteId(null);
+    }
+  };
+
+  const handleDeleteNoteClick = (note: MisskeyNote) => {
+    openDialog({
+      title: t('history.delete_confirm_title'),
+      icon: 'delete_forever',
+      tone: 'danger',
+      contentText: t('history.delete_confirm_desc'),
+      buttons: [
+        {
+          label: t('common.cancel'),
+          variant: 'text',
+          onClick: () => closeDialog(),
+        },
+        {
+          label: t('history.delete_button'),
+          variant: 'error',
+          onClick: async () => {
+            closeDialog();
+            await executeDeleteNote(note.id);
+          },
+        },
+      ],
+    });
+  };
+
   return (
     <div ref={containerRef} class="mizuna-history-view">
       {/* ヘッダー */}
@@ -827,6 +903,18 @@ export function HistoryView() {
                         </div>
 
                         <div class="mizuna-note-actions-right">
+                          <Show when={isOwnNote(note)}>
+                            <button
+                              type="button"
+                              class="mizuna-note-action-icon-btn is-danger"
+                              onClick={() => handleDeleteNoteClick(note)}
+                              disabled={deletingNoteId() === note.id}
+                              title={t('history.delete_note')}
+                              aria-label={t('history.delete_note')}
+                            >
+                              <i>delete_outline</i>
+                            </button>
+                          </Show>
                           <button
                             type="button"
                             class="mizuna-note-action-icon-btn"
@@ -914,6 +1002,18 @@ export function HistoryView() {
                                           <i>reply</i>
                                           <span>{t('history.reply_to')}</span>
                                         </button>
+                                        <Show when={childNote.user.username === currentUser()?.username}>
+                                          <button
+                                            type="button"
+                                            class="mizuna-reply-action-icon-btn is-danger"
+                                            onClick={() => handleDeleteNoteClick(childNote)}
+                                            disabled={deletingNoteId() === childNote.id}
+                                            title={t('history.delete_note')}
+                                            aria-label={t('history.delete_note')}
+                                          >
+                                            <i>delete_outline</i>
+                                          </button>
+                                        </Show>
                                         <button
                                           type="button"
                                           class="mizuna-reply-action-icon-btn"

@@ -532,6 +532,30 @@ export async function fetchUserMentions(
 }
 
 /**
+ * 自分の投稿（ノート）を削除する
+ */
+export async function deleteMisskeyNote(
+  account: AccountRecord,
+  noteId: string
+): Promise<void> {
+  const res = await fetch(`https://${account.address}/api/notes/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      i: account.token,
+      noteId,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new MisskeyApiError(`投稿の削除に失敗しました (HTTP ${res.status})`, {
+      status: res.status,
+      isAuthError: res.status === 401 || res.status === 403,
+    });
+  }
+}
+
+/**
  * 最新のリリースノート記事情報を RSS フィードから取得する
  * 対象 RSS: https://blossomsarchive.com/blog/category/mizuna/feed/
  * (万が一の CORS 制約時は WordPress REST API に自動フォールバック)

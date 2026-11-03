@@ -8069,6 +8069,18 @@ body.dark .mizuna-mfm-toolbar-divider {
   color: var(--on-surface);
 }
 
+.mizuna-note-action-icon-btn.is-danger:hover,
+.mizuna-reply-action-icon-btn.is-danger:hover {
+  background: color-mix(in srgb, var(--error, #ba1a1a) 14%, transparent);
+  color: var(--error, #ba1a1a);
+}
+
+.mizuna-note-action-icon-btn:disabled,
+.mizuna-reply-action-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .mizuna-note-action-icon-btn i {
   font-size: 1.05rem;
 }
