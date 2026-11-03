@@ -70,17 +70,17 @@ describe('comparisonVersion', () => {
   });
 
   describe('getMissingPermissions', () => {
-    it('3.5.0 未満のアカウントでは write:drive と read:notes を含むこと', () => {
-      expect(getMissingPermissions('3.4.0')).toEqual(['write:drive', 'read:notes']);
-      expect(getMissingPermissions('1.0.0')).toEqual(['write:drive', 'read:notes']);
-      expect(getMissingPermissions(null)).toEqual(['write:drive', 'read:notes']);
+    it('3.5.0 未満のアカウントでは write:drive, read:notes, read:notifications を含むこと', () => {
+      expect(getMissingPermissions('3.4.0')).toEqual(['write:drive', 'read:notes', 'read:notifications']);
+      expect(getMissingPermissions('1.0.0')).toEqual(['write:drive', 'read:notes', 'read:notifications']);
+      expect(getMissingPermissions(null)).toEqual(['write:drive', 'read:notes', 'read:notifications']);
     });
 
-    it('3.5.0 以上 4.0.0 未満のバージョンでは read:notes のみ不足すること', () => {
-      expect(getMissingPermissions('3.5.0')).toEqual(['read:notes']);
-      expect(getMissingPermissions('3.13.0')).toEqual(['read:notes']);
-      expect(getMissingPermissions('3.14.0')).toEqual(['read:notes']);
-      expect(getMissingPermissions('3.15.0')).toEqual(['read:notes']);
+    it('3.5.0 以上 4.0.0 未満のバージョンでは read:notes と read:notifications が不足すること', () => {
+      expect(getMissingPermissions('3.5.0')).toEqual(['read:notes', 'read:notifications']);
+      expect(getMissingPermissions('3.13.0')).toEqual(['read:notes', 'read:notifications']);
+      expect(getMissingPermissions('3.14.0')).toEqual(['read:notes', 'read:notifications']);
+      expect(getMissingPermissions('3.15.0')).toEqual(['read:notes', 'read:notifications']);
     });
 
     it('4.0.0 以上のバージョンでは空配列を返すこと', () => {

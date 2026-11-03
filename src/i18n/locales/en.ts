@@ -164,7 +164,7 @@ export const en = {
     open_in_browser: 'Open in Misskey',
     error_load: 'Failed to fetch notes',
     permission_required_title: 'History permission required',
-    permission_required_desc: 'This account was added before v4.0.0 (v{version}) and does not have permission to read notes (read:notes). Please re-authenticate to view history and replies.',
+    permission_required_desc: 'This account was added before v4.0.0 (v{version}) and does not have permission to read notes and notifications (read:notes, read:notifications). Please re-authenticate to view history and replies.',
     reauth_button: 'Re-authenticate Account',
     account_badge_history_unsupported: 'No History',
   },

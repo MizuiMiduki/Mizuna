@@ -57,6 +57,7 @@ export function AccountView() {
     const permDescriptions: Record<string, string> = {
       'write:drive': 'ドライブへの画像アップロード権限',
       'read:notes': '投稿履歴・リプライ閲覧権限',
+      'read:notifications': 'メンション一覧取得権限',
     };
 
     openDialog({

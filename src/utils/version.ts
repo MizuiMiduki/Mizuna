@@ -51,6 +51,7 @@ export function getMissingPermissions(addVersion?: string | null): string[] {
   }
   if (!hasHistoryPermission(addVersion)) {
     missing.push('read:notes');
+    missing.push('read:notifications');
   }
   return missing;
 }

@@ -42,8 +42,12 @@ describe('misskeyApi service', () => {
     it('正しいクエリパラメータと権限を持った MiAuth URL を生成すること', () => {
       const url = buildMiAuthUrl('https://misskey.io/', 'session-uuid-123');
       expect(url).toContain('https://misskey.io/miauth/session-uuid-123');
-      expect(url).toContain('permission=write:notes,read:account,write:drive');
-      const expectedName = encodeURIComponent(`${mizuna_options.app_name} v${mizuna_options.mizuna_version}`);
+      expect(url).toContain(
+        'permission=write:notes,read:account,write:drive,read:notes,read:notifications'
+      );
+      const expectedName = encodeURIComponent(
+        `${mizuna_options.app_name} v${mizuna_options.mizuna_version}`
+      );
       expect(url).toContain(`name=${expectedName}`);
     });
   });

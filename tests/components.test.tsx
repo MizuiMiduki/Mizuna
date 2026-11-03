@@ -659,10 +659,12 @@ describe('UI Components', () => {
       // バッジをクリック
       fireEvent.click(historyBadges[0]);
 
-      // モーダルダイアログが開き、不足権限として read:notes が表示されること
+      // モーダルダイアログが開き、不足権限として read:notes と read:notifications が表示されること
       expect(await screen.findByText('アカウント権限の確認')).toBeInTheDocument();
       expect(screen.getByText(/read:notes/)).toBeInTheDocument();
       expect(screen.getByText(/(投稿履歴・リプライ閲覧権限)/)).toBeInTheDocument();
+      expect(screen.getByText(/read:notifications/)).toBeInTheDocument();
+      expect(screen.getByText(/(メンション一覧取得権限)/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '再認証する' })).toBeInTheDocument();
     });
   });
