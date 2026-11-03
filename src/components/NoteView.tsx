@@ -654,15 +654,6 @@ export function NoteView() {
             onBlur={() => setIsInputFocused(false)}
             onPaste={handlePaste}
           />
-
-          <Show when={endMizuna()}>
-            <div class="mizuna-editor-subrow">
-              <span class="mizuna-suffix-badge">
-                <i>auto_awesome</i>
-                {t('note.suffix_notice')}
-              </span>
-            </div>
-          </Show>
         </div>
 
         {/* リアルタイムMFMプレビュー枠（トグル表示） */}
