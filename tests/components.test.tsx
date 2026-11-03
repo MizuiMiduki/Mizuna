@@ -24,7 +24,12 @@ describe('UI Components', () => {
     await db.open();
     await db.account.clear();
     await db.setting.clear();
-    await db.setting.put({ ...DEFAULT_USER_SETTINGS, id: 1, language: 'ja_jp' });
+    await db.setting.put({
+      ...DEFAULT_USER_SETTINGS,
+      id: 1,
+      language: 'ja_jp',
+      is_check_releasenote: '3.14.0',
+    });
     await db.account.add({
       token: 'tok_test',
       name: 'テストユーザー',

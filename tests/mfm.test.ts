@@ -17,66 +17,74 @@ describe('MFM Parser (renderMfm)', () => {
   });
 
   it('エフェクトタグ $[shake ...] が正しくパースされること', () => {
-    expect(renderMfm('$[shake こんにちは]')).toBe(
-      '<span class="mfm-shake">こんにちは</span>'
-    );
-    expect(renderMfm('$[shake.speed=0.2s 激しい揺れ]')).toBe(
-      '<span class="mfm-shake" style="animation-duration: 0.2s;">激しい揺れ</span>'
-    );
+    const rendered = renderMfm('$[shake こんにちは]');
+    expect(rendered).toContain('class="mfm-shake"');
+    expect(rendered).toContain('animation: mfm-shake 0.5s ease infinite;');
+    expect(rendered).toContain('こんにちは');
+
+    const customSpeed = renderMfm('$[shake.speed=0.2s 激しい揺れ]');
+    expect(customSpeed).toContain('animation: mfm-shake 0.2s ease infinite;');
   });
 
   it('エフェクトタグ $[bounce ...] が正しくパースされること', () => {
-    expect(renderMfm('$[bounce ぴょんぴょん]')).toBe(
-      '<span class="mfm-bounce">ぴょんぴょん</span>'
-    );
-    expect(renderMfm('$[bounce.speed=1s ゆっくりバウンド]')).toBe(
-      '<span class="mfm-bounce" style="animation-duration: 1s;">ゆっくりバウンド</span>'
-    );
+    const rendered = renderMfm('$[bounce ぴょんぴょん]');
+    expect(rendered).toContain('class="mfm-bounce"');
+    expect(rendered).toContain('animation: mfm-bounce 0.75s linear infinite;');
+    expect(rendered).toContain('transform-origin: center bottom;');
+    expect(rendered).toContain('ぴょんぴょん');
+
+    const customSpeed = renderMfm('$[bounce.speed=1s ゆっくりバウンド]');
+    expect(customSpeed).toContain('animation: mfm-bounce 1s linear infinite;');
   });
 
   it('エフェクトタグ $[rainbow ...] が正しくパースされること', () => {
-    expect(renderMfm('$[rainbow 七色]')).toBe(
-      '<span class="mfm-rainbow">七色</span>'
-    );
+    const rendered = renderMfm('$[rainbow 七色]');
+    expect(rendered).toContain('class="mfm-rainbow"');
+    expect(rendered).toContain('animation: mfm-rainbow 1s linear infinite;');
+    expect(rendered).toContain('七色');
   });
 
   it('エフェクトタグ $[spin ...] とオプション付きが正しくパースされること', () => {
-    expect(renderMfm('$[spin 回転]')).toBe(
-      '<span class="mfm-spin">回転</span>'
-    );
-    expect(renderMfm('$[spin.left 逆回転]')).toBe(
-      '<span class="mfm-spin mfm-spin-left">逆回転</span>'
-    );
+    const rendered = renderMfm('$[spin 回転]');
+    expect(rendered).toContain('class="mfm-spin"');
+    expect(rendered).toContain('animation: mfm-spin 1.5s linear infinite;');
+
+    const left = renderMfm('$[spin.left 逆回転]');
+    expect(left).toContain('class="mfm-spin mfm-spin-left"');
+    expect(left).toContain('animation-direction: reverse;');
   });
 
   it('エフェクトタグ $[tada ...] が正しくパースされること', () => {
-    expect(renderMfm('$[tada おめでとう！]')).toBe(
-      '<span class="mfm-tada">おめでとう！</span>'
-    );
+    const rendered = renderMfm('$[tada おめでとう！]');
+    expect(rendered).toContain('class="mfm-tada"');
+    expect(rendered).toContain('animation: global-tada 1s linear infinite both;');
+    expect(rendered).toContain('font-size: 150%;');
   });
 
   it('エフェクトタグ $[blur ...] が正しくパースされること', () => {
     const rendered = renderMfm('$[blur ネタバレ注意]');
-    expect(rendered).toContain('class="mfm-blur"');
+    expect(rendered).toContain('class="_mfm_blur_ mfm-blur"');
     expect(rendered).toContain('ネタバレ注意');
   });
 
   it('文字色 $[fg.color=... ...] が正しくパースされること', () => {
-    expect(renderMfm('$[fg.color=ff0000 赤文字]')).toBe(
-      '<span class="mfm-fg" style="color: #ff0000;">赤文字</span>'
-    );
+    const rendered = renderMfm('$[fg.color=ff0000 赤文字]');
+    expect(rendered).toContain('class="mfm-fg"');
+    expect(rendered).toContain('color: #ff0000;');
+    expect(rendered).toContain('赤文字');
   });
 
   it('背景色 $[bg.color=... ...] が正しくパースされること', () => {
-    expect(renderMfm('$[bg.color=00ff00 緑背景]')).toBe(
-      '<span class="mfm-bg" style="background-color: #00ff00;">緑背景</span>'
-    );
+    const rendered = renderMfm('$[bg.color=00ff00 緑背景]');
+    expect(rendered).toContain('class="mfm-bg"');
+    expect(rendered).toContain('background-color: #00ff00;');
+    expect(rendered).toContain('緑背景');
   });
 
   it('拡大縮小 $[scale.x=...,y=... ...] が正しくパースされること', () => {
     const rendered = renderMfm('$[scale.x=1.5,y=2 でかい]');
     expect(rendered).toContain('class="mfm-scale"');
-    expect(rendered).toContain('transform: scale(1.5, 2)');
+    expect(rendered).toContain('transform: scale(1.5, 2);');
   });
 
   it('複数行コードブロックが保護されて正しくパースされること', () => {
@@ -105,9 +113,9 @@ describe('MFM Parser (renderMfm)', () => {
 
   it('ネストしたタグが正しく解釈されること', () => {
     const rendered = renderMfm('$[shake $[rainbow ネスト]]');
-    expect(rendered).toBe(
-      '<span class="mfm-shake"><span class="mfm-rainbow">ネスト</span></span>'
-    );
+    expect(rendered).toContain('class="mfm-shake"');
+    expect(rendered).toContain('class="mfm-rainbow"');
+    expect(rendered).toContain('ネスト');
   });
 });
 

@@ -5877,119 +5877,165 @@ body.is-simple-mode .mizuna-lightbox-action-btn {
 
 /* エフェクトキーフレーム (Misskey 本家準拠) */
 
-/* $[shake ...] : ランダムで激しいシェイク（0.5s） */
-@keyframes mfm-shake {
-  0% { transform: translate(0, 0) rotate(0deg); }
-  10% { transform: translate(-3px, -2px) rotate(-1deg); }
-  20% { transform: translate(-3px, 0px) rotate(1deg); }
-  30% { transform: translate(3px, 2px) rotate(0deg); }
-  40% { transform: translate(1px, -1px) rotate(1deg); }
-  50% { transform: translate(-2px, 2px) rotate(-1deg); }
-  60% { transform: translate(-3px, 1px) rotate(0deg); }
-  70% { transform: translate(3px, 1px) rotate(-1deg); }
-  80% { transform: translate(-2px, -1px) rotate(1deg); }
-  90% { transform: translate(1px, 2px) rotate(0deg); }
-  100% { transform: translate(1px, -2px) rotate(-1deg); }
-}
+/* ==========================================================================
+   MFM (Misskey Flavored Markdown) Official Keyframes & Styles
+   Misskey公式 (misskey-dev/misskey) 完全準拠
+   ========================================================================== */
 
-/* $[bounce ...] : 弾むボールのような伸縮バウンス（0.75s ease） */
-@keyframes mfm-bounce {
-  0%, 100% {
-    transform: scale(1, 1) translateY(0);
+@keyframes global-tada {
+  from {
+    transform: scale3d(1, 1, 1);
   }
-  10% {
-    transform: scale(1.15, 0.85) translateY(0);
+  10%,
+  20% {
+    transform: scale3d(0.91, 0.91, 0.91) rotate3d(0, 0, 1, -2deg);
   }
-  30% {
-    transform: scale(0.85, 1.15) translateY(-0.6em);
+  30%,
+  70% {
+    transform: scale3d(1.09, 1.09, 1.09) rotate3d(0, 0, 1, 2deg);
   }
-  50% {
-    transform: scale(1.05, 0.95) translateY(0);
+  50%,
+  90% {
+    transform: scale3d(1.09, 1.09, 1.09) rotate3d(0, 0, 1, -2deg);
   }
-  57% {
-    transform: scale(0.98, 1.02) translateY(-0.15em);
-  }
-  64% {
-    transform: scale(1, 1) translateY(0);
+  to {
+    transform: scale3d(1, 1, 1);
   }
 }
 
-/* $[jump ...] : 飛び跳ねるジャンプ（0.75s） */
-@keyframes mfm-jump {
-  0% { transform: translateY(0); }
-  25% { transform: translateY(-0.55em); }
-  50% { transform: translateY(0); }
-  75% { transform: translateY(-0.25em); }
-  100% { transform: translateY(0); }
+@keyframes mfm-rubberBand {
+  from { transform: scale3d(1, 1, 1); }
+  30% { transform: scale3d(1.25, 0.75, 1); }
+  40% { transform: scale3d(0.75, 1.25, 1); }
+  50% { transform: scale3d(1.15, 0.85, 1); }
+  65% { transform: scale3d(0.95, 1.05, 1); }
+  75% { transform: scale3d(1.05, 0.95, 1); }
+  to { transform: scale3d(1, 1, 1); }
 }
 
-/* $[jelly ...] : ゼリーのようなぷるぷる伸縮（1s） */
-@keyframes mfm-jelly {
-  0%, 100% { transform: scale(1, 1); }
-  30% { transform: scale(1.25, 0.75); }
-  40% { transform: scale(0.75, 1.25); }
-  50% { transform: scale(1.15, 0.85); }
-  65% { transform: scale(0.95, 1.05); }
-  75% { transform: scale(1.05, 0.95); }
-}
-
-/* $[twitch ...] : ピクピク痙攣（0.5s） */
 @keyframes mfm-twitch {
-  0% { transform: translate(0, 0); }
-  20% { transform: translate(-2px, 3px); }
-  40% { transform: translate(2px, -1px); }
-  60% { transform: translate(-1px, -2px); }
-  80% { transform: translate(3px, 1px); }
-  100% { transform: translate(0, 0); }
+  0% { transform: translate(7px, -2px); }
+  5% { transform: translate(-3px, 1px); }
+  10% { transform: translate(-7px, -1px); }
+  15% { transform: translate(0px, -1px); }
+  20% { transform: translate(-8px, 6px); }
+  25% { transform: translate(-4px, -3px); }
+  30% { transform: translate(-4px, -6px); }
+  35% { transform: translate(-8px, -8px); }
+  40% { transform: translate(4px, 6px); }
+  45% { transform: translate(-3px, 1px); }
+  50% { transform: translate(2px, -10px); }
+  55% { transform: translate(-7px, 0px); }
+  60% { transform: translate(-2px, 4px); }
+  65% { transform: translate(3px, -8px); }
+  70% { transform: translate(6px, 7px); }
+  75% { transform: translate(-7px, -2px); }
+  80% { transform: translate(-7px, -8px); }
+  85% { transform: translate(9px, 3px); }
+  90% { transform: translate(-3px, -2px); }
+  95% { transform: translate(-10px, 2px); }
+  100% { transform: translate(-2px, -6px); }
 }
 
-/* $[spin ...] : 360度回転（1.5s linear） */
+@keyframes mfm-shake {
+  0% { transform: translate(-3px, -1px) rotate(-8deg); }
+  5% { transform: translate(0px, -1px) rotate(-10deg); }
+  10% { transform: translate(1px, -3px) rotate(0deg); }
+  15% { transform: translate(1px, 1px) rotate(11deg); }
+  20% { transform: translate(-2px, 1px) rotate(1deg); }
+  25% { transform: translate(-1px, -2px) rotate(-2deg); }
+  30% { transform: translate(-1px, 2px) rotate(-3deg); }
+  35% { transform: translate(2px, 1px) rotate(6deg); }
+  40% { transform: translate(-2px, -3px) rotate(-9deg); }
+  45% { transform: translate(0px, -1px) rotate(-12deg); }
+  50% { transform: translate(1px, 2px) rotate(10deg); }
+  55% { transform: translate(0px, -3px) rotate(8deg); }
+  60% { transform: translate(1px, -1px) rotate(8deg); }
+  65% { transform: translate(0px, -1px) rotate(-7deg); }
+  70% { transform: translate(-1px, -3px) rotate(6deg); }
+  75% { transform: translate(0px, -2px) rotate(4deg); }
+  80% { transform: translate(-2px, -1px) rotate(3deg); }
+  85% { transform: translate(1px, -3px) rotate(-10deg); }
+  90% { transform: translate(1px, 0px) rotate(3deg); }
+  95% { transform: translate(-2px, 0px) rotate(-3deg); }
+  100% { transform: translate(2px, 1px) rotate(2deg); }
+}
+
 @keyframes mfm-spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
 
-@keyframes mfm-spin-left {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(-360deg); }
-}
-
-@keyframes mfm-spin-x {
+@keyframes mfm-spinX {
   0% { transform: perspective(128px) rotateX(0deg); }
   100% { transform: perspective(128px) rotateX(360deg); }
 }
 
-@keyframes mfm-spin-y {
+@keyframes mfm-spinY {
   0% { transform: perspective(128px) rotateY(0deg); }
   100% { transform: perspective(128px) rotateY(360deg); }
 }
 
-/* $[rainbow ...] : 虹色変化（1s linear） */
+@keyframes mfm-jump {
+  0% { transform: translateY(0); }
+  25% { transform: translateY(-16px); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(-8px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes mfm-bounce {
+  0% { transform: translateY(0) scale(1, 1); }
+  25% { transform: translateY(-16px) scale(1, 1); }
+  50% { transform: translateY(0) scale(1, 1); }
+  75% { transform: translateY(0) scale(1.5, 0.75); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+
 @keyframes mfm-rainbow {
-  0% { filter: hue-rotate(0deg); }
-  100% { filter: hue-rotate(360deg); }
+  0% { filter: hue-rotate(0deg) contrast(150%) saturate(150%); }
+  100% { filter: hue-rotate(360deg) contrast(150%) saturate(150%); }
 }
 
-/* $[tada ...] : 華やかなファンファーレ（1s） */
-@keyframes mfm-tada {
-  0% { transform: scale(1); }
-  10%, 20% { transform: scale(0.9) rotate(-3deg); }
-  30%, 50%, 70%, 90% { transform: scale(1.1) rotate(3deg); }
-  40%, 60%, 80% { transform: scale(1.1) rotate(-3deg); }
-  100% { transform: scale(1) rotate(0); }
+/* MFM クラス定義 */
+._mfm_blur_ {
+  filter: blur(6px);
+  transition: filter 0.3s;
+  cursor: pointer;
 }
 
-/* MFM エフェクトクラス */
+._mfm_blur_:hover,
+._mfm_blur_:focus,
+._mfm_blur_:active {
+  filter: blur(0px);
+}
+
+.mfm-x2 {
+  --mfm-zoom-size: 200%;
+  font-size: var(--mfm-zoom-size);
+}
+
+.mfm-x3 {
+  --mfm-zoom-size: 400%;
+  font-size: var(--mfm-zoom-size);
+}
+
+.mfm-x4 {
+  --mfm-zoom-size: 600%;
+  font-size: var(--mfm-zoom-size);
+}
+
+/* 後方互換クラス（HTML直書き用フォールバック） */
 .mfm-shake {
   display: inline-block;
   transform-origin: center center;
-  animation: mfm-shake 0.5s infinite;
+  animation: mfm-shake 0.5s ease infinite;
 }
 
 .mfm-bounce {
   display: inline-block;
-  transform-origin: bottom center;
-  animation: mfm-bounce 0.75s cubic-bezier(0.28, 0.84, 0.42, 1) infinite;
+  transform-origin: center bottom;
+  animation: mfm-bounce 0.75s linear infinite;
 }
 
 .mfm-jump {
@@ -6000,54 +6046,38 @@ body.is-simple-mode .mizuna-lightbox-action-btn {
 
 .mfm-jelly {
   display: inline-block;
-  transform-origin: bottom center;
-  animation: mfm-jelly 1s infinite;
+  transform-origin: center center;
+  animation: mfm-rubberBand 1s linear infinite both;
 }
 
 .mfm-twitch {
   display: inline-block;
   transform-origin: center center;
-  animation: mfm-twitch 0.5s infinite;
+  animation: mfm-twitch 0.5s ease infinite;
 }
 
 .mfm-spin {
   display: inline-block;
   transform-origin: center center;
-  animation: mfm-spin 1.5s infinite linear;
-}
-
-.mfm-spin.mfm-spin-left {
-  animation-name: mfm-spin-left;
-}
-
-.mfm-spin.mfm-spin-x {
-  animation-name: mfm-spin-x;
-}
-
-.mfm-spin.mfm-spin-y {
-  animation-name: mfm-spin-y;
-}
-
-.mfm-spin.mfm-spin-alternate {
-  animation-direction: alternate;
+  animation: mfm-spin 1.5s linear infinite;
 }
 
 .mfm-rainbow {
   display: inline-block;
-  color: #ff2a55;
-  animation: mfm-rainbow 1s infinite linear;
+  animation: mfm-rainbow 1s linear infinite;
 }
 
 .mfm-tada {
   display: inline-block;
+  font-size: 150%;
   transform-origin: center center;
-  animation: mfm-tada 1s infinite;
+  animation: global-tada 1s linear infinite both;
 }
 
 .mfm-blur {
   display: inline-block;
   filter: blur(6px);
-  transition: filter 0.25s ease, opacity 0.25s ease;
+  transition: filter 0.3s ease;
   cursor: pointer;
   user-select: none;
   background: rgba(0, 0, 0, 0.05);

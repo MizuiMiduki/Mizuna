@@ -1,6 +1,9 @@
 /**
  * Mizuna MFM (Misskey Flavored Markdown) Parser & Insertion Utilities
+ * Misskey公式パーサー `mfm-js` およびMisskey本家のレンダリング仕様に完全準拠
  */
+
+import * as mfm from 'mfm-js';
 
 /**
  * HTML特殊文字をエスケープして安全にする
@@ -14,49 +17,285 @@ export function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
-/**
- * 16進数カラーコード（3桁または6桁）を安全にパースして '#' 付き文字列にする
- */
-function sanitizeColor(raw: string): string | null {
-  const clean = raw.replace(/^#/, '');
-  if (/^[0-9a-fA-F]{3}$/.test(clean) || /^[0-9a-fA-F]{6}$/.test(clean)) {
-    return `#${clean}`;
-  }
-  return null;
+function safeParseFloat(val: unknown): number | null {
+  if (typeof val === 'number') return isNaN(val) ? null : val;
+  if (typeof val !== 'string' || val === '') return null;
+  const num = parseFloat(val);
+  return isNaN(num) ? null : num;
+}
+
+function validTime(t: string | boolean | null | undefined): string | null {
+  if (t == null || typeof t === 'boolean') return null;
+  return /^-?[0-9.]+s$/.test(t) ? t : /^-?[0-9.]+ms$/.test(t) ? t : /^-?[0-9.]+$/.test(t) ? `${t}s` : null;
+}
+
+function validColor(c: unknown): string | null {
+  if (typeof c !== 'string') return null;
+  const clean = c.replace(/^#/, '');
+  return /^[0-9a-fA-F]{3,6}$/.test(clean) ? clean : null;
 }
 
 /**
- * アニメーションタグのオプション (.speed=0.5s, .delay=0.1s, .left 等) を解析
+ * mfm-js AST ノードを HTML 文字列に再帰レンダリングする
  */
-function parseAnimOptions(optStr = ''): { classes: string[]; style: string } {
-  const classes: string[] = [];
-  const styles: string[] = [];
-  if (!optStr) return { classes, style: '' };
+function renderNodes(nodes: mfm.MfmNode[]): string {
+  return nodes.map(renderNode).join('');
+}
 
-  const matches = optStr.match(/\.([a-zA-Z0-9_-]+)(?:=([a-zA-Z0-9_.-]+))?/g) || [];
-  for (const m of matches) {
-    const raw = m.slice(1); // remove leading '.'
-    const [key, val] = raw.split('=');
-
-    if (key === 'speed' && val) {
-      if (/^[0-9.]+(s|ms)?$/.test(val)) {
-        const sec = val.endsWith('ms') ? val : val.endsWith('s') ? val : `${val}s`;
-        styles.push(`animation-duration: ${sec};`);
-      }
-    } else if (key === 'delay' && val) {
-      if (/^-?[0-9.]+(s|ms)?$/.test(val)) {
-        const sec = val.endsWith('ms') ? val : val.endsWith('s') ? val : `${val}s`;
-        styles.push(`animation-delay: ${sec};`);
-      }
-    } else if (key && !val) {
-      // spin の .left, .x, .y, .alternate は専用クラスを付与するため汎用 opt- は付与しない
-      if (!['left', 'x', 'y', 'alternate'].includes(key)) {
-        classes.push(`mfm-opt-${key}`);
-      }
+function renderNode(node: mfm.MfmNode): string {
+  switch (node.type) {
+    case 'text': {
+      const text = escapeHtml(node.props.text);
+      return text.replace(/\n/g, '<br>');
     }
-  }
 
-  return { classes, style: styles.join(' ') };
+    case 'bold':
+      return `<strong>${renderNodes(node.children)}</strong>`;
+
+    case 'strike':
+      return `<del>${renderNodes(node.children)}</del>`;
+
+    case 'italic':
+      return `<i style="font-style: oblique;">${renderNodes(node.children)}</i>`;
+
+    case 'small':
+      return `<small style="opacity: 0.7;">${renderNodes(node.children)}</small>`;
+
+    case 'center':
+      return `<div style="text-align: center;">${renderNodes(node.children)}</div>`;
+
+    case 'fn': {
+      const args = node.props.args || {};
+      let style: string | undefined;
+      let className = '';
+
+      switch (node.props.name) {
+        case 'tada': {
+          const speed = validTime(args.speed as string) ?? '1s';
+          const delay = validTime(args.delay as string) ?? '0s';
+          style = `font-size: 150%; animation: global-tada ${speed} linear infinite both; animation-delay: ${delay};`;
+          className = 'mfm-tada';
+          break;
+        }
+
+        case 'jelly': {
+          const speed = validTime(args.speed as string) ?? '1s';
+          const delay = validTime(args.delay as string) ?? '0s';
+          style = `animation: mfm-rubberBand ${speed} linear infinite both; animation-delay: ${delay};`;
+          className = 'mfm-jelly';
+          break;
+        }
+
+        case 'twitch': {
+          const speed = validTime(args.speed as string) ?? '0.5s';
+          const delay = validTime(args.delay as string) ?? '0s';
+          style = `animation: mfm-twitch ${speed} ease infinite; animation-delay: ${delay};`;
+          className = 'mfm-twitch';
+          break;
+        }
+
+        case 'shake': {
+          const speed = validTime(args.speed as string) ?? '0.5s';
+          const delay = validTime(args.delay as string) ?? '0s';
+          style = `animation: mfm-shake ${speed} ease infinite; animation-delay: ${delay};`;
+          className = 'mfm-shake';
+          break;
+        }
+
+        case 'spin': {
+          const direction = args.left ? 'reverse' : args.alternate ? 'alternate' : 'normal';
+          const anime = args.x ? 'mfm-spinX' : args.y ? 'mfm-spinY' : 'mfm-spin';
+          const speed = validTime(args.speed as string) ?? '1.5s';
+          const delay = validTime(args.delay as string) ?? '0s';
+          style = `animation: ${anime} ${speed} linear infinite; animation-direction: ${direction}; animation-delay: ${delay};`;
+          const subCls = args.left ? ' mfm-spin-left' : args.x ? ' mfm-spin-x' : args.y ? ' mfm-spin-y' : args.alternate ? ' mfm-spin-alternate' : '';
+          className = `mfm-spin${subCls}`;
+          break;
+        }
+
+        case 'jump': {
+          const speed = validTime(args.speed as string) ?? '0.75s';
+          const delay = validTime(args.delay as string) ?? '0s';
+          style = `animation: mfm-jump ${speed} linear infinite; animation-delay: ${delay};`;
+          className = 'mfm-jump';
+          break;
+        }
+
+        case 'bounce': {
+          const speed = validTime(args.speed as string) ?? '0.75s';
+          const delay = validTime(args.delay as string) ?? '0s';
+          style = `animation: mfm-bounce ${speed} linear infinite; transform-origin: center bottom; animation-delay: ${delay};`;
+          className = 'mfm-bounce';
+          break;
+        }
+
+        case 'flip': {
+          const transform =
+            args.h && args.v ? 'scale(-1, -1)' :
+            args.v ? 'scaleY(-1)' :
+            'scaleX(-1)';
+          style = `transform: ${transform};`;
+          className = args.v ? 'mfm-flip-v' : 'mfm-flip';
+          break;
+        }
+
+        case 'x2':
+          return `<span class="mfm-x2" style="display: inline-block;">${renderNodes(node.children)}</span>`;
+
+        case 'x3':
+          return `<span class="mfm-x3" style="display: inline-block;">${renderNodes(node.children)}</span>`;
+
+        case 'x4':
+          return `<span class="mfm-x4" style="display: inline-block;">${renderNodes(node.children)}</span>`;
+
+        case 'font': {
+          const family =
+            args.serif ? 'serif' :
+            args.monospace ? 'monospace' :
+            args.cursive ? 'cursive' :
+            args.fantasy ? 'fantasy' :
+            args.emoji ? 'emoji' :
+            args.math ? 'math' : null;
+          if (family) style = `font-family: ${family};`;
+          break;
+        }
+
+        case 'blur':
+          return `<span class="_mfm_blur_ mfm-blur" tabindex="0" title="ホバーまたはタップで表示">${renderNodes(node.children)}</span>`;
+
+        case 'rainbow': {
+          const speed = validTime(args.speed as string) ?? '1s';
+          const delay = validTime(args.delay as string) ?? '0s';
+          style = `animation: mfm-rainbow ${speed} linear infinite; animation-delay: ${delay};`;
+          className = 'mfm-rainbow';
+          break;
+        }
+
+        case 'rotate': {
+          const degrees = safeParseFloat(args.deg) ?? 90;
+          style = `transform: rotate(${degrees}deg); transform-origin: center center;`;
+          break;
+        }
+
+        case 'position': {
+          const x = safeParseFloat(args.x) ?? 0;
+          const y = safeParseFloat(args.y) ?? 0;
+          style = `transform: translateX(${x}em) translateY(${y}em);`;
+          break;
+        }
+
+        case 'scale': {
+          const x = Math.min(safeParseFloat(args.x) ?? 1, 5);
+          const y = Math.min(safeParseFloat(args.y) ?? 1, 5);
+          style = `transform: scale(${x}, ${y});`;
+          className = 'mfm-scale';
+          break;
+        }
+
+        case 'fg': {
+          const color = validColor(args.color) ?? 'f00';
+          style = `color: #${color}; overflow-wrap: anywhere;`;
+          className = 'mfm-fg';
+          break;
+        }
+
+        case 'bg': {
+          const color = validColor(args.color) ?? 'f00';
+          style = `background-color: #${color}; overflow-wrap: anywhere;`;
+          className = 'mfm-bg';
+          break;
+        }
+
+        case 'border': {
+          const color = validColor(args.color) ? `#${validColor(args.color)}` : 'var(--pico-primary, #e06c75)';
+          let bStyle = args.style;
+          if (
+            typeof bStyle !== 'string' ||
+            !['hidden', 'dotted', 'dashed', 'solid', 'double', 'groove', 'ridge', 'inset', 'outset'].includes(bStyle)
+          ) {
+            bStyle = 'solid';
+          }
+          const width = safeParseFloat(args.width) ?? 1;
+          const radius = safeParseFloat(args.radius) ?? 0;
+          style = `border: ${width}px ${bStyle} ${color}; border-radius: ${radius}px;${args.noclip ? '' : ' overflow: clip;'}`;
+          break;
+        }
+
+        case 'ruby': {
+          if (node.children.length === 1 && node.children[0].type === 'text') {
+            const parts = node.children[0].props.text.trim().split(/\s+/);
+            const parent = escapeHtml(parts[0] || '');
+            const rt = escapeHtml(parts[1] || '');
+            return `<ruby>${parent}<rt>${rt}</rt></ruby>`;
+          } else {
+            return `<ruby>${renderNodes(node.children)}</ruby>`;
+          }
+        }
+      }
+
+      const classAttr = className ? ` class="${className}"` : '';
+      if (style !== undefined) {
+        return `<span${classAttr} style="display: inline-block; ${style}">${renderNodes(node.children)}</span>`;
+      }
+      if (className) {
+        return `<span${classAttr}>${renderNodes(node.children)}</span>`;
+      }
+      return renderNodes(node.children);
+    }
+
+    case 'quote':
+      return `<blockquote class="mfm-quote">${renderNodes(node.children)}</blockquote>`;
+
+    case 'url': {
+      const url = escapeHtml(node.props.url);
+      return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer" class="mfm-link">${url}</a>`;
+    }
+
+    case 'link': {
+      const url = escapeHtml(node.props.url);
+      return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer" class="mfm-link">${renderNodes(node.children)}</a>`;
+    }
+
+    case 'mention': {
+      const host = node.props.host ? `@${node.props.host}` : '';
+      const mention = `@${node.props.username}${host}`;
+      return `<span class="mfm-mention">${escapeHtml(mention)}</span>`;
+    }
+
+    case 'hashtag':
+      return `<span class="mfm-hashtag">#${escapeHtml(node.props.hashtag)}</span>`;
+
+    case 'blockCode': {
+      const lang = node.props.lang ? ` data-lang="${escapeHtml(node.props.lang)}"` : '';
+      return `<pre class="mfm-code-block"${lang}><code>${escapeHtml(node.props.code)}</code></pre>`;
+    }
+
+    case 'inlineCode':
+      return `<code class="mfm-inline-code">${escapeHtml(node.props.code)}</code>`;
+
+    case 'mathInline':
+      return `<code class="mfm-math-inline">${escapeHtml(node.props.formula)}</code>`;
+
+    case 'mathBlock':
+      return `<pre class="mfm-code-block"><code>${escapeHtml(node.props.formula)}</code></pre>`;
+
+    case 'search': {
+      const query = escapeHtml(node.props.query);
+      return `<div class="mfm-search"><span>${query}</span> <button type="button" class="mfm-search-button">検索</button></div>`;
+    }
+
+    case 'emojiCode':
+      return `:${escapeHtml(node.props.name)}:`;
+
+    case 'unicodeEmoji':
+      return escapeHtml(node.props.emoji);
+
+    case 'plain':
+      return renderNodes(node.children);
+
+    default:
+      return '';
+  }
 }
 
 /**
@@ -65,230 +304,13 @@ function parseAnimOptions(optStr = ''): { classes: string[]; style: string } {
 export function renderMfm(text: string): string {
   if (!text) return '';
 
-  // 1. コードブロック/インラインコードの退避
-  const codeBlocks: string[] = [];
-  let processed = text.replace(/```(?:([a-zA-Z0-9_-]+)?\n)?([\s\S]*?)```/g, (_, lang, code) => {
-    const idx = codeBlocks.length;
-    const langAttr = lang ? ` data-lang="${escapeHtml(lang)}"` : '';
-    codeBlocks.push(
-      `<pre class="mfm-code-block"${langAttr}><code>${escapeHtml(code.trim())}</code></pre>`
-    );
-    return `__MIZUNA_CODE_BLOCK_${idx}__`;
-  });
-
-  const inlineCodes: string[] = [];
-  processed = processed.replace(/`([^`\n]+)`/g, (_, code) => {
-    const idx = inlineCodes.length;
-    inlineCodes.push(`<code class="mfm-inline-code">${escapeHtml(code)}</code>`);
-    return `__MIZUNA_INLINE_CODE_${idx}__`;
-  });
-
-  // 2. HTMLエスケープ（タグインジェクション対策）
-  processed = escapeHtml(processed);
-
-  // 3. ルビ記法: $[ruby 漢字 かんじ]
-  processed = processed.replace(
-    /\$\[ruby\s+([^\s\]]+)\s+([^\s\]]+)\]/g,
-    '<ruby>$1<rt>$2</rt></ruby>'
-  );
-
-  // 4. MFM エフェクトタグ（ネスト対応のため内側から最大8回置換）
-  for (let depth = 0; depth < 8; depth++) {
-    const beforeLoop = processed;
-
-    // $[shake ...]
-    processed = processed.replace(
-      /\$\[shake((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, opt, content) => {
-        const { style } = parseAnimOptions(opt);
-        const styleAttr = style ? ` style="${style}"` : '';
-        return `<span class="mfm-shake"${styleAttr}>${content}</span>`;
-      }
-    );
-
-    // $[bounce ...]
-    processed = processed.replace(
-      /\$\[bounce((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, opt, content) => {
-        const { style } = parseAnimOptions(opt);
-        const styleAttr = style ? ` style="${style}"` : '';
-        return `<span class="mfm-bounce"${styleAttr}>${content}</span>`;
-      }
-    );
-
-    // $[jump ...]
-    processed = processed.replace(
-      /\$\[jump((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, opt, content) => {
-        const { style } = parseAnimOptions(opt);
-        const styleAttr = style ? ` style="${style}"` : '';
-        return `<span class="mfm-jump"${styleAttr}>${content}</span>`;
-      }
-    );
-
-    // $[jelly ...]
-    processed = processed.replace(
-      /\$\[jelly((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, opt, content) => {
-        const { style } = parseAnimOptions(opt);
-        const styleAttr = style ? ` style="${style}"` : '';
-        return `<span class="mfm-jelly"${styleAttr}>${content}</span>`;
-      }
-    );
-
-    // $[twitch ...]
-    processed = processed.replace(
-      /\$\[twitch((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, opt, content) => {
-        const { style } = parseAnimOptions(opt);
-        const styleAttr = style ? ` style="${style}"` : '';
-        return `<span class="mfm-twitch"${styleAttr}>${content}</span>`;
-      }
-    );
-
-    // $[spin ...] / $[spin.left ...], $[spin.x ...], $[spin.y ...], $[spin.alternate ...]
-    processed = processed.replace(
-      /\$\[spin((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, opt, content) => {
-        const { classes, style } = parseAnimOptions(opt);
-        const clsList = ['mfm-spin'];
-        if (opt.includes('.left')) clsList.push('mfm-spin-left');
-        if (opt.includes('.x')) clsList.push('mfm-spin-x');
-        if (opt.includes('.y')) clsList.push('mfm-spin-y');
-        if (opt.includes('.alternate')) clsList.push('mfm-spin-alternate');
-        clsList.push(...classes);
-        const styleAttr = style ? ` style="${style}"` : '';
-        return `<span class="${clsList.join(' ')}"${styleAttr}>${content}</span>`;
-      }
-    );
-
-    // $[rainbow ...]
-    processed = processed.replace(
-      /\$\[rainbow((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, opt, content) => {
-        const { style } = parseAnimOptions(opt);
-        const styleAttr = style ? ` style="${style}"` : '';
-        return `<span class="mfm-rainbow"${styleAttr}>${content}</span>`;
-      }
-    );
-
-    // $[tada ...]
-    processed = processed.replace(
-      /\$\[tada((?:\.[a-zA-Z0-9_=-]+)*)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, opt, content) => {
-        const { style } = parseAnimOptions(opt);
-        const styleAttr = style ? ` style="${style}"` : '';
-        return `<span class="mfm-tada"${styleAttr}>${content}</span>`;
-      }
-    );
-
-    // $[blur <content>]
-    processed = processed.replace(
-      /\$\[blur\s+((?:(?!(\$\[|\])).)+)\]/g,
-      '<span class="mfm-blur" tabindex="0" title="タップまたはホバーで表示">$1</span>'
-    );
-
-    // $[flip <content>]
-    processed = processed.replace(
-      /\$\[flip(?:\.([a-zA-Z0-9_-]+))?\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, opt, content) => {
-        const cls = opt === 'v' ? 'mfm-flip-v' : 'mfm-flip';
-        return `<span class="${cls}">${content}</span>`;
-      }
-    );
-
-    // $[fg.color=<hex> <content>]
-    processed = processed.replace(
-      /\$\[fg\.color=([a-zA-Z0-9#]+)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, colorRaw, content) => {
-        const safeColor = sanitizeColor(colorRaw);
-        return safeColor
-          ? `<span class="mfm-fg" style="color: ${safeColor};">${content}</span>`
-          : content;
-      }
-    );
-
-    // $[bg.color=<hex> <content>]
-    processed = processed.replace(
-      /\$\[bg\.color=([a-zA-Z0-9#]+)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, colorRaw, content) => {
-        const safeColor = sanitizeColor(colorRaw);
-        return safeColor
-          ? `<span class="mfm-bg" style="background-color: ${safeColor};">${content}</span>`
-          : content;
-      }
-    );
-
-    // $[font.serif <content>], $[font.monospace <content>]
-    processed = processed.replace(
-      /\$\[font\.(serif|monospace)\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, font, content) => `<span style="font-family: ${font};">${content}</span>`
-    );
-
-    // $[scale.x=...,y=... <content>]
-    processed = processed.replace(
-      /\$\[scale(?:\.x=([0-9.]+))?(?:,y=([0-9.]+))?\s+((?:(?!(\$\[|\])).)+)\]/g,
-      (_, sx, sy, content) => {
-        const scaleX = sx ? Math.min(5, Math.max(0.1, parseFloat(sx))) : 1;
-        const scaleY = sy ? Math.min(5, Math.max(0.1, parseFloat(sy))) : 1;
-        return `<span class="mfm-scale" style="display:inline-block; transform: scale(${scaleX}, ${scaleY});">${content}</span>`;
-      }
-    );
-
-    if (processed === beforeLoop) break;
+  try {
+    const parsed = mfm.parse(text);
+    return renderNodes(parsed);
+  } catch (err) {
+    console.error('MFM parse error:', err);
+    return escapeHtml(text).replace(/\n/g, '<br>');
   }
-
-  // 5. マークダウン構文
-  // 太字: **text**
-  processed = processed.replace(/\*\*([^\*\n]+?)\*\*/g, '<strong>$1</strong>');
-
-  // 取消線: ~~text~~
-  processed = processed.replace(/~~([^~\n]+?)~~/g, '<del>$1</del>');
-
-  // 斜体: *text* (エスケープやタグに配慮)
-  processed = processed.replace(/(^|[^\*])\*([^\*\n]+?)\*([^\*]|$)/g, '$1<em>$2</em>$3');
-
-  // 引用: 行頭 > text
-  processed = processed.replace(/(?:^|\n)&gt;\s?([^\n]+)/g, '<blockquote class="mfm-quote">$1</blockquote>');
-
-  // 6. URL 自動リンク (http:// / https://)
-  processed = processed.replace(
-    /(https?:\/\/[^\s<]+)/g,
-    '<a href="$1" target="_blank" rel="noopener noreferrer" class="mfm-link">$1</a>'
-  );
-
-  // 7. メンション: @user または @user@instance.example
-  processed = processed.replace(
-    /(^|\s)(@[a-zA-Z0-9_.-]+(?:@[a-zA-Z0-9_.-]+)?)/g,
-    '$1<span class="mfm-mention">$2</span>'
-  );
-
-  // 8. ハッシュタグ: #tag (HTMLタグの外側のみを対象にする)
-  // HTMLタグで区切ってテキスト部分にのみハッシュタグ置換を適用
-  const htmlParts = processed.split(/(<[^>]+>)/g);
-  for (let i = 0; i < htmlParts.length; i++) {
-    // 奇数インデックスはHTMLタグ (<...>)
-    if (!htmlParts[i].startsWith('<')) {
-      htmlParts[i] = htmlParts[i].replace(
-        /(^|[\s　])(#([^\s#<.,!?:;）)]+))/g,
-        '$1<span class="mfm-hashtag">#$3</span>'
-      );
-    }
-  }
-  processed = htmlParts.join('');
-
-  // 9. 改行の変換
-  processed = processed.replace(/\n/g, '<br>');
-
-  // 10. 退避したコードブロックの復元
-  for (let i = 0; i < inlineCodes.length; i++) {
-    processed = processed.replace(`__MIZUNA_INLINE_CODE_${i}__`, inlineCodes[i]);
-  }
-  for (let i = 0; i < codeBlocks.length; i++) {
-    processed = processed.replace(`__MIZUNA_CODE_BLOCK_${i}__`, codeBlocks[i]);
-  }
-
-  return processed;
 }
 
 /**
