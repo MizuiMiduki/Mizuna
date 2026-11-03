@@ -918,6 +918,90 @@ body {
   }
 }
 
+/* サムネイルのドラッグ中・ドロップターゲット状態 */
+.mizuna-media-item.is-dragging {
+  opacity: 0.35;
+  transform: scale(0.95);
+}
+
+.mizuna-media-item.is-drag-over {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary), 0 8px 24px color-mix(in srgb, var(--primary) 25%, transparent);
+  transform: scale(1.05);
+}
+
+/* 添付画像の順序バッジ */
+.mizuna-media-order-badge {
+  position: absolute;
+  top: 5px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 20, 25, 0.78);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  pointer-events: none;
+  z-index: 2;
+  line-height: 1.3;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* 添付画像の並べ替え（左右移動）ボタンバー */
+.mizuna-media-reorder-bar {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  right: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.mizuna-media-reorder-btn {
+  width: 22px !important;
+  height: 22px !important;
+  min-width: 22px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: rgba(15, 20, 25, 0.75) !important;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #fff !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background-color 0.15s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.mizuna-media-reorder-btn i {
+  font-size: 15px;
+  line-height: 1;
+}
+
+@media (hover: hover) {
+  .mizuna-media-reorder-btn:hover:not(:disabled) {
+    background: var(--primary) !important;
+    color: var(--on-primary) !important;
+    transform: scale(1.12);
+  }
+}
+
+.mizuna-media-reorder-btn:disabled {
+  opacity: 0.25;
+  cursor: default;
+  pointer-events: none;
+}
+
 .mizuna-media-edit:active {
   background: var(--primary) !important;
   color: var(--on-primary) !important;
@@ -1344,6 +1428,56 @@ body {
   animation: mizuna-lightbox-img-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* 複数画像プレビュー時の左右ナビゲーションボタン */
+.mizuna-lightbox-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  border: 1px solid rgba(255, 255, 255, 0.22) !important;
+  background: rgba(15, 20, 25, 0.68) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #ffffff !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: background-color 0.18s ease, transform 0.18s ease;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+.mizuna-lightbox-nav-btn i {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.mizuna-lightbox-nav-btn.is-prev {
+  left: max(14px, env(safe-area-inset-left, 0px));
+}
+
+.mizuna-lightbox-nav-btn.is-next {
+  right: max(14px, env(safe-area-inset-right, 0px));
+}
+
+@media (hover: hover) {
+  .mizuna-lightbox-nav-btn:hover {
+    background: var(--primary) !important;
+    color: var(--on-primary) !important;
+    transform: translateY(-50%) scale(1.08);
+  }
+}
+
+.mizuna-lightbox-nav-btn:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
 /* ボトムバー (フローティング アイランド コントロールバー) */
 .mizuna-lightbox-bottombar {
   width: 100%;
@@ -1382,6 +1516,27 @@ body {
   gap: 3px;
   min-width: 0;
   flex: 1;
+}
+
+.mizuna-lightbox-filename-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mizuna-lightbox-order-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: var(--mizuna-radius-pill, 9999px);
+  background: color-mix(in srgb, var(--primary) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 38%, transparent);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
 .mizuna-lightbox-filename {

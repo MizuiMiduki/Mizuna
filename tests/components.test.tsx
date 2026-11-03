@@ -750,6 +750,77 @@ describe('UI Components', () => {
       expect(document.querySelector('.mizuna-editor-tabs')).toBeInTheDocument();
     });
 
+    it('複数画像がある場合にサムネイルの並べ替えボタンで順序変更ができ、プレビューモーダルで左右ナビゲーションボタンで別画像を閲覧できること', async () => {
+      let appHook: ReturnType<typeof useApp> | null = null;
+      function MultiImageTestWrapper() {
+        appHook = useApp();
+        return (
+          <>
+            <button
+              data-testid="add-multi-files-btn"
+              onClick={() => {
+                const fileA = new File(['a'], 'image_a.png', { type: 'image/png' });
+                const fileB = new File(['b'], 'image_b.png', { type: 'image/png' });
+                appHook?.addAttachedFiles([fileA, fileB]);
+              }}
+            >
+              Add Multi
+            </button>
+            <NoteView />
+          </>
+        );
+      }
+
+      render(() => (
+        <AppProvider>
+          <MultiImageTestWrapper />
+        </AppProvider>
+      ));
+
+      fireEvent.click(screen.getByTestId('add-multi-files-btn'));
+      await screen.findByAltText('image_a.png');
+      await screen.findByAltText('image_b.png');
+      // 非同期のWebP圧縮等完了後のDOM要素を取得
+      await new Promise((r) => setTimeout(r, 100));
+      const thumbA = screen.getByAltText('image_a.png');
+      const thumbB = screen.getByAltText('image_b.png');
+      expect(thumbA).toBeInTheDocument();
+      expect(thumbB).toBeInTheDocument();
+
+      // 画像順序バッジが表示されていること
+      expect(screen.getByTitle('画像 1')).toBeInTheDocument();
+      expect(screen.getByTitle('画像 2')).toBeInTheDocument();
+
+      // 1枚目（image_a）の「次へ移動」ボタンを押して2枚目と順序を入れ替える
+      const moveNextBtns = screen.getAllByTitle('次へ移動');
+      expect(moveNextBtns.length).toBeGreaterThan(0);
+      fireEvent.click(moveNextBtns[0]);
+
+      // 順序が image_b, image_a に入れ替わっていること
+      const currentImages = appHook!.attachedImages();
+      expect(currentImages[0].name).toBe('image_b.png');
+      expect(currentImages[1].name).toBe('image_a.png');
+
+      // 1枚目の画像をクリックして拡大プレビューを開く
+      fireEvent.click(thumbB.closest('.mizuna-media-item')!);
+      expect(document.getElementById('imageModal')).toBeInTheDocument();
+      expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_b.png');
+
+      // プレビューモーダル内の左右ナビゲーションボタンで次の画像へ切り替える
+      const nextModalBtn = screen.getByTitle(/次の画像/i);
+      expect(nextModalBtn).toBeInTheDocument();
+      fireEvent.click(nextModalBtn);
+
+      // プレビュー表示が image_a.png に切り替わること
+      expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_a.png');
+
+      // 前の画像ボタンで戻る
+      const prevModalBtn = screen.getByTitle(/前の画像/i);
+      expect(prevModalBtn).toBeInTheDocument();
+      fireEvent.click(prevModalBtn);
+      expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_b.png');
+    });
+
     it('3.5.0未満の古いアカウントがアクティブな場合、画像選択ボタンが無効化 (disabled) されること', async () => {
       // 既存アカウント（3.10.0）をクリアして、3.4.0のアカウントを設定
       await db.account.clear();

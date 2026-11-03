@@ -137,6 +137,8 @@ interface AppContextValue {
   removeAttachedImage: (id: string) => void;
   updateAttachedImage: (id: string, file: File, editState?: ImageEditState) => void;
   revertAttachedImage: (id: string) => void;
+  reorderAttachedImages: (newOrderedIds: string[]) => void;
+  moveAttachedImage: (id: string, direction: -1 | 1) => void;
   clearNoteForm: (showNotification?: boolean) => void;
 
   // アカウント・設定操作
@@ -1265,6 +1267,34 @@ export function AppProvider(props: { children: JSX.Element }) {
     });
   };
 
+  const reorderAttachedImages = (newOrderedIds: string[]) => {
+    setAttachedImages((prev) => {
+      const map = new Map(prev.map((item) => [item.id, item]));
+      const next: AttachedImageItem[] = [];
+      for (const id of newOrderedIds) {
+        const item = map.get(id);
+        if (item) next.push(item);
+      }
+      for (const item of prev) {
+        if (!next.some((x) => x.id === item.id)) next.push(item);
+      }
+      return next;
+    });
+  };
+
+  const moveAttachedImage = (id: string, direction: -1 | 1) => {
+    setAttachedImages((prev) => {
+      const index = prev.findIndex((item) => item.id === id);
+      if (index === -1) return prev;
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= prev.length) return prev;
+      const next = [...prev];
+      const [removed] = next.splice(index, 1);
+      next.splice(newIndex, 0, removed);
+      return next;
+    });
+  };
+
   const clearNoteForm = (showNotification = true) => {
     clearWebShareTargetStorage();
     setCwText('');
@@ -1701,6 +1731,8 @@ export function AppProvider(props: { children: JSX.Element }) {
     removeAttachedImage,
     updateAttachedImage,
     revertAttachedImage,
+    reorderAttachedImages,
+    moveAttachedImage,
     clearNoteForm,
     switchAccount,
     deleteSelectedAccounts,

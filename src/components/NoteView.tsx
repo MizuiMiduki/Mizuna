@@ -50,6 +50,8 @@ export function NoteView() {
     removeAttachedImage,
     updateAttachedImage,
     revertAttachedImage,
+    reorderAttachedImages,
+    moveAttachedImage,
     clearNoteForm,
     showToast,
     pushModalBackHandler,
@@ -65,6 +67,133 @@ export function NoteView() {
     if (!id) return null;
     return attachedImages().find((img) => img.id === id) ?? null;
   });
+
+  const currentPreviewIndex = createMemo(() => {
+    const id = previewModalImageId();
+    if (!id) return -1;
+    return attachedImages().findIndex((img) => img.id === id);
+  });
+
+  const animateLightboxSlide = (direction: 'next' | 'prev') => {
+    if (!modalContentRef) return;
+    const fromX = direction === 'next' ? 44 : -44;
+    gsap.fromTo(
+      modalContentRef,
+      { opacity: 0.2, x: fromX, scale: 0.95 },
+      { opacity: 1, x: 0, scale: 1, duration: 0.22, ease: 'power2.out', clearProps: 'transform' }
+    );
+  };
+
+  const handlePrevPreviewImage = () => {
+    const images = attachedImages();
+    if (images.length <= 1) return;
+    const idx = currentPreviewIndex();
+    const nextIdx = idx > 0 ? idx - 1 : images.length - 1;
+    setPreviewModalImageId(images[nextIdx].id);
+    animateLightboxSlide('prev');
+  };
+
+  const handleNextPreviewImage = () => {
+    const images = attachedImages();
+    if (images.length <= 1) return;
+    const idx = currentPreviewIndex();
+    const nextIdx = idx < images.length - 1 ? idx + 1 : 0;
+    setPreviewModalImageId(images[nextIdx].id);
+    animateLightboxSlide('next');
+  };
+
+  let lightboxTouchStartX = 0;
+  let lightboxTouchStartY = 0;
+  let lightboxTouchDeltaX = 0;
+  let lightboxTouchDeltaY = 0;
+
+  const handleLightboxTouchStart = (e: TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    lightboxTouchStartX = e.touches[0].clientX;
+    lightboxTouchStartY = e.touches[0].clientY;
+    lightboxTouchDeltaX = 0;
+    lightboxTouchDeltaY = 0;
+  };
+
+  const handleLightboxTouchMove = (e: TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    lightboxTouchDeltaX = e.touches[0].clientX - lightboxTouchStartX;
+    lightboxTouchDeltaY = e.touches[0].clientY - lightboxTouchStartY;
+  };
+
+  const handleLightboxTouchEnd = () => {
+    const absX = Math.abs(lightboxTouchDeltaX);
+    const absY = Math.abs(lightboxTouchDeltaY);
+    if (absX > 38 && absX > absY * 1.2) {
+      if (lightboxTouchDeltaX < 0) {
+        handleNextPreviewImage();
+      } else {
+        handlePrevPreviewImage();
+      }
+    }
+    lightboxTouchDeltaX = 0;
+    lightboxTouchDeltaY = 0;
+  };
+
+  // プレビューモーダル表示中の左右キーナビゲーション
+  createEffect(() => {
+    if (previewModalImageId()) {
+      const handleLightboxKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          handlePrevPreviewImage();
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          handleNextPreviewImage();
+        }
+      };
+      window.addEventListener('keydown', handleLightboxKeyDown);
+      onCleanup(() => window.removeEventListener('keydown', handleLightboxKeyDown));
+    }
+  });
+
+  // サムネイルのドラッグ＆ドロップ並べ替えステート
+  const [draggedImageId, setDraggedImageId] = createSignal<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = createSignal<number | null>(null);
+
+  const handleImageDragStart = (e: DragEvent, id: string) => {
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', id);
+      e.dataTransfer.effectAllowed = 'move';
+    }
+    setDraggedImageId(id);
+  };
+
+  const handleImageDragOver = (e: DragEvent, index: number) => {
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+    setDragOverIndex(index);
+  };
+
+  const handleImageDrop = (e: DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const sourceId = e.dataTransfer?.getData('text/plain') || draggedImageId();
+    if (sourceId) {
+      const current = attachedImages();
+      const sourceIndex = current.findIndex((item) => item.id === sourceId);
+      if (sourceIndex !== -1 && sourceIndex !== dropIndex) {
+        const nextIds = current.map((item) => item.id);
+        const [moved] = nextIds.splice(sourceIndex, 1);
+        nextIds.splice(dropIndex, 0, moved);
+        reorderAttachedImages(nextIds);
+      }
+    }
+    setDraggedImageId(null);
+    setDragOverIndex(null);
+  };
+
+  const handleImageDragEnd = () => {
+    setDraggedImageId(null);
+    setDragOverIndex(null);
+  };
   const [editingImageItem, setEditingImageItem] = createSignal<AttachedImageItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = createSignal(false);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = createSignal(false);
@@ -939,8 +1068,19 @@ export function NoteView() {
           <div class="mizuna-media-gallery">
             <div class="mizuna-media-strip">
               <For each={attachedImages()}>
-                {(item) => (
-                  <div class="mizuna-media-item" onClick={() => handleOpenPreview(item)}>
+                {(item, index) => (
+                  <div
+                    class={`mizuna-media-item ${draggedImageId() === item.id ? 'is-dragging' : ''} ${
+                      dragOverIndex() === index() ? 'is-drag-over' : ''
+                    }`}
+                    draggable={attachedImages().length > 1}
+                    onDragStart={(e) => handleImageDragStart(e, item.id)}
+                    onDragOver={(e) => handleImageDragOver(e, index())}
+                    onDragLeave={handleImageDragEnd}
+                    onDrop={(e) => handleImageDrop(e, index())}
+                    onDragEnd={handleImageDragEnd}
+                    onClick={() => handleOpenPreview(item)}
+                  >
                     <Show when={item.thumbUrl}>
                       {(thumb) => (
                         <img
@@ -956,6 +1096,14 @@ export function NoteView() {
                     <div class="mizuna-media-zoom-hint">
                       <i>zoom_in</i>
                     </div>
+
+                    {/* 複数画像時の並び順番号バッジ */}
+                    <Show when={attachedImages().length > 1}>
+                      <span class="mizuna-media-order-badge" title={`画像 ${index() + 1}`}>
+                        {index() + 1}
+                      </span>
+                    </Show>
+
                     <button
                       type="button"
                       class={`mizuna-media-edit ${item.editState ? 'is-edited' : ''}`}
@@ -980,6 +1128,32 @@ export function NoteView() {
                     >
                       <i>close</i>
                     </button>
+
+                    {/* 左右並べ替えボタン（複数画像時） */}
+                    <Show when={attachedImages().length > 1}>
+                      <div class="mizuna-media-reorder-bar" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          class="mizuna-media-reorder-btn is-prev"
+                          disabled={index() === 0}
+                          title="前へ移動"
+                          aria-label="前へ移動"
+                          onClick={() => moveAttachedImage(item.id, -1)}
+                        >
+                          <i>chevron_left</i>
+                        </button>
+                        <button
+                          type="button"
+                          class="mizuna-media-reorder-btn is-next"
+                          disabled={index() === attachedImages().length - 1}
+                          title="次へ移動"
+                          aria-label="次へ移動"
+                          onClick={() => moveAttachedImage(item.id, 1)}
+                        >
+                          <i>chevron_right</i>
+                        </button>
+                      </div>
+                    </Show>
                   </div>
                 )}
               </For>
@@ -1260,7 +1434,38 @@ export function NoteView() {
               id="imageModal"
               class="mizuna-lightbox"
               onClick={() => setPreviewModalImageId(null)}
+              onTouchStart={handleLightboxTouchStart}
+              onTouchMove={handleLightboxTouchMove}
+              onTouchEnd={handleLightboxTouchEnd}
             >
+              {/* 複数画像プレビュー時の左右ナビゲーションボタン */}
+              <Show when={attachedImages().length > 1}>
+                <button
+                  type="button"
+                  class="mizuna-lightbox-nav-btn is-prev"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevPreviewImage();
+                  }}
+                  aria-label="前の画像"
+                  title="前の画像 (←)"
+                >
+                  <i>chevron_left</i>
+                </button>
+                <button
+                  type="button"
+                  class="mizuna-lightbox-nav-btn is-next"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextPreviewImage();
+                  }}
+                  aria-label="次の画像"
+                  title="次の画像 (→)"
+                >
+                  <i>chevron_right</i>
+                </button>
+              </Show>
+
               {/* メイン画像ステージ */}
               <div
                 class="mizuna-lightbox-stage"
@@ -1282,9 +1487,16 @@ export function NoteView() {
               <div class="mizuna-lightbox-bottombar">
                 <div class="mizuna-lightbox-bottombar-inner" onClick={(e) => e.stopPropagation()}>
                   <div class="mizuna-lightbox-fileinfo">
-                    <span class="mizuna-lightbox-filename" title={imgItem().name}>
-                      {imgItem().name}
-                    </span>
+                    <div class="mizuna-lightbox-filename-row">
+                      <Show when={attachedImages().length > 1}>
+                        <span class="mizuna-lightbox-order-badge">
+                          {currentPreviewIndex() + 1} / {attachedImages().length}
+                        </span>
+                      </Show>
+                      <span class="mizuna-lightbox-filename" title={imgItem().name}>
+                        {imgItem().name}
+                      </span>
+                    </div>
                     <div class="mizuna-lightbox-meta">
                       <span class="mizuna-lightbox-raw-size">
                         {(imgItem().originalSize / 1024).toFixed(1)} KB
@@ -1327,6 +1539,29 @@ export function NoteView() {
                   </div>
 
                   <div class="mizuna-lightbox-actions">
+                    <Show when={attachedImages().length > 1}>
+                      <button
+                        type="button"
+                        class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
+                        onClick={() => moveAttachedImage(imgItem().id, -1)}
+                        disabled={currentPreviewIndex() === 0}
+                        title="画像を左へ並べ替え"
+                      >
+                        <i>arrow_back</i>
+                        <span>前へ</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
+                        onClick={() => moveAttachedImage(imgItem().id, 1)}
+                        disabled={currentPreviewIndex() === attachedImages().length - 1}
+                        title="画像を右へ並べ替え"
+                      >
+                        <i>arrow_forward</i>
+                        <span>次へ</span>
+                      </button>
+                    </Show>
+
                     <Show when={imgItem().editState}>
                       <button
                         type="button"

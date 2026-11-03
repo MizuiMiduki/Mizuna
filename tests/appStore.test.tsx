@@ -84,6 +84,36 @@ describe('appStore', () => {
       expect(result.attachedImages().length).toBe(0);
     });
 
+    it('添付画像の並べ替え (moveAttachedImage / reorderAttachedImages) が正常に行えること', async () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      const file1 = new File(['1'], 'img1.png', { type: 'image/png' });
+      const file2 = new File(['2'], 'img2.png', { type: 'image/png' });
+      const file3 = new File(['3'], 'img3.png', { type: 'image/png' });
+
+      result.addAttachedFiles([file1, file2, file3]);
+      expect(result.attachedImages().length).toBe(3);
+
+      const [item1, item2, item3] = result.attachedImages();
+      expect(item1.name).toBe('img1.png');
+      expect(item2.name).toBe('img2.png');
+      expect(item3.name).toBe('img3.png');
+
+      // item1 を右に移動 (index 0 -> index 1)
+      result.moveAttachedImage(item1.id, 1);
+      expect(result.attachedImages().map((x) => x.name)).toEqual(['img2.png', 'img1.png', 'img3.png']);
+
+      // item3 を左に移動 (index 2 -> index 1)
+      result.moveAttachedImage(item3.id, -1);
+      expect(result.attachedImages().map((x) => x.name)).toEqual(['img2.png', 'img3.png', 'img1.png']);
+
+      // 任意の順序指定で並べ替え
+      result.reorderAttachedImages([item1.id, item2.id, item3.id]);
+      expect(result.attachedImages().map((x) => x.name)).toEqual(['img1.png', 'img2.png', 'img3.png']);
+    });
+
     it('添付画像の非破壊編集と元画像へのリセット (updateAttachedImage / revertAttachedImage) ができること', async () => {
       const { result } = renderHook(() => useApp(), {
         wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
