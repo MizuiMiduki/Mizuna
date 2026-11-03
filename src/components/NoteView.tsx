@@ -179,7 +179,7 @@ export function NoteView() {
       const lineHeight = caret.height || 26;
 
       const popupHeight = 132;
-      const popupWidth = 240;
+      const popupWidth = 160;
 
       // Determine vertical placement: below by default, or above if close to bottom
       let top: number;
@@ -612,6 +612,7 @@ export function NoteView() {
                     class={`mizuna-mfm-ac-item ${index() === acIndex() ? 'is-selected' : ''}`}
                     role="option"
                     aria-selected={index() === acIndex()}
+                    title={item.desc}
                     onMouseDown={(e) => {
                       e.preventDefault();
                     }}
@@ -629,7 +630,6 @@ export function NoteView() {
                   >
                     <i class="mizuna-mfm-ac-icon">{item.icon}</i>
                     <span class="mizuna-mfm-ac-tag">$[{item.label}]</span>
-                    <span class="mizuna-mfm-ac-desc">{item.desc}</span>
                   </div>
                 )}
               </For>

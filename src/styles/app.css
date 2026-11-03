@@ -703,8 +703,8 @@ body {
   position: absolute;
   /* top, left はカーソル（入力位置）直下に動的配置 */
   width: max-content;
-  min-width: 180px;
-  max-width: min(260px, calc(100% - 24px));
+  min-width: 110px;
+  max-width: min(180px, calc(100% - 24px));
   z-index: 100;
   background: var(--surface, #ffffff);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent);
@@ -771,16 +771,6 @@ body {
   font-weight: 700;
   color: var(--primary, #2b8cbe);
   white-space: nowrap;
-}
-
-.mizuna-mfm-ac-desc {
-  font-size: 0.68rem;
-  color: var(--text_color, #181c20);
-  opacity: 0.7;
-  margin-left: auto;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .mizuna-main-textarea {
