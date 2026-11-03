@@ -184,6 +184,11 @@ describe('Drafts feature', () => {
       expect(saved.visibility).toBe('followers');
       expect(saved.endMizuna).toBe(true);
       expect(result.draftCount()).toBe(1);
+
+      // 保存後はフォームがクリアされていること
+      expect(result.noteText()).toBe('');
+      expect(result.cwText()).toBe('');
+      expect(result.attachedImages().length).toBe(0);
     });
 
     it('下書きを復元したとき、保存されていたアカウントに自動で切り替わること', async () => {

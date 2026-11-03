@@ -1476,6 +1476,8 @@ export function AppProvider(props: { children: JSX.Element }) {
         images: draftImages,
       });
       await loadDrafts();
+      // 保存後はフォームをクリア（通知は「下書きを保存しました」のみ）
+      clearNoteForm(false);
       showToast(t('draft.saved'), 'success');
       return true;
     } catch (err) {
