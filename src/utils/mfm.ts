@@ -5,16 +5,30 @@
 
 import * as mfm from 'mfm-js';
 
+const HTML_ESCAPE_RE = /[&<>"']/g;
+const HTML_ESCAPE_TEST_RE = /[&<>"']/;
+const HTML_ESCAPE_MAP: Record<string, string> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
+const TIME_S_RE = /^-?[0-9.]+s$/;
+const TIME_MS_RE = /^-?[0-9.]+ms$/;
+const TIME_NUM_RE = /^-?[0-9.]+$/;
+const HEX_COLOR_RE = /^[0-9a-fA-F]{3,6}$/;
+const COLON_TRIM_RE = /^:|:$/g;
+const INLINE_EMOJI_RE = /:([a-zA-Z0-9_@.-]+):/g;
+const EMPTY_EMOJI_MAP = new Map<string, string>();
+
 /**
  * HTML特殊文字をエスケープして安全にする
  */
 export function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  if (!str || !HTML_ESCAPE_TEST_RE.test(str)) return str;
+  return str.replace(HTML_ESCAPE_RE, (ch) => HTML_ESCAPE_MAP[ch]);
 }
 
 function safeParseFloat(val: unknown): number | null {
@@ -26,23 +40,134 @@ function safeParseFloat(val: unknown): number | null {
 
 function validTime(t: string | boolean | null | undefined): string | null {
   if (t == null || typeof t === 'boolean') return null;
-  return /^-?[0-9.]+s$/.test(t) ? t : /^-?[0-9.]+ms$/.test(t) ? t : /^-?[0-9.]+$/.test(t) ? `${t}s` : null;
+  return TIME_S_RE.test(t) ? t : TIME_MS_RE.test(t) ? t : TIME_NUM_RE.test(t) ? `${t}s` : null;
 }
 
 function validColor(c: unknown): string | null {
   if (typeof c !== 'string') return null;
-  const clean = c.replace(/^#/, '');
-  return /^[0-9a-fA-F]{3,6}$/.test(clean) ? clean : null;
+  const clean = c.charCodeAt(0) === 35 /* '#' */ ? c.slice(1) : c;
+  return HEX_COLOR_RE.test(clean) ? clean : null;
+}
+
+export type EmojiSource =
+  | Array<{ name: string; url: string; host?: string | null }>
+  | Record<string, string>
+  | Map<string, string>;
+
+export interface RenderMfmOptions {
+  serverAddress?: string;
+  serverEmojiMap?: Map<string, string>;
+}
+
+/**
+ * 絵文字リストやマップを正規化して検索用 Map に変換する
+ */
+export function normalizeEmojiMap(emojis?: EmojiSource | null): Map<string, string> {
+  if (!emojis) return EMPTY_EMOJI_MAP;
+
+  if (emojis instanceof Map) {
+    if (emojis.size === 0) return EMPTY_EMOJI_MAP;
+    const map = new Map<string, string>();
+    for (const [key, val] of emojis.entries()) {
+      if (typeof val === 'string') {
+        const raw = key.replace(COLON_TRIM_RE, '').toLowerCase();
+        map.set(raw, val);
+        const atIdx = raw.indexOf('@');
+        const withoutDomain = atIdx !== -1 ? raw.slice(0, atIdx) : raw;
+        if (withoutDomain && !map.has(withoutDomain)) {
+          map.set(withoutDomain, val);
+          map.set(`${withoutDomain}@.`, val);
+        }
+      }
+    }
+    return map;
+  }
+
+  if (Array.isArray(emojis)) {
+    if (emojis.length === 0) return EMPTY_EMOJI_MAP;
+    const map = new Map<string, string>();
+    for (let i = 0; i < emojis.length; i++) {
+      const item = emojis[i];
+      if (item && item.name && item.url) {
+        const raw = item.name.replace(COLON_TRIM_RE, '').toLowerCase();
+        map.set(raw, item.url);
+        if (item.host) {
+          map.set(`${raw}@${item.host.toLowerCase()}`, item.url);
+        }
+        map.set(`${raw}@.`, item.url);
+      }
+    }
+    return map;
+  }
+
+  if (typeof emojis === 'object') {
+    const entries = Object.entries(emojis);
+    if (entries.length === 0) return EMPTY_EMOJI_MAP;
+    const map = new Map<string, string>();
+    for (let i = 0; i < entries.length; i++) {
+      const [key, val] = entries[i];
+      if (typeof val === 'string') {
+        const raw = key.replace(COLON_TRIM_RE, '').toLowerCase();
+        map.set(raw, val);
+        const atIdx = raw.indexOf('@');
+        const withoutDomain = atIdx !== -1 ? raw.slice(0, atIdx) : raw;
+        if (withoutDomain && !map.has(withoutDomain)) {
+          map.set(withoutDomain, val);
+          map.set(`${withoutDomain}@.`, val);
+        }
+      }
+    }
+    return map;
+  }
+
+  return EMPTY_EMOJI_MAP;
+}
+
+function resolveCustomEmojiImg(
+  rawName: string,
+  emojiMap: Map<string, string>,
+  options?: RenderMfmOptions
+): string | null {
+  const cleanName = rawName.replace(COLON_TRIM_RE, '').toLowerCase();
+  const atIdx = cleanName.indexOf('@');
+  const withoutHost = atIdx !== -1 ? cleanName.slice(0, atIdx) : cleanName;
+  const localKey = `${withoutHost}@.`;
+
+  let emojiUrl =
+    emojiMap.get(cleanName) ||
+    emojiMap.get(withoutHost) ||
+    emojiMap.get(localKey) ||
+    options?.serverEmojiMap?.get(cleanName) ||
+    options?.serverEmojiMap?.get(withoutHost) ||
+    options?.serverEmojiMap?.get(localKey);
+
+  // 自サーバー絵文字フォールバック (自サーバーの /emoji/name.webp)
+  if (!emojiUrl && options?.serverAddress && (atIdx === -1 || cleanName.endsWith('@.'))) {
+    emojiUrl = `https://${options.serverAddress}/emoji/${encodeURIComponent(withoutHost)}.webp`;
+  }
+
+  if (!emojiUrl) return null;
+  const escapedName = escapeHtml(rawName);
+  const escapedUrl = escapeHtml(emojiUrl);
+  return `<img class="mfm-custom-emoji" src="${escapedUrl}" alt=":${escapedName}:" title=":${escapedName}:" loading="lazy" decoding="async" onerror="this.outerHTML=':${escapedName}:'" />`;
 }
 
 /**
  * mfm-js AST ノードを HTML 文字列に再帰レンダリングする
  */
-function renderNodes(nodes: mfm.MfmNode[]): string {
-  return nodes.map(renderNode).join('');
+function renderNodes(
+  nodes: mfm.MfmNode[],
+  emojiMap: Map<string, string>,
+  options?: RenderMfmOptions
+): string {
+  return nodes.map((node) => renderNode(node, emojiMap, options)).join('');
 }
 
-function renderNode(node: mfm.MfmNode): string {
+function renderNode(
+  node: mfm.MfmNode,
+  emojiMap: Map<string, string>,
+  options?: RenderMfmOptions
+): string {
   switch (node.type) {
     case 'text': {
       const text = escapeHtml(node.props.text);
@@ -50,19 +175,19 @@ function renderNode(node: mfm.MfmNode): string {
     }
 
     case 'bold':
-      return `<strong>${renderNodes(node.children)}</strong>`;
+      return `<strong>${renderNodes(node.children, emojiMap, options)}</strong>`;
 
     case 'strike':
-      return `<del>${renderNodes(node.children)}</del>`;
+      return `<del>${renderNodes(node.children, emojiMap, options)}</del>`;
 
     case 'italic':
-      return `<i style="font-style: oblique;">${renderNodes(node.children)}</i>`;
+      return `<i style="font-style: oblique;">${renderNodes(node.children, emojiMap, options)}</i>`;
 
     case 'small':
-      return `<small style="opacity: 0.7;">${renderNodes(node.children)}</small>`;
+      return `<small style="opacity: 0.7;">${renderNodes(node.children, emojiMap, options)}</small>`;
 
     case 'center':
-      return `<div style="text-align: center;">${renderNodes(node.children)}</div>`;
+      return `<div style="text-align: center;">${renderNodes(node.children, emojiMap, options)}</div>`;
 
     case 'fn': {
       const args = node.props.args || {};
@@ -140,13 +265,13 @@ function renderNode(node: mfm.MfmNode): string {
         }
 
         case 'x2':
-          return `<span class="mfm-x2" style="display: inline-block;">${renderNodes(node.children)}</span>`;
+          return `<span class="mfm-x2" style="display: inline-block;">${renderNodes(node.children, emojiMap, options)}</span>`;
 
         case 'x3':
-          return `<span class="mfm-x3" style="display: inline-block;">${renderNodes(node.children)}</span>`;
+          return `<span class="mfm-x3" style="display: inline-block;">${renderNodes(node.children, emojiMap, options)}</span>`;
 
         case 'x4':
-          return `<span class="mfm-x4" style="display: inline-block;">${renderNodes(node.children)}</span>`;
+          return `<span class="mfm-x4" style="display: inline-block;">${renderNodes(node.children, emojiMap, options)}</span>`;
 
         case 'font': {
           const family =
@@ -161,7 +286,7 @@ function renderNode(node: mfm.MfmNode): string {
         }
 
         case 'blur':
-          return `<span class="_mfm_blur_ mfm-blur" tabindex="0" title="ホバーまたはタップで表示">${renderNodes(node.children)}</span>`;
+          return `<span class="_mfm_blur_ mfm-blur" tabindex="0" title="ホバーまたはタップで表示">${renderNodes(node.children, emojiMap, options)}</span>`;
 
         case 'rainbow': {
           const speed = validTime(args.speed as string) ?? '1s';
@@ -228,23 +353,23 @@ function renderNode(node: mfm.MfmNode): string {
             const rt = escapeHtml(parts[1] || '');
             return `<ruby>${parent}<rt>${rt}</rt></ruby>`;
           } else {
-            return `<ruby>${renderNodes(node.children)}</ruby>`;
+            return `<ruby>${renderNodes(node.children, emojiMap, options)}</ruby>`;
           }
         }
       }
 
       const classAttr = className ? ` class="${className}"` : '';
       if (style !== undefined) {
-        return `<span${classAttr} style="display: inline-block; ${style}">${renderNodes(node.children)}</span>`;
+        return `<span${classAttr} style="display: inline-block; ${style}">${renderNodes(node.children, emojiMap, options)}</span>`;
       }
       if (className) {
-        return `<span${classAttr}>${renderNodes(node.children)}</span>`;
+        return `<span${classAttr}>${renderNodes(node.children, emojiMap, options)}</span>`;
       }
-      return renderNodes(node.children);
+      return renderNodes(node.children, emojiMap, options);
     }
 
     case 'quote':
-      return `<blockquote class="mfm-quote">${renderNodes(node.children)}</blockquote>`;
+      return `<blockquote class="mfm-quote">${renderNodes(node.children, emojiMap, options)}</blockquote>`;
 
     case 'url': {
       const url = escapeHtml(node.props.url);
@@ -253,7 +378,7 @@ function renderNode(node: mfm.MfmNode): string {
 
     case 'link': {
       const url = escapeHtml(node.props.url);
-      return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer" class="mfm-link">${renderNodes(node.children)}</a>`;
+      return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer" class="mfm-link">${renderNodes(node.children, emojiMap, options)}</a>`;
     }
 
     case 'mention': {
@@ -284,14 +409,16 @@ function renderNode(node: mfm.MfmNode): string {
       return `<div class="mfm-search"><span>${query}</span> <button type="button" class="mfm-search-button">検索</button></div>`;
     }
 
-    case 'emojiCode':
-      return `:${escapeHtml(node.props.name)}:`;
+    case 'emojiCode': {
+      const name = node.props.name;
+      return resolveCustomEmojiImg(name, emojiMap, options) ?? `:${escapeHtml(name)}:`;
+    }
 
     case 'unicodeEmoji':
-      return escapeHtml(node.props.emoji);
+      return `<span class="mfm-unicode-emoji">${escapeHtml(node.props.emoji)}</span>`;
 
     case 'plain':
-      return renderNodes(node.children);
+      return renderNodes(node.children, emojiMap, options);
 
     default:
       return '';
@@ -300,17 +427,45 @@ function renderNode(node: mfm.MfmNode): string {
 
 /**
  * MFM構文を含む文字列をHTML文字列に変換する
+ * @param text MFM本文
+ * @param emojis ノート固有のカスタム絵文字リストまたはマップ
+ * @param options サーバーアドレスやインスタンス絵文字マップなどの補完オプション
  */
-export function renderMfm(text: string): string {
+export function renderMfm(
+  text: string,
+  emojis?: EmojiSource | null,
+  options?: RenderMfmOptions
+): string {
   if (!text) return '';
+
+  const emojiMap = normalizeEmojiMap(emojis);
 
   try {
     const parsed = mfm.parse(text);
-    return renderNodes(parsed);
+    return renderNodes(parsed, emojiMap, options);
   } catch (err) {
     console.error('MFM parse error:', err);
-    return escapeHtml(text).replace(/\n/g, '<br>');
+    return renderInlineEmoji(escapeHtml(text).replace(/\n/g, '<br>'), emojis, options);
   }
+}
+
+/**
+ * プレーンテキスト（ユーザー名やCWなど）内のカスタム絵文字 (:name:) を <img> に置換する
+ */
+export function renderInlineEmoji(
+  text: string,
+  emojis?: EmojiSource | null,
+  options?: RenderMfmOptions
+): string {
+  if (!text) return '';
+  const escaped = escapeHtml(text);
+  if (!escaped.includes(':')) return escaped;
+
+  const emojiMap = normalizeEmojiMap(emojis);
+
+  return escaped.replace(INLINE_EMOJI_RE, (match, rawName) => {
+    return resolveCustomEmojiImg(rawName, emojiMap, options) ?? match;
+  });
 }
 
 /**

@@ -3,7 +3,7 @@ import { useApp, type ViewType } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { HoldHoverTip } from './HoldHoverTip';
 
-const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'settings'];
+const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'history'];
 
 function FooterNavContent() {
   const { accounts, currentUser, settings, currentView, setCurrentView, t } = useApp();
@@ -11,7 +11,7 @@ function FooterNavContent() {
   let dockRef: HTMLDivElement | undefined;
   let avatarBtnRef: HTMLButtonElement | undefined;
   let noteBtnRef: HTMLButtonElement | undefined;
-  let settingsBtnRef: HTMLButtonElement | undefined;
+  let historyBtnRef: HTMLButtonElement | undefined;
 
   const [isDragging, setIsDragging] = createSignal(false);
   const [isSwiping, setIsSwiping] = createSignal(false);
@@ -43,13 +43,13 @@ function FooterNavContent() {
   });
 
   const getTabBoundaries = () => {
-    if (!dockRef || !avatarBtnRef || !settingsBtnRef) {
+    if (!dockRef || !avatarBtnRef || !historyBtnRef) {
       const step = 64;
       return { minX: 0, maxX: step * 2, step };
     }
     const dockRect = dockRef.getBoundingClientRect();
     const minX = avatarBtnRef.getBoundingClientRect().left - dockRect.left;
-    const maxX = settingsBtnRef.getBoundingClientRect().left - dockRect.left;
+    const maxX = historyBtnRef.getBoundingClientRect().left - dockRect.left;
     if (maxX <= minX + 20) {
       const step = 64;
       return { minX: 0, maxX: step * 2, step };
@@ -200,7 +200,7 @@ function FooterNavContent() {
       // スワイプによるページ遷移後、前のボタンにフォーカスや擬似ホバーが残らないよう解除
       avatarBtnRef?.blur();
       noteBtnRef?.blur();
-      settingsBtnRef?.blur();
+      historyBtnRef?.blur();
       if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
         document.activeElement.blur();
       }
@@ -264,8 +264,8 @@ function FooterNavContent() {
       targetEl = avatarBtnRef;
     } else if (view === 'note') {
       targetEl = noteBtnRef;
-    } else if (view === 'settings') {
-      targetEl = settingsBtnRef;
+    } else if (view === 'history') {
+      targetEl = historyBtnRef;
     }
 
     if (!targetEl || !dockRef) {
@@ -315,7 +315,7 @@ function FooterNavContent() {
       ro.observe(dockRef);
       if (avatarBtnRef) ro.observe(avatarBtnRef);
       if (noteBtnRef) ro.observe(noteBtnRef);
-      if (settingsBtnRef) ro.observe(settingsBtnRef);
+      if (historyBtnRef) ro.observe(historyBtnRef);
       onCleanup(() => ro.disconnect());
     }
 
@@ -427,18 +427,18 @@ function FooterNavContent() {
             </button>
           </HoldHoverTip>
 
-          <HoldHoverTip label={t('dock.settings')} sublabel={t('dock.settings_sub')} placement="top">
+          <HoldHoverTip label={t('dock.history')} sublabel={t('dock.history_sub')} placement="top">
             <button
-              ref={settingsBtnRef}
+              ref={historyBtnRef}
               type="button"
-              id="settings_icon"
-              class={`mizuna-m3e-item ${currentView() === 'settings' ? 'is-active' : ''}`}
-              onClick={() => handleNavClick('settings')}
+              id="history_icon"
+              class={`mizuna-m3e-item ${currentView() === 'history' ? 'is-active' : ''}`}
+              onClick={() => handleNavClick('history')}
             >
               <span class="mizuna-m3e-indicator">
-                <i>tune</i>
+                <i>history</i>
               </span>
-              <span class="mizuna-m3e-label">{t('dock.settings')}</span>
+              <span class="mizuna-m3e-label">{t('dock.history')}</span>
             </button>
           </HoldHoverTip>
         </div>
@@ -447,7 +447,7 @@ function FooterNavContent() {
   );
 }
 
-const MENU_BAR_VIEWS: ViewType[] = ['note', 'accounts', 'settings'];
+const MENU_BAR_VIEWS: ViewType[] = ['note', 'accounts', 'history', 'settings'];
 
 export function FooterNav() {
   const { accounts, currentView } = useApp();

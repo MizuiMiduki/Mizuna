@@ -9,12 +9,16 @@ import {
   onMount,
   Show,
 } from 'solid-js';
-import { createMisskeyNote, uploadImagesToDrive } from '../services/misskeyApi';
+import { createMisskeyNote, uploadImagesToDrive, type MisskeyFile } from '../services/misskeyApi';
 import {
   useApp,
   type AttachedImageItem,
   type VisibilityType,
 } from '../store/appStore';
+import {
+  getAccountCacheKey,
+  prependNoteToHistoryCache,
+} from '../store/historyStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { type ImageEditState } from '../utils/imageEditor';
 import { comparisonVersion, hasDrivePermission } from '../utils/version';
@@ -28,6 +32,8 @@ import {
 import { getCaretCoordinates } from '../utils/caretCoordinates';
 import { HoldHoverTip } from './HoldHoverTip';
 import { ImageEditorModal } from './ImageEditorModal';
+import { DraftsModal } from './DraftsModal';
+import { DriveImagePickerModal } from './DriveImagePickerModal';
 
 export function NoteView() {
   const {
@@ -53,11 +59,18 @@ export function NoteView() {
     reorderAttachedImages,
     moveAttachedImage,
     clearNoteForm,
+    drafts,
+    draftCount,
+    saveCurrentAsDraft,
+    replyTargetNote,
+    cancelReply,
     showToast,
     pushModalBackHandler,
     t,
   } = useApp();
 
+  const [isDraftsModalOpen, setIsDraftsModalOpen] = createSignal(false);
+  const [isDrivePickerOpen, setIsDrivePickerOpen] = createSignal(false);
   const [isInputFocused, setIsInputFocused] = createSignal(false);
   const [isSending, setIsSending] = createSignal(false);
   const [sendingStatus, setSendingStatus] = createSignal('');
@@ -451,8 +464,14 @@ export function NoteView() {
     return `${text}\n(from Mizuna)`;
   });
 
-  const renderedNoteHtml = createMemo(() => renderMfm(previewNoteText()));
-  const renderedCwHtml = createMemo(() => renderMfm(cwText()));
+  const renderedNoteHtml = createMemo(() => {
+    if (!showPreview()) return '';
+    return renderMfm(previewNoteText(), null, { serverAddress: currentUser()?.address });
+  });
+  const renderedCwHtml = createMemo(() => {
+    if (!showPreview()) return '';
+    return renderMfm(cwText(), null, { serverAddress: currentUser()?.address });
+  });
 
   const handleInsertMfm = (prefix: string, suffix: string, placeholder = '') => {
     const isCw = lastFocusedField() === 'cw' && cwEnabled();
@@ -685,25 +704,61 @@ export function NoteView() {
     try {
       let fileIds: string[] | undefined;
       if (images.length > 0) {
-        fileIds = await uploadImagesToDrive(
-          images.map((item) => item.compressedFile ?? item.file),
-          user,
-          (status) => setSendingStatus(status)
-        );
+        const localFiles: File[] = [];
+        for (const item of images) {
+          if (!item.driveFileId) {
+            localFiles.push(item.compressedFile ?? item.file);
+          }
+        }
+
+        let uploadedIds: string[] = [];
+        if (localFiles.length > 0) {
+          uploadedIds = await uploadImagesToDrive(
+            localFiles,
+            user,
+            (status) => setSendingStatus(status)
+          );
+        }
+
+        let uploadCursor = 0;
+        fileIds = images.map((item) => {
+          if (item.driveFileId) {
+            return item.driveFileId;
+          }
+          return uploadedIds[uploadCursor++];
+        });
       }
 
       setSendingStatus(t('note.submitting'));
-      await createMisskeyNote(
+      const fallbackFiles: MisskeyFile[] = images.map((item, idx) => ({
+        id: fileIds?.[idx] || item.driveFileId || item.id,
+        url: item.dataUrl,
+        thumbnailUrl: item.thumbUrl || item.dataUrl,
+        name: item.name,
+        type: item.file.type || 'image/webp',
+        size: item.compressedSize ?? item.originalSize,
+      }));
+
+      const createdNote = await createMisskeyNote(
         user,
         rawNote,
         cwEnabled() ? rawCw : null,
         visibility(),
         endMizuna(),
-        fileIds
+        fileIds,
+        replyTargetNote()?.id,
+        {
+          replyNote: replyTargetNote(),
+          files: fallbackFiles,
+        }
       );
+
+      // fetch を行わずに投稿履歴の先頭にそのまま反映する
+      prependNoteToHistoryCache(getAccountCacheKey(user), createdNote);
 
       showToast(t('note.sent'), 'success');
       clearNoteForm(false);
+      cancelReply();
       setShowPreview(false);
       if (fileInputRef) {
         fileInputRef.value = '';
@@ -774,6 +829,14 @@ export function NoteView() {
             event.preventDefault();
             clearNoteForm(true);
             if (fileInputRef) fileInputRef.value = '';
+            break;
+          case 's':
+            event.preventDefault();
+            saveCurrentAsDraft();
+            break;
+          case 'd':
+            event.preventDefault();
+            setIsDraftsModalOpen((prev) => !prev);
             break;
           case 'i':
             event.preventDefault();
@@ -992,43 +1055,96 @@ export function NoteView() {
             <i class="mizuna-author-chevron">unfold_more</i>
           </button>
 
-          {/* モダンなピル型公開範囲セレクター */}
-          <div class="mizuna-visibility-pills" role="radiogroup" aria-label={t('settings.default_visibility')}>
-            <HoldHoverTip label={t('note.visibility_public')} sublabel="全ユーザーに公開 (Ctrl+Alt+P)" placement="bottom">
+          {/* 右側グループ：公開範囲ピル ＆ 下書き統合ボタン */}
+          <div class="mizuna-composer-header-right">
+            {/* モダンなピル型公開範囲セレクター */}
+            <div class="mizuna-visibility-pills" role="radiogroup" aria-label={t('settings.default_visibility')}>
+              <HoldHoverTip label={t('note.visibility_public')} sublabel="全ユーザーに公開 (Ctrl+Alt+P)" placement="bottom">
+                <button
+                  type="button"
+                  id="visibility_public"
+                  class={`mizuna-vis-pill ${visibility() === 'public' ? 'is-active' : ''}`}
+                  onClick={(e) => selectVisibility('public', e.currentTarget)}
+                >
+                  <i>public</i>
+                  <span>{t('note.visibility_public')}</span>
+                </button>
+              </HoldHoverTip>
+              <HoldHoverTip label={t('note.visibility_home')} sublabel="ホームTLのみに表示 (Ctrl+Alt+H)" placement="bottom">
+                <button
+                  type="button"
+                  id="visibility_home"
+                  class={`mizuna-vis-pill ${visibility() === 'home' ? 'is-active' : ''}`}
+                  onClick={(e) => selectVisibility('home', e.currentTarget)}
+                >
+                  <i>home</i>
+                  <span>{t('note.visibility_home')}</span>
+                </button>
+              </HoldHoverTip>
+              <HoldHoverTip label={t('note.visibility_followers')} sublabel="フォロワーのみに表示 (Ctrl+Alt+F)" placement="bottom">
+                <button
+                  type="button"
+                  id="visibility_followers"
+                  class={`mizuna-vis-pill ${visibility() === 'followers' ? 'is-active' : ''}`}
+                  onClick={(e) => selectVisibility('followers', e.currentTarget)}
+                >
+                  <i>lock</i>
+                  <span>{t('note.visibility_followers')}</span>
+                </button>
+              </HoldHoverTip>
+            </div>
+
+            {/* 下書き（保存・呼び出し）ボタン */}
+            <HoldHoverTip label={t('draft.title')} sublabel={t('draft.tip_save_and_restore')} placement="bottom">
               <button
                 type="button"
-                id="visibility_public"
-                class={`mizuna-vis-pill ${visibility() === 'public' ? 'is-active' : ''}`}
-                onClick={(e) => selectVisibility('public', e.currentTarget)}
+                id="draft_button"
+                class={`mizuna-composer-draft-btn ${draftCount() > 0 ? 'has-badge' : ''}`}
+                onClick={() => setIsDraftsModalOpen(true)}
+                aria-label={t('draft.title')}
+                title={t('draft.title')}
               >
-                <i>public</i>
-                <span>{t('note.visibility_public')}</span>
-              </button>
-            </HoldHoverTip>
-            <HoldHoverTip label={t('note.visibility_home')} sublabel="ホームTLのみに表示 (Ctrl+Alt+H)" placement="bottom">
-              <button
-                type="button"
-                id="visibility_home"
-                class={`mizuna-vis-pill ${visibility() === 'home' ? 'is-active' : ''}`}
-                onClick={(e) => selectVisibility('home', e.currentTarget)}
-              >
-                <i>home</i>
-                <span>{t('note.visibility_home')}</span>
-              </button>
-            </HoldHoverTip>
-            <HoldHoverTip label={t('note.visibility_followers')} sublabel="フォロワーのみに表示 (Ctrl+Alt+F)" placement="bottom">
-              <button
-                type="button"
-                id="visibility_followers"
-                class={`mizuna-vis-pill ${visibility() === 'followers' ? 'is-active' : ''}`}
-                onClick={(e) => selectVisibility('followers', e.currentTarget)}
-              >
-                <i>lock</i>
-                <span>{t('note.visibility_followers')}</span>
+                <i>drafts</i>
+                <Show when={draftCount() > 0}>
+                  <span class="mizuna-chip-count">{draftCount()}</span>
+                </Show>
               </button>
             </HoldHoverTip>
           </div>
         </div>
+
+        {/* 返信先カード (リプライ時のみ表示) */}
+        <Show when={replyTargetNote()}>
+          {(target) => (
+            <div class="mizuna-reply-target-card">
+              <div class="mizuna-reply-target-main">
+                <i class="mizuna-reply-target-icon">reply</i>
+                <img
+                  src={getDisplayAvatarUrl(target().user.avatarUrl, settings().is_visible_icon)}
+                  alt=""
+                  class="mizuna-reply-target-avatar"
+                />
+                <div class="mizuna-reply-target-content">
+                  <span class="mizuna-reply-target-user">
+                    {target().user.name || target().user.username} <span class="mizuna-reply-target-handle">@{target().user.username}</span>
+                  </span>
+                  <p class="mizuna-reply-target-text">
+                    {target().cw ? `[CW] ${target().cw}` : target().text || '（添付画像またはファイル）'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="mizuna-reply-cancel-btn"
+                onClick={cancelReply}
+                title={t('history.cancel_reply')}
+                aria-label={t('history.cancel_reply')}
+              >
+                <i>close</i>
+              </button>
+            </div>
+          )}
+        </Show>
 
         {/* MFM ツールバー */}
         <div class="mizuna-composer-subbar">
@@ -1305,18 +1421,20 @@ export function NoteView() {
                       <i>zoom_in</i>
                     </div>
 
-                    <button
-                      type="button"
-                      class={`mizuna-media-edit ${item.editState ? 'is-edited' : ''}`}
-                      title={t('note.edit_image')}
-                      aria-label={t('note.edit_image')}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingImageItem(item);
-                      }}
-                    >
-                      <i>edit</i>
-                    </button>
+                    <Show when={!item.driveFileId}>
+                      <button
+                        type="button"
+                        class={`mizuna-media-edit ${item.editState ? 'is-edited' : ''}`}
+                        title={t('note.edit_image')}
+                        aria-label={t('note.edit_image')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingImageItem(item);
+                        }}
+                      >
+                        <i>edit</i>
+                      </button>
+                    </Show>
                     <button
                       type="button"
                       class="mizuna-media-remove"
@@ -1420,7 +1538,7 @@ export function NoteView() {
                     );
                     return;
                   }
-                  fileInputRef?.click();
+                  setIsDrivePickerOpen(true);
                 }}
                 aria-label={isImageSupported() ? t('note.attach_image_label') : '画像添付非対応'}
               >
@@ -1711,41 +1829,50 @@ export function NoteView() {
                     </span>
                   </div>
                   <div class="mizuna-lightbox-meta">
-                    <span class="mizuna-lightbox-raw-size">
-                      {(((previewModalImage()?.originalSize ?? 0) / 1024)).toFixed(1)} KB
-                    </span>
                     <Show
-                      when={previewModalImage()?.compressedSize}
+                      when={!previewModalImage()?.driveFileId}
                       fallback={
-                        <div class="mizuna-lightbox-compressing-wrap">
-                          <span class="mizuna-lightbox-compressing">
-                            <span class="mizuna-lightbox-compressing-spinner" />
-                            WebP圧縮中...
-                          </span>
-                          <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
-                            <div class="mizuna-lightbox-mini-bar-fill" />
-                          </div>
-                        </div>
+                        <span class="mizuna-lightbox-badge">
+                          {t('note.drive_badge_uploaded')}
+                        </span>
                       }
                     >
-                      {(compSize) => {
-                        const originalSize = previewModalImage()?.originalSize ?? 1;
-                        const savedPercent = Math.max(
-                          0,
-                          Math.round(((originalSize - compSize()) / originalSize) * 100)
-                        );
-                        return (
-                          <>
-                            <i class="mizuna-lightbox-meta-arrow">arrow_forward</i>
-                            <span class="mizuna-lightbox-webp-size">
-                              {(compSize() / 1024).toFixed(1)} KB (WebP)
+                      <span class="mizuna-lightbox-raw-size">
+                        {(((previewModalImage()?.originalSize ?? 0) / 1024)).toFixed(1)} KB
+                      </span>
+                      <Show
+                        when={previewModalImage()?.compressedSize}
+                        fallback={
+                          <div class="mizuna-lightbox-compressing-wrap">
+                            <span class="mizuna-lightbox-compressing">
+                              <span class="mizuna-lightbox-compressing-spinner" />
+                              WebP圧縮中...
                             </span>
-                            <span class="mizuna-lightbox-badge">
-                              {savedPercent}% 削減
-                            </span>
-                          </>
-                        );
-                      }}
+                            <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
+                              <div class="mizuna-lightbox-mini-bar-fill" />
+                            </div>
+                          </div>
+                        }
+                      >
+                        {(compSize) => {
+                          const originalSize = previewModalImage()?.originalSize ?? 1;
+                          const savedPercent = Math.max(
+                            0,
+                            Math.round(((originalSize - compSize()) / originalSize) * 100)
+                          );
+                          return (
+                            <>
+                              <i class="mizuna-lightbox-meta-arrow">arrow_forward</i>
+                              <span class="mizuna-lightbox-webp-size">
+                                {(compSize() / 1024).toFixed(1)} KB (WebP)
+                              </span>
+                              <span class="mizuna-lightbox-badge">
+                                {savedPercent}% 削減
+                              </span>
+                            </>
+                          );
+                        }}
+                      </Show>
                     </Show>
                   </div>
                 </div>
@@ -1793,6 +1920,19 @@ export function NoteView() {
           />
         )}
       </Show>
+
+      {/* 下書き一覧モーダル */}
+      <DraftsModal
+        isOpen={isDraftsModalOpen()}
+        onClose={() => setIsDraftsModalOpen(false)}
+      />
+
+      {/* 画像追加・Misskeyドライブ選択モーダル */}
+      <DriveImagePickerModal
+        isOpen={isDrivePickerOpen()}
+        onClose={() => setIsDrivePickerOpen(false)}
+        onOpenLocalFilePicker={() => fileInputRef?.click()}
+      />
     </div>
   );
 }

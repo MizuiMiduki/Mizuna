@@ -45,6 +45,133 @@ export interface NoteParam {
   visibility: 'public' | 'home' | 'followers';
   cw?: string;
   fileIds?: string[];
+  replyId?: string;
+}
+
+export interface MisskeyCustomEmoji {
+  name: string;
+  url: string;
+  host?: string | null;
+  aliases?: string[];
+}
+
+export interface MisskeyNoteUser {
+  id: string;
+  name: string | null;
+  username: string;
+  avatarUrl: string;
+  emojis?: MisskeyCustomEmoji[] | Record<string, string>;
+  instance?: {
+    name?: string;
+    faviconUrl?: string;
+  };
+}
+
+export interface MisskeyFile {
+  id: string;
+  url: string;
+  thumbnailUrl?: string;
+  name: string;
+  type: string;
+  size?: number;
+  createdAt?: string;
+  isSensitive?: boolean;
+}
+
+export interface MisskeyNote {
+  id: string;
+  createdAt: string;
+  text: string | null;
+  cw: string | null;
+  userId: string;
+  user: MisskeyNoteUser;
+  replyId?: string | null;
+  reply?: MisskeyNote | null;
+  renoteId?: string | null;
+  renote?: MisskeyNote | null;
+  visibility: 'public' | 'home' | 'followers' | 'specified';
+  files?: MisskeyFile[];
+  repliesCount?: number;
+  renoteCount?: number;
+  reactions?: Record<string, number>;
+  reactionEmojis?: Record<string, string>;
+  emojis?: MisskeyCustomEmoji[] | Record<string, string>;
+}
+
+// ユーザーIDのインメモリキャッシュ (token -> userId)
+const userIdCache = new Map<string, string>();
+
+// サーバーカスタム絵文字のインメモリキャッシュ (address -> Map<emojiName, emojiUrl>)
+const serverEmojiCache = new Map<string, Map<string, string>>();
+
+/**
+ * インスタンスのカスタム絵文字一覧 (/api/emojis) を取得し、絵文字名からURLへのマップを返す
+ */
+export async function fetchServerEmojis(rawAddress: string): Promise<Map<string, string>> {
+  const address = rawAddress.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  if (!address || address.includes(' ') || !address.includes('.')) {
+    return new Map();
+  }
+
+  const cached = serverEmojiCache.get(address);
+  if (cached) {
+    return cached;
+  }
+
+  try {
+    const res = await fetch(`https://${address}/api/emojis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    let data: any;
+    if (res.ok) {
+      data = await res.json();
+    } else {
+      const getRes = await fetch(`https://${address}/api/emojis`);
+      if (getRes.ok) {
+        data = await getRes.json();
+      }
+    }
+
+    if (data) {
+      const map = new Map<string, string>();
+      const list: MisskeyCustomEmoji[] = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.emojis)
+        ? data.emojis
+        : [];
+
+      for (const item of list) {
+        if (item && item.name && item.url) {
+          const lower = item.name.toLowerCase();
+          map.set(lower, item.url);
+          map.set(`${lower}@.`, item.url);
+          if (item.aliases && Array.isArray(item.aliases)) {
+            for (const alias of item.aliases) {
+              if (alias) {
+                const lowerAlias = alias.toLowerCase();
+                map.set(lowerAlias, item.url);
+                map.set(`${lowerAlias}@.`, item.url);
+              }
+            }
+          }
+        }
+      }
+
+      serverEmojiCache.set(address, map);
+      return map;
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch custom emojis from ${address}:`, err);
+  }
+
+  return new Map();
+}
+
+export function clearServerEmojiCache(): void {
+  serverEmojiCache.clear();
 }
 
 /**
@@ -101,7 +228,7 @@ export function buildMiAuthUrl(address: string, sessionId: string): string {
   const appNameWithVersion = `${mizuna_options.app_name} v${mizuna_options.mizuna_version}`;
   return `https://${cleanAddress}/miauth/${sessionId}?name=${encodeURIComponent(
     appNameWithVersion
-  )}&callback=${encodeURIComponent(callbackOrigin)}&permission=write:notes,read:account,write:drive`;
+  )}&callback=${encodeURIComponent(callbackOrigin)}&permission=write:notes,read:account,write:drive,read:drive,read:notes,read:notifications`;
 }
 
 /**
@@ -237,7 +364,7 @@ export async function uploadImagesToDrive(
 }
 
 /**
- * ノートを送信する
+ * ノートを送信する (リプライ対応・作成されたノートオブジェクトを返す)
  */
 export async function createMisskeyNote(
   account: AccountRecord,
@@ -245,12 +372,18 @@ export async function createMisskeyNote(
   cwContent: string | null,
   visibility: 'public' | 'home' | 'followers',
   appendFromMizuna: boolean,
-  fileIds?: string[]
-): Promise<void> {
+  fileIds?: string[],
+  replyId?: string,
+  extra?: {
+    replyNote?: MisskeyNote | null;
+    files?: MisskeyFile[];
+  }
+): Promise<MisskeyNote> {
   const suffix = appendFromMizuna ? '\n(from Mizuna)' : '';
+  const finalText = noteContent + suffix;
   const param: NoteParam = {
     i: account.token,
-    text: noteContent + suffix,
+    text: finalText,
     visibility,
   };
 
@@ -262,6 +395,10 @@ export async function createMisskeyNote(
     param.fileIds = fileIds;
   }
 
+  if (replyId && replyId.length > 0) {
+    param.replyId = replyId;
+  }
+
   const res = await fetch(`https://${account.address}/api/notes/create`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -271,6 +408,277 @@ export async function createMisskeyNote(
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}`);
   }
+
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch {
+    // JSON でない場合はフォールバック
+  }
+
+  const rawCreated = data?.createdNote ?? data ?? {};
+  const createdNote: MisskeyNote = {
+    id: rawCreated.id || `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: rawCreated.createdAt || new Date().toISOString(),
+    text: rawCreated.text !== undefined ? rawCreated.text : finalText,
+    cw:
+      rawCreated.cw !== undefined
+        ? rawCreated.cw
+        : cwContent && cwContent.length > 0
+        ? cwContent
+        : null,
+    userId: rawCreated.userId || String(account.id ?? account.username),
+    user: rawCreated.user?.username
+      ? rawCreated.user
+      : {
+          id: String(account.id ?? account.username),
+          name: account.name || account.username,
+          username: account.username,
+          avatarUrl: account.avatarurl,
+        },
+    visibility: rawCreated.visibility || visibility,
+    replyId: rawCreated.replyId !== undefined ? rawCreated.replyId : replyId || null,
+    reply: rawCreated.reply !== undefined ? rawCreated.reply : extra?.replyNote ?? null,
+    files:
+      Array.isArray(rawCreated.files) && rawCreated.files.length > 0
+        ? rawCreated.files
+        : extra?.files ?? [],
+    repliesCount: rawCreated.repliesCount ?? 0,
+    emojis: rawCreated.emojis,
+  };
+
+  return createdNote;
+}
+
+/**
+ * 自身のMisskeyアカウントIDを取得（キャッシュ対応）
+ */
+export async function fetchMyUserId(account: AccountRecord): Promise<string> {
+  const cacheKey = `${account.address}:${account.token}`;
+  const cached = userIdCache.get(cacheKey);
+  if (cached) return cached;
+
+  const res = await fetch(`https://${account.address}/api/i`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ i: account.token }),
+  });
+
+  if (!res.ok) {
+    throw new MisskeyApiError(`ユーザー情報の取得に失敗しました (HTTP ${res.status})`, {
+      status: res.status,
+      isAuthError: res.status === 401 || res.status === 403,
+    });
+  }
+
+  const data = await res.json();
+  if (!data?.id) {
+    throw new Error('ユーザーIDが見つかりませんでした');
+  }
+
+  userIdCache.set(cacheKey, data.id);
+  return data.id;
+}
+
+/**
+ * 自分の投稿履歴を取得する (Issue #129)
+ * 直近10件ずつ取得しページネーション可能
+ */
+export async function fetchUserNotes(
+  account: AccountRecord,
+  options?: { untilId?: string; sinceId?: string; limit?: number }
+): Promise<MisskeyNote[]> {
+  const userId = await fetchMyUserId(account);
+  const limit = options?.limit ?? 10;
+
+  const payload: Record<string, unknown> = {
+    i: account.token,
+    userId,
+    limit,
+    includeReplies: true,
+    includeMyRenotes: false,
+  };
+
+  if (options?.untilId) payload.untilId = options.untilId;
+  if (options?.sinceId) payload.sinceId = options.sinceId;
+
+  const res = await fetch(`https://${account.address}/api/users/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new MisskeyApiError(`投稿履歴の取得に失敗しました (HTTP ${res.status})`, {
+      status: res.status,
+    });
+  }
+
+  const notes: MisskeyNote[] = await res.json();
+  return Array.isArray(notes) ? notes : [];
+}
+
+/**
+ * 特定のノートに付いたリプライ一覧を取得する (Issue #130)
+ */
+export async function fetchNoteChildren(
+  account: AccountRecord,
+  noteId: string,
+  options?: { untilId?: string; limit?: number }
+): Promise<MisskeyNote[]> {
+  const payload: Record<string, unknown> = {
+    i: account.token,
+    noteId,
+    limit: options?.limit ?? 10,
+  };
+  if (options?.untilId) payload.untilId = options.untilId;
+
+  const res = await fetch(`https://${account.address}/api/notes/children`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new MisskeyApiError(`リプライ一覧の取得に失敗しました (HTTP ${res.status})`, {
+      status: res.status,
+    });
+  }
+
+  const children: MisskeyNote[] = await res.json();
+  return Array.isArray(children) ? children : [];
+}
+
+/**
+ * 自分宛てのリプライ/メンション一覧を取得する (Issue #130)
+ */
+export async function fetchUserMentions(
+  account: AccountRecord,
+  options?: { untilId?: string; limit?: number }
+): Promise<MisskeyNote[]> {
+  const payload: Record<string, unknown> = {
+    i: account.token,
+    limit: options?.limit ?? 10,
+  };
+  if (options?.untilId) payload.untilId = options.untilId;
+
+  const res = await fetch(`https://${account.address}/api/notes/mentions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new MisskeyApiError(`メンション一覧の取得に失敗しました (HTTP ${res.status})`, {
+      status: res.status,
+    });
+  }
+
+  const mentions: MisskeyNote[] = await res.json();
+  return Array.isArray(mentions) ? mentions : [];
+}
+
+/**
+ * 自分の投稿（ノート）を削除する
+ */
+export async function deleteMisskeyNote(
+  account: AccountRecord,
+  noteId: string
+): Promise<void> {
+  const res = await fetch(`https://${account.address}/api/notes/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      i: account.token,
+      noteId,
+    }),
+  });
+
+  if (!res.ok) {
+    throw new MisskeyApiError(`投稿の削除に失敗しました (HTTP ${res.status})`, {
+      status: res.status,
+      isAuthError: res.status === 401 || res.status === 403,
+    });
+  }
+}
+
+/**
+ * Misskeyドライブにアップロード済みの画像一覧を取得する
+ * - 第一優先: `/api/drive/files` (read:drive 権限がある場合)
+ * - フォールバック: `read:drive` 未付与の既存アカウントでも利用できるよう `/api/users/notes` (withFiles: true) から添付済み画像を抽出
+ */
+export async function fetchDriveImages(
+  account: AccountRecord,
+  options?: { untilId?: string; limit?: number }
+): Promise<MisskeyFile[]> {
+  const limit = options?.limit ?? 24;
+  const payload: Record<string, unknown> = {
+    i: account.token,
+    limit,
+    type: 'image/*',
+  };
+  if (options?.untilId) {
+    payload.untilId = options.untilId;
+  }
+
+  try {
+    const res = await fetch(`https://${account.address}/api/drive/files`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      const files: MisskeyFile[] = await res.json();
+      if (Array.isArray(files)) {
+        return files.filter((f) => f && f.id && f.url && (!f.type || f.type.startsWith('image/')));
+      }
+    }
+  } catch {
+    // フォールバックへ進む
+  }
+
+  // フォールバック: 自分の画像付き投稿からアップロード済みファイル一覧を抽出
+  const userId = await fetchMyUserId(account);
+  const notesPayload: Record<string, unknown> = {
+    i: account.token,
+    userId,
+    limit: 30,
+    withFiles: true,
+    includeMyRenotes: false,
+  };
+  if (options?.untilId) {
+    notesPayload.untilId = options.untilId;
+  }
+
+  const notesRes = await fetch(`https://${account.address}/api/users/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(notesPayload),
+  });
+
+  if (!notesRes.ok) {
+    throw new MisskeyApiError(`アップロード済み画像の取得に失敗しました (HTTP ${notesRes.status})`, {
+      status: notesRes.status,
+    });
+  }
+
+  const notes: MisskeyNote[] = await notesRes.json();
+  if (!Array.isArray(notes)) return [];
+
+  const seenIds = new Set<string>();
+  const collected: MisskeyFile[] = [];
+  for (const note of notes) {
+    if (Array.isArray(note.files)) {
+      for (const file of note.files) {
+        if (file && file.id && file.url && (!file.type || file.type.startsWith('image/')) && !seenIds.has(file.id)) {
+          seenIds.add(file.id);
+          collected.push(file);
+        }
+      }
+    }
+  }
+  return collected;
 }
 
 /**

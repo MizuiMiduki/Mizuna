@@ -130,13 +130,13 @@ jobs:
             echo ""
             if [ -n "$PREV_TAG" ]; then
               echo "### 変更内容 ($PREV_TAG からの差分)"
-              git log "${PREV_TAG}..HEAD" --no-merges --pretty=format:"- %s (%h)"
+              git log "${PREV_TAG}..HEAD" --no-merges --pretty=format:"- %s (%h)" | sed -E 's/@([a-zA-Z0-9_-]+)/`@\1`/g'
               echo ""
               echo ""
               echo "**Full Changelog**: https://github.com/${REPO}/compare/${PREV_TAG}...${TAG_NAME}"
             else
               echo "### 変更内容 (直近のコミット)"
-              git log -n 30 --no-merges --pretty=format:"- %s (%h)"
+              git log -n 30 --no-merges --pretty=format:"- %s (%h)" | sed -E 's/@([a-zA-Z0-9_-]+)/`@\1`/g'
               echo ""
             fi
           } > RELEASE_NOTES.md
