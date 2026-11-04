@@ -238,6 +238,41 @@ i[style*="italic"] {
   border-radius: inherit;
 }
 
+/* 各種ボタンおよびUIコントロールの長押し時に文字選択されて判定が外れる現象を防止 */
+button,
+button *,
+[role="button"],
+[role="button"] *,
+.button,
+.button *,
+.chip,
+.chip *,
+summary,
+.mizuna-btn,
+.mizuna-btn *,
+.mizuna-tip-anchor,
+.mizuna-tip-anchor *,
+.mizuna-topbar,
+.mizuna-topbar *,
+.mizuna-dock,
+.mizuna-dock *,
+.mizuna-composer-head,
+.mizuna-composer-foot,
+.mizuna-mfm-bar,
+.mizuna-mfm-bar * {
+  -webkit-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+}
+
 /* タッチデバイスでタップ後にBeerCSSの波紋(after)やfocus、ホバー色が残留する問題を解消 */
 @media (hover: none) {
   :is(.wave, .chip, .button, button, nav.tabbed > a, .tabs > a, nav.toolbar > a):not(.slow-ripple, .ripple, .fast-ripple):after {

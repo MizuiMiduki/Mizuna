@@ -183,9 +183,7 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
       onContextMenu={(e) => {
-        if (didLongPress || visible()) {
-          e.preventDefault();
-        }
+        e.preventDefault();
       }}
     >
       {props.children}

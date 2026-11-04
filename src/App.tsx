@@ -1,4 +1,4 @@
-import { createEffect, Match, onMount, Show, Switch } from 'solid-js';
+import { createEffect, Match, onCleanup, onMount, Show, Switch } from 'solid-js';
 import gsap from 'gsap';
 import { AboutView } from './components/AboutView';
 import { AccountView } from './components/AccountView';
@@ -26,6 +26,30 @@ function MainContent() {
 
   onMount(() => {
     initAnalytics();
+
+    const isButtonElement = (target: EventTarget | null): boolean => {
+      if (!(target instanceof Element)) return false;
+      if (target.closest('input, textarea, [contenteditable="true"]')) return false;
+      return Boolean(
+        target.closest(
+          'button, [role="button"], .button, .chip, summary, .mizuna-btn, .mizuna-tip-anchor'
+        )
+      );
+    };
+
+    const handlePreventButtonSelection = (e: Event) => {
+      if (isButtonElement(e.target)) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('selectstart', handlePreventButtonSelection);
+    document.addEventListener('contextmenu', handlePreventButtonSelection);
+
+    onCleanup(() => {
+      document.removeEventListener('selectstart', handlePreventButtonSelection);
+      document.removeEventListener('contextmenu', handlePreventButtonSelection);
+    });
   });
 
   createEffect(() => {
