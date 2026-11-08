@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { renderMfm, insertMfmTag, escapeHtml } from '../src/utils/mfm';
+import { renderMfm, renderInlineEmoji, insertMfmTag, escapeHtml } from '../src/utils/mfm';
 
 describe('MFM Parser (renderMfm)', () => {
   it('空文字の場合は空文字を返すこと', () => {
@@ -116,6 +116,47 @@ describe('MFM Parser (renderMfm)', () => {
     expect(rendered).toContain('class="mfm-shake"');
     expect(rendered).toContain('class="mfm-rainbow"');
     expect(rendered).toContain('ネスト');
+  });
+
+  it('カスタム絵文字が渡された場合、<img> タグに変換されること', () => {
+    const emojis = [
+      { name: 'blobcat', url: 'https://example.com/blobcat.webp' },
+      { name: 'verified', url: 'https://example.com/verified.png' },
+    ];
+    const rendered = renderMfm('こんにちは :blobcat: さん :verified:', emojis);
+    expect(rendered).toContain('<img class="mfm-custom-emoji"');
+    expect(rendered).toContain('src="https://example.com/blobcat.webp"');
+    expect(rendered).toContain('src="https://example.com/verified.png"');
+    expect(rendered).toContain('alt=":blobcat:"');
+
+    // マップにない絵文字はそのままテキストで返ること
+    const notFound = renderMfm('謎の絵文字 :unknown_emoji:', emojis);
+    expect(notFound).toContain(':unknown_emoji:');
+    expect(notFound).not.toContain('src=');
+  });
+
+  it('自サーバーアドレスが指定されている場合、note.emojisにないローカル絵文字もサーバーURLにフォールバックして<img>タグ化されること', () => {
+    const rendered = renderMfm('自サーバーの :ai_yoshio: テスト', null, {
+      serverAddress: 'misskey.io',
+    });
+    expect(rendered).toContain('<img class="mfm-custom-emoji"');
+    expect(rendered).toContain('src="https://misskey.io/emoji/ai_yoshio.webp"');
+    expect(rendered).toContain('alt=":ai_yoshio:"');
+  });
+
+  it('serverEmojiMap が指定されている場合、そこからURLが解決されること', () => {
+    const serverMap = new Map([['custom_cat', 'https://example.com/custom_cat.png']]);
+    const rendered = renderMfm(':custom_cat:', null, { serverEmojiMap: serverMap });
+    expect(rendered).toContain('src="https://example.com/custom_cat.png"');
+  });
+
+  it('renderInlineEmoji でインラインのカスタム絵文字が <img> タグに変換されること', () => {
+    const emojis = {
+      blobcat: 'https://example.com/blobcat.webp',
+    };
+    const rendered = renderInlineEmoji('ユーザー名 :blobcat:', emojis);
+    expect(rendered).toContain('<img class="mfm-custom-emoji"');
+    expect(rendered).toContain('src="https://example.com/blobcat.webp"');
   });
 });
 

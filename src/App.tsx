@@ -1,4 +1,4 @@
-import { createEffect, Match, onMount, Show, Switch } from 'solid-js';
+import { createEffect, Match, onCleanup, onMount, Show, Switch } from 'solid-js';
 import gsap from 'gsap';
 import { AboutView } from './components/AboutView';
 import { AccountView } from './components/AccountView';
@@ -9,6 +9,7 @@ import { DialogHost } from './components/DialogHost';
 import { FooterNav } from './components/FooterNav';
 import { Header } from './components/Header';
 import { NoteView } from './components/NoteView';
+import { HistoryView } from './components/HistoryView';
 import { PrivacyPolicyView } from './components/PrivacyPolicyView';
 import { SettingsView } from './components/SettingsView';
 import { ShortcutsView } from './components/ShortcutsView';
@@ -16,7 +17,7 @@ import { SnackbarHost } from './components/SnackbarHost';
 import { AppProvider, useApp, type ViewType } from './store/appStore';
 import { initAnalytics, trackPageView } from './utils/analytics';
 
-const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'settings'];
+const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'history'];
 
 function MainContent() {
   const { isInitializing, currentView, settings } = useApp();
@@ -25,6 +26,30 @@ function MainContent() {
 
   onMount(() => {
     initAnalytics();
+
+    const isButtonElement = (target: EventTarget | null): boolean => {
+      if (!(target instanceof Element)) return false;
+      if (target.closest('input, textarea, [contenteditable="true"]')) return false;
+      return Boolean(
+        target.closest(
+          'button, [role="button"], .button, .chip, summary, .mizuna-btn, .mizuna-tip-anchor'
+        )
+      );
+    };
+
+    const handlePreventButtonSelection = (e: Event) => {
+      if (isButtonElement(e.target)) {
+        e.preventDefault();
+      }
+    };
+
+    document.addEventListener('selectstart', handlePreventButtonSelection);
+    document.addEventListener('contextmenu', handlePreventButtonSelection);
+
+    onCleanup(() => {
+      document.removeEventListener('selectstart', handlePreventButtonSelection);
+      document.removeEventListener('contextmenu', handlePreventButtonSelection);
+    });
   });
 
   createEffect(() => {
@@ -121,6 +146,9 @@ function MainContent() {
           <Switch fallback={<NoteView />}>
             <Match when={currentView() === 'note'}>
               <NoteView />
+            </Match>
+            <Match when={currentView() === 'history'}>
+              <HistoryView />
             </Match>
             <Match when={currentView() === 'accounts'}>
               <AccountView />

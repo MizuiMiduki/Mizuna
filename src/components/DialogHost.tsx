@@ -1,5 +1,6 @@
 import gsap from 'gsap';
 import { createEffect, For, Show } from 'solid-js';
+import { Portal } from 'solid-js/web';
 import { useApp, type DialogButton } from '../store/appStore';
 
 export function DialogHost() {
@@ -54,7 +55,8 @@ export function DialogHost() {
         const iconName = () => cfg().icon ?? getDefaultIcon(cfg().tone);
 
         return (
-          <div class="mizuna-modal-portal" role="dialog" aria-modal="true">
+          <Portal>
+            <div class="mizuna-modal-portal mizuna-dialog-portal" role="dialog" aria-modal="true">
             <div
               ref={backdropRef}
               class="mizuna-modal-backdrop"
@@ -157,7 +159,8 @@ export function DialogHost() {
               </div>
             </div>
           </div>
-        );
+        </Portal>
+      );
       }}
     </Show>
   );

@@ -2,7 +2,7 @@ import gsap from 'gsap';
 import { createSignal, For, onMount, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
-import { hasDrivePermission, getMissingPermissions } from '../utils/version';
+import { hasDrivePermission, hasHistoryPermission, getMissingPermissions } from '../utils/version';
 import type { AccountRecord } from '../db/database';
 
 export function AccountView() {
@@ -54,6 +54,12 @@ export function AccountView() {
 
   const showPermissionNotice = (account: AccountRecord) => {
     const missingPerms = getMissingPermissions(account.add_mizuna_versinon);
+    const permDescriptions: Record<string, string> = {
+      'write:drive': 'ドライブへの画像アップロード権限',
+      'read:notes': '投稿履歴・リプライ閲覧権限',
+      'read:notifications': 'メンション一覧取得権限',
+    };
+
     openDialog({
       title: 'アカウント権限の確認',
       icon: 'warning',
@@ -66,11 +72,16 @@ export function AccountView() {
         <div class="mizuna-modal-AlertBox" style="margin-bottom: 12px;">
           <div style="font-weight: 700; margin-bottom: 6px;">不足している権限:</div>
           <ul style="margin: 0; padding-left: 20px; line-height: 1.5;">
-            ${missingPerms.map((p) => `<li><code>${p}</code> (ドライブへの画像アップロード権限)</li>`).join('')}
+            ${missingPerms
+              .map(
+                (p) =>
+                  `<li><code>${p}</code> (${permDescriptions[p] || '追加機能権限'})</li>`
+              )
+              .join('')}
           </ul>
         </div>
         <div style="font-size: 0.85rem; color: var(--on-surface-variant); line-height: 1.5;">
-          ※ 画像付きノートを投稿するには、アカウント追加画面から同一サーバーで再度認証を行ってください（現在のトークンや設定は最新の権限で上書き更新されます）。
+          ※ 画像付きノートの投稿や投稿履歴の閲覧を行うには、アカウント追加画面から同一サーバーで再度認証を行ってください（現在のトークンや設定は最新の権限で上書き更新されます）。
         </div>
       `,
       buttons: [
@@ -342,7 +353,7 @@ export function AccountView() {
                     <Show when={!hasDrivePermission(account.add_mizuna_versinon)}>
                       <button
                         type="button"
-                        class="mizuna-perm-warning-badge"
+                        class="mizuna-perm-warning-badge drive"
                         title="画像添付権限が不足しています（タップして詳細を確認）"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -351,6 +362,20 @@ export function AccountView() {
                       >
                         <i>warning</i>
                         <span>画像非対応</span>
+                      </button>
+                    </Show>
+                    <Show when={!hasHistoryPermission(account.add_mizuna_versinon)}>
+                      <button
+                        type="button"
+                        class="mizuna-perm-warning-badge history"
+                        title="投稿履歴閲覧権限が不足しています（タップして詳細を確認）"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          showPermissionNotice(account);
+                        }}
+                      >
+                        <i>lock</i>
+                        <span>履歴非対応</span>
                       </button>
                     </Show>
                     <span class="mizuna-ver-tag" title="追加時のMizunaバージョン">

@@ -17,6 +17,8 @@ const SHORTCUT_LIST: ShortcutItem[] = [
   { label: 'MFMプレビューの切り替え', keys: ['Ctrl', 'Alt', 'K'] },
   { label: '末尾に『(from Mizuna)』を付与', keys: ['Ctrl', 'Alt', 'M'] },
   { label: '画像ファイルを選択', keys: ['Ctrl', 'Alt', 'V'] },
+  { label: '下書きを保存', keys: ['Ctrl', 'Alt', 'S'] },
+  { label: '下書き一覧を表示', keys: ['Ctrl', 'Alt', 'D'] },
   { label: '入力フォームをクリア', keys: ['Ctrl', 'Alt', 'C'] },
   { label: 'ノート入力欄にフォーカス', keys: ['Ctrl', 'Alt', 'I'] },
   { label: 'CW入力欄にフォーカス', keys: ['Ctrl', 'Alt', 'O'] },

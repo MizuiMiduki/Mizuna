@@ -200,6 +200,32 @@ describe('appStore', () => {
       expect(result.dialogConfig()).toBeNull();
     });
 
+    it('closeDialog を二重に呼んでも history.back() が1回だけで下層モーダルが閉じないこと', () => {
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      let modalClosed = false;
+      result.pushModalBackHandler(() => {
+        modalClosed = true;
+      });
+
+      const backSpy = vi.spyOn(window.history, 'back');
+
+      result.openDialog({
+        title: '削除確認',
+        contentText: '削除しますか？',
+        buttons: [{ label: 'キャンセル' }],
+      });
+
+      result.closeDialog();
+      result.closeDialog();
+
+      expect(backSpy.mock.calls.length).toBeLessThanOrEqual(1);
+      expect(modalClosed).toBe(false);
+      backSpy.mockRestore();
+    });
+
     it('アカウントの並べ替え (reorderAccounts) が正常に反映され保存されること', async () => {
       const id2 = await db.account.add({
         token: 'tok_test_2',
@@ -404,6 +430,133 @@ describe('appStore', () => {
 
       // トーストが表示されていること
       expect(result.toasts().some((t) => t.message.includes('インポート'))).toBe(true);
+    });
+
+    it('アカウントのインポート (importAccountsFromFile) で同一アカウントが存在する場合、古いレコードを上書き更新すること', async () => {
+      // 既存の古いアカウント（v3.5.0, 旧トークン）を登録
+      await db.account.clear();
+      await db.account.add({
+        id: 1,
+        token: 'old_token_123',
+        name: '古い表示名',
+        username: 'same_user',
+        address: 'misskey.test',
+        avatarurl: 'https://example.com/old_avatar.webp',
+        add_mizuna_versinon: '3.5.0',
+      });
+
+      const { result } = renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      // 新しいトークンと最新バージョンのバックアップデータ
+      const importedData = [
+        {
+          token: 'new_token_456',
+          name: '最新の表示名',
+          username: 'same_user',
+          address: 'misskey.test',
+          avatarurl: 'https://example.com/new_avatar.webp',
+          add_mizuna_versinon: '4.0.0',
+        },
+      ];
+      const jsonBlob = new Blob([JSON.stringify(importedData)], { type: 'application/json' });
+      const testFile = new File([jsonBlob], 'mizuna_accounts_backup.json', { type: 'application/json' });
+
+      await result.importAccountsFromFile(testFile);
+
+      // ダイアログから「インポートを実行」をクリック
+      const importButton = result.dialogConfig()?.buttons.find((b) => b.label === 'インポートを実行');
+      expect(importButton).toBeDefined();
+      await importButton!.onClick!();
+
+      // アカウント総数は1件のままで、トークンやバージョンが上書きされていること
+      const allAccounts = await db.account.toArray();
+      expect(allAccounts.length).toBe(1);
+      expect(allAccounts[0].id).toBe(1);
+      expect(allAccounts[0].token).toBe('new_token_456');
+      expect(allAccounts[0].name).toBe('最新の表示名');
+      expect(allAccounts[0].avatarurl).toBe('https://example.com/new_avatar.webp');
+      expect(allAccounts[0].add_mizuna_versinon).toBe('4.0.0');
+    });
+
+    it('MiAuth コールバック時、同一サーバー・同一ユーザー名のアカウントが存在する場合はトークンとバージョンを上書き更新すること', async () => {
+      // 既存の古いアカウント（v3.5.0）
+      await db.account.clear();
+      await db.account.add({
+        id: 1,
+        token: 'old_token_xyz',
+        name: '古いアカウント名',
+        username: 'reauth_user',
+        address: 'misskey.io',
+        avatarurl: 'https://example.com/old_avatar.webp',
+        add_mizuna_versinon: '3.5.0',
+      });
+
+      // safeLocalStorage に認証中サーバーアドレスを保存
+      safeLocalStorage.setItem('add_server_address', 'misskey.io');
+
+      // window.location.search をモック
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        value: {
+          ...originalLocation,
+          search: '?session=test-miauth-session-id',
+          protocol: 'https:',
+          host: 'localhost:3000',
+          replace: vi.fn(),
+          assign: vi.fn(),
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      // fetch (checkMiAuthSession: /api/miauth/{sessionId}/check) をモック
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async (url: string) => {
+          if (url.includes('/api/miauth/test-miauth-session-id/check')) {
+            return {
+              ok: true,
+              json: async () => ({
+                ok: true,
+                token: 'fresh_reauth_token_999',
+                user: {
+                  id: 'user_reauth_001',
+                  name: '最新のユーザー名',
+                  username: 'reauth_user',
+                  avatarUrl: 'https://example.com/fresh_avatar.webp',
+                },
+              }),
+            };
+          }
+          return { ok: false };
+        })
+      );
+
+      // AppProvider をマウントして初期化させる
+      renderHook(() => useApp(), {
+        wrapper: (props) => <AppProvider>{props.children}</AppProvider>,
+      });
+
+      // 非同期の MiAuth 完了・アカウント読み込みを少し待機
+      await new Promise((r) => setTimeout(r, 60));
+
+      // アカウントが重複せず、ID 1 のまま上書き更新されていること
+      const accountsInDb = await db.account.toArray();
+      expect(accountsInDb.length).toBe(1);
+      expect(accountsInDb[0].id).toBe(1);
+      expect(accountsInDb[0].token).toBe('fresh_reauth_token_999');
+      expect(accountsInDb[0].name).toBe('最新のユーザー名');
+      expect(accountsInDb[0].avatarurl).toBe('https://example.com/fresh_avatar.webp');
+      expect(accountsInDb[0].add_mizuna_versinon).toBe('4.0.0');
+
+      // window.location を復元
+      Object.defineProperty(window, 'location', {
+        value: originalLocation,
+        writable: true,
+        configurable: true,
+      });
     });
   });
 });

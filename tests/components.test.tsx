@@ -41,18 +41,35 @@ describe('UI Components', () => {
   });
 
   describe('Header & FooterNav', () => {
-    it('ヘッダーにタイトルとお知らせアイコンが表示されること', async () => {
+    it('ヘッダーにタイトルとお知らせ・設定アイコンが表示されること', async () => {
+      let currentAppView: any;
+      function TestConsumer() {
+        const { currentView } = useApp();
+        currentAppView = currentView;
+        return null;
+      }
+
       render(() => (
         <AppProvider>
           <Header />
+          <TestConsumer />
         </AppProvider>
       ));
 
       expect(await screen.findByText('Mizuna')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /(お知らせ|Announcements)/ })).toBeInTheDocument();
+
+      // 初期化待機
+      await new Promise((r) => setTimeout(r, 80));
+
+      // ヘッダーに設定ボタンが存在し、クリックで設定画面へ遷移すること
+      const settingsBtn = screen.getByRole('button', { name: /(設定|Settings)/ });
+      expect(settingsBtn).toBeInTheDocument();
+      fireEvent.click(settingsBtn);
+      expect(currentAppView()).toBe('settings');
     });
 
-    it('フッターナビゲーションにアカウント管理ボタンと設定ボタンが存在すること', async () => {
+    it('フッターナビゲーションにアカウント管理ボタンと投稿履歴ボタンが存在すること', async () => {
       render(() => (
         <AppProvider>
           <FooterNav />
@@ -63,8 +80,8 @@ describe('UI Components', () => {
       const accountBtn = await screen.findByRole('button', { name: /(アカウント管理|Accounts)/ });
       expect(accountBtn).toBeInTheDocument();
 
-      const settingsBtn = await screen.findByRole('button', { name: /(設定|Settings)/ });
-      expect(settingsBtn).toBeInTheDocument();
+      const historyBtn = await screen.findByRole('button', { name: /(投稿履歴|History)/ });
+      expect(historyBtn).toBeInTheDocument();
     });
 
     it('フッターナビゲーションのアクティブピルインジケーターが初期描画時に配置されること', async () => {
@@ -90,7 +107,7 @@ describe('UI Components', () => {
           </AppProvider>
         ));
 
-        await screen.findByRole('button', { name: /(設定|Settings)/ });
+        await screen.findByRole('button', { name: /(投稿履歴|History)/ });
         await new Promise((resolve) => setTimeout(resolve, 50));
 
         const activePill = container.querySelector('.mizuna-dock-active-pill') as HTMLElement;
@@ -117,15 +134,15 @@ describe('UI Components', () => {
         </AppProvider>
       ));
 
-      const settingsBtn = await screen.findByRole('button', { name: /(設定|Settings)/ });
+      const historyBtn = await screen.findByRole('button', { name: /(投稿履歴|History)/ });
 
-      // 1回目のクリック: 設定画面へ遷移
-      fireEvent.click(settingsBtn);
-      expect(currentAppView()).toBe('settings');
+      // 1回目のクリック: 投稿履歴画面へ遷移
+      fireEvent.click(historyBtn);
+      expect(currentAppView()).toBe('history');
 
-      // 2回目のクリック: 投稿画面（note）に戻らず settings のまま維持されること
-      fireEvent.click(settingsBtn);
-      expect(currentAppView()).toBe('settings');
+      // 2回目のクリック: 投稿画面（note）に戻らず history のまま維持されること
+      fireEvent.click(historyBtn);
+      expect(currentAppView()).toBe('history');
 
       // アカウントボタンも同様
       const accountBtn = await screen.findByRole('button', { name: /(アカウント管理|Accounts)/ });
@@ -169,21 +186,21 @@ describe('UI Components', () => {
         </AppProvider>
       ));
 
-      await screen.findByRole('button', { name: /(設定|Settings)/ });
+      await screen.findByRole('button', { name: /(投稿履歴|History)/ });
       const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
       expect(dock).toBeInTheDocument();
 
       // 初期状態は note (投稿画面)
       expect(currentAppView()).toBe('note');
 
-      // 右スワイプ (note -> settings: 右にある設定画面へ): startX: 100 -> moveX: 160 (dx: +60)
+      // 右スワイプ (note -> history: 右にある投稿履歴画面へ): startX: 100 -> moveX: 160 (dx: +60)
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 160, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 160, clientY: 100 }));
 
-      expect(currentAppView()).toBe('settings');
+      expect(currentAppView()).toBe('history');
 
-      // 左スワイプ (settings -> note: 左にある投稿画面へ): startX: 200 -> moveX: 140 (dx: -60)
+      // 左スワイプ (history -> note: 左にある投稿画面へ): startX: 200 -> moveX: 140 (dx: -60)
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 140, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 140, clientY: 100 }));
@@ -198,7 +215,7 @@ describe('UI Components', () => {
       expect(currentAppView()).toBe('accounts');
     });
 
-    it('メニューバーをアカウント一覧から設定まで大きくスワイプして直接遷移できること（大スワイプ対応）', async () => {
+    it('メニューバーをアカウント一覧から投稿履歴まで大きくスワイプして直接遷移できること（大スワイプ対応）', async () => {
       let currentAppView: any;
       function TestConsumer() {
         const { currentView, forceSetCurrentView } = useApp();
@@ -214,21 +231,21 @@ describe('UI Components', () => {
         </AppProvider>
       ));
 
-      await screen.findByRole('button', { name: /(設定|Settings)/ });
+      await screen.findByRole('button', { name: /(投稿履歴|History)/ });
       const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
       expect(dock).toBeInTheDocument();
 
       // 初期状態は accounts (アカウント管理画面)
       expect(currentAppView()).toBe('accounts');
 
-      // accounts から settings へ大きく右スワイプ (dx: +140) -> 投稿画面で止まらず設定まで直接移動
+      // accounts から history へ大きく右スワイプ (dx: +140) -> 投稿画面で止まらず投稿履歴まで直接移動
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 50, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 190, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 190, clientY: 100 }));
 
-      expect(currentAppView()).toBe('settings');
+      expect(currentAppView()).toBe('history');
 
-      // settings から accounts へ大きく左スワイプ (dx: -140) -> 投稿画面で止まらずアカウント一覧まで直接移動
+      // history から accounts へ大きく左スワイプ (dx: -140) -> 投稿画面で止まらずアカウント一覧まで直接移動
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 60, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 60, clientY: 100 }));
@@ -254,18 +271,18 @@ describe('UI Components', () => {
         </AppProvider>
       ));
 
-      await screen.findByRole('button', { name: /(設定|Settings)/ });
+      await screen.findByRole('button', { name: /(投稿履歴|History)/ });
       const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
       expect(dock).toBeInTheDocument();
 
       expect(currentAppView()).toBe('note');
 
-      // note から右へ大きくスワイプ (dx: +200) -> 右端（settings）でバウンドして settings に着地
+      // note から右へ大きくスワイプ (dx: +200) -> 右端（history）でバウンドして history に着地
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 300, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 300, clientY: 100 }));
 
-      expect(currentAppView()).toBe('settings');
+      expect(currentAppView()).toBe('history');
 
       // 再度 note に戻す
       forceSetView('note');
@@ -614,6 +631,40 @@ describe('UI Components', () => {
       expect(await screen.findByText('アカウント権限の確認')).toBeInTheDocument();
       expect(screen.getByText(/write:drive/)).toBeInTheDocument();
       expect(screen.getByText(/(ドライブへの画像アップロード権限)/)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: '再認証する' })).toBeInTheDocument();
+    });
+
+    it('4.0.0未満のアカウントに「履歴非対応」バッジが表示され、タップ時に不足権限ダイアログが表示されること', async () => {
+      // 3.15.0のアカウント（write:drive はあるが read:notes はない）を追加
+      await db.account.add({
+        token: 'tok_v315',
+        name: '3.15.0ユーザー',
+        username: 'user_v315',
+        address: 'misskey.io',
+        avatarurl: 'https://example.com/avatar_v315.webp',
+        add_mizuna_versinon: '3.15.0',
+      });
+
+      render(() => (
+        <AppProvider>
+          <AccountView />
+          <DialogHost />
+        </AppProvider>
+      ));
+
+      // 履歴非対応バッジが存在すること（初期アカウントと合わせて複数存在）
+      const historyBadges = await screen.findAllByRole('button', { name: /(履歴非対応|lock)/i });
+      expect(historyBadges.length).toBeGreaterThanOrEqual(1);
+
+      // バッジをクリック
+      fireEvent.click(historyBadges[0]);
+
+      // モーダルダイアログが開き、不足権限として read:notes と read:notifications が表示されること
+      expect(await screen.findByText('アカウント権限の確認')).toBeInTheDocument();
+      expect(screen.getByText(/read:notes/)).toBeInTheDocument();
+      expect(screen.getByText(/(投稿履歴・リプライ閲覧権限)/)).toBeInTheDocument();
+      expect(screen.getByText(/read:notifications/)).toBeInTheDocument();
+      expect(screen.getByText(/(メンション一覧取得権限)/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: '再認証する' })).toBeInTheDocument();
     });
   });

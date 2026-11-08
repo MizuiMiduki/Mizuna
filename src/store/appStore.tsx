@@ -17,10 +17,24 @@ import {
   DEFAULT_USER_SETTINGS,
   loadOrCreateSettings,
   updateSettingDb,
+  saveDraftDb,
+  getAllDraftsDb,
+  deleteDraftDb,
+  clearAllDraftsDb,
+  countDraftsDb,
   type AccountRecord,
   type SettingRecord,
+  type DraftRecord,
+  type DraftAttachedImage,
 } from '../db/database';
-import { checkMiAuthSession, fetchLatestAccountInfo, fetchLatestReleaseNote, MisskeyApiError } from '../services/misskeyApi';
+import {
+  checkMiAuthSession,
+  fetchLatestAccountInfo,
+  fetchLatestReleaseNote,
+  MisskeyApiError,
+  type MisskeyFile,
+  type MisskeyNote,
+} from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
 import { applyCustomCss } from '../utils/customCss';
 import { translate, type I18nKey } from '../i18n';
@@ -41,7 +55,8 @@ export type ViewType =
   | 'shortcuts'
   | 'about'
   | 'announcements'
-  | 'privacy';
+  | 'privacy'
+  | 'history';
 export type VisibilityType = 'public' | 'home' | 'followers';
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -89,6 +104,8 @@ export interface AttachedImageItem {
   compressedSize?: number;
   /** 編集モーダルで適用された加工ステート（再編集時に復元して継続編集が可能） */
   editState?: ImageEditState;
+  /** Misskeyドライブに既にアップロード済みのファイルID（設定時は再圧縮・再アップロード不要） */
+  driveFileId?: string;
 }
 
 // 添付画像のサムネイル生成・事前圧縮を直列化するキュー
@@ -96,7 +113,7 @@ let attachProcessQueue: Promise<void> = Promise.resolve();
 
 function revokeAttachedUrls(item: AttachedImageItem): void {
   if (item.dataUrl.startsWith('blob:')) URL.revokeObjectURL(item.dataUrl);
-  if (item.thumbUrl) URL.revokeObjectURL(item.thumbUrl);
+  if (item.thumbUrl && item.thumbUrl.startsWith('blob:')) URL.revokeObjectURL(item.thumbUrl);
 }
 
 export function visibilityNumToString(num: 1 | 2 | 3): VisibilityType {
@@ -134,6 +151,7 @@ interface AppContextValue {
   setEndMizuna: Setter<boolean>;
   attachedImages: Accessor<AttachedImageItem[]>;
   addAttachedFiles: (fileList: FileList | File[]) => void;
+  addAttachedDriveFiles: (driveFiles: MisskeyFile[]) => void;
   removeAttachedImage: (id: string) => void;
   updateAttachedImage: (id: string, file: File, editState?: ImageEditState) => void;
   revertAttachedImage: (id: string) => void;
@@ -141,8 +159,17 @@ interface AppContextValue {
   moveAttachedImage: (id: string, direction: -1 | 1) => void;
   clearNoteForm: (showNotification?: boolean) => void;
 
+  // 下書き保存・復帰
+  drafts: Accessor<DraftRecord[]>;
+  draftCount: Accessor<number>;
+  loadDrafts: () => Promise<void>;
+  saveCurrentAsDraft: () => Promise<boolean>;
+  restoreDraft: (draft: DraftRecord) => Promise<boolean>;
+  deleteDraftById: (id: number) => Promise<void>;
+  deleteAllDrafts: () => Promise<void>;
+
   // アカウント・設定操作
-  switchAccount: (accountId: number) => Promise<void>;
+  switchAccount: (accountId: number, silent?: boolean) => Promise<void>;
   deleteSelectedAccounts: (accountIds: number[]) => Promise<void>;
   reorderAccounts: (newOrderedIds: number[]) => Promise<void>;
   updateSettings: (changes: Partial<SettingRecord>) => Promise<void>;
@@ -176,6 +203,12 @@ interface AppContextValue {
   applyPendingUpdate: () => void;
   checkForUpdate: () => Promise<void>;
 
+  // リプライ制御
+  replyTargetNote: Accessor<MisskeyNote | null>;
+  setReplyTargetNote: Setter<MisskeyNote | null>;
+  startReply: (note: MisskeyNote) => void;
+  cancelReply: () => void;
+
   // 多言語対応 (i18n)
   t: (key: I18nKey, params?: Record<string, string | number>) => string;
 }
@@ -192,6 +225,7 @@ const VALID_VIEWS: ViewType[] = [
   'about',
   'announcements',
   'privacy',
+  'history',
 ];
 
 function getSavedView(): ViewType | null {
@@ -228,6 +262,13 @@ export function AppProvider(props: { children: JSX.Element }) {
   const [visibility, setVisibility] = createSignal<VisibilityType>('public');
   const [endMizuna, setEndMizuna] = createSignal(false);
   const [attachedImages, setAttachedImages] = createSignal<AttachedImageItem[]>([]);
+
+  // 下書き状態
+  const [drafts, setDrafts] = createSignal<DraftRecord[]>([]);
+  const draftCount = () => drafts().length;
+
+  // リプライ状態 (返信先ノート)
+  const [replyTargetNote, setReplyTargetNote] = createSignal<MisskeyNote | null>(null);
 
   // トースト・ダイアログ状態
   const [toasts, setToasts] = createSignal<ToastItem[]>([]);
@@ -299,6 +340,8 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   const closeDialog = () => {
+    // 既に閉じている場合は何もしない（二重呼び出しで history.back() が重複し、下層モーダルまで閉じるのを防ぐ）
+    if (!dialogConfig()) return;
     setDialogConfig(null);
     if (!isDialogPoppedByPopState && typeof window !== 'undefined' && window.history.state?.isDialog) {
       ignoreNextPopState = true;
@@ -665,31 +708,63 @@ export function AppProvider(props: { children: JSX.Element }) {
 
     try {
       const data = await checkMiAuthSession(address, sessionId);
-      if (!data.ok || !data.token || !data.user) {
+      const user = data.user;
+      const token = data.token;
+      if (!data.ok || !token || !user) {
         showToast('アカウント認証に失敗しました', 'error');
         window.history.replaceState({}, document.title, '/');
         return false;
       }
 
       const cleanAddress = address.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
-      const newId = await db.account.put({
-        token: data.token,
-        name: data.user.name || data.user.username,
-        username: data.user.username,
-        address: cleanAddress,
-        avatarurl: data.user.avatarUrl,
-        add_mizuna_versinon: MIZUNA_VERSION,
-      });
 
-      // 追加したアカウントをアクティブにする
-      if (typeof newId === 'number') {
-        await updateSettingDb({ select_user: newId });
-        setSettings((prev) => ({ ...prev, select_user: newId }));
+      // 既存アカウントの存在チェック (同一サーバー・同一ユーザー名)
+      const existingAccounts = await db.account.toArray();
+      const existingAccount = existingAccounts.find(
+        (acc) =>
+          acc.username.toLowerCase() === user.username.toLowerCase() &&
+          acc.address.toLowerCase() === cleanAddress.toLowerCase()
+      );
+
+      let targetId: number | undefined;
+      const isExisting = Boolean(existingAccount && existingAccount.id !== undefined);
+
+      if (isExisting && existingAccount?.id !== undefined) {
+        // 同一アカウントが存在する場合は、トークンや最新バージョン情報を上書き更新
+        await db.account.update(existingAccount.id, {
+          token,
+          name: user.name || user.username,
+          avatarurl: user.avatarUrl,
+          add_mizuna_versinon: MIZUNA_VERSION,
+        });
+        targetId = existingAccount.id;
+      } else {
+        // 新規アカウントとして追加
+        const newId = await db.account.add({
+          token,
+          name: user.name || user.username,
+          username: user.username,
+          address: cleanAddress,
+          avatarurl: user.avatarUrl,
+          add_mizuna_versinon: MIZUNA_VERSION,
+        });
+        if (typeof newId === 'number') {
+          targetId = newId;
+        }
+      }
+
+      // 追加・更新したアカウントをアクティブにする
+      if (typeof targetId === 'number') {
+        await updateSettingDb({ select_user: targetId });
+        setSettings((prev) => ({ ...prev, select_user: targetId }));
       }
 
       safeLocalStorage.removeItem('add_server_address');
       window.history.replaceState({}, document.title, '/');
-      showToast('アカウントを追加しました！', 'success');
+      showToast(
+        isExisting ? 'アカウント情報を更新しました！' : 'アカウントを追加しました！',
+        'success'
+      );
       return true;
     } catch (err) {
       console.error('MiAuth check error:', err);
@@ -988,6 +1063,9 @@ export function AppProvider(props: { children: JSX.Element }) {
 
       // リリースノート確認
       await checkNewReleaseNote(loadedSettings);
+
+      // 下書きのロード
+      await loadDrafts();
     } catch (err) {
       console.error('Initialization failed:', err);
       showToast('データベースの読み込みに失敗しました', 'error');
@@ -1165,6 +1243,44 @@ export function AppProvider(props: { children: JSX.Element }) {
     });
   };
 
+  // Misskeyドライブの既存ファイルを添付画像として追加（再圧縮・再アップロード不要）
+  const addAttachedDriveFiles = (driveFiles: MisskeyFile[]) => {
+    if (!driveFiles || driveFiles.length === 0) return;
+
+    const current = attachedImages();
+    const existingDriveIds = new Set(
+      current.map((item) => item.driveFileId).filter(Boolean) as string[]
+    );
+    const uniqueIncoming = driveFiles.filter(
+      (f) => f && f.id && f.url && !existingDriveIds.has(f.id)
+    );
+    if (uniqueIncoming.length === 0) return;
+
+    if (current.length + uniqueIncoming.length > 16) {
+      showToast('画像は16枚までです', 'error', '画像選択エラー');
+      return;
+    }
+
+    const newItems: AttachedImageItem[] = uniqueIncoming.map((df) => {
+      const placeholderFile = new File([], df.name || 'drive_image.webp', {
+        type: df.type || 'image/webp',
+      });
+      return {
+        id: `drive_${df.id}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: df.name || 'drive_image.webp',
+        file: placeholderFile,
+        rawFile: placeholderFile,
+        dataUrl: df.url,
+        thumbUrl: df.thumbnailUrl || df.url,
+        originalSize: df.size ?? 0,
+        compressedSize: df.size ?? 0,
+        driveFileId: df.id,
+      };
+    });
+
+    setAttachedImages((prev) => [...prev, ...newItems].slice(0, 16));
+  };
+
   const removeAttachedImage = (id: string) => {
     setAttachedImages((prev) => {
       const target = prev.find((item) => item.id === id);
@@ -1307,6 +1423,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     clearWebShareTargetStorage();
     setCwText('');
     setNoteText('');
+    setReplyTargetNote(null);
     setAttachedImages((prev) => {
       prev.forEach(revokeAttachedUrls);
       return [];
@@ -1316,7 +1433,220 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
   };
 
-  const switchAccount = async (accountId: number) => {
+  const cancelReply = () => {
+    setReplyTargetNote(null);
+  };
+
+  const startReply = (note: MisskeyNote) => {
+    setReplyTargetNote(note);
+
+    // 返信先の公開範囲を引き継ぐ
+    if (note.visibility === 'followers' || note.visibility === 'home' || note.visibility === 'public') {
+      setVisibility(note.visibility);
+    }
+
+    // 返信先にCWがあればCWモードを有効化
+    if (note.cw) {
+      setCwEnabled(true);
+    }
+
+    // 自分自身への返信以外なら @username を本文の先頭に自動入力
+    const user = currentUser();
+    const isSelf = user && (user.username === note.user.username);
+    if (!isSelf && note.user.username) {
+      const handle = `@${note.user.username} `;
+      if (!noteText().includes(handle)) {
+        setNoteText((prev) => (prev ? `${handle}${prev}` : handle));
+      }
+    }
+
+    // ノート投稿画面へ遷移
+    setCurrentViewInternal('note');
+    showToast(`@${note.user.username} への返信`, 'info');
+  };
+
+  // ----------------------------------------------------
+  // 下書き保存・復帰操作
+  // ----------------------------------------------------
+  const loadDrafts = async () => {
+    try {
+      const list = await getAllDraftsDb();
+      setDrafts(list);
+    } catch (e) {
+      console.error('Failed to load drafts:', e);
+    }
+  };
+
+  const saveCurrentAsDraft = async (): Promise<boolean> => {
+    const text = noteText().trim();
+    const cw = cwText().trim();
+    const images = attachedImages();
+    const hasContent = text.length > 0 || cw.length > 0 || images.length > 0;
+    if (!hasContent) {
+      showToast(t('draft.empty_cannot_save'), 'warning');
+      return false;
+    }
+
+    const user = currentUser();
+    if (!user || typeof user.id !== 'number') {
+      showToast(t('note.no_account'), 'error');
+      return false;
+    }
+
+    const draftImages: DraftAttachedImage[] = images.map((img) => ({
+      name: img.name,
+      type: img.file.type || 'image/png',
+      blob: img.file,
+      rawBlob: img.rawFile,
+      originalSize: img.originalSize,
+      compressedSize: img.compressedSize,
+      editState: img.editState,
+      driveFileId: img.driveFileId,
+      remoteUrl: img.driveFileId ? img.dataUrl : undefined,
+      remoteThumbUrl: img.driveFileId ? img.thumbUrl : undefined,
+    }));
+
+    try {
+      await saveDraftDb({
+        accountId: user.id,
+        accountUsername: user.username,
+        accountAddress: user.address,
+        accountName: user.name,
+        accountAvatarUrl: user.avatarurl,
+        text: noteText(),
+        cwText: cwText(),
+        cwEnabled: cwEnabled(),
+        visibility: visibility(),
+        endMizuna: endMizuna(),
+        images: draftImages,
+      });
+      await loadDrafts();
+      // 保存後はフォームをクリア（通知は「下書きを保存しました」のみ）
+      clearNoteForm(false);
+      showToast(t('draft.saved'), 'success');
+      return true;
+    } catch (err) {
+      console.error('Failed to save draft:', err);
+      showToast('下書きの保存に失敗しました', 'error');
+      return false;
+    }
+  };
+
+  const executeRestoreDraft = async (draft: DraftRecord): Promise<boolean> => {
+    try {
+      const allAccounts = accounts();
+      const targetAccount = allAccounts.find((a) => a.id === draft.accountId);
+      if (targetAccount && typeof targetAccount.id === 'number') {
+        if (currentUser()?.id !== targetAccount.id) {
+          await switchAccount(targetAccount.id, true);
+        }
+      }
+
+      setNoteText(draft.text || '');
+      setCwText(draft.cwText || '');
+      setCwEnabled(Boolean(draft.cwEnabled));
+      setVisibility(draft.visibility || 'public');
+      setEndMizuna(Boolean(draft.endMizuna));
+
+      setAttachedImages((prev) => {
+        prev.forEach(revokeAttachedUrls);
+        return [];
+      });
+
+      if (draft.images && draft.images.length > 0) {
+        const restoredItems: AttachedImageItem[] = draft.images.map((img) => {
+          const restoredFile = new File([img.blob], img.name, { type: img.type || 'image/png' });
+          const restoredRawFile = img.rawBlob
+            ? new File([img.rawBlob], img.name, { type: img.type || 'image/png' })
+            : restoredFile;
+          const dataUrl = img.driveFileId && img.remoteUrl
+            ? img.remoteUrl
+            : URL.createObjectURL(restoredFile);
+          return {
+            id: `draft_img_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            name: img.name,
+            file: restoredFile,
+            rawFile: restoredRawFile,
+            dataUrl,
+            thumbUrl: img.driveFileId ? (img.remoteThumbUrl || img.remoteUrl) : undefined,
+            originalSize: img.originalSize ?? restoredFile.size,
+            compressedSize: img.compressedSize,
+            editState: img.editState,
+            driveFileId: img.driveFileId,
+          };
+        });
+        setAttachedImages(restoredItems);
+      }
+
+      showToast(t('draft.restored'), 'success');
+      return true;
+    } catch (err) {
+      console.error('Failed to restore draft:', err);
+      showToast('下書きの復元に失敗しました', 'error');
+      return false;
+    }
+  };
+
+  const restoreDraft = async (draft: DraftRecord): Promise<boolean> => {
+    const hasCurrentContent =
+      noteText().trim().length > 0 ||
+      cwText().trim().length > 0 ||
+      attachedImages().length > 0;
+
+    if (hasCurrentContent) {
+      return new Promise<boolean>((resolve) => {
+        openDialog({
+          title: t('draft.restore_confirm_title'),
+          icon: 'history_edu',
+          tone: 'warning',
+          contentText: t('draft.restore_confirm_desc'),
+          buttons: [
+            {
+              label: 'キャンセル',
+              variant: 'text',
+              onClick: () => {
+                closeDialog();
+                resolve(false);
+              },
+            },
+            {
+              label: t('draft.restore'),
+              variant: 'fill',
+              onClick: async () => {
+                closeDialog();
+                const success = await executeRestoreDraft(draft);
+                resolve(success);
+              },
+            },
+          ],
+        });
+      });
+    }
+
+    return executeRestoreDraft(draft);
+  };
+
+  const deleteDraftById = async (id: number): Promise<void> => {
+    try {
+      await deleteDraftDb(id);
+      await loadDrafts();
+      showToast(t('draft.deleted'), 'info');
+    } catch (e) {
+      console.error('Failed to delete draft:', e);
+    }
+  };
+
+  const deleteAllDrafts = async (): Promise<void> => {
+    try {
+      await clearAllDraftsDb();
+      await loadDrafts();
+      showToast(t('draft.all_cleared'), 'info');
+    } catch (e) {
+      console.error('Failed to clear drafts:', e);
+    }
+  };
+
+  const switchAccount = async (accountId: number, silent = false) => {
     await updateSettingDb({ select_user: accountId });
     const nextSettings = { ...settings(), select_user: accountId };
     setSettings(nextSettings);
@@ -1324,7 +1654,9 @@ export function AppProvider(props: { children: JSX.Element }) {
     const target = accounts().find((a) => a.id === accountId) ?? null;
     setCurrentUser(target);
     await applyThemeAndMode(nextSettings, target?.avatarurl, target?.address);
-    showToast('アカウントを切り替えました', 'success');
+    if (!silent) {
+      showToast('アカウントを切り替えました', 'success');
+    }
   };
 
   const deleteSelectedAccounts = async (accountIds: number[]) => {
@@ -1683,16 +2015,24 @@ export function AppProvider(props: { children: JSX.Element }) {
                 add_mizuna_versinon: String(item.add_mizuna_versinon ?? MIZUNA_VERSION),
               }));
 
+              const allExistingAccounts = await db.account.toArray();
               const recordsToInsert: AccountRecord[] = [];
               for (const record of sanitized) {
                 if (!record.token || !record.username || !record.address) continue;
-                const exists = await db.account
-                  .where({
-                    username: record.username,
-                    address: record.address,
-                  })
-                  .count();
-                if (exists === 0) {
+                const existing = allExistingAccounts.find(
+                  (acc) =>
+                    acc.username.toLowerCase() === record.username.toLowerCase() &&
+                    acc.address.toLowerCase() === record.address.toLowerCase()
+                );
+                if (existing && existing.id !== undefined) {
+                  // 同一アカウントが存在する場合はトークンや最新情報を上書き
+                  await db.account.update(existing.id, {
+                    token: record.token,
+                    name: record.name,
+                    avatarurl: record.avatarurl,
+                    add_mizuna_versinon: record.add_mizuna_versinon,
+                  });
+                } else if (!existing) {
                   recordsToInsert.push(record);
                 }
               }
@@ -1736,12 +2076,20 @@ export function AppProvider(props: { children: JSX.Element }) {
     setEndMizuna,
     attachedImages,
     addAttachedFiles,
+    addAttachedDriveFiles,
     removeAttachedImage,
     updateAttachedImage,
     revertAttachedImage,
     reorderAttachedImages,
     moveAttachedImage,
     clearNoteForm,
+    drafts,
+    draftCount,
+    loadDrafts,
+    saveCurrentAsDraft,
+    restoreDraft,
+    deleteDraftById,
+    deleteAllDrafts,
     switchAccount,
     deleteSelectedAccounts,
     reorderAccounts,
@@ -1771,6 +2119,10 @@ export function AppProvider(props: { children: JSX.Element }) {
     promptUpdateDialog,
     applyPendingUpdate,
     checkForUpdate,
+    replyTargetNote,
+    setReplyTargetNote,
+    startReply,
+    cancelReply,
     t,
   };
 
