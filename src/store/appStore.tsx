@@ -1,6 +1,5 @@
 import { compressAndConvertToWebP, createThumbnailUrl } from '../utils/image';
 import { editImageOptimized, type ImageEditState, type SignaturePosition } from '../utils/imageEditor';
-import gsap from 'gsap';
 import {
   createContext,
   createSignal,
@@ -849,17 +848,6 @@ export function AppProvider(props: { children: JSX.Element }) {
 
   // 初回マウント時の初期化フロー
   onSettled(() => {
-    // 省電力設定: GSAPティッカーの自動スリープを早め、バックグラウンド時は完全停止させる
-    gsap.config({ autoSleep: 60, nullTargetWarn: false });
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        gsap.globalTimeline.pause();
-      } else {
-        gsap.globalTimeline.resume();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
     // オンライン・オフライン検知
     const handleOnline = () => {
       showToast('インターネット接続が回復しました', 'success');
@@ -1092,13 +1080,6 @@ export function AppProvider(props: { children: JSX.Element }) {
         mediaQuery?.removeEventListener?.('change', handleSchemeChange);
       } catch {
         // テスト環境等のティアダウン時は無視
-      }
-      if (typeof document !== 'undefined') {
-        try {
-          document.removeEventListener('visibilitychange', handleVisibilityChange);
-        } catch {
-          // 無視
-        }
       }
       if (typeof window !== 'undefined') {
         try {

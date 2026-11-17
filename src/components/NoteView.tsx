@@ -1,5 +1,4 @@
 import { Portal } from '@solidjs/web';
-import gsap from 'gsap';
 import {
   createEffect,
   createMemo,
@@ -23,6 +22,14 @@ import { getDisplayAvatarUrl } from '../utils/image';
 import { type ImageEditState } from '../utils/imageEditor';
 import { comparisonVersion, hasDrivePermission } from '../utils/version';
 import { renderMfm, insertMfmTag } from '../utils/mfm';
+import {
+  animateModalEnter,
+  animateModalLeave,
+  animatePop,
+  animateViewEnter,
+  EASING,
+  safeAnimate,
+} from '../utils/animation';
 import {
   type MfmSuggestion,
   getMfmTriggerInfo,
@@ -657,16 +664,19 @@ export function NoteView() {
     return '';
   });
 
-  // CWエリア開閉のGSAPアニメーション
+  // CWエリア開閉のアニメーション
   createEffect(
     () => cwEnabled(),
     (open) => {
       if (!cwSectionRef) return;
       if (open) {
-        gsap.fromTo(
+        safeAnimate(
           cwSectionRef,
-          { height: 0, opacity: 0, y: -6 },
-          { height: 'auto', opacity: 1, y: 0, duration: 0.28, ease: 'power3.out' }
+          [
+            { opacity: 0, transform: 'translateY(-6px)' },
+            { opacity: 1, transform: 'translateY(0)' },
+          ],
+          { duration: 240, easing: EASING.outCubic }
         );
       }
     }
@@ -795,13 +805,7 @@ export function NoteView() {
 
   // キーボードショートカット (Ctrl + Alt + Key)
   onSettled(() => {
-    if (viewContainerRef) {
-      gsap.fromTo(
-        viewContainerRef,
-        { opacity: 0, y: 14, scale: 0.99 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+    animateViewEnter(viewContainerRef, 14);
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.altKey) {
@@ -895,10 +899,16 @@ export function NoteView() {
     setTimeout(() => {
       const el = document.getElementById('modalImage');
       if (el) {
-        gsap.fromTo(
+        safeAnimate(
           el,
-          { scale: 0.88, opacity: 0 },
-          { scale: 1, opacity: 1, duration: 0.24, ease: 'back.out(1.5)', clearProps: 'transform' }
+          [
+            { transform: 'scale(0.88)', opacity: 0 },
+            { transform: 'scale(1)', opacity: 1 },
+          ],
+          {
+            duration: 240,
+            easing: EASING.outBack,
+          }
         );
       }
     }, 10);
@@ -949,7 +959,7 @@ export function NoteView() {
   };
 
   const selectVisibility = (val: VisibilityType, el: HTMLElement) => {
-    gsap.fromTo(el, { scale: 0.92 }, { scale: 1, duration: 0.22, ease: 'back.out(2)' });
+    animatePop(el);
     setVisibility(val);
   };
 
@@ -959,10 +969,7 @@ export function NoteView() {
 
   const closeAccountPicker = async () => {
     if (pickerCardRef && pickerBackdropRef) {
-      await Promise.all([
-        gsap.to(pickerCardRef, { opacity: 0, scale: 0.94, y: 8, duration: 0.15, ease: 'power2.in' }),
-        gsap.to(pickerBackdropRef, { opacity: 0, duration: 0.15, ease: 'power2.in' }),
-      ]);
+      await animateModalLeave(pickerCardRef, pickerBackdropRef);
     }
     setIsAccountPickerOpen(false);
   };
@@ -1655,11 +1662,6 @@ export function NoteView() {
             <div
               ref={(el) => {
                 pickerBackdropRef = el;
-                gsap.fromTo(
-                  el,
-                  { opacity: 0 },
-                  { opacity: 1, duration: 0.22, ease: 'power2.out' }
-                );
               }}
               class="mizuna-modal-backdrop"
               style={{ opacity: 0 }}
@@ -1669,11 +1671,7 @@ export function NoteView() {
             <div
               ref={(el) => {
                 pickerCardRef = el;
-                gsap.fromTo(
-                  el,
-                  { opacity: 0, scale: 0.92, y: 14 },
-                  { opacity: 1, scale: 1, y: 0, duration: 0.28, ease: 'back.out(1.5)' }
-                );
+                animateModalEnter(pickerCardRef, pickerBackdropRef);
               }}
               class="mizuna-picker-modal"
               style={{ opacity: 0 }}

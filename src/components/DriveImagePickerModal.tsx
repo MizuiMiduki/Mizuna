@@ -1,4 +1,3 @@
-import gsap from 'gsap';
 import {
   createEffect,
   createMemo,
@@ -10,6 +9,7 @@ import {
 import { Portal } from '@solidjs/web';
 import { fetchDriveImages, type MisskeyFile } from '../services/misskeyApi';
 import { useApp } from '../store/appStore';
+import { animateModalEnter } from '../utils/animation';
 
 interface DriveImagePickerModalProps {
   isOpen: boolean;
@@ -160,11 +160,6 @@ export function DriveImagePickerModal(props: DriveImagePickerModalProps) {
           <div
             ref={(el) => {
               backdropRef = el;
-              gsap.fromTo(
-                el,
-                { opacity: 0 },
-                { opacity: 1, duration: 0.2, ease: 'power2.out' }
-              );
             }}
             class="mizuna-modal-backdrop"
             onClick={() => props.onClose()}
@@ -173,11 +168,7 @@ export function DriveImagePickerModal(props: DriveImagePickerModalProps) {
           <div
             ref={(el) => {
               cardRef = el;
-              gsap.fromTo(
-                el,
-                { opacity: 0, scale: 0.94, y: 16 },
-                { opacity: 1, scale: 1, y: 0, duration: 0.26, ease: 'power3.out' }
-              );
+              animateModalEnter(cardRef, backdropRef);
             }}
             class="mizuna-picker-modal mizuna-drive-picker-modal"
             onClick={(e) => e.stopPropagation()}

@@ -122,7 +122,6 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('gsap')) return 'vendor-gsap';
               if (id.includes('dexie')) return 'vendor-db';
               if (id.includes('mfm-js')) return 'vendor-mfm';
               if (id.includes('solid-js')) return 'vendor-solid';

@@ -1,7 +1,7 @@
-import gsap from 'gsap';
 import { createEffect, For, Show } from 'solid-js';
 import { Portal } from '@solidjs/web';
 import { useApp, type DialogButton } from '../store/appStore';
+import { animateModalEnter, animateModalLeave } from '../utils/animation';
 
 export function DialogHost() {
   const { dialogConfig, closeDialog, setCurrentView } = useApp();
@@ -12,26 +12,14 @@ export function DialogHost() {
     () => dialogConfig(),
     (cfg) => {
       if (cfg && modalRef && backdropRef) {
-        gsap.fromTo(
-          backdropRef,
-          { opacity: 0 },
-          { opacity: 1, duration: 0.22, ease: 'power2.out' }
-        );
-        gsap.fromTo(
-          modalRef,
-          { opacity: 0, scale: 0.9, y: 18 },
-          { opacity: 1, scale: 1, y: 0, duration: 0.3, ease: 'back.out(1.5)' }
-        );
+        animateModalEnter(modalRef, backdropRef);
       }
     }
   );
 
   const handleAction = async (btn: DialogButton) => {
     if (modalRef && backdropRef) {
-      await Promise.all([
-        gsap.to(modalRef, { opacity: 0, scale: 0.94, y: 10, duration: 0.16 }),
-        gsap.to(backdropRef, { opacity: 0, duration: 0.16 }),
-      ]);
+      await animateModalLeave(modalRef, backdropRef);
     }
     closeDialog();
     await btn.onClick?.();

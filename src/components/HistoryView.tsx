@@ -1,4 +1,3 @@
-import gsap from 'gsap';
 import {
   createEffect,
   createMemo,
@@ -20,6 +19,7 @@ import {
   type MisskeyNote,
 } from '../services/misskeyApi';
 import { useApp } from '../store/appStore';
+import { animateViewEnter, EASING, safeAnimate } from '../utils/animation';
 import {
   type HistoryTab,
   type RepliesState,
@@ -69,8 +69,9 @@ export function HistoryView() {
 
   let containerRef: HTMLDivElement | undefined;
   let refreshIconRef: HTMLElement | undefined;
-  let spinTween: gsap.core.Tween | null = null;
-  let settleTween: gsap.core.Tween | null = null;
+  let spinAnim: Animation | null = null;
+  let settleAnim: Animation | null = null;
+  let startAngle = 0;
 
   const isHistorySupported = createMemo(() =>
     hasHistoryPermission(currentUser()?.add_mizuna_versinon)
@@ -421,13 +422,7 @@ export function HistoryView() {
   );
 
   onSettled(() => {
-    if (containerRef) {
-      gsap.fromTo(
-        containerRef,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+    animateViewEnter(containerRef);
   });
 
   // リフレッシュアイコンの滑らかな回転・減速着地アニメーション
@@ -437,52 +432,65 @@ export function HistoryView() {
       if (!refreshIconRef) return;
 
       if (loading) {
-        if (settleTween) {
-          settleTween.kill();
-          settleTween = null;
+        if (settleAnim) {
+          settleAnim.cancel();
+          settleAnim = null;
         }
-        if (spinTween) {
-          spinTween.kill();
+        if (spinAnim) {
+          spinAnim.cancel();
         }
-        const currentRot = Number(gsap.getProperty(refreshIconRef, 'rotation')) || 0;
-        const normalizedRot = ((currentRot % 360) + 360) % 360;
-        gsap.set(refreshIconRef, { rotation: normalizedRot });
-
-        spinTween = gsap.to(refreshIconRef, {
-          rotation: normalizedRot + 360,
-          duration: 0.85,
-          ease: 'none',
-          repeat: -1,
-        });
+        spinAnim = safeAnimate(
+          refreshIconRef,
+          [
+            { transform: `rotate(${startAngle}deg)` },
+            { transform: `rotate(${startAngle + 360}deg)` },
+          ],
+          {
+            duration: 850,
+            iterations: Infinity,
+            easing: 'linear',
+          }
+        );
       } else {
-        if (spinTween) {
-          spinTween.kill();
-          spinTween = null;
+        if (spinAnim) {
+          const progress = (Number(spinAnim.currentTime) || 0) % 850;
+          const currentRot = (startAngle + (progress / 850) * 360) % 360;
+          spinAnim.cancel();
+          spinAnim = null;
 
-          const currentRot = Number(gsap.getProperty(refreshIconRef, 'rotation')) || 0;
           const nextTarget = Math.ceil(currentRot / 360) * 360;
           // 残り角度が少なすぎる場合はもう1周回して自然に減速させる
           const finalTarget = (nextTarget - currentRot < 70) ? nextTarget + 360 : nextTarget;
 
-          settleTween = gsap.to(refreshIconRef, {
-            rotation: finalTarget,
-            duration: 0.45,
-            ease: 'power2.out',
-            onComplete: () => {
+          settleAnim = safeAnimate(
+            refreshIconRef,
+            [
+              { transform: `rotate(${currentRot}deg)` },
+              { transform: `rotate(${finalTarget}deg)` },
+            ],
+            {
+              duration: 450,
+              easing: EASING.outQuad,
+              fill: 'forwards',
+            }
+          );
+          if (settleAnim) {
+            settleAnim.onfinish = () => {
               if (refreshIconRef) {
-                gsap.set(refreshIconRef, { rotation: 0 });
+                refreshIconRef.style.transform = 'rotate(0deg)';
               }
-              settleTween = null;
-            },
-          });
+              startAngle = 0;
+              settleAnim = null;
+            };
+          }
         }
       }
     }
   );
 
   onCleanup(() => {
-    spinTween?.kill();
-    settleTween?.kill();
+    spinAnim?.cancel();
+    settleAnim?.cancel();
   });
 
   // リプライの開閉と取得 (Issue #130)

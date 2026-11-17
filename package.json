@@ -15,7 +15,6 @@
   "dependencies": {
     "@solidjs/web": "^2.0.0",
     "dexie": "^4.0.11",
-    "gsap": "^3.12.7",
     "material-dynamic-colors": "^1.1.2",
     "mfm-js": "^0.28.0",
     "pulltorefreshjs": "^0.1.22",

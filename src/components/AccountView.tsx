@@ -1,9 +1,9 @@
-import gsap from 'gsap';
 import { createSignal, For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { hasDrivePermission, hasHistoryPermission, getMissingPermissions } from '../utils/version';
 import type { AccountRecord } from '../db/database';
+import { EASING, prefersReducedMotion, safeAnimate } from '../utils/animation';
 
 export function AccountView() {
   const {
@@ -27,13 +27,23 @@ export function AccountView() {
 
   onSettled(() => {
     if (listRef) {
-      const cards = listRef.querySelectorAll('.mizuna-acc-card');
-      if (cards.length > 0) {
-        gsap.fromTo(
-          cards,
-          { opacity: 0, y: 14 },
-          { opacity: 1, y: 0, duration: 0.3, stagger: 0.045, ease: 'power3.out' }
-        );
+      const cards = listRef.querySelectorAll<HTMLElement>('.mizuna-acc-card');
+      if (cards.length > 0 && !prefersReducedMotion()) {
+        cards.forEach((card, i) => {
+          safeAnimate(
+            card,
+            [
+              { opacity: 0, transform: 'translateY(14px)' },
+              { opacity: 1, transform: 'translateY(0)' },
+            ],
+            {
+              duration: 300,
+              delay: i * 45,
+              easing: EASING.outCubic,
+              fill: 'backwards',
+            }
+          );
+        });
       }
     }
   });

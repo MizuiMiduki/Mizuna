@@ -1,21 +1,15 @@
-import gsap from 'gsap';
 import { onSettled } from 'solid-js';
 import { mizuna_options } from '../config/mizunaOptions';
 import { useApp } from '../store/appStore';
 import { FloatingBackButton } from './FloatingBackButton';
+import { animateViewEnter } from '../utils/animation';
 
 export function PrivacyPolicyView() {
   const { accounts, setCurrentView } = useApp();
   let containerRef: HTMLDivElement | undefined;
 
   onSettled(() => {
-    if (containerRef) {
-      gsap.fromTo(
-        containerRef,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+    animateViewEnter(containerRef);
   });
 
   const handleBack = () => {

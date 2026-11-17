@@ -1,9 +1,9 @@
-import gsap from 'gsap';
 import { createEffect, For, onCleanup, Show } from 'solid-js';
 import { Portal } from '@solidjs/web';
 import { useApp } from '../store/appStore';
 import { type DraftRecord } from '../db/database';
 import { getDisplayAvatarUrl } from '../utils/image';
+import { animateModalEnter } from '../utils/animation';
 
 export interface DraftsModalProps {
   isOpen: boolean;
@@ -130,11 +130,6 @@ export function DraftsModal(props: DraftsModalProps) {
           <div
             ref={(el) => {
               backdropRef = el;
-              gsap.fromTo(
-                el,
-                { opacity: 0 },
-                { opacity: 1, duration: 0.22, ease: 'power2.out' }
-              );
             }}
             class="mizuna-modal-backdrop"
             style={{ opacity: 0 }}
@@ -144,11 +139,7 @@ export function DraftsModal(props: DraftsModalProps) {
           <div
             ref={(el) => {
               cardRef = el;
-              gsap.fromTo(
-                el,
-                { opacity: 0, scale: 0.94, y: 14 },
-                { opacity: 1, scale: 1, y: 0, duration: 0.26, ease: 'back.out(1.4)' }
-              );
+              animateModalEnter(cardRef, backdropRef);
             }}
             class="mizuna-drafts-modal"
             style={{ opacity: 0 }}

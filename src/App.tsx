@@ -1,5 +1,4 @@
 import { createEffect, Match, onCleanup, onSettled, Show, Switch } from 'solid-js';
-import gsap from 'gsap';
 import { AboutView } from './components/AboutView';
 import { AccountView } from './components/AccountView';
 import { AddAccountView } from './components/AddAccountView';
@@ -16,6 +15,8 @@ import { ShortcutsView } from './components/ShortcutsView';
 import { SnackbarHost } from './components/SnackbarHost';
 import { AppProvider, useApp, type ViewType } from './store/appStore';
 import { initAnalytics, trackPageView } from './utils/analytics';
+
+import { EASING, safeAnimate } from './utils/animation';
 
 const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'history'];
 
@@ -94,16 +95,18 @@ function MainContent() {
           window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
 
         if (!prefersReduced) {
-          gsap.killTweensOf(mainContainerRef);
-          gsap.fromTo(
+          if (typeof mainContainerRef.getAnimations === 'function') {
+            mainContainerRef.getAnimations().forEach((a) => a.cancel());
+          }
+          safeAnimate(
             mainContainerRef,
-            { opacity: 0.65, x: direction * 24 },
+            [
+              { opacity: 0.65, transform: `translateX(${direction * 24}px)` },
+              { opacity: 1, transform: 'translateX(0)' },
+            ],
             {
-              opacity: 1,
-              x: 0,
-              duration: 0.22,
-              ease: 'power2.out',
-              clearProps: 'transform',
+              duration: 220,
+              easing: EASING.outQuad,
             }
           );
         }

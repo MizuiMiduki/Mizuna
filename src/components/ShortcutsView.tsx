@@ -1,7 +1,7 @@
-import gsap from 'gsap';
 import { For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { FloatingBackButton } from './FloatingBackButton';
+import { animateViewEnter } from '../utils/animation';
 
 interface ShortcutItem {
   label: string;
@@ -29,13 +29,7 @@ export function ShortcutsView() {
   let containerRef: HTMLDivElement | undefined;
 
   onSettled(() => {
-    if (containerRef) {
-      gsap.fromTo(
-        containerRef,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+    animateViewEnter(containerRef);
   });
 
   const handleBack = () => {

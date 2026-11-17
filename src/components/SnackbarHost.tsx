@@ -1,29 +1,38 @@
-import gsap from 'gsap';
 import { For, onCleanup, onSettled } from 'solid-js';
 import { useApp, type ToastItem } from '../store/appStore';
+import { EASING, safeAnimate } from '../utils/animation';
 
 const TOAST_DURATION_SEC = 3.5;
 
 function ToastCard(props: { item: ToastItem; onDismiss: (id: string) => void }) {
   let cardRef: HTMLDivElement | undefined;
   let progressRef: HTMLDivElement | undefined;
-  let progressTween: gsap.core.Tween | undefined;
+  let progressAnim: Animation | null = null;
   let isClosing = false;
 
   const handleClose = () => {
     if (isClosing) return;
     isClosing = true;
-    progressTween?.kill();
+    progressAnim?.cancel();
 
     if (cardRef) {
-      gsap.to(cardRef, {
-        opacity: 0,
-        x: 32,
-        scale: 0.92,
-        duration: 0.18,
-        ease: 'power2.in',
-        onComplete: () => props.onDismiss(props.item.id),
-      });
+      const closeAnim = safeAnimate(
+        cardRef,
+        [
+          { opacity: 1, transform: 'translateX(0) scale(1)' },
+          { opacity: 0, transform: 'translateX(32px) scale(0.92)' },
+        ],
+        {
+          duration: 180,
+          easing: EASING.inQuad,
+          fill: 'forwards',
+        }
+      );
+      if (closeAnim) {
+        closeAnim.onfinish = () => props.onDismiss(props.item.id);
+      } else {
+        props.onDismiss(props.item.id);
+      }
     } else {
       props.onDismiss(props.item.id);
     }
@@ -31,28 +40,39 @@ function ToastCard(props: { item: ToastItem; onDismiss: (id: string) => void }) 
 
   onSettled(() => {
     if (cardRef) {
-      gsap.fromTo(
+      safeAnimate(
         cardRef,
-        { opacity: 0, y: -16, scale: 0.94 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.28, ease: 'back.out(1.6)' }
-      );
-    }
-
-    if (progressRef) {
-      progressTween = gsap.fromTo(
-        progressRef,
-        { scaleX: 1 },
+        [
+          { opacity: 0, transform: 'translateY(-16px) scale(0.94)' },
+          { opacity: 1, transform: 'translateY(0) scale(1)' },
+        ],
         {
-          scaleX: 0,
-          duration: TOAST_DURATION_SEC,
-          ease: 'none',
-          onComplete: handleClose,
+          duration: 280,
+          easing: EASING.outBackStrong,
         }
       );
     }
 
+    if (progressRef) {
+      progressAnim = safeAnimate(
+        progressRef,
+        [
+          { transform: 'scaleX(1)' },
+          { transform: 'scaleX(0)' },
+        ],
+        {
+          duration: TOAST_DURATION_SEC * 1000,
+          easing: 'linear',
+          fill: 'forwards',
+        }
+      );
+      if (progressAnim) {
+        progressAnim.onfinish = handleClose;
+      }
+    }
+
     return () => {
-      progressTween?.kill();
+      progressAnim?.cancel();
     };
   });
 

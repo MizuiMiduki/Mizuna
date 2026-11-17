@@ -1,9 +1,9 @@
-import gsap from 'gsap';
 import { createEffect, createSignal, For, onSettled, Show, untrack } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { SUPPORTED_LANGUAGES } from '../i18n';
 import { applyCustomCss, sanitizeCustomCss } from '../utils/customCss';
 import { safeSessionStorage } from '../utils/storage';
+import { animateViewEnter } from '../utils/animation';
 
 export function SettingsView() {
   const {
@@ -98,13 +98,7 @@ export function SettingsView() {
   };
 
   onSettled(() => {
-    if (panelRef) {
-      gsap.fromTo(
-        panelRef,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+    animateViewEnter(panelRef);
   });
 
   const [isClearingCache, setIsClearingCache] = createSignal(false);

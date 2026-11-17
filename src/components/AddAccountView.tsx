@@ -1,9 +1,9 @@
-import gsap from 'gsap';
 import { createSignal, For, onSettled, Show } from 'solid-js';
 import { buildMiAuthUrl, checkServerExists } from '../services/misskeyApi';
 import { useApp } from '../store/appStore';
 import { safeLocalStorage } from '../utils/storage';
 import { FloatingBackButton } from './FloatingBackButton';
+import { animateViewEnter } from '../utils/animation';
 
 const SUGGESTED_SERVERS = ['misskey.io', 'misskey.systems'];
 
@@ -17,13 +17,7 @@ export function AddAccountView() {
   let jsonInputRef: HTMLInputElement | undefined;
 
   onSettled(() => {
-    if (containerRef) {
-      gsap.fromTo(
-        containerRef,
-        { opacity: 0, y: 14 },
-        { opacity: 1, y: 0, duration: 0.34, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+    animateViewEnter(containerRef, 14);
   });
 
   const handleAddServerSubmit = async (e?: Event) => {

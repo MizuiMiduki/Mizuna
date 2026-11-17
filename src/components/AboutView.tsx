@@ -1,8 +1,8 @@
-import gsap from 'gsap';
 import { For, onSettled, onCleanup, Show } from 'solid-js';
 import { mizuna_options, mizuna_share } from '../config/mizunaOptions';
 import { useApp } from '../store/appStore';
 import { FloatingBackButton } from './FloatingBackButton';
+import { animateViewEnter } from '../utils/animation';
 
 const OSS_LICENSES = [
   {
@@ -10,12 +10,6 @@ const OSS_LICENSES = [
     license: 'MIT License',
     copyright: 'Copyright (c) 2016-2025 Ryan Carniato',
     url: 'https://www.solidjs.com/',
-  },
-  {
-    name: 'GSAP (GreenSock Animation Platform)',
-    license: 'Standard "No Charge" GreenSock License',
-    copyright: 'Copyright (c) GreenSock, Inc.',
-    url: 'https://gsap.com/',
   },
   {
     name: 'Material Dynamic Colors',
@@ -79,13 +73,7 @@ export function AboutView() {
 
   onSettled(() => {
     resetUpdateCheckStatus();
-    if (containerRef) {
-      gsap.fromTo(
-        containerRef,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+    animateViewEnter(containerRef);
 
     return () => {
       resetUpdateCheckStatus();
