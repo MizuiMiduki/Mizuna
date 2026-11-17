@@ -336,9 +336,9 @@ export function DriveImagePickerModal(props: DriveImagePickerModalProps) {
                                   {t('note.drive_already_attached')}
                                 </span>
                               </Show>
-                              <Show when={selectedOrder()}>
+                              <Show when={selectedOrder()} keyed>
                                 {(order) => (
-                                  <span class="mizuna-drive-select-badge">{order()}</span>
+                                  <span class="mizuna-drive-select-badge">{order}</span>
                                 )}
                               </Show>
                             </button>

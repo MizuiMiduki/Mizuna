@@ -1136,22 +1136,22 @@ export function NoteView() {
         </div>
 
         {/* 返信先カード (リプライ時のみ表示) */}
-        <Show when={replyTargetNote()}>
+        <Show when={replyTargetNote()} keyed>
           {(target) => (
             <div class="mizuna-reply-target-card">
               <div class="mizuna-reply-target-main">
                 <i class="mizuna-reply-target-icon">reply</i>
                 <img
-                  src={getDisplayAvatarUrl(target().user.avatarUrl, settings().is_visible_icon)}
+                  src={getDisplayAvatarUrl(target.user.avatarUrl, settings().is_visible_icon)}
                   alt=""
                   class="mizuna-reply-target-avatar"
                 />
                 <div class="mizuna-reply-target-content">
                   <span class="mizuna-reply-target-user">
-                    {target().user.name || target().user.username} <span class="mizuna-reply-target-handle">@{target().user.username}</span>
+                    {target.user.name || target.user.username} <span class="mizuna-reply-target-handle">@{target.user.username}</span>
                   </span>
                   <p class="mizuna-reply-target-text">
-                    {target().cw ? `[CW] ${target().cw}` : target().text || '（添付画像またはファイル）'}
+                    {target.cw ? `[CW] ${target.cw}` : target.text || '（添付画像またはファイル）'}
                   </p>
                 </div>
               </div>
@@ -1427,11 +1427,11 @@ export function NoteView() {
                     onTouchCancel={handleThumbTouchEnd}
                     onClick={() => handleOpenPreview(item)}
                   >
-                    <Show when={item.thumbUrl}>
+                    <Show when={item.thumbUrl} keyed>
                       {(thumb) => (
                         <img
                           class="input_image_preview"
-                          src={thumb()}
+                          src={thumb}
                           alt={item.name}
                           data-name={item.name}
                           loading="lazy"

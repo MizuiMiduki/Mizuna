@@ -51,10 +51,10 @@ export function DialogHost() {
   };
 
   return (
-    <Show when={dialogConfig()}>
+    <Show when={dialogConfig()} keyed>
       {(cfg) => {
-        const tone = () => cfg().tone ?? 'primary';
-        const iconName = () => cfg().icon ?? getDefaultIcon(cfg().tone);
+        const tone = cfg.tone ?? 'primary';
+        const iconName = cfg.icon ?? getDefaultIcon(cfg.tone);
 
         return (
           <Portal>
@@ -67,34 +67,34 @@ export function DialogHost() {
 
             <div
               ref={modalRef}
-              class={`mizuna-modal-card is-${tone()}`}
+              class={`mizuna-modal-card is-${tone}`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* 上部アイコン＆バッジ */}
               <div class="mizuna-modal-top">
-                <div class={`mizuna-modal-icon is-${tone()}`}>
-                  <i>{iconName()}</i>
+                <div class={`mizuna-modal-icon is-${tone}`}>
+                  <i>{iconName}</i>
                 </div>
-                <Show when={cfg().badgeText}>
-                  <span class={`mizuna-modal-badge is-${tone()}`}>{cfg().badgeText}</span>
+                <Show when={cfg.badgeText}>
+                  <span class={`mizuna-modal-badge is-${tone}`}>{cfg.badgeText}</span>
                 </Show>
-                <h3 class="mizuna-modal-title">{cfg().title}</h3>
+                <h3 class="mizuna-modal-title">{cfg.title}</h3>
               </div>
 
               {/* 本文エリア */}
               <div class="mizuna-modal-body">
                 <Show
-                  when={cfg().contentHtml}
-                  fallback={<p class="mizuna-modal-text">{cfg().contentText}</p>}
+                  when={cfg.contentHtml}
+                  fallback={<p class="mizuna-modal-text">{cfg.contentText}</p>}
                 >
-                  <div class="mizuna-modal-html" innerHTML={cfg().contentHtml} />
+                  <div class="mizuna-modal-html" innerHTML={cfg.contentHtml} />
                 </Show>
 
                 {/* リンクカード（リリースノート等） */}
-                <Show when={cfg().linkCard}>
+                <Show when={cfg.linkCard} keyed>
                   {(link) => (
                     <a
-                      href={link().url}
+                      href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       class="mizuna-modal-linkcard"
@@ -103,8 +103,8 @@ export function DialogHost() {
                         <i>article</i>
                       </div>
                       <div class="mizuna-modal-linkcard-meta">
-                        <span class="mizuna-modal-linkcard-label">{link().label}</span>
-                        <span class="mizuna-modal-linkcard-title">{link().title}</span>
+                        <span class="mizuna-modal-linkcard-label">{link.label}</span>
+                        <span class="mizuna-modal-linkcard-title">{link.title}</span>
                       </div>
                       <i class="mizuna-modal-linkcard-arrow">open_in_new</i>
                     </a>
@@ -112,7 +112,7 @@ export function DialogHost() {
                 </Show>
 
                 {/* プライバシーポリシーリンク */}
-                <Show when={cfg().showPrivacyPolicy}>
+                <Show when={cfg.showPrivacyPolicy}>
                   <button
                     type="button"
                     class="mizuna-modal-linkcard mizuna-modal-privacy-card"
@@ -136,10 +136,10 @@ export function DialogHost() {
               {/* アクションボタン行 */}
               <div
                 class={`mizuna-modal-actions ${
-                  cfg().buttons.length === 1 ? 'is-single' : 'is-split'
+                  cfg.buttons.length === 1 ? 'is-single' : 'is-split'
                 }`}
               >
-                <For each={cfg().buttons}>
+                <For each={cfg.buttons}>
                   {(btn) => (
                     <button
                       type="button"

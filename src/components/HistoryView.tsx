@@ -754,11 +754,12 @@ export function HistoryView() {
                             <i class="mizuna-note-reply-icon">reply</i>
                             <Show
                               when={note.reply?.user}
+                              keyed
                               fallback={<span>{t('history.reply_badge')}</span>}
                             >
                               {(replyUser) => (
                                 <span class="mizuna-note-reply-banner-user">
-                                  {t('history.reply_to_user', { user: replyUser().username })}
+                                  {t('history.reply_to_user', { user: replyUser.username })}
                                 </span>
                               )}
                             </Show>
@@ -848,10 +849,10 @@ export function HistoryView() {
                         </Show>
 
                         {/* リノート元の抜粋（本文のみ・一部抜粋） */}
-                        <Show when={note.renote}>
+                        <Show when={note.renote} keyed>
                           {(rn) => {
                             const excerpt = () => {
-                              const src = rn().cw || rn().text || '';
+                              const src = rn.cw || rn.text || '';
                               return src.length > 80 ? `${src.slice(0, 80)}…` : src;
                             };
                             return (
@@ -862,8 +863,8 @@ export function HistoryView() {
                                   <span
                                     class="mizuna-note-renote-user"
                                     innerHTML={renderInlineEmoji(
-                                      rn().user.name || rn().user.username,
-                                      rn().user.emojis,
+                                      rn.user.name || rn.user.username,
+                                      rn.user.emojis,
                                       mfmOptions()
                                     )}
                                   />
@@ -871,7 +872,7 @@ export function HistoryView() {
                                 <Show when={excerpt()}>
                                   <div
                                     class="mizuna-note-renote-excerpt"
-                                    innerHTML={renderInlineEmoji(excerpt(), rn().emojis, mfmOptions())}
+                                    innerHTML={renderInlineEmoji(excerpt(), rn.emojis, mfmOptions())}
                                   />
                                 </Show>
                               </div>
