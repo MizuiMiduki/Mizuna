@@ -167,11 +167,10 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
 
   onSettled(() => {
     anchorRef?.addEventListener('click', handleClickCapture, true);
-  });
-
-  onCleanup(() => {
-    anchorRef?.removeEventListener('click', handleClickCapture, true);
-    clearTimers();
+    return () => {
+      anchorRef?.removeEventListener('click', handleClickCapture, true);
+      clearTimers();
+    };
   });
 
   return (
@@ -184,9 +183,7 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
       onContextMenu={(e) => {
-        if (didLongPress || visible()) {
-          e.preventDefault();
-        }
+        e.preventDefault();
       }}
     >
       {props.children}

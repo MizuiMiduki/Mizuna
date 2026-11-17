@@ -1,4 +1,6 @@
 import Dexie, { type Table } from 'dexie';
+import { detectBrowserLanguage } from '../i18n';
+import type { ImageEditState } from '../utils/imageEditor';
 
 /**
  * アカウント情報レコード
@@ -12,6 +14,57 @@ export interface AccountRecord {
   address: string;
   avatarurl: string;
   add_mizuna_versinon: string;
+}
+
+export type AutoWatermarkPosition = 'none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
+/**
+ * 下書きに添付された画像データ
+ */
+export interface DraftAttachedImage {
+  name: string;
+  type: string;
+  blob: Blob;
+  rawBlob?: Blob;
+  originalSize: number;
+  compressedSize?: number;
+  editState?: ImageEditState;
+  driveFileId?: string;
+  remoteUrl?: string;
+  remoteThumbUrl?: string;
+}
+
+/**
+ * 下書きレコード
+ */
+export interface DraftRecord {
+  id?: number;
+  /** 保存時のアカウントID */
+  accountId: number;
+  /** 保存時のアカウントユーザー名 */
+  accountUsername: string;
+  /** 保存時のアカウントホスト/アドレス */
+  accountAddress: string;
+  /** 保存時のアカウント表示名 */
+  accountName?: string;
+  /** 保存時のアカウントアバターURL */
+  accountAvatarUrl?: string;
+  /** ノート本文 */
+  text: string;
+  /** CWテキスト */
+  cwText?: string;
+  /** CW有効フラグ */
+  cwEnabled: boolean;
+  /** 公開範囲 (public | home | followers) */
+  visibility: 'public' | 'home' | 'followers';
+  /** 末尾に (from Mizuna) を付与するか */
+  endMizuna: boolean;
+  /** 添付画像リスト */
+  images?: DraftAttachedImage[];
+  /** 作成日時 (UNIXミリ秒) */
+  createdAt: number;
+  /** 更新日時 (UNIXミリ秒) */
+  updatedAt: number;
 }
 
 /**
@@ -28,8 +81,8 @@ export interface SettingRecord {
   is_note_end_mizuna: boolean;
   /** 自分のアイコンを表示するか */
   is_visible_icon: boolean;
-  /** UIモード (初期値: 1) */
-  ui_mode: number;
+  /** UIモード (1: 通常, 2: シンプル, 3: 大, 4: 中, 5: 小) */
+  ui_mode: 1 | 2 | 3 | 4 | 5;
   /** ダークモード (1: 無効, 2: 端末設定, 3: 有効) */
   is_darkmode: 1 | 2 | 3;
   /** アイコンカラーを元にUIカラーを変更するか */
@@ -40,6 +93,24 @@ export interface SettingRecord {
   is_check_releasenote: string | null;
   /** 言語設定 */
   language: string;
+  /** アカウントの並び順 (アカウントID配列) */
+  account_order?: number[];
+  /** ユーザー定義のカスタムCSS */
+  custom_css?: string;
+  /** 画像編集用のカスタム透かしテキスト (盗作防止用) */
+  watermark_text?: string;
+  /** 画像添付時の自動透かし位置 (旧設定互換用) */
+  watermark_position?: AutoWatermarkPosition;
+  /** 盗作防止透かしの自動付与 (true / false) */
+  watermark_enabled?: boolean;
+  /** 盗作防止透かしのパターン ('diagonal' | 'grid' | 'center-huge') */
+  watermark_pattern?: 'diagonal' | 'grid' | 'center-huge';
+  /** 盗作防止透かしの不透明度 (1〜100) */
+  watermark_opacity?: number;
+  /** 画像署名のカスタムテキスト (未設定時は @username@address) */
+  signature_text?: string;
+  /** 画像署名の自動付与位置 ('none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left') */
+  signature_position?: AutoWatermarkPosition;
 }
 
 export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
@@ -52,12 +123,24 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
   is_pick_theme_color: false,
   latest_theme_color: [null, null, null],
   is_check_releasenote: null,
-  language: 'ja_jp',
+  get language() {
+    return detectBrowserLanguage();
+  },
+  account_order: [],
+  custom_css: '',
+  watermark_text: '',
+  watermark_position: 'none',
+  watermark_enabled: false,
+  watermark_pattern: 'diagonal',
+  watermark_opacity: 22,
+  signature_text: '',
+  signature_position: 'none',
 };
 
 export class MizunaDatabase extends Dexie {
   account!: Table<AccountRecord, number>;
   setting!: Table<SettingRecord, number>;
+  draft!: Table<DraftRecord, number>;
 
   constructor() {
     super('MizunaDatabase');
@@ -80,6 +163,11 @@ export class MizunaDatabase extends Dexie {
       setting:
         '++id, select_user, default_visibility, is_note_end_mizuna, is_visible_icon, ui_mode, is_darkmode, is_pick_theme_color, latest_theme_color, is_check_releasenote, language',
     });
+
+    // v4 (下書き保存機能)
+    this.version(4).stores({
+      draft: '++id, accountId, createdAt, updatedAt',
+    });
   }
 }
 
@@ -100,24 +188,41 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
       default_visibility: (settingData.default_visibility as 1 | 2 | 3) ?? DEFAULT_USER_SETTINGS.default_visibility,
       is_note_end_mizuna: settingData.is_note_end_mizuna ?? DEFAULT_USER_SETTINGS.is_note_end_mizuna,
       is_visible_icon: settingData.is_visible_icon ?? DEFAULT_USER_SETTINGS.is_visible_icon,
-      ui_mode: settingData.ui_mode ?? DEFAULT_USER_SETTINGS.ui_mode,
+      ui_mode: (settingData.ui_mode as 1 | 2 | 3 | 4 | 5) ?? DEFAULT_USER_SETTINGS.ui_mode,
       is_darkmode: (settingData.is_darkmode as 1 | 2 | 3) ?? DEFAULT_USER_SETTINGS.is_darkmode,
       is_pick_theme_color: settingData.is_pick_theme_color ?? DEFAULT_USER_SETTINGS.is_pick_theme_color,
       latest_theme_color: settingData.latest_theme_color ?? DEFAULT_USER_SETTINGS.latest_theme_color,
       is_check_releasenote: settingData.is_check_releasenote ?? DEFAULT_USER_SETTINGS.is_check_releasenote,
-      language: settingData.language ?? DEFAULT_USER_SETTINGS.language,
+      language: settingData.language ?? detectBrowserLanguage(),
+      account_order: Array.isArray(settingData.account_order) ? settingData.account_order : [],
+      custom_css: typeof settingData.custom_css === 'string' ? settingData.custom_css : DEFAULT_USER_SETTINGS.custom_css,
+      watermark_text: typeof settingData.watermark_text === 'string' ? settingData.watermark_text : DEFAULT_USER_SETTINGS.watermark_text,
+      watermark_position: (settingData.watermark_position as AutoWatermarkPosition) ?? DEFAULT_USER_SETTINGS.watermark_position,
+      watermark_enabled: typeof settingData.watermark_enabled === 'boolean' ? settingData.watermark_enabled : DEFAULT_USER_SETTINGS.watermark_enabled,
+      watermark_pattern: (settingData.watermark_pattern as 'diagonal' | 'grid' | 'center-huge') ?? DEFAULT_USER_SETTINGS.watermark_pattern,
+      watermark_opacity: typeof settingData.watermark_opacity === 'number'
+        ? Math.max(1, Math.min(100, Math.round(settingData.watermark_opacity)))
+        : (DEFAULT_USER_SETTINGS.watermark_opacity ?? 22),
+      signature_text: typeof settingData.signature_text === 'string' ? settingData.signature_text : (typeof settingData.watermark_text === 'string' ? settingData.watermark_text : DEFAULT_USER_SETTINGS.signature_text),
+      signature_position: (settingData.signature_position as AutoWatermarkPosition) ?? (settingData.watermark_position as AutoWatermarkPosition) ?? DEFAULT_USER_SETTINGS.signature_position,
     };
   }
 
-  // id: 1 として初期設定を作成
+  // id: 1 として初期設定を作成（OS/ブラウザ言語から自動判定）
+  const initialLanguage = detectBrowserLanguage();
+  const initialSettings = {
+    ...DEFAULT_USER_SETTINGS,
+    language: initialLanguage,
+  };
+
   await db.setting.put({
     id: 1,
-    ...DEFAULT_USER_SETTINGS,
+    ...initialSettings,
   });
 
   return {
     id: 1,
-    ...DEFAULT_USER_SETTINGS,
+    ...initialSettings,
   };
 }
 
@@ -140,4 +245,74 @@ export async function checkAccountDbStatus(): Promise<0 | 1> {
   await db.open();
   const count = await db.account.count();
   return count === 0 ? 0 : 1;
+}
+
+/**
+ * 下書きを保存または更新する
+ */
+export async function saveDraftDb(
+  draft: Omit<DraftRecord, 'id' | 'createdAt' | 'updatedAt'>,
+  id?: number
+): Promise<number> {
+  await db.open();
+  const now = Date.now();
+  if (typeof id === 'number') {
+    const existing = await db.draft.get(id);
+    const createdAt = existing?.createdAt ?? now;
+    await db.draft.put({
+      ...draft,
+      id,
+      createdAt,
+      updatedAt: now,
+    });
+    return id;
+  } else {
+    const newId = await db.draft.add({
+      ...draft,
+      createdAt: now,
+      updatedAt: now,
+    });
+    return newId;
+  }
+}
+
+/**
+ * すべての下書きを取得（更新日時の降順）
+ */
+export async function getAllDraftsDb(): Promise<DraftRecord[]> {
+  await db.open();
+  const list = await db.draft.toArray();
+  return list.sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+/**
+ * 特定の下書きを取得
+ */
+export async function getDraftDb(id: number): Promise<DraftRecord | undefined> {
+  await db.open();
+  return db.draft.get(id);
+}
+
+/**
+ * 特定の下書きを削除
+ */
+export async function deleteDraftDb(id: number): Promise<void> {
+  await db.open();
+  await db.draft.delete(id);
+}
+
+/**
+ * すべての下書きを削除
+ */
+export async function clearAllDraftsDb(): Promise<void> {
+  await db.open();
+  await db.draft.clear();
+}
+
+/**
+ * 下書きの総件数を取得
+ */
+export async function countDraftsDb(): Promise<number> {
+  await db.open();
+  return db.draft.count();
 }

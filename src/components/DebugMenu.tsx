@@ -4,6 +4,9 @@ import { MIZUNA_VERSION, mizuna_options } from '../config/mizunaOptions';
 import { db, DEFAULT_USER_SETTINGS, updateSettingDb } from '../db/database';
 import { fetchLatestReleaseNote } from '../services/misskeyApi';
 import { useApp, type ViewType } from '../store/appStore';
+import { applyCustomThemeColor } from '../utils/theme';
+import { safeLocalStorage } from '../utils/storage';
+import { WST_TITLE_KEY, WST_TEXT_KEY, WST_URL_KEY } from '../utils/webShare';
 
 const PRESET_COLORS = [
   { label: 'Sky', hex: '#2b8cbe' },
@@ -77,7 +80,7 @@ export function DebugMenu() {
       username: isLongName
         ? `very_long_username_account_test_example_${rand}`
         : `mizuna_dev_${rand}`,
-      address: isLongName ? 'very-long-instance-domain-example.misskey.io' : 'misskey.io',
+      address: isLongName ? 'very-long-instance-domain-example.example.com' : 'example.com',
       avatarurl: '/icon.png',
       add_mizuna_versinon: ver,
     });
@@ -97,11 +100,11 @@ export function DebugMenu() {
   // Web Share Target シミュレート
   const simulateWebShareTarget = () => {
     const title = `Mizuna ${MIZUNA_VERSION} リリース記事`;
-    const text = 'Solid.js + GSAP + BeerCSS でモダンに生まれ変わりました！';
+    const text = 'Solid.js + GSAP でモダンに生まれ変わりました！';
     const url = 'https://mizuna.blossomsarchive.com/';
-    localStorage.setItem('wst_title', title);
-    localStorage.setItem('wst_text', text);
-    localStorage.setItem('wst_url', url);
+    safeLocalStorage.setItem(WST_TITLE_KEY, title);
+    safeLocalStorage.setItem(WST_TEXT_KEY, text);
+    safeLocalStorage.setItem(WST_URL_KEY, url);
     setNoteText(`${title}\n${text}\n${url}`);
     setCwEnabled(true);
     setCwText('Web Share Target テスト');
@@ -134,9 +137,7 @@ export function DebugMenu() {
 
   // テーマカラー直接適用
   const applyPresetColor = async (hex: string) => {
-    if (window.ui) {
-      await window.ui('theme', hex);
-    }
+    await applyCustomThemeColor(hex);
     showToast(`テーマカラーを ${hex} に変更しました`, 'info', 'Debug');
   };
 
@@ -194,6 +195,8 @@ export function DebugMenu() {
                     { id: 'settings', label: '設定' },
                     { id: 'shortcuts', label: 'キー一覧' },
                     { id: 'about', label: 'About' },
+                    { id: 'announcements', label: 'お知らせ' },
+                    { id: 'privacy', label: 'ポリシー' },
                   ] as { id: ViewType; label: string }[]
                 ).map((v) => (
                   <button
@@ -284,6 +287,20 @@ export function DebugMenu() {
                 <button type="button" class="mizuna-debug-btn" onClick={simulateWebShareTarget}>
                   <i>share</i>
                   <span>WebShare受信テスト</span>
+                </button>
+              </div>
+
+              <div class="mizuna-debug-row top-gap">
+                <button
+                  type="button"
+                  class="mizuna-debug-btn"
+                  onClick={() => {
+                    window.open('/maintenance.html', '_blank');
+                    showToast('maintenance.html を別タブで開きました', 'info', 'Debug');
+                  }}
+                >
+                  <i>engineering</i>
+                  <span>メンテナンス画面 (maintenance.html)</span>
                 </button>
               </div>
             </div>

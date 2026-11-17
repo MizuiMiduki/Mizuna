@@ -1,4 +1,5 @@
-import { compressAndConvertToWebP } from '../utils/image';
+import { compressAndConvertToWebP, createThumbnailUrl } from '../utils/image';
+import { editImageOptimized, type ImageEditState, type SignaturePosition } from '../utils/imageEditor';
 import gsap from 'gsap';
 import {
   createContext,
@@ -15,16 +16,35 @@ import {
   DEFAULT_USER_SETTINGS,
   loadOrCreateSettings,
   updateSettingDb,
+  saveDraftDb,
+  getAllDraftsDb,
+  deleteDraftDb,
+  clearAllDraftsDb,
+  countDraftsDb,
   type AccountRecord,
   type SettingRecord,
+  type DraftRecord,
+  type DraftAttachedImage,
 } from '../db/database';
 import {
   checkMiAuthSession,
   fetchLatestAccountInfo,
   fetchLatestReleaseNote,
   MisskeyApiError,
+  type MisskeyFile,
+  type MisskeyNote,
 } from '../services/misskeyApi';
 import { applyThemeAndMode } from '../utils/theme';
+import { applyCustomCss } from '../utils/customCss';
+import { translate, type I18nKey } from '../i18n';
+import { comparisonVersion } from '../utils/version';
+import { safeLocalStorage, safeSessionStorage, generateSettingBackupFileName, generateAccountBackupFileName } from '../utils/storage';
+import {
+  captureWebShareTargetFromUrl,
+  getWebShareTargetStorage,
+  clearWebShareTargetStorage,
+  combineNoteWithShareData,
+} from '../utils/webShare';
 
 export type ViewType =
   | 'note'
@@ -33,7 +53,9 @@ export type ViewType =
   | 'settings'
   | 'shortcuts'
   | 'about'
-  | 'announcements';
+  | 'announcements'
+  | 'privacy'
+  | 'history';
 export type VisibilityType = 'public' | 'home' | 'followers';
 export type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -62,6 +84,8 @@ export interface DialogConfig {
     title: string;
     url: string;
   };
+  /** プライバシーポリシーへのリンクを表示するか */
+  showPrivacyPolicy?: boolean;
   buttons: DialogButton[];
 }
 
@@ -69,10 +93,26 @@ export interface AttachedImageItem {
   id: string;
   name: string;
   file: File;
+  /** 初回アップロード時の未加工元画像ファイル（非破壊・何度でも再編集できるように保持） */
+  rawFile: File;
   dataUrl: string;
+  /** 一覧表示用の縮小サムネイル (ObjectURL)。生成前は undefined */
+  thumbUrl?: string;
   compressedFile?: File;
   originalSize: number;
   compressedSize?: number;
+  /** 編集モーダルで適用された加工ステート（再編集時に復元して継続編集が可能） */
+  editState?: ImageEditState;
+  /** Misskeyドライブに既にアップロード済みのファイルID（設定時は再圧縮・再アップロード不要） */
+  driveFileId?: string;
+}
+
+// 添付画像のサムネイル生成・事前圧縮を直列化するキュー
+let attachProcessQueue: Promise<void> = Promise.resolve();
+
+function revokeAttachedUrls(item: AttachedImageItem): void {
+  if (item.dataUrl.startsWith('blob:')) URL.revokeObjectURL(item.dataUrl);
+  if (item.thumbUrl && item.thumbUrl.startsWith('blob:')) URL.revokeObjectURL(item.thumbUrl);
 }
 
 export function visibilityNumToString(num: 1 | 2 | 3): VisibilityType {
@@ -110,19 +150,36 @@ interface AppContextValue {
   setEndMizuna: Setter<boolean>;
   attachedImages: Accessor<AttachedImageItem[]>;
   addAttachedFiles: (fileList: FileList | File[]) => void;
+  addAttachedDriveFiles: (driveFiles: MisskeyFile[]) => void;
   removeAttachedImage: (id: string) => void;
+  updateAttachedImage: (id: string, file: File, editState?: ImageEditState) => void;
+  revertAttachedImage: (id: string) => void;
+  reorderAttachedImages: (newOrderedIds: string[]) => void;
+  moveAttachedImage: (id: string, direction: -1 | 1) => void;
   clearNoteForm: (showNotification?: boolean) => void;
 
+  // 下書き保存・復帰
+  drafts: Accessor<DraftRecord[]>;
+  draftCount: Accessor<number>;
+  loadDrafts: () => Promise<void>;
+  saveCurrentAsDraft: () => Promise<boolean>;
+  restoreDraft: (draft: DraftRecord) => Promise<boolean>;
+  deleteDraftById: (id: number) => Promise<void>;
+  deleteAllDrafts: () => Promise<void>;
+
   // アカウント・設定操作
-  switchAccount: (accountId: number) => Promise<void>;
+  switchAccount: (accountId: number, silent?: boolean) => Promise<void>;
   deleteSelectedAccounts: (accountIds: number[]) => Promise<void>;
+  reorderAccounts: (newOrderedIds: number[]) => Promise<void>;
   updateSettings: (changes: Partial<SettingRecord>) => Promise<void>;
   isSyncingAccounts: Accessor<boolean>;
   syncAllAccounts: () => Promise<void>;
   syncCurrentAccount: () => Promise<void>;
   exportAccounts: () => Promise<void>;
   importAccountsFromFile: (file: File) => Promise<void>;
-  reloadAccounts: () => Promise<void>;
+  exportSettings: () => Promise<void>;
+  importSettingsFromFile: (file: File) => Promise<void>;
+  reloadAccounts: () => Promise<AccountRecord[]>;
 
   // UI通知・ダイアログ
   toasts: Accessor<ToastItem[]>;
@@ -131,6 +188,28 @@ interface AppContextValue {
   dialogConfig: Accessor<DialogConfig | null>;
   openDialog: (config: DialogConfig) => void;
   closeDialog: () => void;
+  pushModalBackHandler: (handler: () => void) => () => void;
+
+  // PWA アップデート制御
+  hasPendingUpdate: Accessor<boolean>;
+  availableUpdateVersion: Accessor<string | null>;
+  isCheckingUpdate: Accessor<boolean>;
+  updateCheckStatus: Accessor<'idle' | 'checking' | 'latest' | 'update_available' | 'error'>;
+  resetUpdateCheckStatus: () => void;
+  showUpdateBanner: Accessor<boolean>;
+  dismissUpdateBanner: () => void;
+  promptUpdateDialog: (worker?: ServiceWorker | null, forceDialog?: boolean) => void;
+  applyPendingUpdate: () => void;
+  checkForUpdate: () => Promise<void>;
+
+  // リプライ制御
+  replyTargetNote: Accessor<MisskeyNote | null>;
+  setReplyTargetNote: Setter<MisskeyNote | null>;
+  startReply: (note: MisskeyNote) => void;
+  cancelReply: () => void;
+
+  // 多言語対応 (i18n)
+  t: (key: I18nKey, params?: Record<string, string | number>) => string;
 }
 
 const AppContext = createContext<AppContextValue>();
@@ -144,26 +223,20 @@ const VALID_VIEWS: ViewType[] = [
   'shortcuts',
   'about',
   'announcements',
+  'privacy',
+  'history',
 ];
 
 function getSavedView(): ViewType | null {
-  try {
-    const saved = sessionStorage.getItem(VIEW_STORAGE_KEY) as ViewType | null;
-    if (saved && VALID_VIEWS.includes(saved)) {
-      return saved;
-    }
-  } catch {
-    // sessionStorage 無効時は無視
+  const saved = safeSessionStorage.getItem(VIEW_STORAGE_KEY) as ViewType | null;
+  if (saved && VALID_VIEWS.includes(saved)) {
+    return saved;
   }
   return null;
 }
 
 function saveViewToSession(view: ViewType): void {
-  try {
-    sessionStorage.setItem(VIEW_STORAGE_KEY, view);
-  } catch {
-    // sessionStorage 無効時は無視
-  }
+  safeSessionStorage.setItem(VIEW_STORAGE_KEY, view);
 }
 
 export function AppProvider(props: { children: JSX.Element }) {
@@ -189,6 +262,13 @@ export function AppProvider(props: { children: JSX.Element }) {
   const [endMizuna, setEndMizuna] = createSignal(false);
   const [attachedImages, setAttachedImages] = createSignal<AttachedImageItem[]>([]);
 
+  // 下書き状態
+  const [drafts, setDrafts] = createSignal<DraftRecord[]>([]);
+  const draftCount = () => drafts().length;
+
+  // リプライ状態 (返信先ノート)
+  const [replyTargetNote, setReplyTargetNote] = createSignal<MisskeyNote | null>(null);
+
   // トースト・ダイアログ状態
   const [toasts, setToasts] = createSignal<ToastItem[]>([]);
   const [dialogConfig, setDialogConfig] = createSignal<DialogConfig | null>(null);
@@ -203,62 +283,374 @@ export function AppProvider(props: { children: JSX.Element }) {
     setToasts((prev) => prev.filter((item) => item.id !== id));
   };
 
+  // ----------------------------------------------------
+  // Android / ブラウザの戻るボタン (PopState) ハンドリング
+  // ----------------------------------------------------
+  const modalBackHandlers: Array<() => void> = [];
+  let isPopStateActive = false;
+  let ignoreNextPopState = false;
+  let isDialogPoppedByPopState = false;
+  let lastBackPressTime = 0;
+
+  const pushModalBackHandler = (handler: () => void): () => void => {
+    if (typeof window === 'undefined') return () => {};
+
+    let isPoppedByPopState = false;
+
+    const wrappedHandler = () => {
+      isPoppedByPopState = true;
+      handler();
+    };
+
+    modalBackHandlers.push(wrappedHandler);
+    try {
+      window.history.pushState({ isModal: true }, '');
+    } catch (e) {
+      // ignore
+    }
+
+    let cleaned = false;
+    return () => {
+      if (cleaned) return;
+      cleaned = true;
+      const idx = modalBackHandlers.indexOf(wrappedHandler);
+      if (idx !== -1) {
+        modalBackHandlers.splice(idx, 1);
+      }
+      // Androidの戻るボタン(popstate)で既に閉じられた場合はブラウザ履歴が既に戻っているためback()不要
+      // UIの閉じるボタンや背景タップで閉じられた場合のみ、pushされた履歴エントリを巻き戻す
+      if (!isPoppedByPopState && typeof window !== 'undefined' && window.history.state?.isModal) {
+        ignoreNextPopState = true;
+        window.history.back();
+      }
+    };
+  };
+
   const openDialog = (config: DialogConfig) => {
+    isDialogPoppedByPopState = false;
     setDialogConfig(config);
+    if (typeof window !== 'undefined') {
+      try {
+        window.history.pushState({ isDialog: true }, '');
+      } catch (e) {
+        // ignore
+      }
+    }
   };
 
   const closeDialog = () => {
+    // 既に閉じている場合は何もしない（二重呼び出しで history.back() が重複し、下層モーダルまで閉じるのを防ぐ）
+    if (!dialogConfig()) return;
     setDialogConfig(null);
+    if (!isDialogPoppedByPopState && typeof window !== 'undefined' && window.history.state?.isDialog) {
+      ignoreNextPopState = true;
+      window.history.back();
+    }
   };
 
-  const setCurrentView = (view: ViewType) => {
-    if (
-      accounts().length === 0 &&
-      view !== 'add_account' &&
-      view !== 'shortcuts' &&
-      view !== 'about' &&
-      view !== 'announcements'
-    ) {
-      setCurrentViewInternal('add_account');
-      return;
-    }
-    setCurrentViewInternal(view);
+  // 多言語翻訳ヘルパー（Solid.js のリアクティビティと連動し、言語切替時に最小コストで即座に反映）
+  const t = (key: I18nKey, params?: Record<string, string | number>): string => {
+    return translate(key, params, settings().language);
+  };
+
+  // PWA アップデート状態管理
+  const [waitingWorker, setWaitingWorker] = createSignal<ServiceWorker | null>(null);
+  const [hasPendingUpdate, setHasPendingUpdate] = createSignal(false);
+  const [availableUpdateVersion, setAvailableUpdateVersion] = createSignal<string | null>(null);
+  const [isCheckingUpdate, setIsCheckingUpdate] = createSignal(false);
+  const [updateCheckStatus, setUpdateCheckStatus] = createSignal<'idle' | 'checking' | 'latest' | 'update_available' | 'error'>('idle');
+  const [isApplyingUpdate, setIsApplyingUpdate] = createSignal(false);
+  const [showUpdateBanner, setShowUpdateBanner] = createSignal(false);
+  let activeSwRegistration: ServiceWorkerRegistration | null = null;
+  let suppressNextControllerChange = false;
+
+  /**
+   * 待機中の Service Worker のバージョンを問い合わせる
+   */
+  const queryWorkerVersion = (worker: ServiceWorker): Promise<string | null> => {
+    return new Promise((resolve) => {
+      if (typeof MessageChannel === 'undefined') {
+        resolve(null);
+        return;
+      }
+      const channel = new MessageChannel();
+      const timeout = setTimeout(() => {
+        resolve(null);
+      }, 1000);
+
+      channel.port1.onmessage = (event) => {
+        clearTimeout(timeout);
+        resolve(event.data?.version || null);
+      };
+
+      try {
+        worker.postMessage({ type: 'GET_VERSION' }, [channel.port2]);
+      } catch {
+        clearTimeout(timeout);
+        resolve(null);
+      }
+    });
+  };
+
+  const dismissUpdateBanner = () => {
+    setShowUpdateBanner(false);
   };
 
   /**
-   * Web Share Target パラメータをURLおよびlocalStorageから読み込む
+   * 軽量エンドポイント (/version.json) による最新バージョン自動確認
+   * コアアセット等のダウンロードを行わず、わずか数十バイトで最新バージョンの有無のみを安全に確認
    */
-  const captureWebShareTargetFromUrl = (): boolean => {
-    const params = new URL(document.location.href).searchParams;
-    const wstTitle = params.get('title');
-    const wstText = params.get('text');
-    const wstUrl = params.get('url');
-
-    if (wstTitle || wstText || wstUrl) {
-      localStorage.removeItem('wst_title');
-      localStorage.removeItem('wst_text');
-      localStorage.removeItem('wst_url');
-
-      if (wstTitle) localStorage.setItem('wst_title', wstTitle);
-      if (wstText) localStorage.setItem('wst_text', wstText);
-      if (wstUrl) localStorage.setItem('wst_url', wstUrl);
-      return true;
+  const checkVersionOnServer = async (silent = true): Promise<boolean> => {
+    try {
+      const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-cache' });
+      if (!res.ok) {
+        if (!silent) {
+          setUpdateCheckStatus('error');
+        }
+        return false;
+      }
+      const data = await res.json();
+      if (data && typeof data.version === 'string') {
+        const isNewer = comparisonVersion(data.version, mizuna_options.mizuna_version) > 0;
+        if (isNewer) {
+          setAvailableUpdateVersion(data.version);
+          setHasPendingUpdate(true);
+          setShowUpdateBanner(true);
+          if (!silent) {
+            setUpdateCheckStatus('update_available');
+            promptUpdateDialog(null, true);
+          }
+          return true;
+        } else {
+          setHasPendingUpdate(false);
+          setShowUpdateBanner(false);
+          if (!silent) {
+            setUpdateCheckStatus('latest');
+          }
+          return false;
+        }
+      }
+    } catch {
+      if (!silent) {
+        setUpdateCheckStatus('error');
+      }
     }
     return false;
   };
 
-  const applyWebShareTargetToForm = () => {
-    const title = localStorage.getItem('wst_title');
-    const text = localStorage.getItem('wst_text');
-    const url = localStorage.getItem('wst_url');
+  const handleWaitingWorker = async (worker: ServiceWorker, forceDialog = false) => {
+    const swVersion = await queryWorkerVersion(worker);
 
-    if (title !== null || text !== null || url !== null) {
-      let combined = noteText() || '';
-      if (title) combined += (combined ? '\n' : '') + title;
-      if (text) combined += (combined ? '\n' : '') + text;
-      if (url) combined += (combined ? '\n' : '') + url;
-      setNoteText(combined);
+    // 待機中 SW のバージョンが現在実行中のアプリと同じ場合：
+    // 画面は既に最新なのでアップデート通知は出さず、SW を静かにアクティブ化して待機状態を解消する
+    if (swVersion && swVersion === mizuna_options.mizuna_version) {
+      suppressNextControllerChange = true;
+      try {
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      } catch (e) {
+        // ignore
+      }
+      setHasPendingUpdate(false);
+      setWaitingWorker(null);
+      return;
     }
+
+    // 待機中 SW が現在アプリと異なる（新しい）場合：
+    // ユーザーが更新を適用するまで待機させ、バナー／ダイアログを表示
+    setWaitingWorker(worker);
+    setHasPendingUpdate(true);
+    promptUpdateDialog(worker, forceDialog);
+  };
+
+  const promptUpdateDialog = (worker?: ServiceWorker | null, forceDialog = false) => {
+    // ヘッダー下の控えめバナーを表示
+    setShowUpdateBanner(true);
+
+    // 手動更新確認時や明示的ダイアログ要求時はモーダルダイアログを表示
+    if (forceDialog) {
+      openDialog({
+        title: translate('update.found_title', undefined, settings().language as any),
+        icon: 'system_update',
+        tone: 'primary',
+        badgeText: 'UPDATE',
+        contentText: translate('update.found_desc', undefined, settings().language as any),
+        buttons: [
+          {
+            label: translate('update.later', undefined, settings().language as any),
+            variant: 'text',
+            onClick: () => closeDialog(),
+          },
+          {
+            label: translate('update.apply', undefined, settings().language as any),
+            variant: 'fill',
+            onClick: () => {
+              closeDialog();
+              applyPendingUpdate();
+            },
+          },
+        ],
+      });
+    }
+  };
+
+  /**
+   * ユーザー主導によるアップデート適用
+   * ここで初めて最新版の Service Worker をダウンロード・更新し、適用リロードを行う
+   */
+  const applyPendingUpdate = async () => {
+    if (isApplyingUpdate()) return;
+    setIsApplyingUpdate(true);
+    suppressNextControllerChange = false;
+
+    // アップデート適用直後フラグを保存（リロード後にリリースノートを自動表示するため）
+    safeLocalStorage.setItem('mizuna_show_release_notes_after_update', 'true');
+    showToast('最新版を適用しています...', 'info');
+
+    const doReload = () => {
+      window.location.reload();
+    };
+
+    const worker = waitingWorker() || activeSwRegistration?.waiting;
+    if (worker) {
+      try {
+        worker.postMessage({ type: 'SKIP_WAITING' });
+      } catch (err) {
+        console.error('SKIP_WAITING postMessage error:', err);
+      }
+      setTimeout(doReload, 600);
+      return;
+    }
+
+    // 待機中ワーカーがまだダウンロードされていない場合、手動で Service Worker の更新を開始
+    try {
+      if ('serviceWorker' in navigator && navigator.serviceWorker) {
+        let resolved = false;
+
+        const handleInstalledWorker = (w: ServiceWorker) => {
+          if (resolved) return;
+          resolved = true;
+          try {
+            w.postMessage({ type: 'SKIP_WAITING' });
+          } catch {}
+          setTimeout(doReload, 500);
+        };
+
+        // updateViaCache: 'none' を指定してブラウザの HTTP キャッシュをバイパスし、確実に最新の sw.js を取得
+        const reg =
+          (await navigator.serviceWorker.register?.('/sw.js', { updateViaCache: 'none' })) ||
+          activeSwRegistration ||
+          (await navigator.serviceWorker.getRegistration?.());
+
+        if (reg) {
+          if (reg.waiting) {
+            handleInstalledWorker(reg.waiting);
+            return;
+          }
+
+          const onStateChange = (w: ServiceWorker) => {
+            if (w.state === 'installed') {
+              handleInstalledWorker(w);
+            }
+          };
+
+          reg.addEventListener?.('updatefound', () => {
+            const installing = reg.installing;
+            if (installing) {
+              installing.addEventListener('statechange', () => onStateChange(installing));
+            }
+          });
+
+          if (reg.installing) {
+            reg.installing.addEventListener?.('statechange', () => onStateChange(reg.installing!));
+          }
+
+          await reg.update?.();
+
+          if (reg.waiting) {
+            handleInstalledWorker(reg.waiting);
+            return;
+          }
+
+          // 3秒経ってもイベントが完了しない場合のフォールバック（リロード）
+          setTimeout(() => {
+            if (!resolved) {
+              doReload();
+            }
+          }, 3000);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error('applyPendingUpdate error:', e);
+    }
+
+    doReload();
+  };
+
+  /**
+   * 「更新を確認」ボタン押下時の手動チェック
+   */
+  const checkForUpdate = async () => {
+    if (isCheckingUpdate()) return;
+    setIsCheckingUpdate(true);
+    setUpdateCheckStatus('checking');
+
+    try {
+      await checkVersionOnServer(false);
+    } finally {
+      setIsCheckingUpdate(false);
+    }
+  };
+
+  const resetUpdateCheckStatus = () => {
+    setUpdateCheckStatus('idle');
+  };
+
+  const setCurrentView = (view: ViewType) => {
+    const target =
+      accounts().length === 0 &&
+      view !== 'add_account' &&
+      view !== 'shortcuts' &&
+      view !== 'about' &&
+      view !== 'announcements' &&
+      view !== 'privacy'
+        ? 'add_account'
+        : view;
+
+    if (target === currentView()) return;
+
+    if (typeof window !== 'undefined') {
+      try {
+        window.history.pushState({ view: target }, '');
+      } catch (e) {
+        // ignore
+      }
+    }
+    setCurrentViewInternal(target);
+  };
+
+  /**
+   * Web Share Target から渡された共有データをフォームに反映する
+   */
+  const applyWebShareTargetToForm = () => {
+    const data = getWebShareTargetStorage();
+    if (data) {
+      setNoteText(combineNoteWithShareData(noteText(), data));
+    }
+  };
+
+  /**
+   * アカウントの並び順 (account_order) に基づいてソート
+   */
+  const sortAccountsByOrder = (accountList: AccountRecord[], order: number[]): AccountRecord[] => {
+    if (!order || order.length === 0) return accountList;
+    const orderMap = new Map(order.map((id, index) => [id, index]));
+    return [...accountList].sort((a, b) => {
+      const orderA = a.id !== undefined && orderMap.has(a.id) ? orderMap.get(a.id)! : 999999;
+      const orderB = b.id !== undefined && orderMap.has(b.id) ? orderMap.get(b.id)! : 999999;
+      if (orderA !== orderB) return orderA - orderB;
+      return (a.id ?? 0) - (b.id ?? 0);
+    });
   };
 
   /**
@@ -266,21 +658,22 @@ export function AppProvider(props: { children: JSX.Element }) {
    */
   const reloadAccounts = async () => {
     const allAccounts = await db.account.orderBy('id').toArray();
-    setAccounts(allAccounts);
+    const sortedAccounts = sortAccountsByOrder(allAccounts, settings().account_order ?? []);
+    setAccounts(sortedAccounts);
 
-    if (allAccounts.length === 0) {
+    if (sortedAccounts.length === 0) {
       setCurrentUser(null);
       await applyThemeAndMode(settings(), undefined);
-      return;
+      return [];
     }
 
     const selectedId = settings().select_user;
-    const matched = allAccounts.find((a) => a.id === selectedId);
+    const matched = sortedAccounts.find((a) => a.id === selectedId);
     if (matched) {
       setCurrentUser(matched);
       await applyThemeAndMode(settings(), matched.avatarurl, matched.address);
     } else {
-      const firstAccount = allAccounts[0];
+      const firstAccount = sortedAccounts[0];
       if (firstAccount && firstAccount.id !== undefined) {
         await updateSettingDb({ select_user: firstAccount.id });
         setSettings((prev) => ({ ...prev, select_user: firstAccount.id! }));
@@ -292,19 +685,20 @@ export function AppProvider(props: { children: JSX.Element }) {
         );
       }
     }
+    return sortedAccounts;
   };
 
   /**
    * MiAuthコールバック (?session=...) の処理
    */
   const handleMiAuthCallbackIfPresent = async (): Promise<boolean> => {
-    const search = location.search;
+    const search = typeof window !== 'undefined' ? window.location.search : '';
     if (!search || !search.includes('session=')) {
       return false;
     }
 
     const sessionId = new URLSearchParams(search).get('session');
-    const address = localStorage.getItem('add_server_address');
+    const address = safeLocalStorage.getItem('add_server_address');
 
     if (!sessionId || !address) {
       window.history.replaceState({}, document.title, '/');
@@ -313,31 +707,63 @@ export function AppProvider(props: { children: JSX.Element }) {
 
     try {
       const data = await checkMiAuthSession(address, sessionId);
-      if (!data.ok || !data.token || !data.user) {
+      const user = data.user;
+      const token = data.token;
+      if (!data.ok || !token || !user) {
         showToast('アカウント認証に失敗しました', 'error');
         window.history.replaceState({}, document.title, '/');
         return false;
       }
 
       const cleanAddress = address.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
-      const newId = await db.account.put({
-        token: data.token,
-        name: data.user.name || data.user.username,
-        username: data.user.username,
-        address: cleanAddress,
-        avatarurl: data.user.avatarUrl,
-        add_mizuna_versinon: MIZUNA_VERSION,
-      });
 
-      // 追加したアカウントをアクティブにする
-      if (typeof newId === 'number') {
-        await updateSettingDb({ select_user: newId });
-        setSettings((prev) => ({ ...prev, select_user: newId }));
+      // 既存アカウントの存在チェック (同一サーバー・同一ユーザー名)
+      const existingAccounts = await db.account.toArray();
+      const existingAccount = existingAccounts.find(
+        (acc) =>
+          acc.username.toLowerCase() === user.username.toLowerCase() &&
+          acc.address.toLowerCase() === cleanAddress.toLowerCase()
+      );
+
+      let targetId: number | undefined;
+      const isExisting = Boolean(existingAccount && existingAccount.id !== undefined);
+
+      if (isExisting && existingAccount?.id !== undefined) {
+        // 同一アカウントが存在する場合は、トークンや最新バージョン情報を上書き更新
+        await db.account.update(existingAccount.id, {
+          token,
+          name: user.name || user.username,
+          avatarurl: user.avatarUrl,
+          add_mizuna_versinon: MIZUNA_VERSION,
+        });
+        targetId = existingAccount.id;
+      } else {
+        // 新規アカウントとして追加
+        const newId = await db.account.add({
+          token,
+          name: user.name || user.username,
+          username: user.username,
+          address: cleanAddress,
+          avatarurl: user.avatarUrl,
+          add_mizuna_versinon: MIZUNA_VERSION,
+        });
+        if (typeof newId === 'number') {
+          targetId = newId;
+        }
       }
 
-      localStorage.removeItem('add_server_address');
+      // 追加・更新したアカウントをアクティブにする
+      if (typeof targetId === 'number') {
+        await updateSettingDb({ select_user: targetId });
+        setSettings((prev) => ({ ...prev, select_user: targetId }));
+      }
+
+      safeLocalStorage.removeItem('add_server_address');
       window.history.replaceState({}, document.title, '/');
-      showToast('アカウントを追加しました！', 'success');
+      showToast(
+        isExisting ? 'アカウント情報を更新しました！' : 'アカウントを追加しました！',
+        'success'
+      );
       return true;
     } catch (err) {
       console.error('MiAuth check error:', err);
@@ -351,47 +777,73 @@ export function AppProvider(props: { children: JSX.Element }) {
    * リリースノートの更新チェック
    */
   const checkNewReleaseNote = async (currentSettings: SettingRecord) => {
-    if (currentSettings.is_check_releasenote === null) {
-      await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
-      setSettings((prev) => ({ ...prev, is_check_releasenote: mizuna_options.mizuna_version }));
+    let forceShowAfterUpdate = safeLocalStorage.getItem('mizuna_show_release_notes_after_update') === 'true';
+    if (forceShowAfterUpdate) {
+      safeLocalStorage.removeItem('mizuna_show_release_notes_after_update');
+    }
+
+    // 初回起動時のウェルカムポップアップ表示
+    if (currentSettings.is_check_releasenote === null && !forceShowAfterUpdate) {
+      openDialog({
+        title: `${mizuna_options.app_name} へようこそ`,
+        icon: 'celebration',
+        tone: 'primary',
+        badgeText: 'WELCOME',
+        contentText:
+          'Mizuna はノート投稿機能のみに特化し、通信量削減と快適な操作性に重点を置いた Misskey クライアントです。',
+        showPrivacyPolicy: true,
+        buttons: [
+          {
+            label: 'はじめる',
+            variant: 'fill',
+            onClick: async () => {
+              await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
+              setSettings((prev) => ({
+                ...prev,
+                is_check_releasenote: mizuna_options.mizuna_version,
+              }));
+              closeDialog();
+            },
+          },
+        ],
+      });
       return;
     }
 
-    if (mizuna_options.mizuna_version !== currentSettings.is_check_releasenote) {
+    // アップデート適用直後（ユーザーが更新を適用してリロードされた後）にのみダイアログを表示
+    if (forceShowAfterUpdate) {
+      let latestPost: { title: string; link: string } | null = null;
       try {
-        const latestPost = await fetchLatestReleaseNote();
-        if (latestPost) {
-          openDialog({
-            title: 'Mizuna がアップデートされました',
-            icon: 'celebration',
-            tone: 'primary',
-            badgeText: `VERSION ${mizuna_options.mizuna_version}`,
-            contentText: `いつもご利用ありがとうございます。Mizuna v${mizuna_options.mizuna_version} への更新が完了しました。新機能や改善点についてはリリースノートをご覧ください。`,
-            linkCard: {
-              label: 'RELEASE NOTE',
-              title: latestPost.title,
-              url: latestPost.link,
-            },
-            buttons: [
-              {
-                label: '確認してはじめる',
-                variant: 'fill',
-                onClick: async () => {
-                  await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
-                  setSettings((prev) => ({
-                    ...prev,
-                    is_check_releasenote: mizuna_options.mizuna_version,
-                  }));
-                },
-              },
-            ],
-          });
-        } else {
-          await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
-        }
+        latestPost = await fetchLatestReleaseNote();
       } catch (err) {
         console.error('リリースノートの取得に失敗しました:', err);
       }
+
+      openDialog({
+        title: 'Mizuna がアップデートされました',
+        icon: 'celebration',
+        tone: 'primary',
+        badgeText: `VERSION ${mizuna_options.mizuna_version}`,
+        contentText: `いつもご利用ありがとうございます。Mizuna v${mizuna_options.mizuna_version} への更新が完了しました。新機能や改善点についてはリリースノートをご覧ください。`,
+        linkCard: {
+          label: 'RELEASE NOTE',
+          title: latestPost?.title || `Mizuna v${mizuna_options.mizuna_version} リリースノート`,
+          url: latestPost?.link || 'https://github.com/MizuiMiduki/Mizuna/releases',
+        },
+        buttons: [
+          {
+            label: '確認してはじめる',
+            variant: 'fill',
+            onClick: async () => {
+              await updateSettingDb({ is_check_releasenote: mizuna_options.mizuna_version });
+              setSettings((prev) => ({
+                ...prev,
+                is_check_releasenote: mizuna_options.mizuna_version,
+              }));
+            },
+          },
+        ],
+      });
     }
   };
 
@@ -408,6 +860,16 @@ export function AppProvider(props: { children: JSX.Element }) {
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
+    // オンライン・オフライン検知
+    const handleOnline = () => {
+      showToast('インターネット接続が回復しました', 'success');
+    };
+    const handleOffline = () => {
+      showToast('ネットワークが切断されました（オフライン）', 'warning');
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
     // OSのカラースキーム変更を監視（端末設定モード時）
     const mediaQuery =
       typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -419,6 +881,150 @@ export function AppProvider(props: { children: JSX.Element }) {
       }
     };
     mediaQuery?.addEventListener?.('change', handleSchemeChange);
+
+    // Service Worker の登録とPWA更新待機監視
+    let handleControllerChange: (() => void) | null = null;
+    if (typeof window !== 'undefined' && 'serviceWorker' in navigator && navigator.serviceWorker) {
+      let isRefreshing = false;
+      handleControllerChange = () => {
+        if (suppressNextControllerChange) {
+          suppressNextControllerChange = false;
+          return;
+        }
+        if (isRefreshing) return;
+        isRefreshing = true;
+        window.location.reload();
+      };
+      navigator.serviceWorker.addEventListener?.('controllerchange', handleControllerChange);
+
+      const setupRegistration = (registration: ServiceWorkerRegistration) => {
+        activeSwRegistration = registration;
+
+        // 前回の起動などで既に待機状態のワーカーがいる場合
+        if (registration.waiting && navigator.serviceWorker.controller) {
+          handleWaitingWorker(registration.waiting);
+        }
+
+        // 新しいService Workerのインストールを検知
+        registration.addEventListener?.('updatefound', () => {
+          const installingWorker = registration.installing;
+          if (!installingWorker) return;
+
+          installingWorker.addEventListener?.('statechange', () => {
+            if (
+              installingWorker.state === 'installed' &&
+              navigator.serviceWorker.controller
+            ) {
+              // 新しいバージョンがインストール完了＆待機状態（ユーザーの選択待ち）
+              handleWaitingWorker(installingWorker);
+            }
+          });
+        });
+      };
+
+      // 既存の登録を確認。すでに登録済みの場合は register を呼ばず、勝手なバックグラウンドダウンロード・更新を抑止する
+      navigator.serviceWorker
+        .getRegistration?.()
+        .then((existingReg) => {
+          if (existingReg) {
+            setupRegistration(existingReg);
+          } else {
+            // 初回起動時のみ Service Worker を登録
+            navigator.serviceWorker
+              .register?.('/sw.js', { updateViaCache: 'all' })
+              ?.then(setupRegistration)
+              ?.catch((error) => {
+                console.error('Service Worker registration error:', error);
+              });
+          }
+        })
+        .catch(() => {
+          navigator.serviceWorker
+            .register?.('/sw.js', { updateViaCache: 'all' })
+            ?.then(setupRegistration)
+            ?.catch((error) => {
+              console.error('Service Worker registration error:', error);
+            });
+        });
+    }
+
+    // 起動時にサーバー上の最新バージョン情報を軽量チェック（アップデートの有無を自動検知）
+    checkVersionOnServer(true);
+
+    if (mizuna_options.maintenance) {
+      window.location.href = `${mizuna_options.mizuna_address}/maintenance.html`;
+      return;
+    }
+
+    // キャッシュクリア等のリロードパラメータがあればURLをクリーンアップ
+    if (typeof window !== 'undefined' && window.location.search.includes('reload=')) {
+      const cleanUrl = window.location.pathname + window.location.hash;
+      window.history.replaceState({}, document.title, cleanUrl || '/');
+    }
+
+    let handlePopState: ((e: PopStateEvent) => void) | null = null;
+    // Android / ブラウザの戻る操作 (PopState) をハンドリング
+    if (typeof window !== 'undefined') {
+      try {
+        window.history.replaceState({ view: currentView(), isRoot: true }, '');
+      } catch (e) {
+        // ignore
+      }
+
+      handlePopState = (e: PopStateEvent) => {
+        // UI操作（閉じるボタンや背景タップ）によってプログラムで history.back() された時は何もしない
+        if (ignoreNextPopState) {
+          ignoreNextPopState = false;
+          return;
+        }
+
+        isPopStateActive = true;
+        try {
+          // 1. 最優先：ダイアログが開いている場合はダイアログを閉じる
+          if (dialogConfig()) {
+            isDialogPoppedByPopState = true;
+            setDialogConfig(null);
+            return;
+          }
+
+          // 2. モーダル（画像編集、画像プレビュー等）が開いている場合は最新のものを閉じる
+          if (modalBackHandlers.length > 0) {
+            const handler = modalBackHandlers.pop();
+            if (handler) {
+              handler();
+              return;
+            }
+          }
+
+          // 3. サブ画面（設定、アカウント、お知らせ等）にいる場合はホーム画面（アカウント未登録時はadd_account）に戻る
+          const homeTarget: ViewType = accounts().length > 0 ? 'note' : 'add_account';
+          if (currentView() !== homeTarget) {
+            setCurrentViewInternal(homeTarget);
+            return;
+          }
+
+          // 4. ホーム画面（note）にいる場合：誤終了防止（二度押しで終了）
+          const now = Date.now();
+          if (now - lastBackPressTime < 2000) {
+            return;
+          }
+
+          lastBackPressTime = now;
+          showToast(t('common.exit_confirm') || 'もう一度「戻る」を押すと終了します', 'info');
+          try {
+            window.history.pushState({ view: 'note', isRoot: true }, '');
+          } catch (e) {
+            // ignore
+          }
+        } finally {
+          setTimeout(() => {
+            isPopStateActive = false;
+          }, 50);
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+    }
 
     void (async () => {
       // Canary / 本番のタイトル・PWAマニフェスト同期
@@ -435,17 +1041,13 @@ export function AppProvider(props: { children: JSX.Element }) {
         );
       }
 
-      if (mizuna_options.maintenance) {
-        window.location.href = `${mizuna_options.mizuna_address}/maintenance.html`;
-        return;
-      }
-
       const hasShareParams = captureWebShareTargetFromUrl();
       const savedView = getSavedView();
 
       try {
         const loadedSettings = await loadOrCreateSettings();
         setSettings(loadedSettings);
+        applyCustomCss(loadedSettings.custom_css ?? '');
         setVisibility(visibilityNumToString(loadedSettings.default_visibility));
         setEndMizuna(loadedSettings.is_note_end_mizuna);
 
@@ -453,13 +1055,13 @@ export function AppProvider(props: { children: JSX.Element }) {
         const addedViaMiAuth = await handleMiAuthCallbackIfPresent();
 
         // アカウント読み込み
-        await reloadAccounts();
+        const loadedAccounts = await reloadAccounts();
 
-        if (accounts().length > 0) {
+        if (loadedAccounts && loadedAccounts.length > 0) {
           applyWebShareTargetToForm();
           if (addedViaMiAuth || hasShareParams) {
             setCurrentViewInternal('note');
-          } else if (savedView) {
+          } else if (savedView && savedView !== 'add_account') {
             setCurrentViewInternal(savedView);
           } else {
             setCurrentViewInternal('note');
@@ -474,6 +1076,9 @@ export function AppProvider(props: { children: JSX.Element }) {
 
         // リリースノート確認
         await checkNewReleaseNote(loadedSettings);
+
+        // 下書きのロード
+        await loadDrafts();
       } catch (err) {
         console.error('Initialization failed:', err);
         showToast('データベースの読み込みに失敗しました', 'error');
@@ -491,6 +1096,27 @@ export function AppProvider(props: { children: JSX.Element }) {
       if (typeof document !== 'undefined') {
         try {
           document.removeEventListener('visibilitychange', handleVisibilityChange);
+        } catch {
+          // 無視
+        }
+      }
+      if (typeof window !== 'undefined') {
+        try {
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+          if (
+            'serviceWorker' in navigator &&
+            navigator.serviceWorker?.removeEventListener &&
+            handleControllerChange
+          ) {
+            navigator.serviceWorker.removeEventListener(
+              'controllerchange',
+              handleControllerChange
+            );
+          }
+          if (handlePopState) {
+            window.removeEventListener('popstate', handlePopState);
+          }
         } catch {
           // 無視
         }
@@ -513,14 +1139,101 @@ export function AppProvider(props: { children: JSX.Element }) {
       id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name: file.name,
       file,
+      rawFile: file,
       dataUrl: URL.createObjectURL(file),
       originalSize: file.size,
     }));
 
-    // バックグラウンドでWebPへ事前圧縮し、削減率と圧縮後サイズを記録
+    // 自動署名・透かし付与の設定を確認
+    const sigPos = settings().signature_position ?? settings().watermark_position;
+    const shouldAutoSignature = sigPos && sigPos !== 'none';
+    const user = currentUser();
+    const defaultUserText = user ? `@${user.username}@${user.address}` : '';
+    const signatureText = settings().signature_text?.trim() || settings().watermark_text?.trim() || defaultUserText;
+
+    const shouldAutoWatermark = settings().watermark_enabled === true;
+    const watermarkText = settings().watermark_text?.trim() || defaultUserText || '@username@instance';
+    const watermarkPattern = settings().watermark_pattern ?? 'diagonal';
+
+    // サムネイル生成とWebP事前圧縮は、原寸デコードのピークメモリを抑えるため1枚ずつ直列に処理する
     newItems.forEach((item) => {
-      compressAndConvertToWebP(item.file, 0.75)
-        .then((compressed) => {
+      attachProcessQueue = attachProcessQueue.then(async () => {
+        let activeFile = item.file;
+        let activeDataUrl = item.dataUrl;
+
+        // 設定で署名または透かし付与が有効化されている場合、自動で合成
+        if ((shouldAutoSignature && signatureText) || (shouldAutoWatermark && watermarkText)) {
+          try {
+            const processed = await editImageOptimized(activeFile, {
+              signature: shouldAutoSignature && signatureText ? {
+                text: signatureText,
+                position: sigPos,
+                opacity: 0.85,
+              } : null,
+              watermark: shouldAutoWatermark && watermarkText ? {
+                text: watermarkText,
+                pattern: watermarkPattern,
+                opacity: (settings().watermark_opacity ?? 22) / 100,
+              } : null,
+            });
+            const oldDataUrl = activeDataUrl;
+            activeDataUrl = URL.createObjectURL(processed);
+            activeFile = processed;
+
+            setAttachedImages((prev) =>
+              prev.map((img) =>
+                img.id === item.id
+                  ? {
+                      ...img,
+                      file: activeFile,
+                      dataUrl: activeDataUrl,
+                      originalSize: activeFile.size,
+                      editState: {
+                        rotation: 0,
+                        flipX: false,
+                        brightness: 100,
+                        contrast: 100,
+                        saturation: 100,
+                        aspectRatio: 'free',
+                        cropBox: null,
+                        mosaics: [],
+                        texts: [],
+                        drawings: [],
+                        watermarkEnabled: Boolean(shouldAutoWatermark && watermarkText),
+                        watermarkText: watermarkText,
+                        watermarkPattern: watermarkPattern,
+                        watermarkOpacity: settings().watermark_opacity ?? 22,
+                        watermarkScale: 100,
+                        signatureEnabled: Boolean(shouldAutoSignature && signatureText),
+                        signatureText: signatureText,
+                        signaturePosition: (sigPos as SignaturePosition) || 'bottom-right',
+                        signatureOpacity: 85,
+                        signatureScale: 100,
+                      },
+                    }
+                  : img
+              )
+            );
+            if (oldDataUrl) URL.revokeObjectURL(oldDataUrl);
+          } catch (wmErr) {
+            console.warn('Auto watermark failed, proceeding with original file:', wmErr);
+          }
+        }
+
+        const thumbUrl = (await createThumbnailUrl(activeFile)) ?? activeDataUrl; // 生成不可なら原寸にフォールバック
+        {
+          let alive = false;
+          setAttachedImages((prev) =>
+            prev.map((img) => {
+              if (img.id !== item.id) return img;
+              alive = true;
+              return { ...img, thumbUrl };
+            })
+          );
+          if (!alive && thumbUrl !== activeDataUrl) URL.revokeObjectURL(thumbUrl);
+        }
+        try {
+          const compressed = await compressAndConvertToWebP(activeFile, 0.75);
           setAttachedImages((prev) =>
             prev.map((img) =>
               img.id === item.id
@@ -528,42 +1241,205 @@ export function AppProvider(props: { children: JSX.Element }) {
                 : img
             )
           );
-        })
-        .catch((err) => console.warn('Pre-compression failed:', err));
+        } catch (err) {
+          console.warn('Pre-compression failed:', err);
+        }
+      });
     });
 
     setAttachedImages((prev) => {
       const combined = [...prev, ...newItems];
       if (combined.length > 16) {
-        combined.slice(16).forEach((extra) => URL.revokeObjectURL(extra.dataUrl));
+        combined.slice(16).forEach(revokeAttachedUrls);
         return combined.slice(0, 16);
       }
       return combined;
     });
   };
 
+  // Misskeyドライブの既存ファイルを添付画像として追加（再圧縮・再アップロード不要）
+  const addAttachedDriveFiles = (driveFiles: MisskeyFile[]) => {
+    if (!driveFiles || driveFiles.length === 0) return;
+
+    const current = attachedImages();
+    const existingDriveIds = new Set(
+      current.map((item) => item.driveFileId).filter(Boolean) as string[]
+    );
+    const uniqueIncoming = driveFiles.filter(
+      (f) => f && f.id && f.url && !existingDriveIds.has(f.id)
+    );
+    if (uniqueIncoming.length === 0) return;
+
+    if (current.length + uniqueIncoming.length > 16) {
+      showToast('画像は16枚までです', 'error', '画像選択エラー');
+      return;
+    }
+
+    const newItems: AttachedImageItem[] = uniqueIncoming.map((df) => {
+      const placeholderFile = new File([], df.name || 'drive_image.webp', {
+        type: df.type || 'image/webp',
+      });
+      return {
+        id: `drive_${df.id}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        name: df.name || 'drive_image.webp',
+        file: placeholderFile,
+        rawFile: placeholderFile,
+        dataUrl: df.url,
+        thumbUrl: df.thumbnailUrl || df.url,
+        originalSize: df.size ?? 0,
+        compressedSize: df.size ?? 0,
+        driveFileId: df.id,
+      };
+    });
+
+    setAttachedImages((prev) => [...prev, ...newItems].slice(0, 16));
+  };
+
   const removeAttachedImage = (id: string) => {
     setAttachedImages((prev) => {
       const target = prev.find((item) => item.id === id);
-      if (target && target.dataUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(target.dataUrl);
-      }
+      if (target) revokeAttachedUrls(target);
       return prev.filter((item) => item.id !== id);
     });
   };
 
+  const updateAttachedImage = (id: string, updatedFile: File, editState?: ImageEditState) => {
+    const current = attachedImages();
+    const target = current.find((item) => item.id === id);
+    if (!target) return;
+
+    revokeAttachedUrls(target);
+
+    const newDataUrl = URL.createObjectURL(updatedFile);
+    const updatedItem: AttachedImageItem = {
+      ...target,
+      name: updatedFile.name,
+      file: updatedFile,
+      dataUrl: newDataUrl,
+      thumbUrl: newDataUrl,
+      originalSize: updatedFile.size,
+      compressedFile: undefined,
+      compressedSize: undefined,
+      editState: editState ?? target.editState,
+    };
+
+    setAttachedImages((prev) =>
+      prev.map((item) => (item.id === id ? updatedItem : item))
+    );
+
+    attachProcessQueue = attachProcessQueue.then(async () => {
+      const thumbUrl = (await createThumbnailUrl(updatedFile)) ?? newDataUrl;
+      let alive = false;
+      setAttachedImages((prev) =>
+        prev.map((img) => {
+          if (img.id !== id) return img;
+          alive = true;
+          return { ...img, thumbUrl };
+        })
+      );
+      if (!alive && thumbUrl !== newDataUrl) URL.revokeObjectURL(thumbUrl);
+
+      try {
+        const compressed = await compressAndConvertToWebP(updatedFile, 0.75);
+        setAttachedImages((prev) =>
+          prev.map((img) =>
+            img.id === id
+              ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
+              : img
+          )
+        );
+      } catch (err) {
+        console.warn('Pre-compression failed for edited image:', err);
+      }
+    });
+  };
+
+  const revertAttachedImage = (id: string) => {
+    const current = attachedImages();
+    const target = current.find((item) => item.id === id);
+    if (!target) return;
+
+    revokeAttachedUrls(target);
+
+    const newDataUrl = URL.createObjectURL(target.rawFile);
+    const revertedItem: AttachedImageItem = {
+      ...target,
+      name: target.rawFile.name,
+      file: target.rawFile,
+      dataUrl: newDataUrl,
+      thumbUrl: newDataUrl,
+      originalSize: target.rawFile.size,
+      compressedFile: undefined,
+      compressedSize: undefined,
+      editState: undefined,
+    };
+
+    setAttachedImages((prev) =>
+      prev.map((item) => (item.id === id ? revertedItem : item))
+    );
+
+    attachProcessQueue = attachProcessQueue.then(async () => {
+      const thumbUrl = (await createThumbnailUrl(target.rawFile)) ?? newDataUrl;
+      let alive = false;
+      setAttachedImages((prev) =>
+        prev.map((img) => {
+          if (img.id !== id) return img;
+          alive = true;
+          return { ...img, thumbUrl };
+        })
+      );
+      if (!alive && thumbUrl !== newDataUrl) URL.revokeObjectURL(thumbUrl);
+
+      try {
+        const compressed = await compressAndConvertToWebP(target.rawFile, 0.75);
+        setAttachedImages((prev) =>
+          prev.map((img) =>
+            img.id === id
+              ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
+              : img
+          )
+        );
+      } catch (err) {
+        console.warn('Pre-compression failed for reverted image:', err);
+      }
+    });
+  };
+
+  const reorderAttachedImages = (newOrderedIds: string[]) => {
+    setAttachedImages((prev) => {
+      const map = new Map(prev.map((item) => [item.id, item]));
+      const next: AttachedImageItem[] = [];
+      for (const id of newOrderedIds) {
+        const item = map.get(id);
+        if (item) next.push(item);
+      }
+      for (const item of prev) {
+        if (!next.some((x) => x.id === item.id)) next.push(item);
+      }
+      return next;
+    });
+  };
+
+  const moveAttachedImage = (id: string, direction: -1 | 1) => {
+    setAttachedImages((prev) => {
+      const index = prev.findIndex((item) => item.id === id);
+      if (index === -1) return prev;
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= prev.length) return prev;
+      const next = [...prev];
+      const [removed] = next.splice(index, 1);
+      next.splice(newIndex, 0, removed);
+      return next;
+    });
+  };
+
   const clearNoteForm = (showNotification = true) => {
-    localStorage.removeItem('wst_title');
-    localStorage.removeItem('wst_text');
-    localStorage.removeItem('wst_url');
+    clearWebShareTargetStorage();
     setCwText('');
     setNoteText('');
+    setReplyTargetNote(null);
     setAttachedImages((prev) => {
-      prev.forEach((item) => {
-        if (item.dataUrl.startsWith('blob:')) {
-          URL.revokeObjectURL(item.dataUrl);
-        }
-      });
+      prev.forEach(revokeAttachedUrls);
       return [];
     });
     if (showNotification) {
@@ -571,7 +1447,220 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
   };
 
-  const switchAccount = async (accountId: number) => {
+  const cancelReply = () => {
+    setReplyTargetNote(null);
+  };
+
+  const startReply = (note: MisskeyNote) => {
+    setReplyTargetNote(note);
+
+    // 返信先の公開範囲を引き継ぐ
+    if (note.visibility === 'followers' || note.visibility === 'home' || note.visibility === 'public') {
+      setVisibility(note.visibility);
+    }
+
+    // 返信先にCWがあればCWモードを有効化
+    if (note.cw) {
+      setCwEnabled(true);
+    }
+
+    // 自分自身への返信以外なら @username を本文の先頭に自動入力
+    const user = currentUser();
+    const isSelf = user && (user.username === note.user.username);
+    if (!isSelf && note.user.username) {
+      const handle = `@${note.user.username} `;
+      if (!noteText().includes(handle)) {
+        setNoteText((prev) => (prev ? `${handle}${prev}` : handle));
+      }
+    }
+
+    // ノート投稿画面へ遷移
+    setCurrentViewInternal('note');
+    showToast(`@${note.user.username} への返信`, 'info');
+  };
+
+  // ----------------------------------------------------
+  // 下書き保存・復帰操作
+  // ----------------------------------------------------
+  const loadDrafts = async () => {
+    try {
+      const list = await getAllDraftsDb();
+      setDrafts(list);
+    } catch (e) {
+      console.error('Failed to load drafts:', e);
+    }
+  };
+
+  const saveCurrentAsDraft = async (): Promise<boolean> => {
+    const text = noteText().trim();
+    const cw = cwText().trim();
+    const images = attachedImages();
+    const hasContent = text.length > 0 || cw.length > 0 || images.length > 0;
+    if (!hasContent) {
+      showToast(t('draft.empty_cannot_save'), 'warning');
+      return false;
+    }
+
+    const user = currentUser();
+    if (!user || typeof user.id !== 'number') {
+      showToast(t('note.no_account'), 'error');
+      return false;
+    }
+
+    const draftImages: DraftAttachedImage[] = images.map((img) => ({
+      name: img.name,
+      type: img.file.type || 'image/png',
+      blob: img.file,
+      rawBlob: img.rawFile,
+      originalSize: img.originalSize,
+      compressedSize: img.compressedSize,
+      editState: img.editState,
+      driveFileId: img.driveFileId,
+      remoteUrl: img.driveFileId ? img.dataUrl : undefined,
+      remoteThumbUrl: img.driveFileId ? img.thumbUrl : undefined,
+    }));
+
+    try {
+      await saveDraftDb({
+        accountId: user.id,
+        accountUsername: user.username,
+        accountAddress: user.address,
+        accountName: user.name,
+        accountAvatarUrl: user.avatarurl,
+        text: noteText(),
+        cwText: cwText(),
+        cwEnabled: cwEnabled(),
+        visibility: visibility(),
+        endMizuna: endMizuna(),
+        images: draftImages,
+      });
+      await loadDrafts();
+      // 保存後はフォームをクリア（通知は「下書きを保存しました」のみ）
+      clearNoteForm(false);
+      showToast(t('draft.saved'), 'success');
+      return true;
+    } catch (err) {
+      console.error('Failed to save draft:', err);
+      showToast('下書きの保存に失敗しました', 'error');
+      return false;
+    }
+  };
+
+  const executeRestoreDraft = async (draft: DraftRecord): Promise<boolean> => {
+    try {
+      const allAccounts = accounts();
+      const targetAccount = allAccounts.find((a) => a.id === draft.accountId);
+      if (targetAccount && typeof targetAccount.id === 'number') {
+        if (currentUser()?.id !== targetAccount.id) {
+          await switchAccount(targetAccount.id, true);
+        }
+      }
+
+      setNoteText(draft.text || '');
+      setCwText(draft.cwText || '');
+      setCwEnabled(Boolean(draft.cwEnabled));
+      setVisibility(draft.visibility || 'public');
+      setEndMizuna(Boolean(draft.endMizuna));
+
+      setAttachedImages((prev) => {
+        prev.forEach(revokeAttachedUrls);
+        return [];
+      });
+
+      if (draft.images && draft.images.length > 0) {
+        const restoredItems: AttachedImageItem[] = draft.images.map((img) => {
+          const restoredFile = new File([img.blob], img.name, { type: img.type || 'image/png' });
+          const restoredRawFile = img.rawBlob
+            ? new File([img.rawBlob], img.name, { type: img.type || 'image/png' })
+            : restoredFile;
+          const dataUrl = img.driveFileId && img.remoteUrl
+            ? img.remoteUrl
+            : URL.createObjectURL(restoredFile);
+          return {
+            id: `draft_img_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            name: img.name,
+            file: restoredFile,
+            rawFile: restoredRawFile,
+            dataUrl,
+            thumbUrl: img.driveFileId ? (img.remoteThumbUrl || img.remoteUrl) : undefined,
+            originalSize: img.originalSize ?? restoredFile.size,
+            compressedSize: img.compressedSize,
+            editState: img.editState,
+            driveFileId: img.driveFileId,
+          };
+        });
+        setAttachedImages(restoredItems);
+      }
+
+      showToast(t('draft.restored'), 'success');
+      return true;
+    } catch (err) {
+      console.error('Failed to restore draft:', err);
+      showToast('下書きの復元に失敗しました', 'error');
+      return false;
+    }
+  };
+
+  const restoreDraft = async (draft: DraftRecord): Promise<boolean> => {
+    const hasCurrentContent =
+      noteText().trim().length > 0 ||
+      cwText().trim().length > 0 ||
+      attachedImages().length > 0;
+
+    if (hasCurrentContent) {
+      return new Promise<boolean>((resolve) => {
+        openDialog({
+          title: t('draft.restore_confirm_title'),
+          icon: 'history_edu',
+          tone: 'warning',
+          contentText: t('draft.restore_confirm_desc'),
+          buttons: [
+            {
+              label: 'キャンセル',
+              variant: 'text',
+              onClick: () => {
+                closeDialog();
+                resolve(false);
+              },
+            },
+            {
+              label: t('draft.restore'),
+              variant: 'fill',
+              onClick: async () => {
+                closeDialog();
+                const success = await executeRestoreDraft(draft);
+                resolve(success);
+              },
+            },
+          ],
+        });
+      });
+    }
+
+    return executeRestoreDraft(draft);
+  };
+
+  const deleteDraftById = async (id: number): Promise<void> => {
+    try {
+      await deleteDraftDb(id);
+      await loadDrafts();
+      showToast(t('draft.deleted'), 'info');
+    } catch (e) {
+      console.error('Failed to delete draft:', e);
+    }
+  };
+
+  const deleteAllDrafts = async (): Promise<void> => {
+    try {
+      await clearAllDraftsDb();
+      await loadDrafts();
+      showToast(t('draft.all_cleared'), 'info');
+    } catch (e) {
+      console.error('Failed to clear drafts:', e);
+    }
+  };
+
+  const switchAccount = async (accountId: number, silent = false) => {
     await updateSettingDb({ select_user: accountId });
     const nextSettings = { ...settings(), select_user: accountId };
     setSettings(nextSettings);
@@ -579,12 +1668,23 @@ export function AppProvider(props: { children: JSX.Element }) {
     const target = accounts().find((a) => a.id === accountId) ?? null;
     setCurrentUser(target);
     await applyThemeAndMode(nextSettings, target?.avatarurl, target?.address);
-    showToast('アカウントを切り替えました', 'success');
+    if (!silent) {
+      showToast('アカウントを切り替えました', 'success');
+    }
   };
 
   const deleteSelectedAccounts = async (accountIds: number[]) => {
     if (accountIds.length === 0) return;
     await db.account.bulkDelete(accountIds);
+
+    // 並び順設定からも削除対象アカウントを除外
+    const currentOrder = settings().account_order ?? [];
+    if (currentOrder.length > 0) {
+      const nextOrder = currentOrder.filter((id) => !accountIds.includes(id));
+      await updateSettingDb({ account_order: nextOrder });
+      setSettings((prev) => ({ ...prev, account_order: nextOrder }));
+    }
+
     await reloadAccounts();
 
     if (accounts().length === 0) {
@@ -593,6 +1693,11 @@ export function AppProvider(props: { children: JSX.Element }) {
     } else {
       showToast(`${accountIds.length}件のアカウントを削除しました`, 'success');
     }
+  };
+
+  const reorderAccounts = async (newOrderedIds: number[]) => {
+    await updateSettings({ account_order: newOrderedIds });
+    setAccounts((prev) => sortAccountsByOrder(prev, newOrderedIds));
   };
 
   const updateSettings = async (changes: Partial<SettingRecord>) => {
@@ -606,6 +1711,11 @@ export function AppProvider(props: { children: JSX.Element }) {
     }
     if (changes.is_note_end_mizuna !== undefined) {
       setEndMizuna(changes.is_note_end_mizuna);
+    }
+
+    // カスタムCSSが更新された場合は再適用
+    if (changes.custom_css !== undefined) {
+      applyCustomCss(changes.custom_css);
     }
 
     // テーマやアイコン表示に関する変更があれば再適用
@@ -704,17 +1814,186 @@ export function AppProvider(props: { children: JSX.Element }) {
     await syncAllAccounts();
   };
 
+  const readFileAsText = async (file: File): Promise<string> => {
+    if (typeof file.text === 'function') {
+      return file.text();
+    }
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve((reader.result as string) || '');
+      reader.onerror = () => reject(reader.error || new Error('Failed to read file'));
+      reader.readAsText(file);
+    });
+  };
+
   const exportAccounts = async () => {
     const all = await db.account.toArray();
+    const fileName = generateAccountBackupFileName();
     const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'mizuna_accounts.json';
+    a.download = fileName;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
     showToast('アカウント情報をエクスポートしました', 'success');
+  };
+
+  const exportSettings = async () => {
+    const current = settings();
+    const exportData: Omit<SettingRecord, 'id'> = {
+      select_user: current.select_user,
+      default_visibility: current.default_visibility,
+      is_note_end_mizuna: current.is_note_end_mizuna,
+      is_visible_icon: current.is_visible_icon,
+      ui_mode: current.ui_mode,
+      is_darkmode: current.is_darkmode,
+      is_pick_theme_color: current.is_pick_theme_color,
+      latest_theme_color: current.latest_theme_color,
+      is_check_releasenote: current.is_check_releasenote,
+      language: current.language,
+      account_order: current.account_order ?? [],
+      custom_css: current.custom_css ?? '',
+      watermark_text: current.watermark_text ?? '',
+      watermark_position: current.watermark_position ?? 'none',
+      watermark_enabled: current.watermark_enabled ?? false,
+      watermark_pattern: current.watermark_pattern ?? 'diagonal',
+      watermark_opacity: current.watermark_opacity ?? 22,
+      signature_text: current.signature_text ?? '',
+      signature_position: current.signature_position ?? 'none',
+    };
+    const fileName = generateSettingBackupFileName();
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    showToast('設定情報をエクスポートしました', 'success');
+  };
+
+  const importSettingsFromFile = async (file: File) => {
+    openDialog({
+      title: '設定データのインポート',
+      icon: 'tune',
+      tone: 'warning',
+      badgeText: 'RESTORE SETTINGS',
+      contentText:
+        'エクスポートした設定ファイルから設定を復元します。現在の設定は上書きされますがよろしいですか？',
+      buttons: [
+        {
+          label: 'キャンセル',
+          variant: 'border',
+        },
+        {
+          label: 'インポートを実行',
+          variant: 'fill',
+          onClick: async () => {
+            try {
+              const text = await readFileAsText(file);
+              const parsed = JSON.parse(text);
+              if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+                throw new Error('Invalid JSON format: expected an object');
+              }
+
+              const changes: Partial<SettingRecord> = {};
+
+              if (typeof parsed.default_visibility === 'number' && [1, 2, 3].includes(parsed.default_visibility)) {
+                changes.default_visibility = parsed.default_visibility as 1 | 2 | 3;
+              }
+              if (typeof parsed.is_note_end_mizuna === 'boolean') {
+                changes.is_note_end_mizuna = parsed.is_note_end_mizuna;
+              }
+              if (typeof parsed.is_visible_icon === 'boolean') {
+                changes.is_visible_icon = parsed.is_visible_icon;
+              }
+              if (typeof parsed.ui_mode === 'number' && [1, 2, 3, 4, 5].includes(parsed.ui_mode)) {
+                changes.ui_mode = parsed.ui_mode as 1 | 2 | 3 | 4 | 5;
+              }
+              if (typeof parsed.is_darkmode === 'number' && [1, 2, 3].includes(parsed.is_darkmode)) {
+                changes.is_darkmode = parsed.is_darkmode as 1 | 2 | 3;
+              }
+              if (typeof parsed.is_pick_theme_color === 'boolean') {
+                changes.is_pick_theme_color = parsed.is_pick_theme_color;
+              }
+              if (Array.isArray(parsed.latest_theme_color) && parsed.latest_theme_color.length === 3) {
+                changes.latest_theme_color = parsed.latest_theme_color;
+              }
+              if (typeof parsed.language === 'string' && parsed.language.trim()) {
+                changes.language = parsed.language;
+              }
+              if (typeof parsed.custom_css === 'string') {
+                changes.custom_css = parsed.custom_css;
+              }
+              if (typeof parsed.watermark_text === 'string') {
+                changes.watermark_text = parsed.watermark_text;
+              }
+              if (
+                typeof parsed.watermark_position === 'string' &&
+                ['none', 'bottom-right', 'bottom-left', 'top-right', 'top-left'].includes(parsed.watermark_position)
+              ) {
+                changes.watermark_position = parsed.watermark_position;
+              }
+              if (typeof parsed.watermark_enabled === 'boolean') {
+                changes.watermark_enabled = parsed.watermark_enabled;
+              }
+              if (
+                typeof parsed.watermark_pattern === 'string' &&
+                ['diagonal', 'grid', 'center-huge'].includes(parsed.watermark_pattern)
+              ) {
+                changes.watermark_pattern = parsed.watermark_pattern;
+              }
+              if (typeof parsed.watermark_opacity === 'number') {
+                changes.watermark_opacity = Math.max(1, Math.min(100, Math.round(parsed.watermark_opacity)));
+              }
+              if (typeof parsed.signature_text === 'string') {
+                changes.signature_text = parsed.signature_text;
+              }
+              if (
+                typeof parsed.signature_position === 'string' &&
+                ['none', 'bottom-right', 'bottom-left', 'top-right', 'top-left'].includes(parsed.signature_position)
+              ) {
+                changes.signature_position = parsed.signature_position;
+              }
+
+              // アカウント順序や選択ユーザーは、端末に存在するアカウントIDと照合して安全に復元
+              if (Array.isArray(parsed.account_order)) {
+                const currentAccountIds = new Set(
+                  accounts()
+                    .map((a) => a.id)
+                    .filter((id): id is number => id !== undefined)
+                );
+                const validOrder = parsed.account_order.filter(
+                  (id: any) => typeof id === 'number' && currentAccountIds.has(id)
+                );
+                for (const id of currentAccountIds) {
+                  if (!validOrder.includes(id)) {
+                    validOrder.push(id);
+                  }
+                }
+                changes.account_order = validOrder;
+              }
+
+              if (typeof parsed.select_user === 'number') {
+                const hasUser = accounts().some((a) => a.id === parsed.select_user);
+                if (hasUser) {
+                  changes.select_user = parsed.select_user;
+                }
+              }
+
+              await updateSettings(changes);
+              showToast('設定情報をインポートしました', 'success');
+            } catch (err) {
+              console.error('Settings import failed:', err);
+              showToast('設定のインポートに失敗しました', 'error');
+            }
+          },
+        },
+      ],
+    });
   };
 
   const importAccountsFromFile = async (file: File) => {
@@ -735,7 +2014,7 @@ export function AppProvider(props: { children: JSX.Element }) {
           variant: 'fill',
           onClick: async () => {
             try {
-              const text = await file.text();
+              const text = await readFileAsText(file);
               const parsed = JSON.parse(text);
               if (!Array.isArray(parsed)) {
                 throw new Error('Invalid JSON format');
@@ -750,16 +2029,24 @@ export function AppProvider(props: { children: JSX.Element }) {
                 add_mizuna_versinon: String(item.add_mizuna_versinon ?? MIZUNA_VERSION),
               }));
 
+              const allExistingAccounts = await db.account.toArray();
               const recordsToInsert: AccountRecord[] = [];
               for (const record of sanitized) {
                 if (!record.token || !record.username || !record.address) continue;
-                const exists = await db.account
-                  .where({
-                    username: record.username,
-                    address: record.address,
-                  })
-                  .count();
-                if (exists === 0) {
+                const existing = allExistingAccounts.find(
+                  (acc) =>
+                    acc.username.toLowerCase() === record.username.toLowerCase() &&
+                    acc.address.toLowerCase() === record.address.toLowerCase()
+                );
+                if (existing && existing.id !== undefined) {
+                  // 同一アカウントが存在する場合はトークンや最新情報を上書き
+                  await db.account.update(existing.id, {
+                    token: record.token,
+                    name: record.name,
+                    avatarurl: record.avatarurl,
+                    add_mizuna_versinon: record.add_mizuna_versinon,
+                  });
+                } else if (!existing) {
                   recordsToInsert.push(record);
                 }
               }
@@ -803,16 +2090,31 @@ export function AppProvider(props: { children: JSX.Element }) {
     setEndMizuna,
     attachedImages,
     addAttachedFiles,
+    addAttachedDriveFiles,
     removeAttachedImage,
+    updateAttachedImage,
+    revertAttachedImage,
+    reorderAttachedImages,
+    moveAttachedImage,
     clearNoteForm,
+    drafts,
+    draftCount,
+    loadDrafts,
+    saveCurrentAsDraft,
+    restoreDraft,
+    deleteDraftById,
+    deleteAllDrafts,
     switchAccount,
     deleteSelectedAccounts,
+    reorderAccounts,
     updateSettings,
     isSyncingAccounts,
     syncAllAccounts,
     syncCurrentAccount,
     exportAccounts,
     importAccountsFromFile,
+    exportSettings,
+    importSettingsFromFile,
     reloadAccounts,
     toasts,
     showToast,
@@ -820,6 +2122,22 @@ export function AppProvider(props: { children: JSX.Element }) {
     dialogConfig,
     openDialog,
     closeDialog,
+    pushModalBackHandler,
+    hasPendingUpdate,
+    availableUpdateVersion,
+    isCheckingUpdate,
+    updateCheckStatus,
+    resetUpdateCheckStatus,
+    showUpdateBanner,
+    dismissUpdateBanner,
+    promptUpdateDialog,
+    applyPendingUpdate,
+    checkForUpdate,
+    replyTargetNote,
+    setReplyTargetNote,
+    startReply,
+    cancelReply,
+    t,
   };
 
   return <AppContext value={contextValue}>{props.children}</AppContext>;

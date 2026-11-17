@@ -50,10 +50,10 @@ function ToastCard(props: { item: ToastItem; onDismiss: (id: string) => void }) 
         }
       );
     }
-  });
 
-  onCleanup(() => {
-    progressTween?.kill();
+    return () => {
+      progressTween?.kill();
+    };
   });
 
   const getIconName = () => {

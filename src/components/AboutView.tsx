@@ -1,7 +1,8 @@
 import gsap from 'gsap';
-import { For, onSettled } from 'solid-js';
+import { For, onSettled, onCleanup, Show } from 'solid-js';
 import { mizuna_options, mizuna_share } from '../config/mizunaOptions';
 import { useApp } from '../store/appStore';
+import { FloatingBackButton } from './FloatingBackButton';
 
 const OSS_LICENSES = [
   {
@@ -17,16 +18,30 @@ const OSS_LICENSES = [
     url: 'https://gsap.com/',
   },
   {
-    name: 'BeerCSS & Material Dynamic Colors',
+    name: 'Material Dynamic Colors',
     license: 'MIT License',
     copyright: 'Copyright (c) 2021 Everton',
-    url: 'https://www.beercss.com/',
+    url: 'https://github.com/beercss/material-dynamic-colors',
   },
   {
     name: 'Dexie.js',
     license: 'Apache-2.0 License',
     copyright: '© 2014-2025 Dexie.js',
     url: 'https://dexie.org/',
+  },
+  {
+    name: 'mfm-js',
+    license: 'MIT License',
+    copyright: 'Copyright (c) Marihachi / misskey-dev',
+    url: 'https://github.com/misskey-dev/mfm.js',
+    description: 'Misskey公式 MFM (Misskey Flavored Markdown) パーサー',
+  },
+  {
+    name: 'Misskey (MFM Animations & Spec)',
+    license: 'AGPL-3.0 (Reference & Compatibility)',
+    copyright: 'Copyright (c) syuilo and misskey-project',
+    url: 'https://github.com/misskey-dev/misskey',
+    description: 'MFM アニメーション仕様およびキーフレーム定義の準拠・参照',
   },
   {
     name: 'pulltorefreshjs',
@@ -47,17 +62,34 @@ const OSS_LICENSES = [
 ];
 
 export function AboutView() {
-  const { accounts, setCurrentView, showToast } = useApp();
+  const {
+    accounts,
+    setCurrentView,
+    showToast,
+    hasPendingUpdate,
+    availableUpdateVersion,
+    applyPendingUpdate,
+    checkForUpdate,
+    isCheckingUpdate,
+    updateCheckStatus,
+    resetUpdateCheckStatus,
+    t,
+  } = useApp();
   let containerRef: HTMLDivElement | undefined;
 
   onSettled(() => {
+    resetUpdateCheckStatus();
     if (containerRef) {
       gsap.fromTo(
         containerRef,
         { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out' }
+        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
       );
     }
+
+    return () => {
+      resetUpdateCheckStatus();
+    };
   });
 
   const handleBack = () => {
@@ -85,14 +117,6 @@ export function AboutView() {
         <div>
           <h2 class="mizuna-section-title">Mizunaについて</h2>
         </div>
-        <button
-          type="button"
-          class="mizuna-btn mizuna-btn-outline"
-          onClick={handleBack}
-        >
-          <i>arrow_back</i>
-          <span>もどる</span>
-        </button>
       </div>
 
       {/* ヒーロープロフィールカード */}
@@ -105,15 +129,61 @@ export function AboutView() {
               v{mizuna_options.mizuna_version}
             </span>
           </div>
+          <div class="mizuna-about-update-status">
+            <button
+              type="button"
+              id="check_update_button"
+              class={`mizuna-about-update-link ${
+                updateCheckStatus() === 'update_available' || hasPendingUpdate()
+                  ? 'is-update-ready'
+                  : updateCheckStatus() === 'latest'
+                  ? 'is-up-to-date'
+                  : updateCheckStatus() === 'error'
+                  ? 'is-error'
+                  : ''
+              }`}
+              disabled={isCheckingUpdate()}
+              onClick={() => {
+                if (updateCheckStatus() === 'update_available' || hasPendingUpdate()) {
+                  applyPendingUpdate();
+                } else {
+                  checkForUpdate();
+                }
+              }}
+            >
+              <Show when={isCheckingUpdate()}>
+                <i class="is-spinning">sync</i>
+                <span>{t('update.checking')}</span>
+              </Show>
+              <Show when={!isCheckingUpdate() && (updateCheckStatus() === 'update_available' || hasPendingUpdate())}>
+                <i class="is-bounce">system_update</i>
+                <span>{availableUpdateVersion() ? `v${availableUpdateVersion()} に更新` : t('update.apply_now')}</span>
+              </Show>
+              <Show when={!isCheckingUpdate() && updateCheckStatus() === 'latest' && !hasPendingUpdate()}>
+                <i class="mizuna-check-icon">check_circle</i>
+                <span>{t('update.up_to_date')}</span>
+              </Show>
+              <Show when={!isCheckingUpdate() && updateCheckStatus() === 'error' && !hasPendingUpdate()}>
+                <i class="mizuna-error-icon">error_outline</i>
+                <span>{t('update.failed')}</span>
+              </Show>
+              <Show when={!isCheckingUpdate() && updateCheckStatus() === 'idle' && !hasPendingUpdate()}>
+                <i>sync</i>
+                <span>{t('settings.check_button')}</span>
+              </Show>
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          class="mizuna_share mizuna-btn mizuna-btn-primary"
-          onClick={handleWebShare}
-        >
-          <i>share</i>
-          <span>Mizunaを共有</span>
-        </button>
+        <div class="mizuna-about-actions">
+          <button
+            type="button"
+            class="mizuna_share mizuna-btn mizuna-btn-primary"
+            onClick={handleWebShare}
+          >
+            <i>share</i>
+            <span>Mizunaを共有</span>
+          </button>
+        </div>
       </div>
 
       {/* 詳細情報カード */}
@@ -145,9 +215,21 @@ export function AboutView() {
         </div>
         <div class="mizuna-row-divider" />
         <div class="mizuna-meta-row">
+          <span class="mizuna-meta-label">Privacy Policy</span>
+          <button
+            type="button"
+            class="mizuna-link-btn"
+            onClick={() => setCurrentView('privacy')}
+          >
+            <span>プライバシーポリシー</span>
+            <i>arrow_forward</i>
+          </button>
+        </div>
+        <div class="mizuna-row-divider" />
+        <div class="mizuna-meta-row">
           <span class="mizuna-meta-label">License / Copyright</span>
           <span class="mizuna-meta-val">
-            MIT License · (c) <span id="Copyright_year">{currentYear}</span> Mizui Miduki
+            MIT License · ©<span id="Copyright_year">{currentYear}</span> Mizui Miduki
           </span>
         </div>
         <div class="mizuna-row-divider" />
@@ -217,10 +299,17 @@ export function AboutView() {
                 <span class="mizuna-oss-badge">{oss.license}</span>
               </div>
               <div class="mizuna-oss-copy">{oss.copyright}</div>
+              <Show when={oss.description}>
+                <div class="mizuna-oss-desc" style="font-size: 0.8rem; opacity: 0.75; margin-top: 4px; line-height: 1.4;">
+                  {oss.description}
+                </div>
+              </Show>
             </div>
           )}
         </For>
       </div>
+
+      <FloatingBackButton onClick={handleBack} />
     </div>
   );
 }

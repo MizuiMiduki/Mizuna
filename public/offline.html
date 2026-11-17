@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta content="width=device-width, initial-scale=1.0" name="viewport">
+  <meta content="IE=edge" http-equiv="X-UA-Compatible">
+  <title>オフライン | Mizuna</title>
+  <link href="/icon.png" rel="icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+JP:wght@400;600;700;800&family=Inter:wght@500;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,600,1,0" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #2b8cbe;
+      --surface: #f8fafe;
+      --surface-container-low: #ffffff;
+      --on-surface: #181c20;
+      --on-surface-variant: #44474f;
+      --outline-variant: #c4c7d0;
+      --radius-xl: 28px;
+      --offline-color: #ea580c;
+      --offline-bg: color-mix(in srgb, var(--offline-color) 12%, transparent);
+      --offline-border: color-mix(in srgb, var(--offline-color) 30%, transparent);
+      --online-color: #16a34a;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: #38bdf8;
+        --surface: #0f141c;
+        --surface-container-low: #181f2c;
+        --on-surface: #e2e8f0;
+        --on-surface-variant: #94a3b8;
+        --outline-variant: #334155;
+        --offline-color: #fb923c;
+        --offline-bg: color-mix(in srgb, var(--offline-color) 16%, transparent);
+        --offline-border: color-mix(in srgb, var(--offline-color) 36%, transparent);
+        --online-color: #4ade80;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      font-family: "IBM Plex Sans JP", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--surface);
+      color: var(--on-surface);
+      min-height: 100svh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px 16px;
+      position: relative;
+      overflow-x: hidden;
+      background:
+        radial-gradient(
+          800px circle at 15% -10%,
+          color-mix(in srgb, var(--primary) 14%, transparent),
+          transparent 70%
+        ),
+        radial-gradient(
+          700px circle at 85% 100%,
+          color-mix(in srgb, var(--offline-color) 10%, transparent),
+          transparent 65%
+        ),
+        var(--surface);
+    }
+
+    budoux-ja {
+      display: contents;
+    }
+
+    .mizuna-offline-card {
+      position: relative;
+      text-align: center;
+      background: color-mix(in srgb, var(--surface-container-low) 92%, transparent);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid color-mix(in srgb, var(--outline-variant) 50%, transparent);
+      box-shadow:
+        0 24px 60px -12px rgba(0, 0, 0, 0.08),
+        0 2px 8px -2px rgba(0, 0, 0, 0.04);
+      border-radius: var(--radius-xl);
+      padding: 44px 32px 36px;
+      max-width: 440px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      animation: floatIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @media (max-width: 480px) {
+      .mizuna-offline-card {
+        padding: 32px 20px 28px;
+        gap: 12px;
+      }
+    }
+
+    @keyframes floatIn {
+      from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .mizuna-logo-container {
+      position: relative;
+      margin-bottom: 6px;
+    }
+
+    .mizuna-logo-badge {
+      position: relative;
+      width: 80px;
+      height: 80px;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 10px 24px -4px color-mix(in srgb, var(--primary) 30%, transparent);
+    }
+
+    .mizuna-logo-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .mizuna-offline-indicator {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface-container-low);
+      border: 2px solid var(--surface-container-low);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      color: var(--offline-color);
+    }
+
+    .mizuna-status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: var(--offline-bg);
+      border: 1px solid var(--offline-border);
+      color: var(--offline-color);
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      transition: all 0.3s ease;
+    }
+
+    .mizuna-status-pill.is-online {
+      background: color-mix(in srgb, var(--online-color) 14%, transparent);
+      border-color: color-mix(in srgb, var(--online-color) 35%, transparent);
+      color: var(--online-color);
+    }
+
+    .mizuna-pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      box-shadow: 0 0 8px currentColor;
+      animation: pulse 1.8s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.35;
+        transform: scale(0.75);
+      }
+    }
+
+    h1 {
+      font-size: 1.45rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--on-surface);
+      margin-top: 4px;
+      line-height: 1.3;
+    }
+
+    p {
+      font-size: 0.92rem;
+      line-height: 1.65;
+      color: var(--on-surface-variant);
+      margin: 0;
+    }
+
+    .mizuna-hint-box {
+      width: 100%;
+      background: color-mix(in srgb, var(--surface) 60%, var(--surface-container-low));
+      border: 1px solid color-mix(in srgb, var(--outline-variant) 40%, transparent);
+      border-radius: 16px;
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 0.82rem;
+      color: var(--on-surface-variant);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 2px;
+    }
+
+    .mizuna-hint-title {
+      font-weight: 700;
+      color: var(--on-surface);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+    }
+
+    .mizuna-hint-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-left: 4px;
+    }
+
+    .mizuna-hint-list li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      line-height: 1.4;
+    }
+
+    .mizuna-hint-list li::before {
+      content: "•";
+      color: var(--primary);
+      font-weight: bold;
+    }
+
+    .mizuna-divider {
+      width: 100%;
+      height: 1px;
+      background: color-mix(in srgb, var(--outline-variant) 40%, transparent);
+      margin: 8px 0 2px;
+    }
+
+    .mizuna-reload-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 44px;
+      padding: 0 22px;
+      border-radius: 9999px;
+      background: color-mix(in srgb, var(--primary) 14%, var(--surface-container-low));
+      border: 1px solid color-mix(in srgb, var(--primary) 40%, transparent);
+      color: var(--primary);
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      font-family: inherit;
+      width: 100%;
+      max-width: 260px;
+    }
+
+    .mizuna-reload-btn:hover {
+      background: var(--primary);
+      color: #ffffff;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px -2px color-mix(in srgb, var(--primary) 35%, transparent);
+    }
+
+    .mizuna-reload-btn:active {
+      transform: translateY(0);
+    }
+
+    .mizuna-reload-btn.loading .btn-icon {
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .footer {
+      font-size: 0.75rem;
+      color: color-mix(in srgb, var(--on-surface-variant) 70%, transparent);
+      margin-top: 2px;
+    }
+
+    .svg-icon {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      display: inline-block;
+      vertical-align: middle;
+    }
+  </style>
+  <script src="https://unpkg.com/budoux/bundle/budoux-ja.min.js"></script>
+</head>
+
+<body>
+  <div class="mizuna-offline-card">
+    <div class="mizuna-logo-container">
+      <div class="mizuna-logo-badge">
+        <img alt="Mizuna" class="mizuna-logo-img" src="/icon.png">
+      </div>
+      <div class="mizuna-offline-indicator" title="オフライン">
+        <svg class="svg-icon" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+          <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4c-1.48 0-2.85.43-4.01 1.17l1.46 1.46C10.21 6.23 11.08 6 12 6c3.04 0 5.5 2.46 5.5 5.5v.5H19c1.66 0 3 1.34 3 3 0 1.13-.64 2.11-1.56 2.62l1.45 1.45C23.16 18.16 24 16.68 24 15c0-2.64-2.05-4.78-4.65-4.96zM3 5.27l2.75 2.74C2.56 8.52 0 11.47 0 15c0 3.86 3.14 7 7 7h11.73l2 2 1.27-1.27L4.27 4 3 5.27zM7 20c-2.76 0-5-2.24-5-5 0-2.64 2.05-4.78 4.65-4.96l7.85 7.86c-.5.06-1 .1-1.5.1H7z" />
+        </svg>
+      </div>
+    </div>
+
+    <div class="mizuna-status-pill" id="status-pill">
+      <span class="mizuna-pulse-dot"></span>
+      <span id="status-text">OFFLINE</span>
+    </div>
+
+    <budoux-ja>
+      <h1 id="offline-heading">インターネットに接続されていません</h1>
+    </budoux-ja>
+
+    <budoux-ja>
+      <p id="offline-desc">ネットワーク接続が切断されているため、Mizunaを表示できません。<br>接続が復帰すると自動的に再接続されます。</p>
+    </budoux-ja>
+
+    <div class="mizuna-hint-box">
+      <div class="mizuna-hint-title">
+        <svg class="svg-icon" viewBox="0 0 24 24" style="width: 15px; height: 15px;">
+          <path d="M11 17h2v-6h-2v6zm1-15C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-11h2V7h-2v2z" />
+        </svg>
+        <span>ご確認ください</span>
+      </div>
+      <ul class="mizuna-hint-list">
+        <li>Wi-Fiまたはモバイルデータ通信が有効か</li>
+        <li>端末の機内モードがオフになっているか</li>
+        <li>電波状況の良い場所にいるか</li>
+      </ul>
+    </div>
+
+    <div class="mizuna-divider"></div>
+
+    <button type="button" class="mizuna-reload-btn" id="reload-btn" onclick="handleReload()">
+      <svg class="svg-icon btn-icon" viewBox="0 0 24 24">
+        <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" />
+      </svg>
+      <span id="btn-text">再接続を試す</span>
+    </button>
+
+    <div class="footer">
+      &copy; <span id="Copyright_year"></span> Mizui Miduki · <span id="app-name-footer">Mizuna</span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      // Canary / 本番のタイトル判定
+      var h = location.hostname.toLowerCase();
+      var isCanary = h.indexOf('canary') !== -1 || h.indexOf('test') !== -1;
+      var appName = isCanary ? 'Mizuna Canary' : 'Mizuna';
+
+      document.title = 'オフライン | ' + appName;
+      var footerName = document.getElementById('app-name-footer');
+      if (footerName) footerName.textContent = appName;
+
+      var copyrightYear = document.getElementById('Copyright_year');
+      if (copyrightYear) copyrightYear.textContent = new Date().getFullYear();
+
+      // オンライン状態への復帰検知
+      function handleOnline() {
+        var pill = document.getElementById('status-pill');
+        var statusText = document.getElementById('status-text');
+        var heading = document.getElementById('offline-heading');
+        var desc = document.getElementById('offline-desc');
+        var btn = document.getElementById('reload-btn');
+        var btnText = document.getElementById('btn-text');
+
+        if (pill) pill.classList.add('is-online');
+        if (statusText) statusText.textContent = 'ONLINE';
+        if (heading) heading.textContent = '接続が回復しました';
+        if (desc) desc.textContent = 'ネットワーク接続が確認できました。ページを再読み込みしています...';
+        if (btn) btn.classList.add('loading');
+        if (btnText) btnText.textContent = '再読み込み中...';
+
+        setTimeout(function () {
+          location.reload();
+        }, 1000);
+      }
+
+      window.addEventListener('online', handleOnline);
+
+      // 定期的な接続チェック（バックグラウンド監視）
+      var checkInterval = setInterval(function () {
+        if (navigator.onLine) {
+          // フェッチで疎通確認
+          fetch('/icon.png?check=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
+            .then(function (res) {
+              if (res.ok) {
+                clearInterval(checkInterval);
+                handleOnline();
+              }
+            })
+            .catch(function () {
+              // まだオフライン
+            });
+        }
+      }, 5000);
+    })();
+
+    function handleReload() {
+      var btn = document.getElementById('reload-btn');
+      var btnText = document.getElementById('btn-text');
+      if (btn) btn.classList.add('loading');
+      if (btnText) btnText.textContent = '接続確認中...';
+
+      // 簡易疎通確認後にリロード
+      fetch('/icon.png?check=' + Date.now(), { method: 'HEAD', cache: 'no-store' })
+        .then(function () {
+          location.reload();
+        })
+        .catch(function () {
+          setTimeout(function () {
+            location.reload();
+          }, 400);
+        });
+    }
+  </script>
+</body>
+
+</html>

@@ -1,11 +1,53 @@
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
 import { vi, afterEach } from 'vitest';
+import { configure } from '@solidjs/testing-library';
 import gsap from 'gsap';
 
-// BeerCSS & Material Dynamic Colors mock
-vi.mock('beercss', () => ({}));
-vi.mock('material-dynamic-colors', () => ({}));
+// 非同期テストの安定化のためタイムアウトを調整
+configure({ asyncUtilTimeout: 4000 });
+
+// Material Dynamic Colors mock
+vi.mock('material-dynamic-colors', () => ({
+  default: vi.fn().mockResolvedValue({
+    light: {
+      primary: '#00658e',
+      surface: '#f9f9fc',
+      onSurface: '#191c1e',
+    },
+    dark: {
+      primary: '#85cfff',
+      surface: '#111416',
+      onSurface: '#e2e2e5',
+    },
+  }),
+}));
+
+// PointerEvent mock for jsdom
+if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined') {
+  class MockPointerEvent extends MouseEvent {
+    pointerId: number;
+    width: number;
+    height: number;
+    pressure: number;
+    pointerType: string;
+    constructor(type: string, params: PointerEventInit = {}) {
+      super(type, params);
+      this.pointerId = params.pointerId ?? 1;
+      this.width = params.width ?? 1;
+      this.height = params.height ?? 1;
+      this.pressure = params.pressure ?? 0;
+      this.pointerType = params.pointerType ?? 'touch';
+    }
+  }
+  (window as any).PointerEvent = MockPointerEvent;
+  (globalThis as any).PointerEvent = MockPointerEvent;
+}
+
+// scrollIntoView mock for jsdom
+if (typeof Element !== 'undefined' && typeof Element.prototype.scrollIntoView !== 'function') {
+  Element.prototype.scrollIntoView = vi.fn();
+}
 
 // 1. window.matchMedia mock
 Object.defineProperty(window, 'matchMedia', {
@@ -89,3 +131,24 @@ if (typeof globalThis.fetch === 'undefined' || !vi.isMockFunction(globalThis.fet
 afterEach(() => {
   gsap.killTweensOf('*');
 });
+
+// 7. navigator.serviceWorker mock (jsdom lacks serviceWorker implementation)
+if (typeof navigator !== 'undefined') {
+  Object.defineProperty(navigator as any, 'serviceWorker', {
+    writable: true,
+    configurable: true,
+    value: {
+      register: vi.fn().mockResolvedValue({
+        waiting: null,
+        installing: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        update: vi.fn().mockResolvedValue(undefined),
+      }),
+      getRegistration: vi.fn().mockResolvedValue(null),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      controller: null,
+    },
+  });
+}

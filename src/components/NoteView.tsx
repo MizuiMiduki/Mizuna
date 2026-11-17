@@ -5,18 +5,35 @@ import {
   createMemo,
   createSignal,
   For,
+  onCleanup,
   onSettled,
   Show,
 } from 'solid-js';
-import { createMisskeyNote, uploadImagesToDrive } from '../services/misskeyApi';
+import { createMisskeyNote, uploadImagesToDrive, type MisskeyFile } from '../services/misskeyApi';
 import {
   useApp,
   type AttachedImageItem,
   type VisibilityType,
 } from '../store/appStore';
+import {
+  getAccountCacheKey,
+  prependNoteToHistoryCache,
+} from '../store/historyStore';
 import { getDisplayAvatarUrl } from '../utils/image';
-import { comparisonVersion } from '../utils/version';
+import { type ImageEditState } from '../utils/imageEditor';
+import { comparisonVersion, hasDrivePermission } from '../utils/version';
+import { renderMfm, insertMfmTag } from '../utils/mfm';
+import {
+  type MfmSuggestion,
+  getMfmTriggerInfo,
+  filterMfmSuggestions,
+  applyMfmSuggestion,
+} from '../utils/mfmAutocomplete';
+import { getCaretCoordinates } from '../utils/caretCoordinates';
 import { HoldHoverTip } from './HoldHoverTip';
+import { ImageEditorModal } from './ImageEditorModal';
+import { DraftsModal } from './DraftsModal';
+import { DriveImagePickerModal } from './DriveImagePickerModal';
 
 export function NoteView() {
   const {
@@ -37,18 +54,416 @@ export function NoteView() {
     attachedImages,
     addAttachedFiles,
     removeAttachedImage,
+    updateAttachedImage,
+    revertAttachedImage,
+    reorderAttachedImages,
+    moveAttachedImage,
     clearNoteForm,
+    drafts,
+    draftCount,
+    saveCurrentAsDraft,
+    replyTargetNote,
+    cancelReply,
     showToast,
+    pushModalBackHandler,
+    t,
   } = useApp();
 
+  const [isDraftsModalOpen, setIsDraftsModalOpen] = createSignal(false);
+  const [isDrivePickerOpen, setIsDrivePickerOpen] = createSignal(false);
   const [isInputFocused, setIsInputFocused] = createSignal(false);
   const [isSending, setIsSending] = createSignal(false);
   const [sendingStatus, setSendingStatus] = createSignal('');
-  const [previewModalImage, setPreviewModalImage] = createSignal<AttachedImageItem | null>(null);
+  const [previewModalImageId, setPreviewModalImageId] = createSignal<string | null>(null);
+  const previewModalImage = createMemo(() => {
+    const id = previewModalImageId();
+    if (!id) return null;
+    return attachedImages().find((img) => img.id === id) ?? null;
+  });
+
+  const currentPreviewIndex = createMemo(() => {
+    const id = previewModalImageId();
+    if (!id) return -1;
+    return attachedImages().findIndex((img) => img.id === id);
+  });
+
+  const [lightboxDragX, setLightboxDragX] = createSignal(0);
+  const [isLightboxDragging, setIsLightboxDragging] = createSignal(false);
+
+  const handlePrevPreviewImage = () => {
+    const images = attachedImages();
+    if (images.length <= 1) return;
+    const idx = currentPreviewIndex();
+    const nextIdx = idx > 0 ? idx - 1 : images.length - 1;
+    setIsLightboxDragging(false);
+    setLightboxDragX(0);
+    setPreviewModalImageId(images[nextIdx].id);
+  };
+
+  const handleNextPreviewImage = () => {
+    const images = attachedImages();
+    if (images.length <= 1) return;
+    const idx = currentPreviewIndex();
+    const nextIdx = idx < images.length - 1 ? idx + 1 : 0;
+    setIsLightboxDragging(false);
+    setLightboxDragX(0);
+    setPreviewModalImageId(images[nextIdx].id);
+  };
+
+  // ライトボックスのスワイプ操作（カルーセルトラックによる指のダイレクト追従とスムーズな物理スナップ）
+  let lightboxTouchStartX = 0;
+  let lightboxTouchStartY = 0;
+  let lightboxTouchLastX = 0;
+  let lightboxTouchLastTime = 0;
+  let lightboxTouchVelocityX = 0;
+  let isLightboxHorizontalSwipe = false;
+  let hasLightboxSwiped = false;
+  let isLightboxDraggingLocal = false;
+  let lightboxDragXLocal = 0;
+  let lightboxSwipeResetTimer: any = null;
+
+  const handleLightboxTouchStart = (e: TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    lightboxTouchStartX = touch.clientX;
+    lightboxTouchStartY = touch.clientY;
+    lightboxTouchLastX = touch.clientX;
+    lightboxTouchLastTime = Date.now();
+    lightboxTouchVelocityX = 0;
+    isLightboxHorizontalSwipe = false;
+    isLightboxDraggingLocal = true;
+    lightboxDragXLocal = 0;
+    setIsLightboxDragging(true);
+    setLightboxDragX(0);
+  };
+
+  const handleLightboxTouchMove = (e: TouchEvent) => {
+    if (!isLightboxDraggingLocal || e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    const dx = touch.clientX - lightboxTouchStartX;
+    const dy = touch.clientY - lightboxTouchStartY;
+    const absX = Math.abs(dx);
+    const absY = Math.abs(dy);
+
+    // 初動判定（水平スワイプか垂直操作か）
+    if (!isLightboxHorizontalSwipe && (absX > 6 || absY > 6)) {
+      if (absX >= absY) {
+        isLightboxHorizontalSwipe = true;
+      } else {
+        isLightboxDraggingLocal = false;
+        lightboxDragXLocal = 0;
+        setIsLightboxDragging(false);
+        setLightboxDragX(0);
+        return;
+      }
+    }
+
+    if (isLightboxHorizontalSwipe) {
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+
+      const now = Date.now();
+      const dt = now - lightboxTouchLastTime;
+      if (dt > 10) {
+        lightboxTouchVelocityX = (touch.clientX - lightboxTouchLastX) / dt;
+        lightboxTouchLastX = touch.clientX;
+        lightboxTouchLastTime = now;
+      }
+
+      if (absX > 10) {
+        hasLightboxSwiped = true;
+      }
+
+      const images = attachedImages();
+      const idx = currentPreviewIndex();
+
+      let effectiveDx = dx;
+      // 1枚のみ、または両端（先頭で右、末尾で左）に引っ張る時はラバーバンド抵抗
+      if (images.length <= 1) {
+        effectiveDx = dx * 0.25;
+      } else if (idx === 0 && dx > 0) {
+        effectiveDx = dx * 0.3;
+      } else if (idx === images.length - 1 && dx < 0) {
+        effectiveDx = dx * 0.3;
+      }
+
+      lightboxDragXLocal = effectiveDx;
+      setLightboxDragX(effectiveDx);
+    }
+  };
+
+  const handleLightboxTouchEnd = () => {
+    if (!isLightboxDraggingLocal) return;
+    isLightboxDraggingLocal = false;
+    setIsLightboxDragging(false);
+
+    const dx = lightboxDragXLocal;
+    const images = attachedImages();
+    const idx = currentPreviewIndex();
+
+    if (!isLightboxHorizontalSwipe || images.length <= 1) {
+      setLightboxDragX(0);
+      isLightboxHorizontalSwipe = false;
+      clearTimeout(lightboxSwipeResetTimer);
+      lightboxSwipeResetTimer = setTimeout(() => {
+        hasLightboxSwiped = false;
+      }, 120);
+      return;
+    }
+
+    // フリック速度に応じた慣性判定
+    const flick = Math.abs(lightboxTouchVelocityX) > 0.25 ? lightboxTouchVelocityX * 120 : 0;
+    const projectedX = dx + flick;
+    const threshold = 40;
+
+    if (projectedX < -threshold && idx < images.length - 1) {
+      // 次の画像へスムーズに遷移
+      setPreviewModalImageId(images[idx + 1].id);
+    } else if (projectedX > threshold && idx > 0) {
+      // 前の画像へスムーズに遷移
+      setPreviewModalImageId(images[idx - 1].id);
+    }
+
+    // オフセットを0へ戻し、CSS cubic-bezier トランジションで目的のスライドへ吸い付く
+    setLightboxDragX(0);
+    isLightboxHorizontalSwipe = false;
+    clearTimeout(lightboxSwipeResetTimer);
+    lightboxSwipeResetTimer = setTimeout(() => {
+      hasLightboxSwiped = false;
+    }, 120);
+  };
+
+  // プレビューモーダル表示中の左右キーナビゲーション
+  createEffect(
+    () => previewModalImageId(),
+    (id) => {
+      if (id) {
+        const handleLightboxKeyDown = (e: KeyboardEvent) => {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            handlePrevPreviewImage();
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            handleNextPreviewImage();
+          }
+        };
+        window.addEventListener('keydown', handleLightboxKeyDown);
+        onCleanup(() => window.removeEventListener('keydown', handleLightboxKeyDown));
+      }
+    }
+  );
+
+  // サムネイルのドラッグ＆ドロップ並べ替えステート（マウスおよびタッチ端末対応）
+  const [draggedImageId, setDraggedImageId] = createSignal<string | null>(null);
+  const [dragOverIndex, setDragOverIndex] = createSignal<number | null>(null);
+  let isDraggingItem = false;
+  let isLongPressActive = false;
+  let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+  let touchThumbStartX = 0;
+  let touchThumbStartY = 0;
+  let touchThumbSourceId: string | null = null;
+  let touchThumbSourceIndex = -1;
+  let justFinishedDrag = false;
+
+  const cancelLongPress = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+  };
+
+  const handleImageDragStart = (e: DragEvent, id: string) => {
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', id);
+      e.dataTransfer.effectAllowed = 'move';
+    }
+    isDraggingItem = true;
+    setDraggedImageId(id);
+  };
+
+  const handleImageDragOver = (e: DragEvent, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+    setDragOverIndex(index);
+  };
+
+  const handleImageDrop = (e: DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDraggingOver(false);
+    const sourceId = e.dataTransfer?.getData('text/plain') || draggedImageId();
+    if (sourceId) {
+      const current = attachedImages();
+      const sourceIndex = current.findIndex((item) => item.id === sourceId);
+      if (sourceIndex !== -1 && sourceIndex !== dropIndex) {
+        const nextIds = current.map((item) => item.id);
+        const [moved] = nextIds.splice(sourceIndex, 1);
+        nextIds.splice(dropIndex, 0, moved);
+        reorderAttachedImages(nextIds);
+      }
+    }
+    setDraggedImageId(null);
+    setDragOverIndex(null);
+    isDraggingItem = false;
+    justFinishedDrag = true;
+    setTimeout(() => {
+      justFinishedDrag = false;
+    }, 150);
+  };
+
+  const handleImageDragEnd = () => {
+    setDraggedImageId(null);
+    setDragOverIndex(null);
+    isDraggingItem = false;
+    setIsDraggingOver(false);
+  };
+
+  // タッチ端末での長押しドラッグ並べ替え（通常スクロール操作を妨げない設計）
+  const handleThumbTouchStart = (e: TouchEvent, id: string, index: number) => {
+    if (attachedImages().length <= 1) return;
+    if (e.touches.length !== 1) return;
+    cancelLongPress();
+    setIsDraggingOver(false);
+    isLongPressActive = false;
+    touchThumbStartX = e.touches[0].clientX;
+    touchThumbStartY = e.touches[0].clientY;
+    touchThumbSourceId = id;
+    touchThumbSourceIndex = index;
+
+    // 250ms長押しでドラッグモード開始
+    longPressTimer = setTimeout(() => {
+      isLongPressActive = true;
+      isDraggingItem = true;
+      setDraggedImageId(touchThumbSourceId);
+      try {
+        if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate(30);
+        }
+      } catch {
+        // ignore
+      }
+    }, 250);
+  };
+
+  const handleThumbTouchMove = (e: TouchEvent) => {
+    if (!touchThumbSourceId || e.touches.length !== 1) return;
+    const clientX = e.touches[0].clientX;
+    const clientY = e.touches[0].clientY;
+    const dx = clientX - touchThumbStartX;
+    const dy = clientY - touchThumbStartY;
+
+    // 長押し前に指が動いた場合はスクロール操作と判定し、タイマーを解除してネイティブスクロールを許可
+    if (!isLongPressActive) {
+      if (Math.hypot(dx, dy) > 10) {
+        cancelLongPress();
+        touchThumbSourceId = null;
+      }
+      return;
+    }
+
+    // 長押し成立後はドラッグとして処理し、画面スクロールを停止
+    if (e.cancelable) e.preventDefault();
+    const el = document.elementFromPoint(clientX, clientY);
+    const targetItem = el?.closest('.mizuna-media-item') as HTMLElement | null;
+    if (targetItem && targetItem.dataset.index !== undefined) {
+      const targetIdx = parseInt(targetItem.dataset.index, 10);
+      if (!isNaN(targetIdx)) {
+        setDragOverIndex(targetIdx);
+      }
+    }
+  };
+
+  const handleThumbTouchEnd = () => {
+    cancelLongPress();
+    setIsDraggingOver(false);
+    if (isLongPressActive && touchThumbSourceId) {
+      const dropIdx = dragOverIndex();
+      if (dropIdx !== null && dropIdx !== touchThumbSourceIndex) {
+        const current = attachedImages();
+        const nextIds = current.map((item) => item.id);
+        const [moved] = nextIds.splice(touchThumbSourceIndex, 1);
+        nextIds.splice(dropIdx, 0, moved);
+        reorderAttachedImages(nextIds);
+      }
+      justFinishedDrag = true;
+      setTimeout(() => {
+        justFinishedDrag = false;
+      }, 150);
+    }
+    touchThumbSourceId = null;
+    touchThumbSourceIndex = -1;
+    isLongPressActive = false;
+    isDraggingItem = false;
+    setDraggedImageId(null);
+    setDragOverIndex(null);
+  };
+
+  onCleanup(() => {
+    cancelLongPress();
+  });
+  const [editingImageItem, setEditingImageItem] = createSignal<AttachedImageItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = createSignal(false);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = createSignal(false);
+  const [showPreview, setShowPreview] = createSignal(false);
+  const [previewCwRevealed, setPreviewCwRevealed] = createSignal(false);
+  const [lastFocusedField, setLastFocusedField] = createSignal<'note' | 'cw'>('note');
+
+  // MFM 予測変換（オートコンプリート）ステート
+  const [acActive, setAcActive] = createSignal(false);
+  const [acQuery, setAcQuery] = createSignal('');
+  const [acStartPos, setAcStartPos] = createSignal(-1);
+  const [acIndex, setAcIndex] = createSignal(0);
+  const [acField, setAcField] = createSignal<'note' | 'cw'>('note');
+  const [acPos, setAcPos] = createSignal<{ top: number; left: number }>({ top: 90, left: 16 });
+
+  const acSuggestions = createMemo(() => filterMfmSuggestions(acQuery()));
+
+  // Androidの戻るボタン対応：画像加工モーダル・プレビュー・アカウントピッカーを戻る操作で安全に閉じる
+  createEffect(
+    () => editingImageItem(),
+    (item) => {
+      if (item) {
+        const unregister = pushModalBackHandler(() => {
+          setEditingImageItem(null);
+        });
+        onCleanup(unregister);
+      }
+    }
+  );
+
+  createEffect(
+    () => previewModalImageId(),
+    (id) => {
+      if (id) {
+        const unregister = pushModalBackHandler(() => {
+          setPreviewModalImageId(null);
+        });
+        onCleanup(unregister);
+      }
+    }
+  );
+
+  createEffect(
+    () => isAccountPickerOpen(),
+    (open) => {
+      if (open) {
+        const unregister = pushModalBackHandler(() => {
+          setIsAccountPickerOpen(false);
+        });
+        onCleanup(unregister);
+      }
+    }
+  );
 
   let viewContainerRef: HTMLDivElement | undefined;
+  let composerRef: HTMLElement | undefined;
   let cwSectionRef: HTMLDivElement | undefined;
   let cwInputRef: HTMLTextAreaElement | undefined;
   let noteInputRef: HTMLTextAreaElement | undefined;
@@ -58,8 +473,159 @@ export function NoteView() {
   let pickerBackdropRef: HTMLDivElement | undefined;
 
   const maxCharCount = createMemo(() => (endMizuna() ? 2986 : 3000));
+  const isImageSupported = createMemo(() => hasDrivePermission(currentUser()?.add_mizuna_versinon));
   const noteLength = createMemo(() => noteText().length);
   const cwLength = createMemo(() => cwText().length);
+
+  const previewNoteText = createMemo(() => {
+    const text = noteText();
+    if (!endMizuna()) return text;
+    if (!text) return '(from Mizuna)';
+    return `${text}\n(from Mizuna)`;
+  });
+
+  const renderedNoteHtml = createMemo(() => {
+    if (!showPreview()) return '';
+    return renderMfm(previewNoteText(), null, { serverAddress: currentUser()?.address });
+  });
+  const renderedCwHtml = createMemo(() => {
+    if (!showPreview()) return '';
+    return renderMfm(cwText(), null, { serverAddress: currentUser()?.address });
+  });
+
+  const handleInsertMfm = (prefix: string, suffix: string, placeholder = '') => {
+    const isCw = lastFocusedField() === 'cw' && cwEnabled();
+    const targetRef = isCw ? cwInputRef : noteInputRef;
+    const currentText = isCw ? cwText() : noteText();
+    const setText = isCw ? setCwText : setNoteText;
+
+    if (!targetRef) return;
+    const start = targetRef.selectionStart ?? currentText.length;
+    const end = targetRef.selectionEnd ?? currentText.length;
+
+    const { newText, newCursorStart, newCursorEnd } = insertMfmTag(
+      currentText,
+      start,
+      end,
+      prefix,
+      suffix,
+      placeholder
+    );
+
+    setText(newText);
+    setTimeout(() => {
+      targetRef.focus();
+      targetRef.setSelectionRange(newCursorStart, newCursorEnd);
+    }, 0);
+  };
+
+  const updateAutocompletePosition = (targetEl: HTMLTextAreaElement, triggerPos: number) => {
+    if (!composerRef) return;
+    try {
+      const caret = getCaretCoordinates(targetEl, triggerPos);
+      const targetRect = targetEl.getBoundingClientRect();
+      const composerRect = composerRef.getBoundingClientRect();
+
+      if (composerRect.width === 0 || composerRect.height === 0) {
+        setAcPos({ top: 90, left: 16 });
+        return;
+      }
+
+      // Exact pixel position of the trigger character inside the composer card
+      const caretTopInComposer = targetRect.top - composerRect.top + (caret.top - targetEl.scrollTop);
+      const caretLeftInComposer = targetRect.left - composerRect.left + (caret.left - targetEl.scrollLeft);
+      const lineHeight = caret.height || 26;
+
+      const popupHeight = 132;
+      const popupWidth = 160;
+
+      // Determine vertical placement: below by default, or above if close to bottom
+      let top: number;
+      const spaceBelow = composerRect.height - (caretTopInComposer + lineHeight);
+      if (spaceBelow >= popupHeight + 8 || caretTopInComposer < popupHeight + 8) {
+        // Position below the line being typed (with a 4px cushion)
+        top = caretTopInComposer + lineHeight + 4;
+      } else {
+        // Position above the line being typed (with a 4px cushion)
+        top = Math.max(6, caretTopInComposer - popupHeight - 4);
+      }
+
+      // Horizontal clamp within composer bounds
+      const maxLeft = Math.max(8, composerRect.width - popupWidth - 12);
+      const left = Math.max(8, Math.min(caretLeftInComposer, maxLeft));
+
+      setAcPos({ top, left });
+    } catch {
+      setAcPos({ top: 90, left: 16 });
+    }
+  };
+
+  const handleCheckAutocomplete = (field: 'note' | 'cw', text: string, targetEl: HTMLTextAreaElement) => {
+    const cursorPos = targetEl.selectionStart ?? text.length;
+    const { active, query, startPos } = getMfmTriggerInfo(text, cursorPos);
+    if (active) {
+      setAcActive(true);
+      setAcQuery(query);
+      setAcStartPos(startPos);
+      setAcIndex(0);
+      setAcField(field);
+      updateAutocompletePosition(targetEl, startPos);
+    } else {
+      setAcActive(false);
+    }
+  };
+
+  const handleApplySuggestion = (
+    field: 'note' | 'cw',
+    suggestion: MfmSuggestion,
+    targetRef: HTMLTextAreaElement,
+    currentText: string,
+    setText: (v: string) => void
+  ) => {
+    const cursorPos = targetRef.selectionStart ?? currentText.length;
+    const { newText, newCursorPos } = applyMfmSuggestion(
+      currentText,
+      acStartPos(),
+      cursorPos,
+      suggestion
+    );
+    setText(newText);
+    setAcActive(false);
+
+    setTimeout(() => {
+      targetRef.focus();
+      targetRef.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const handleTextareaKeyDown = (
+    e: KeyboardEvent,
+    field: 'note' | 'cw',
+    text: string,
+    setText: (v: string) => void,
+    targetRef: HTMLTextAreaElement | undefined
+  ) => {
+    if (!acActive() || acField() !== field) return;
+    const list = acSuggestions();
+    if (list.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setAcIndex((prev) => (prev + 1) % list.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setAcIndex((prev) => (prev - 1 + list.length) % list.length);
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      e.preventDefault();
+      const selected = list[acIndex()];
+      if (selected && targetRef) {
+        handleApplySuggestion(field, selected, targetRef, text, setText);
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setAcActive(false);
+    }
+  };
 
   const noteProgressPercent = createMemo(() =>
     Math.min(100, (noteLength() / maxCharCount()) * 100)
@@ -112,7 +678,7 @@ export function NoteView() {
     if (isSending()) return;
     const user = currentUser();
     if (!user) {
-      showToast('アカウントが選択されていません', 'error');
+      showToast(t('note.no_account'), 'error');
       return;
     }
 
@@ -123,11 +689,11 @@ export function NoteView() {
     if (cwEnabled()) {
       const trimmedCw = rawCw.replace(/[\s\u3000]/g, '');
       if (trimmedCw.length === 0) {
-        showToast('なにか入力してください', 'warning', 'CWが空です');
+        showToast(t('note.empty_desc'), 'warning', t('note.cw_empty'));
         return;
       }
       if (trimmedCw.length > 100) {
-        showToast('100文字以内で入力してください', 'warning', 'CWが長すぎます');
+        showToast(t('note.cw_limit'), 'warning', t('note.cw_too_long'));
         return;
       }
     }
@@ -135,18 +701,18 @@ export function NoteView() {
     // ノート本文バリデーション
     const trimmedNote = rawNote.replace(/[\s\u3000]/g, '');
     if (trimmedNote.length === 0) {
-      showToast('なにか入力してください', 'warning', 'ノートが空です');
+      showToast(t('note.empty_desc'), 'warning', t('note.empty'));
       return;
     }
 
     if (noteLength() > maxCharCount()) {
-      showToast('文字数が多すぎます', 'warning');
+      showToast(t('note.too_long'), 'warning');
       return;
     }
 
     const images = attachedImages();
     if (images.length > 0) {
-      if (comparisonVersion('3.5.0', user.add_mizuna_versinon) > 0) {
+      if (!isImageSupported()) {
         showToast(
           'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
           'warning',
@@ -160,31 +726,68 @@ export function NoteView() {
     try {
       let fileIds: string[] | undefined;
       if (images.length > 0) {
-        fileIds = await uploadImagesToDrive(
-          images.map((item) => item.compressedFile ?? item.file),
-          user,
-          (status) => setSendingStatus(status)
-        );
+        const localFiles: File[] = [];
+        for (const item of images) {
+          if (!item.driveFileId) {
+            localFiles.push(item.compressedFile ?? item.file);
+          }
+        }
+
+        let uploadedIds: string[] = [];
+        if (localFiles.length > 0) {
+          uploadedIds = await uploadImagesToDrive(
+            localFiles,
+            user,
+            (status) => setSendingStatus(status)
+          );
+        }
+
+        let uploadCursor = 0;
+        fileIds = images.map((item) => {
+          if (item.driveFileId) {
+            return item.driveFileId;
+          }
+          return uploadedIds[uploadCursor++];
+        });
       }
 
-      setSendingStatus('送信中...');
-      await createMisskeyNote(
+      setSendingStatus(t('note.submitting'));
+      const fallbackFiles: MisskeyFile[] = images.map((item, idx) => ({
+        id: fileIds?.[idx] || item.driveFileId || item.id,
+        url: item.dataUrl,
+        thumbnailUrl: item.thumbUrl || item.dataUrl,
+        name: item.name,
+        type: item.file.type || 'image/webp',
+        size: item.compressedSize ?? item.originalSize,
+      }));
+
+      const createdNote = await createMisskeyNote(
         user,
         rawNote,
         cwEnabled() ? rawCw : null,
         visibility(),
         endMizuna(),
-        fileIds
+        fileIds,
+        replyTargetNote()?.id,
+        {
+          replyNote: replyTargetNote(),
+          files: fallbackFiles,
+        }
       );
 
-      showToast('ノートを送信しました！', 'success');
+      // fetch を行わずに投稿履歴の先頭にそのまま反映する
+      prependNoteToHistoryCache(getAccountCacheKey(user), createdNote);
+
+      showToast(t('note.sent'), 'success');
       clearNoteForm(false);
+      cancelReply();
+      setShowPreview(false);
       if (fileInputRef) {
         fileInputRef.value = '';
       }
     } catch (err) {
       console.error('Send note error:', err);
-      showToast('ノートできませんでした', 'error');
+      showToast(t('note.send_failed'), 'error');
     } finally {
       setIsSending(false);
       setSendingStatus('');
@@ -224,18 +827,38 @@ export function NoteView() {
             event.preventDefault();
             setCwEnabled((prev) => !prev);
             break;
+          case 'k':
+            event.preventDefault();
+            setShowPreview((prev) => !prev);
+            break;
           case 'm':
             event.preventDefault();
             setEndMizuna((prev) => !prev);
             break;
           case 'v':
             event.preventDefault();
-            fileInputRef?.click();
+            if (isImageSupported()) {
+              fileInputRef?.click();
+            } else {
+              showToast(
+                'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+                'warning',
+                'このアカウントでは画像付きノートが出来ません'
+              );
+            }
             break;
           case 'c':
             event.preventDefault();
             clearNoteForm(true);
             if (fileInputRef) fileInputRef.value = '';
+            break;
+          case 's':
+            event.preventDefault();
+            saveCurrentAsDraft();
+            break;
+          case 'd':
+            event.preventDefault();
+            setIsDraftsModalOpen((prev) => !prev);
             break;
           case 'i':
             event.preventDefault();
@@ -250,12 +873,26 @@ export function NoteView() {
       }
     };
 
+    const handleResize = () => {
+      if (acActive()) {
+        const targetEl = acField() === 'cw' ? cwInputRef : noteInputRef;
+        if (targetEl) {
+          updateAutocompletePosition(targetEl, acStartPos());
+        }
+      }
+    };
+
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('resize', handleResize);
+    };
   });
 
   const handleOpenPreview = (item: AttachedImageItem) => {
-    setPreviewModalImage(item);
+    if (isDraggingItem || justFinishedDrag || draggedImageId()) return;
+    setPreviewModalImageId(item.id);
     setTimeout(() => {
       if (modalContentRef) {
         gsap.fromTo(
@@ -267,16 +904,30 @@ export function NoteView() {
     }, 10);
   };
 
-  const handleDeletePreviewImage = () => {
-    const target = previewModalImage();
-    if (!target) return;
-    removeAttachedImage(target.id);
-    setPreviewModalImage(null);
+  const handleSaveEditedImage = (id: string, editedFile: File, editState: ImageEditState) => {
+    updateAttachedImage(id, editedFile, editState);
+    setEditingImageItem(null);
+    if (previewModalImageId() === id) {
+      setPreviewModalImageId(null);
+    }
+  };
+
+  const handleResetImage = (id: string) => {
+    revertAttachedImage(id);
+    showToast('加工をリセットして元画像に戻しました', 'info');
   };
 
   const handlePaste = (e: ClipboardEvent) => {
     const items = e.clipboardData?.files;
     if (items && items.length > 0) {
+      if (!isImageSupported()) {
+        showToast(
+          'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+          'warning',
+          'このアカウントでは画像付きノートが出来ません'
+        );
+        return;
+      }
       addAttachedFiles(items);
     }
   };
@@ -285,6 +936,14 @@ export function NoteView() {
     e.preventDefault();
     setIsDraggingOver(false);
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
+      if (!isImageSupported()) {
+        showToast(
+          'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+          'warning',
+          'このアカウントでは画像付きノートが出来ません'
+        );
+        return;
+      }
       addAttachedFiles(e.dataTransfer.files);
     }
   };
@@ -327,18 +986,73 @@ export function NoteView() {
       ref={viewContainerRef}
       class="mizuna-note-view"
       onDragOver={(e) => {
+        // 内部サムネイルの並べ替え中や、外部からのファイルドラッグではない場合はフォーム全体の枠線を出さない
+        if (draggedImageId() || isDraggingItem || !e.dataTransfer?.types?.includes('Files')) {
+          return;
+        }
         e.preventDefault();
         setIsDraggingOver(true);
       }}
-      onDragLeave={() => setIsDraggingOver(false)}
-      onDrop={handleDrop}
+      onDragLeave={(e) => {
+        if (!e.relatedTarget || !e.currentTarget.contains(e.relatedTarget as Node)) {
+          setIsDraggingOver(false);
+        }
+      }}
+      onDrop={(e) => {
+        setIsDraggingOver(false);
+        if (draggedImageId() || isDraggingItem) return;
+        handleDrop(e);
+      }}
     >
       {/* 統合型コンポーザーカード */}
       <section
+        ref={composerRef}
         class={`mizuna-studio-composer ${isInputFocused() ? 'is-focused' : ''} ${
           isDraggingOver() ? 'is-dragging' : ''
         }`}
       >
+        {/* MFM 予測変換（オートコンプリート）サジェストポップアップ */}
+        <Show when={acActive() && acSuggestions().length > 0}>
+          <div
+            class="mizuna-mfm-autocomplete-popup"
+            role="listbox"
+            aria-label="MFM Suggestions"
+            style={{
+              top: `${acPos().top}px`,
+              left: `${acPos().left}px`,
+            }}
+          >
+            <div class="mizuna-mfm-ac-list">
+              <For each={acSuggestions()}>
+                {(item, index) => (
+                  <div
+                    class={`mizuna-mfm-ac-item ${index() === acIndex() ? 'is-selected' : ''}`}
+                    role="option"
+                    aria-selected={index() === acIndex() ? 'true' : 'false'}
+                    title={item.desc}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                    }}
+                    onTouchStart={(e) => {
+                      e.preventDefault();
+                    }}
+                    onClick={() => {
+                      const targetRef = acField() === 'cw' ? cwInputRef : noteInputRef;
+                      const text = acField() === 'cw' ? cwText() : noteText();
+                      const setText = acField() === 'cw' ? setCwText : setNoteText;
+                      if (targetRef) {
+                        handleApplySuggestion(acField(), item, targetRef, text, setText);
+                      }
+                    }}
+                  >
+                    <i class="mizuna-mfm-ac-icon">{item.icon}</i>
+                    <span class="mizuna-mfm-ac-tag">$[{item.label}]</span>
+                  </div>
+                )}
+              </For>
+            </div>
+          </div>
+        </Show>
         {/* コンポーザー上部：投稿者情報 ＆ 公開範囲ピルセレクター */}
         <div class="mizuna-composer-header">
           <button
@@ -363,42 +1077,205 @@ export function NoteView() {
             <i class="mizuna-author-chevron">unfold_more</i>
           </button>
 
-          {/* モダンなピル型公開範囲セレクター */}
-          <div class="mizuna-visibility-pills" role="radiogroup" aria-label="公開範囲">
-            <HoldHoverTip label="パブリック公開" sublabel="全ユーザーに公開 (Ctrl+Alt+P)" placement="bottom">
+          {/* 右側グループ：公開範囲ピル ＆ 下書き統合ボタン */}
+          <div class="mizuna-composer-header-right">
+            {/* モダンなピル型公開範囲セレクター */}
+            <div class="mizuna-visibility-pills" role="radiogroup" aria-label={t('settings.default_visibility')}>
+              <HoldHoverTip label={t('note.visibility_public')} sublabel="全ユーザーに公開 (Ctrl+Alt+P)" placement="bottom">
+                <button
+                  type="button"
+                  id="visibility_public"
+                  class={`mizuna-vis-pill ${visibility() === 'public' ? 'is-active' : ''}`}
+                  onClick={(e) => selectVisibility('public', e.currentTarget)}
+                >
+                  <i>public</i>
+                  <span>{t('note.visibility_public')}</span>
+                </button>
+              </HoldHoverTip>
+              <HoldHoverTip label={t('note.visibility_home')} sublabel="ホームTLのみに表示 (Ctrl+Alt+H)" placement="bottom">
+                <button
+                  type="button"
+                  id="visibility_home"
+                  class={`mizuna-vis-pill ${visibility() === 'home' ? 'is-active' : ''}`}
+                  onClick={(e) => selectVisibility('home', e.currentTarget)}
+                >
+                  <i>home</i>
+                  <span>{t('note.visibility_home')}</span>
+                </button>
+              </HoldHoverTip>
+              <HoldHoverTip label={t('note.visibility_followers')} sublabel="フォロワーのみに表示 (Ctrl+Alt+F)" placement="bottom">
+                <button
+                  type="button"
+                  id="visibility_followers"
+                  class={`mizuna-vis-pill ${visibility() === 'followers' ? 'is-active' : ''}`}
+                  onClick={(e) => selectVisibility('followers', e.currentTarget)}
+                >
+                  <i>lock</i>
+                  <span>{t('note.visibility_followers')}</span>
+                </button>
+              </HoldHoverTip>
+            </div>
+
+            {/* 下書き（保存・呼び出し）ボタン */}
+            <HoldHoverTip label={t('draft.title')} sublabel={t('draft.tip_save_and_restore')} placement="bottom">
               <button
                 type="button"
-                id="visibility_public"
-                class={`mizuna-vis-pill ${visibility() === 'public' ? 'is-active' : ''}`}
-                onClick={(e) => selectVisibility('public', e.currentTarget)}
+                id="draft_button"
+                class={`mizuna-composer-draft-btn ${draftCount() > 0 ? 'has-badge' : ''}`}
+                onClick={() => setIsDraftsModalOpen(true)}
+                aria-label={t('draft.title')}
+                title={t('draft.title')}
               >
-                <i>public</i>
-                <span>パブリック</span>
-              </button>
-            </HoldHoverTip>
-            <HoldHoverTip label="ホーム公開" sublabel="ホームTLのみに表示 (Ctrl+Alt+H)" placement="bottom">
-              <button
-                type="button"
-                id="visibility_home"
-                class={`mizuna-vis-pill ${visibility() === 'home' ? 'is-active' : ''}`}
-                onClick={(e) => selectVisibility('home', e.currentTarget)}
-              >
-                <i>home</i>
-                <span>ホーム</span>
-              </button>
-            </HoldHoverTip>
-            <HoldHoverTip label="フォロワー限定" sublabel="フォロワーのみに表示 (Ctrl+Alt+F)" placement="bottom">
-              <button
-                type="button"
-                id="visibility_followers"
-                class={`mizuna-vis-pill ${visibility() === 'followers' ? 'is-active' : ''}`}
-                onClick={(e) => selectVisibility('followers', e.currentTarget)}
-              >
-                <i>lock</i>
-                <span>フォロワー</span>
+                <i>drafts</i>
+                <Show when={draftCount() > 0}>
+                  <span class="mizuna-chip-count">{draftCount()}</span>
+                </Show>
               </button>
             </HoldHoverTip>
           </div>
+        </div>
+
+        {/* 返信先カード (リプライ時のみ表示) */}
+        <Show when={replyTargetNote()}>
+          {(target) => (
+            <div class="mizuna-reply-target-card">
+              <div class="mizuna-reply-target-main">
+                <i class="mizuna-reply-target-icon">reply</i>
+                <img
+                  src={getDisplayAvatarUrl(target().user.avatarUrl, settings().is_visible_icon)}
+                  alt=""
+                  class="mizuna-reply-target-avatar"
+                />
+                <div class="mizuna-reply-target-content">
+                  <span class="mizuna-reply-target-user">
+                    {target().user.name || target().user.username} <span class="mizuna-reply-target-handle">@{target().user.username}</span>
+                  </span>
+                  <p class="mizuna-reply-target-text">
+                    {target().cw ? `[CW] ${target().cw}` : target().text || '（添付画像またはファイル）'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="mizuna-reply-cancel-btn"
+                onClick={cancelReply}
+                title={t('history.cancel_reply')}
+                aria-label={t('history.cancel_reply')}
+              >
+                <i>close</i>
+              </button>
+            </div>
+          )}
+        </Show>
+
+        {/* MFM ツールバー */}
+        <div class="mizuna-composer-subbar">
+          <div class="mizuna-mfm-toolbar" role="toolbar" aria-label="MFM Insertion Toolbar">
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[shake ', ']', 'text')}
+              title="揺らす ($[shake ...])"
+            >
+              <i>vibration</i>
+              <span>{t('note.mfm_tag_shake')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[bounce ', ']', 'text')}
+              title="跳ねる ($[bounce ...])"
+            >
+              <i>sports_baseball</i>
+              <span>{t('note.mfm_tag_bounce')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[spin ', ']', 'text')}
+              title="回転 ($[spin ...])"
+            >
+              <i>rotate_right</i>
+              <span>{t('note.mfm_tag_spin')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[rainbow ', ']', 'text')}
+              title="虹色 ($[rainbow ...])"
+            >
+              <i>palette</i>
+              <span>{t('note.mfm_tag_rainbow')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[tada ', ']', 'text')}
+              title="祝砲 ($[tada ...])"
+            >
+              <i>celebration</i>
+              <span>{t('note.mfm_tag_tada')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[blur ', ']', 'text')}
+              title="ぼかし ($[blur ...])"
+            >
+              <i>blur_on</i>
+              <span>{t('note.mfm_tag_blur')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('**', '**', 'bold')}
+              title="太字 (**...**)"
+            >
+              <i>format_bold</i>
+              <span>{t('note.mfm_tag_bold')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('~~', '~~', 'strike')}
+              title="打消 (~~...~~)"
+            >
+              <i>format_strikethrough</i>
+              <span>{t('note.mfm_tag_strike')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[fg.color=ff0000 ', ']', 'text')}
+              title="文字色 ($[fg.color=ff0000 ...])"
+            >
+              <i>format_color_text</i>
+              <span>{t('note.mfm_tag_color')}</span>
+            </button>
+            <button
+              type="button"
+              class="mizuna-mfm-chip"
+              onClick={() => handleInsertMfm('$[ruby ', ' かんじ]', '漢字')}
+              title="ルビ ($[ruby 漢字 かんじ])"
+            >
+              <i>translate</i>
+              <span>{t('note.mfm_tag_ruby')}</span>
+            </button>
+          </div>
+          <div class="mizuna-mfm-toolbar-divider" />
+          <HoldHoverTip label={t('note.preview_tab_preview')} sublabel={t('note.preview_toggle_tip')} placement="bottom">
+            <button
+              type="button"
+              id="preview_toggle_button"
+              class={`mizuna-mfm-preview-btn ${showPreview() ? 'is-active' : ''}`}
+              onClick={() => setShowPreview((prev) => !prev)}
+              aria-pressed={showPreview() ? 'true' : 'false'}
+              aria-label={t('note.preview_tab_preview')}
+              title={t('note.preview_tab_preview')}
+            >
+              <i>{showPreview() ? 'visibility_off' : 'preview'}</i>
+            </button>
+          </HoldHoverTip>
         </div>
 
         {/* CW（閲覧注意）折りたたみ入力欄 */}
@@ -411,11 +1288,26 @@ export function NoteView() {
                 class="cw_content mizuna-cw-textarea"
                 maxlength={100}
                 rows={1}
-                placeholder="閲覧注意の注釈 (CW) を入力..."
+                placeholder={t('note.cw_placeholder')}
                 value={cwText()}
-                onInput={(e) => setCwText(e.currentTarget.value)}
-                onFocus={() => setIsInputFocused(true)}
-                onBlur={() => setIsInputFocused(false)}
+                onInput={(e) => {
+                  setCwText(e.currentTarget.value);
+                  handleCheckAutocomplete('cw', e.currentTarget.value, e.currentTarget);
+                }}
+                onKeyDown={(e) => handleTextareaKeyDown(e, 'cw', cwText(), setCwText, cwInputRef)}
+                onFocus={() => {
+                  setIsInputFocused(true);
+                  setLastFocusedField('cw');
+                }}
+                onBlur={() => {
+                  setIsInputFocused(false);
+                  setTimeout(() => setAcActive(false), 200);
+                }}
+                onScroll={() => {
+                  if (acActive() && cwInputRef) {
+                    updateAutocompletePosition(cwInputRef, acStartPos());
+                  }
+                }}
               />
               <div class={`mizuna-cw-counter ${cwCountStatus()}`}>
                 <span class="mizuna-zero-pad">{cwZeroPadding()}</span>
@@ -433,46 +1325,143 @@ export function NoteView() {
             class="note_content mizuna-main-textarea"
             maxlength={3000}
             rows={6}
-            placeholder="いまどうしてる？"
+            placeholder={t('note.placeholder')}
             value={noteText()}
-            onInput={(e) => setNoteText(e.currentTarget.value)}
-            onFocus={() => setIsInputFocused(true)}
-            onBlur={() => setIsInputFocused(false)}
+            onInput={(e) => {
+              setNoteText(e.currentTarget.value);
+              handleCheckAutocomplete('note', e.currentTarget.value, e.currentTarget);
+            }}
+            onScroll={() => {
+              if (acActive() && noteInputRef) {
+                updateAutocompletePosition(noteInputRef, acStartPos());
+              }
+            }}
+            onKeyDown={(e) => handleTextareaKeyDown(e, 'note', noteText(), setNoteText, noteInputRef)}
+            onFocus={() => {
+              setIsInputFocused(true);
+              setLastFocusedField('note');
+            }}
+            onBlur={() => {
+              setIsInputFocused(false);
+              setTimeout(() => setAcActive(false), 200);
+            }}
             onPaste={handlePaste}
           />
-
-          <Show when={endMizuna()}>
-            <div class="mizuna-editor-subrow">
-              <span class="mizuna-suffix-badge">
-                <i>auto_awesome</i>
-                末尾に <b>(from Mizuna)</b> が自動付与されます
-              </span>
-            </div>
-          </Show>
         </div>
+
+        {/* リアルタイムMFMプレビュー枠（トグル表示） */}
+        <Show when={showPreview()}>
+          <div class="mizuna-preview-area">
+            <div class="mizuna-preview-header">
+              <span class="mizuna-preview-badge">
+                <i>visibility</i>
+                {t('note.preview_tab_preview')}
+              </span>
+              <button
+                type="button"
+                class="mizuna-preview-close-btn"
+                onClick={() => setShowPreview(false)}
+                title="プレビューを閉じる"
+              >
+                <i>close</i>
+              </button>
+            </div>
+
+            {/* CW注釈エリア */}
+            <Show when={cwEnabled()}>
+              <div class="mizuna-preview-cw-card">
+                <div class="mizuna-preview-cw-text">
+                  <i>visibility_off</i>
+                  <span innerHTML={renderedCwHtml() || t('note.cw_empty')} />
+                </div>
+                <button
+                  type="button"
+                  class="mizuna-preview-cw-toggle-btn"
+                  onClick={() => setPreviewCwRevealed((prev) => !prev)}
+                >
+                  <i>{previewCwRevealed() ? 'visibility_off' : 'visibility'}</i>
+                  <span>{previewCwRevealed() ? t('note.preview_cw_hide') : t('note.preview_cw_show')}</span>
+                </button>
+              </div>
+            </Show>
+
+            {/* 本文プレビュー */}
+            <Show
+              when={!cwEnabled() || previewCwRevealed()}
+              fallback={
+                <div class="mizuna-preview-empty">
+                  <span>CWにより本文は隠されています。「見る」を押すと展開されます。</span>
+                </div>
+              }
+            >
+              <Show
+                when={previewNoteText().length > 0}
+                fallback={<div class="mizuna-preview-empty">{t('note.preview_empty')}</div>}
+              >
+                <div class="mizuna-preview-content" innerHTML={renderedNoteHtml()} />
+              </Show>
+            </Show>
+          </div>
+        </Show>
 
         {/* 添付画像ギャラリー */}
         <Show when={attachedImages().length > 0}>
           <div class="mizuna-media-gallery">
             <div class="mizuna-media-strip">
               <For each={attachedImages()}>
-                {(item) => (
-                  <div class="mizuna-media-item" onClick={() => handleOpenPreview(item)}>
-                    <img
-                      class="input_image_preview"
-                      src={item.dataUrl}
-                      alt={item.name}
-                      data-name={item.name}
-                      loading="lazy"
-                      decoding="async"
-                    />
+                {(item, index) => (
+                  <div
+                    class={`mizuna-media-item ${draggedImageId() === item.id ? 'is-dragging' : ''} ${
+                      dragOverIndex() === index() ? 'is-drag-over' : ''
+                    }`}
+                    data-index={index()}
+                    draggable={attachedImages().length > 1 ? 'true' : 'false'}
+                    onDragStart={(e) => handleImageDragStart(e, item.id)}
+                    onDragOver={(e) => handleImageDragOver(e, index())}
+                    onDragLeave={handleImageDragEnd}
+                    onDrop={(e) => handleImageDrop(e, index())}
+                    onDragEnd={handleImageDragEnd}
+                    onTouchStart={(e) => handleThumbTouchStart(e, item.id, index())}
+                    onTouchMove={handleThumbTouchMove}
+                    onTouchEnd={handleThumbTouchEnd}
+                    onTouchCancel={handleThumbTouchEnd}
+                    onClick={() => handleOpenPreview(item)}
+                  >
+                    <Show when={item.thumbUrl}>
+                      {(thumb) => (
+                        <img
+                          class="input_image_preview"
+                          src={thumb()}
+                          alt={item.name}
+                          data-name={item.name}
+                          loading="lazy"
+                          decoding="async"
+                        />
+                      )}
+                    </Show>
                     <div class="mizuna-media-zoom-hint">
                       <i>zoom_in</i>
                     </div>
+
+                    <Show when={!item.driveFileId}>
+                      <button
+                        type="button"
+                        class={`mizuna-media-edit ${item.editState ? 'is-edited' : ''}`}
+                        title={t('note.edit_image')}
+                        aria-label={t('note.edit_image')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingImageItem(item);
+                        }}
+                      >
+                        <i>edit</i>
+                      </button>
+                    </Show>
                     <button
                       type="button"
                       class="mizuna-media-remove"
-                      title="画像を削除"
+                      title={t('note.delete_image')}
+                      aria-label={t('note.delete_image')}
                       onClick={(e) => {
                         e.stopPropagation();
                         removeAttachedImage(item.id);
@@ -500,8 +1489,18 @@ export function NoteView() {
           name="image"
           accept="image/*"
           style="display: none;"
+          disabled={!isImageSupported()}
           onChange={(e) => {
             if (e.currentTarget.files) {
+              if (!isImageSupported()) {
+                showToast(
+                  'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+                  'warning',
+                  'このアカウントでは画像付きノートが出来ません'
+                );
+                e.currentTarget.value = '';
+                return;
+              }
               addAttachedFiles(e.currentTarget.files);
               e.currentTarget.value = '';
             }
@@ -512,7 +1511,7 @@ export function NoteView() {
         <div class="mizuna-composer-footer">
           <div class="mizuna-tool-group">
             {/* CWトグル */}
-            <HoldHoverTip label="コンテンツワーニング (CW)" sublabel="閲覧注意の注釈を追加 (Ctrl+Alt+W)" placement="top">
+            <HoldHoverTip label={t('note.cw_tip')} sublabel={t('note.cw_tip_sub')} placement="top">
               <button
                 type="button"
                 id="cw"
@@ -525,7 +1524,7 @@ export function NoteView() {
             </HoldHoverTip>
 
             {/* (from Mizuna) トグル */}
-            <HoldHoverTip label="Mizuna クレジット付与" sublabel="末尾に (from Mizuna) を追加 (Ctrl+Alt+M)" placement="top">
+            <HoldHoverTip label={t('note.mizuna_tip')} sublabel={t('note.mizuna_tip_sub')} placement="top">
               <button
                 type="button"
                 id="note_end_mizuna_checkbox"
@@ -538,15 +1537,35 @@ export function NoteView() {
             </HoldHoverTip>
 
             {/* 画像選択ボタン */}
-            <HoldHoverTip label="画像を添付 (最大16枚)" sublabel="自動でWebPへ圧縮されます (Ctrl+Alt+V)" placement="top">
+            <HoldHoverTip
+              label={isImageSupported() ? t('note.attach_image_tip') : '画像添付非対応'}
+              sublabel={
+                isImageSupported()
+                  ? t('note.attach_image_tip_sub')
+                  : 'v3.5.0未満で追加されたため画像添付権限がありません。アカウント管理から再認証してください。'
+              }
+              placement="top"
+            >
               <button
                 type="button"
                 id="select_picture_button"
-                class={`mizuna-tool-chip ${attachedImages().length > 0 ? 'has-badge' : ''}`}
-                onClick={() => fileInputRef?.click()}
+                class={`mizuna-tool-chip ${attachedImages().length > 0 ? 'has-badge' : ''} ${!isImageSupported() ? 'is-disabled' : ''}`}
+                disabled={!isImageSupported()}
+                onClick={() => {
+                  if (!isImageSupported()) {
+                    showToast(
+                      'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+                      'warning',
+                      'このアカウントでは画像付きノートが出来ません'
+                    );
+                    return;
+                  }
+                  setIsDrivePickerOpen(true);
+                }}
+                aria-label={isImageSupported() ? t('note.attach_image_label') : '画像添付非対応'}
               >
                 <i>image</i>
-                <span>画像</span>
+                <span>{t('note.attach_image_label')}</span>
                 <Show when={attachedImages().length > 0}>
                   <span class="mizuna-chip-count">{attachedImages().length}</span>
                 </Show>
@@ -554,7 +1573,7 @@ export function NoteView() {
             </HoldHoverTip>
 
             {/* フォームクリアボタン */}
-            <HoldHoverTip label="フォームをクリア" sublabel="入力内容と添付画像をリセット (Ctrl+Alt+C)" placement="top">
+            <HoldHoverTip label={t('note.clear_form_tip')} sublabel={t('note.clear_form_tip_sub')} placement="top">
               <button
                 type="button"
                 id="form_clear_button"
@@ -563,7 +1582,7 @@ export function NoteView() {
                   clearNoteForm(true);
                   if (fileInputRef) fileInputRef.value = '';
                 }}
-                aria-label="フォームをクリア"
+                aria-label={t('note.clear_form_tip')}
               >
                 <i>delete_sweep</i>
               </button>
@@ -616,12 +1635,12 @@ export function NoteView() {
                 when={!isSending()}
                 fallback={
                   <>
-                    <progress class="circle small" />
-                    <span>{sendingStatus() || '送信中...'}</span>
+                    <div class="mizuna-spinner small" />
+                    <span>{sendingStatus() || t('note.submitting')}</span>
                   </>
                 }
               >
-                <span>ノートする</span>
+                <span>{t('note.submit')}</span>
                 <i>send</i>
               </Show>
             </button>
@@ -722,36 +1741,146 @@ export function NoteView() {
         </Portal>
       </Show>
 
-      {/* 画像拡大プレビューモーダル */}
-      <Show when={previewModalImage()}>
-        {(imgItem) => (
-          <Portal>
+      {/* 画像拡大プレビューモーダル（画像切り替え時にアンマウントせずチカチカやボタンのガタつきを防止） */}
+      <Show when={Boolean(previewModalImageId() && previewModalImage())}>
+        <Portal>
+          <div
+            id="imageModal"
+            class="mizuna-lightbox"
+            onClick={() => {
+              if (hasLightboxSwiped) {
+                hasLightboxSwiped = false;
+                return;
+              }
+              setPreviewModalImageId(null);
+            }}
+            onTouchStart={handleLightboxTouchStart}
+            onTouchMove={handleLightboxTouchMove}
+            onTouchEnd={handleLightboxTouchEnd}
+            onTouchCancel={handleLightboxTouchEnd}
+          >
+            {/* メイン画像ステージ */}
             <div
-              id="imageModal"
-              class="mizuna-lightbox"
-              onClick={() => setPreviewModalImage(null)}
+              class="mizuna-lightbox-stage"
+              onClick={() => {
+                if (hasLightboxSwiped) {
+                  hasLightboxSwiped = false;
+                  return;
+                }
+                setPreviewModalImageId(null);
+              }}
             >
-              {/* トップバー: ファイル情報・WebP削減率 & 閉じるボタン */}
-              <div class="mizuna-lightbox-topbar" onClick={(e) => e.stopPropagation()}>
-                <div class="mizuna-lightbox-topbar-inner">
-                  <div class="mizuna-lightbox-fileinfo">
-                    <span class="mizuna-lightbox-filename" title={imgItem().name}>
-                      {imgItem().name}
+              {/* 複数画像プレビュー時の左右ナビゲーションボタン（画像ステージ内に配置して縦位置を固定・安定化） */}
+              <Show when={attachedImages().length > 1}>
+                <button
+                  type="button"
+                  class="mizuna-lightbox-nav-btn is-prev"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevPreviewImage();
+                  }}
+                  aria-label="前の画像"
+                  title="前の画像 (←)"
+                >
+                  <i>chevron_left</i>
+                </button>
+                <button
+                  type="button"
+                  class="mizuna-lightbox-nav-btn is-next"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextPreviewImage();
+                  }}
+                  aria-label="次の画像"
+                  title="次の画像 (→)"
+                >
+                  <i>chevron_right</i>
+                </button>
+              </Show>
+
+              {/* カルーセルトラック */}
+              <div
+                class="mizuna-lightbox-track"
+                style={{
+                  transform: `translateX(calc(${-Math.max(0, currentPreviewIndex()) * 100}% + ${lightboxDragX()}px))`,
+                  transition: isLightboxDragging() ? 'none' : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                }}
+              >
+                <For each={attachedImages()}>
+                  {(item) => (
+                    <div
+                      class="mizuna-lightbox-slide"
+                      onClick={() => {
+                        if (hasLightboxSwiped) {
+                          hasLightboxSwiped = false;
+                          return;
+                        }
+                        setPreviewModalImageId(null);
+                      }}
+                    >
+                      <img
+                        ref={item.id === previewModalImageId() ? (el) => { modalContentRef = el; } : undefined}
+                        id={item.id === previewModalImageId() ? 'modalImage' : undefined}
+                        class="mizuna-lightbox-img"
+                        src={item.dataUrl}
+                        alt={item.name || ''}
+                        data-name={item.name || ''}
+                        decoding="async"
+                        draggable={false}
+                        onDragStart={(e) => e.preventDefault()}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
+                </For>
+              </div>
+            </div>
+
+            {/* ボトムバー: ファイル情報・WebP削減率 & リセットボタン & 閉じるボタン */}
+            <div class="mizuna-lightbox-bottombar">
+              <div class="mizuna-lightbox-bottombar-inner" onClick={(e) => e.stopPropagation()}>
+                <div class="mizuna-lightbox-fileinfo">
+                  <div class="mizuna-lightbox-filename-row">
+                    <Show when={attachedImages().length > 1}>
+                      <span class="mizuna-lightbox-order-badge">
+                        {currentPreviewIndex() + 1} / {attachedImages().length}
+                      </span>
+                    </Show>
+                    <span class="mizuna-lightbox-filename" title={previewModalImage()?.name}>
+                      {previewModalImage()?.name}
                     </span>
-                    <div class="mizuna-lightbox-meta">
+                  </div>
+                  <div class="mizuna-lightbox-meta">
+                    <Show
+                      when={!previewModalImage()?.driveFileId}
+                      fallback={
+                        <span class="mizuna-lightbox-badge">
+                          {t('note.drive_badge_uploaded')}
+                        </span>
+                      }
+                    >
                       <span class="mizuna-lightbox-raw-size">
-                        {(imgItem().originalSize / 1024).toFixed(1)} KB
+                        {(((previewModalImage()?.originalSize ?? 0) / 1024)).toFixed(1)} KB
                       </span>
                       <Show
-                        when={imgItem().compressedSize}
-                        fallback={<span class="mizuna-lightbox-compressing">WebP圧縮中...</span>}
+                        when={previewModalImage()?.compressedSize}
+                        fallback={
+                          <div class="mizuna-lightbox-compressing-wrap">
+                            <span class="mizuna-lightbox-compressing">
+                              <span class="mizuna-lightbox-compressing-spinner" />
+                              WebP圧縮中...
+                            </span>
+                            <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
+                              <div class="mizuna-lightbox-mini-bar-fill" />
+                            </div>
+                          </div>
+                        }
                       >
                         {(compSize) => {
+                          const originalSize = previewModalImage()?.originalSize ?? 1;
                           const savedPercent = Math.max(
                             0,
-                            Math.round(
-                              ((imgItem().originalSize - compSize()) / imgItem().originalSize) * 100
-                            )
+                            Math.round(((originalSize - compSize()) / originalSize) * 100)
                           );
                           return (
                             <>
@@ -766,55 +1895,66 @@ export function NoteView() {
                           );
                         }}
                       </Show>
-                    </div>
+                    </Show>
                   </div>
+                </div>
+
+                <div class="mizuna-lightbox-actions">
+                  <Show when={previewModalImage()?.editState}>
+                    <button
+                      type="button"
+                      class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
+                      onClick={() => {
+                        const img = previewModalImage();
+                        if (img) handleResetImage(img.id);
+                      }}
+                    >
+                      <i>restart_alt</i>
+                      <span>加工をリセット</span>
+                    </button>
+                  </Show>
 
                   <button
                     type="button"
                     class="circle mizuna-lightbox-close-icon-btn"
-                    onClick={() => setPreviewModalImage(null)}
+                    onClick={() => setPreviewModalImageId(null)}
                     aria-label="閉じる"
                   >
                     <i>close</i>
                   </button>
                 </div>
               </div>
-
-              {/* メイン画像ステージ */}
-              <div
-                class="mizuna-lightbox-stage"
-                onClick={() => setPreviewModalImage(null)}
-              >
-                <img
-                  ref={modalContentRef}
-                  id="modalImage"
-                  class="mizuna-lightbox-img"
-                  src={imgItem().dataUrl}
-                  alt={imgItem().name}
-                  data-name={imgItem().name}
-                  decoding="async"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </div>
-
-              {/* ボトムバー: アクションボタン */}
-              <div class="mizuna-lightbox-bottombar" onClick={(e) => e.stopPropagation()}>
-                <div class="mizuna-lightbox-bottombar-inner">
-                  <button
-                    type="button"
-                    id="deleteImageButton"
-                    class="mizuna-btn mizuna-btn-danger mizuna-lightbox-action-btn"
-                    onClick={handleDeletePreviewImage}
-                  >
-                    <i>delete</i>
-                    <span>削除する</span>
-                  </button>
-                </div>
-              </div>
             </div>
-          </Portal>
+          </div>
+        </Portal>
+      </Show>
+
+      {/* 画像加工モーダル */}
+      <Show when={editingImageItem()}>
+        {(item) => (
+          <ImageEditorModal
+            file={item().rawFile || item().file}
+            initialState={item().editState}
+            onClose={() => setEditingImageItem(null)}
+            onSave={(updatedFile, editState) =>
+              handleSaveEditedImage(item().id, updatedFile, editState)
+            }
+          />
         )}
       </Show>
+
+      {/* 下書き一覧モーダル */}
+      <DraftsModal
+        isOpen={isDraftsModalOpen()}
+        onClose={() => setIsDraftsModalOpen(false)}
+      />
+
+      {/* 画像追加・Misskeyドライブ選択モーダル */}
+      <DriveImagePickerModal
+        isOpen={isDrivePickerOpen()}
+        onClose={() => setIsDrivePickerOpen(false)}
+        onOpenLocalFilePicker={() => fileInputRef?.click()}
+      />
     </div>
   );
 }

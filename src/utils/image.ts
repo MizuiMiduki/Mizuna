@@ -92,3 +92,34 @@ export function getDisplayAvatarUrl(avatarUrl: string | undefined, isVisibleIcon
   }
   return avatarUrl;
 }
+
+/**
+ * 添付プレビュー用の縮小サムネイルを生成し、ObjectURLを返す。
+ * 原寸の画像を<img>に直接表示するとデコード済みビットマップ(例: 12MPで約48MB)が
+ * 保持され続けるため、一覧表示には縮小版を使ってメモリ使用量を抑える。
+ * 生成できない環境では null を返す（呼び出し側で原寸にフォールバック）。
+ */
+export async function createThumbnailUrl(file: File, width = 480): Promise<string | null> {
+  if (typeof createImageBitmap !== 'function') return null;
+  try {
+    const bitmap = await createImageBitmap(file, { resizeWidth: width, resizeQuality: 'medium' });
+    const canvas = document.createElement('canvas');
+    try {
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+      ctx.drawImage(bitmap, 0, 0);
+    } finally {
+      bitmap.close();
+    }
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((b) => resolve(b), 'image/webp', 0.8)
+    );
+    canvas.width = 0;
+    canvas.height = 0;
+    return blob ? URL.createObjectURL(blob) : null;
+  } catch {
+    return null;
+  }
+}

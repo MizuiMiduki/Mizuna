@@ -1,7 +1,7 @@
 {
   "name": "mizuna",
   "private": true,
-  "version": "3.10.0",
+  "version": "4.1.0",
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "scripts": {
@@ -13,13 +13,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@solidjs/web": "^2.0.0-rc.19",
-    "beercss": "^3.11.20",
+    "@solidjs/web": "^2.0.0",
     "dexie": "^4.0.11",
     "gsap": "^3.12.7",
     "material-dynamic-colors": "^1.1.2",
+    "mfm-js": "^0.28.0",
     "pulltorefreshjs": "^0.1.22",
-    "solid-js": "^2.0.0-rc.19"
+    "solid-js": "^2.0.0"
   },
   "devDependencies": {
     "@solidjs/testing-library": "^1.0.0-rc.2",

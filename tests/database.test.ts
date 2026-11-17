@@ -21,6 +21,7 @@ describe('database operations', () => {
       expect(settings.default_visibility).toBe(DEFAULT_USER_SETTINGS.default_visibility);
       expect(settings.is_visible_icon).toBe(DEFAULT_USER_SETTINGS.is_visible_icon);
       expect(settings.language).toBe(DEFAULT_USER_SETTINGS.language);
+      expect(settings.custom_css).toBe('');
 
       // DB に実際に保存されていることを確認
       const saved = await db.setting.get(1);
@@ -47,11 +48,12 @@ describe('database operations', () => {
     it('指定したキーのみを更新できること', async () => {
       await loadOrCreateSettings();
 
-      await updateSettingDb({ is_darkmode: 3, is_note_end_mizuna: true });
+      await updateSettingDb({ is_darkmode: 3, is_note_end_mizuna: true, custom_css: 'body { color: blue; }' });
 
       const updated = await db.setting.get(1);
       expect(updated?.is_darkmode).toBe(3);
       expect(updated?.is_note_end_mizuna).toBe(true);
+      expect(updated?.custom_css).toBe('body { color: blue; }');
       // 他のフィールドが維持されていること
       expect(updated?.language).toBe(DEFAULT_USER_SETTINGS.language);
     });

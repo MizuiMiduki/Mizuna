@@ -1,6 +1,7 @@
 import gsap from 'gsap';
 import { For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
+import { FloatingBackButton } from './FloatingBackButton';
 
 interface ShortcutItem {
   label: string;
@@ -13,8 +14,11 @@ const SHORTCUT_LIST: ShortcutItem[] = [
   { label: '公開範囲：ホーム', keys: ['Ctrl', 'Alt', 'H'] },
   { label: '公開範囲：フォロワー', keys: ['Ctrl', 'Alt', 'F'] },
   { label: 'CW（閲覧注意）の切り替え', keys: ['Ctrl', 'Alt', 'W'] },
+  { label: 'MFMプレビューの切り替え', keys: ['Ctrl', 'Alt', 'K'] },
   { label: '末尾に『(from Mizuna)』を付与', keys: ['Ctrl', 'Alt', 'M'] },
   { label: '画像ファイルを選択', keys: ['Ctrl', 'Alt', 'V'] },
+  { label: '下書きを保存', keys: ['Ctrl', 'Alt', 'S'] },
+  { label: '下書き一覧を表示', keys: ['Ctrl', 'Alt', 'D'] },
   { label: '入力フォームをクリア', keys: ['Ctrl', 'Alt', 'C'] },
   { label: 'ノート入力欄にフォーカス', keys: ['Ctrl', 'Alt', 'I'] },
   { label: 'CW入力欄にフォーカス', keys: ['Ctrl', 'Alt', 'O'] },
@@ -29,7 +33,7 @@ export function ShortcutsView() {
       gsap.fromTo(
         containerRef,
         { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out' }
+        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
       );
     }
   });
@@ -44,14 +48,6 @@ export function ShortcutsView() {
         <div>
           <h2 class="mizuna-section-title">ショートカット</h2>
         </div>
-        <button
-          type="button"
-          class="mizuna-btn mizuna-btn-outline"
-          onClick={handleBack}
-        >
-          <i>arrow_back</i>
-          <span>もどる</span>
-        </button>
       </div>
 
       <div class="mizuna-shortcut-bento">
@@ -75,6 +71,8 @@ export function ShortcutsView() {
           )}
         </For>
       </div>
+
+      <FloatingBackButton onClick={handleBack} />
     </div>
   );
 }

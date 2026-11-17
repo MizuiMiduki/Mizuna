@@ -2,6 +2,8 @@ import gsap from 'gsap';
 import { createSignal, For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
+import { hasDrivePermission, hasHistoryPermission, getMissingPermissions } from '../utils/version';
+import type { AccountRecord } from '../db/database';
 
 export function AccountView() {
   const {
@@ -10,13 +12,17 @@ export function AccountView() {
     settings,
     switchAccount,
     deleteSelectedAccounts,
+    reorderAccounts,
     setCurrentView,
     openDialog,
     showToast,
   } = useApp();
 
   const [isDeleteMode, setIsDeleteMode] = createSignal(false);
+  const [isReorderMode, setIsReorderMode] = createSignal(false);
   const [selectedIds, setSelectedIds] = createSignal<number[]>([]);
+  const [draggedIndex, setDraggedIndex] = createSignal<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = createSignal<number | null>(null);
   let listRef: HTMLDivElement | undefined;
 
   onSettled(() => {
@@ -34,7 +40,115 @@ export function AccountView() {
 
   const toggleDeleteMode = () => {
     setIsDeleteMode((prev) => !prev);
+    setIsReorderMode(false);
     setSelectedIds([]);
+  };
+
+  const toggleReorderMode = () => {
+    setIsReorderMode((prev) => !prev);
+    setIsDeleteMode(false);
+    setSelectedIds([]);
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+  };
+
+  const showPermissionNotice = (account: AccountRecord) => {
+    const missingPerms = getMissingPermissions(account.add_mizuna_versinon);
+    const permDescriptions: Record<string, string> = {
+      'write:drive': 'ドライブへの画像アップロード権限',
+      'read:notes': '投稿履歴・リプライ閲覧権限',
+      'read:notifications': 'メンション一覧取得権限',
+    };
+
+    openDialog({
+      title: 'アカウント権限の確認',
+      icon: 'warning',
+      tone: 'warning',
+      badgeText: 'PERMISSION NOTICE',
+      contentHtml: `
+        <div style="font-size: 0.95rem; line-height: 1.6; margin-bottom: 12px;">
+          <strong>@${account.username}@${account.address}</strong> は <strong>v${account.add_mizuna_versinon}</strong> で追加されたため、最新の機能に必要な権限が不足しています。
+        </div>
+        <div class="mizuna-modal-AlertBox" style="margin-bottom: 12px;">
+          <div style="font-weight: 700; margin-bottom: 6px;">不足している権限:</div>
+          <ul style="margin: 0; padding-left: 20px; line-height: 1.5;">
+            ${missingPerms
+              .map(
+                (p) =>
+                  `<li><code>${p}</code> (${permDescriptions[p] || '追加機能権限'})</li>`
+              )
+              .join('')}
+          </ul>
+        </div>
+        <div style="font-size: 0.85rem; color: var(--on-surface-variant); line-height: 1.5;">
+          ※ 画像付きノートの投稿や投稿履歴の閲覧を行うには、アカウント追加画面から同一サーバーで再度認証を行ってください（現在のトークンや設定は最新の権限で上書き更新されます）。
+        </div>
+      `,
+      buttons: [
+        {
+          label: '閉じる',
+          variant: 'border',
+        },
+        {
+          label: '再認証する',
+          variant: 'fill',
+          onClick: () => {
+            setCurrentView('add_account');
+          },
+        },
+      ],
+    });
+  };
+
+  const moveAccount = async (fromIndex: number, toIndex: number) => {
+    const list = [...accounts()];
+    if (fromIndex < 0 || fromIndex >= list.length || toIndex < 0 || toIndex >= list.length) {
+      return;
+    }
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+
+    const newIds = list.map((a) => a.id).filter((id): id is number => id !== undefined);
+    await reorderAccounts(newIds);
+  };
+
+  const handleDragStart = (e: DragEvent, index: number) => {
+    if (!isReorderMode()) return;
+    setDraggedIndex(index);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(index));
+    }
+  };
+
+  const handleDragOver = (e: DragEvent, index: number) => {
+    if (!isReorderMode()) return;
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e: DragEvent, targetIndex: number) => {
+    if (!isReorderMode()) return;
+    e.preventDefault();
+    const sourceIndex = draggedIndex();
+    setDraggedIndex(null);
+    setDragOverIndex(null);
+
+    if (sourceIndex !== null && sourceIndex !== targetIndex) {
+      await moveAccount(sourceIndex, targetIndex);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+    setDragOverIndex(null);
   };
 
   const toggleSelectId = (id: number) => {
@@ -45,6 +159,9 @@ export function AccountView() {
 
   const handleCardClick = async (id: number | undefined) => {
     if (id === undefined) return;
+    if (isReorderMode()) {
+      return; // 並べ替えモード中はアカウント切り替えを防止
+    }
     if (isDeleteMode()) {
       toggleSelectId(id);
       return;
@@ -92,23 +209,40 @@ export function AccountView() {
         </div>
 
         <div class="mizuna-header-actions">
-          <button
-            type="button"
-            class={`mizuna-btn ${isDeleteMode() ? 'mizuna-btn-tonal' : 'mizuna-btn-outline'}`}
-            onClick={toggleDeleteMode}
-          >
-            <i>{isDeleteMode() ? 'close' : 'delete_outline'}</i>
-            <span>{isDeleteMode() ? 'キャンセル' : '選択削除'}</span>
-          </button>
+          <Show when={!isDeleteMode()}>
+            <button
+              type="button"
+              class={`mizuna-btn ${isReorderMode() ? 'mizuna-btn-primary' : 'mizuna-btn-outline'}`}
+              onClick={toggleReorderMode}
+              disabled={accounts().length <= 1}
+              title="アカウントの表示順を並べ替え"
+            >
+              <i>{isReorderMode() ? 'check' : 'swap_vert'}</i>
+              <span>{isReorderMode() ? '完了' : '並べ替え'}</span>
+            </button>
+          </Show>
 
-          <button
-            type="button"
-            class="add_account_floating_button mizuna-btn mizuna-btn-primary"
-            onClick={() => setCurrentView('add_account')}
-          >
-            <i>person_add</i>
-            <span>アカウント追加</span>
-          </button>
+          <Show when={!isReorderMode()}>
+            <button
+              type="button"
+              class={`mizuna-btn ${isDeleteMode() ? 'mizuna-btn-tonal' : 'mizuna-btn-outline'}`}
+              onClick={toggleDeleteMode}
+            >
+              <i>{isDeleteMode() ? 'close' : 'delete_outline'}</i>
+              <span>{isDeleteMode() ? 'キャンセル' : '選択削除'}</span>
+            </button>
+          </Show>
+
+          <Show when={!isDeleteMode() && !isReorderMode()}>
+            <button
+              type="button"
+              class="add_account_floating_button mizuna-btn mizuna-btn-primary"
+              onClick={() => setCurrentView('add_account')}
+            >
+              <i>person_add</i>
+              <span>アカウント追加</span>
+            </button>
+          </Show>
         </div>
       </div>
 
@@ -133,17 +267,27 @@ export function AccountView() {
       {/* アカウントカードグリッド */}
       <div ref={listRef} class="account_display_area mizuna-acc-grid">
         <For each={accounts()}>
-          {(account) => {
+          {(account, index) => {
             const isActive = () => currentUser()?.id === account.id;
             const isChecked = () =>
               account.id !== undefined && selectedIds().includes(account.id);
+            const isDragging = () => draggedIndex() === index();
+            const isDragOver = () => dragOverIndex() === index();
 
             return (
               <div
                 id="account_card"
                 data-id={account.id}
+                draggable={isReorderMode() ? 'true' : 'false'}
+                onDragStart={(e) => handleDragStart(e, index())}
+                onDragOver={(e) => handleDragOver(e, index())}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, index())}
+                onDragEnd={handleDragEnd}
                 class={`mizuna-acc-card ${isActive() ? 'is-active' : ''} ${
                   isChecked() ? 'is-selected-delete' : ''
+                } ${isDragging() ? 'is-dragging' : ''} ${isDragOver() ? 'is-drag-over' : ''} ${
+                  isReorderMode() ? 'is-reordering' : ''
                 }`}
                 onClick={() => handleCardClick(account.id)}
               >
@@ -193,11 +337,52 @@ export function AccountView() {
                   </div>
                 </div>
 
-                <div class="mizuna-acc-meta">
-                  <span class="mizuna-ver-tag" title="追加時のMizunaバージョン">
-                    v{account.add_mizuna_versinon}
-                  </span>
-                </div>
+                <Show when={isReorderMode()}>
+                  <div
+                    class="mizuna-acc-reorder-controls"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <span class="mizuna-reorder-drag-handle" title="ドラッグして並べ替え">
+                      <i>drag_indicator</i>
+                    </span>
+                  </div>
+                </Show>
+
+                <Show when={!isReorderMode()}>
+                  <div class="mizuna-acc-meta">
+                    <Show when={!hasDrivePermission(account.add_mizuna_versinon)}>
+                      <button
+                        type="button"
+                        class="mizuna-perm-warning-badge drive"
+                        title="画像添付権限が不足しています（タップして詳細を確認）"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          showPermissionNotice(account);
+                        }}
+                      >
+                        <i>warning</i>
+                        <span>画像非対応</span>
+                      </button>
+                    </Show>
+                    <Show when={!hasHistoryPermission(account.add_mizuna_versinon)}>
+                      <button
+                        type="button"
+                        class="mizuna-perm-warning-badge history"
+                        title="投稿履歴閲覧権限が不足しています（タップして詳細を確認）"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          showPermissionNotice(account);
+                        }}
+                      >
+                        <i>lock</i>
+                        <span>履歴非対応</span>
+                      </button>
+                    </Show>
+                    <span class="mizuna-ver-tag" title="追加時のMizunaバージョン">
+                      v{account.add_mizuna_versinon}
+                    </span>
+                  </div>
+                </Show>
               </div>
             );
           }}
