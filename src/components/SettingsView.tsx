@@ -1,5 +1,5 @@
 import gsap from 'gsap';
-import { createEffect, createSignal, For, onSettled, Show } from 'solid-js';
+import { createEffect, createSignal, For, onSettled, Show, untrack } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { SUPPORTED_LANGUAGES } from '../i18n';
 import { applyCustomCss, sanitizeCustomCss } from '../utils/customCss';
@@ -23,12 +23,13 @@ export function SettingsView() {
   let panelRef: HTMLDivElement | undefined;
   let settingFileInputRef: HTMLInputElement | undefined;
 
-  const [customCssValue, setCustomCssValue] = createSignal(settings().custom_css ?? '');
+  const initialSettings = untrack(settings);
+  const [customCssValue, setCustomCssValue] = createSignal(initialSettings.custom_css ?? '');
   const [cssWarnings, setCssWarnings] = createSignal<string[]>([]);
   const [isCssDirty, setIsCssDirty] = createSignal(false);
-  const [signatureValue, setSignatureValue] = createSignal(settings().signature_text ?? '');
+  const [signatureValue, setSignatureValue] = createSignal(initialSettings.signature_text ?? '');
   const [isSignatureDirty, setIsSignatureDirty] = createSignal(false);
-  const [watermarkValue, setWatermarkValue] = createSignal(settings().watermark_text ?? '');
+  const [watermarkValue, setWatermarkValue] = createSignal(initialSettings.watermark_text ?? '');
   const [isWatermarkDirty, setIsWatermarkDirty] = createSignal(false);
 
   createEffect(

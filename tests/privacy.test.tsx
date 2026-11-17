@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@solidjs/testing-library';
+import { flush } from 'solid-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProvider, useApp } from '../src/store/appStore';
 import { PrivacyPolicyView } from '../src/components/PrivacyPolicyView';
@@ -26,10 +27,10 @@ describe('PrivacyPolicyView & Dialog Privacy Link', () => {
   });
 
   it('戻るボタンをクリックするとビューが切り替わること', () => {
-    let currentViewVal = '';
+    let currentAppView: any;
     function TestConsumer() {
       const { currentView } = useApp();
-      currentViewVal = currentView();
+      currentAppView = currentView;
       return <PrivacyPolicyView />;
     }
 
@@ -42,9 +43,10 @@ describe('PrivacyPolicyView & Dialog Privacy Link', () => {
     const backButtons = screen.getAllByRole('button', { name: /もどる/ });
     expect(backButtons.length).toBeGreaterThanOrEqual(1);
     fireEvent.click(backButtons[0]);
+    flush();
 
     // アカウントが0件の場合は add_account、ある場合は note
-    expect(['add_account', 'note']).toContain(currentViewVal);
+    expect(['add_account', 'note']).toContain(currentAppView());
   });
 
   it('DialogHost で showPrivacyPolicy が有効な場合にプライバシーポリシーリンクが表示され遷移すること', async () => {

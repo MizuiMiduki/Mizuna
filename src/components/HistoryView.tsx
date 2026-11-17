@@ -7,6 +7,7 @@ import {
   onCleanup,
   onSettled,
   Show,
+  untrack,
 } from 'solid-js';
 import { Portal } from '@solidjs/web';
 import {
@@ -274,10 +275,10 @@ export function HistoryView() {
           }
         };
         window.addEventListener('keydown', handleLightboxKeyDown);
-        onCleanup(() => {
+        return () => {
           cleanupBack();
           window.removeEventListener('keydown', handleLightboxKeyDown);
-        });
+        };
       }
     }
   );
@@ -332,9 +333,13 @@ export function HistoryView() {
     });
   };
 
-  const loadNotes = async (reset = false) => {
-    const user = currentUser();
-    if (!user || !isHistorySupported()) return;
+  const loadNotes = async (
+    reset = false,
+    targetUser = untrack(currentUser),
+    targetTab = untrack(activeTab)
+  ) => {
+    const user = targetUser;
+    if (!user || !untrack(isHistorySupported)) return;
 
     if (reset) {
       setIsLoading(true);
@@ -345,11 +350,11 @@ export function HistoryView() {
     }
 
     try {
-      const currentNotes = reset ? [] : notes();
+      const currentNotes = reset ? [] : untrack(notes);
       const untilId = currentNotes.length > 0 ? currentNotes[currentNotes.length - 1].id : undefined;
 
       let fetched: MisskeyNote[] = [];
-      if (activeTab() === 'my_notes') {
+      if (targetTab === 'my_notes') {
         fetched = await fetchUserNotes(user, { limit: 10, untilId });
       } else {
         fetched = await fetchUserMentions(user, { limit: 10, untilId });
@@ -390,11 +395,12 @@ export function HistoryView() {
       _v: historyCacheVersion(),
       tab: activeTab(),
       user: currentUser(),
+      supported: isHistorySupported(),
     }),
-    ({ tab, user }) => {
-      if (!user || !isHistorySupported()) return;
+    ({ tab, user, supported }) => {
+      if (!user || !supported) return;
 
-      const key = getAccountKey();
+      const key = getAccountCacheKey(user);
       const cached = getHistoryCache(key, tab);
 
       if (cached && cached.isLoaded) {
@@ -409,7 +415,7 @@ export function HistoryView() {
         setNotes([]);
         setRepliesMap({});
         setExpandedCwMap({});
-        loadNotes(true);
+        void loadNotes(true, user, tab);
       }
     }
   );

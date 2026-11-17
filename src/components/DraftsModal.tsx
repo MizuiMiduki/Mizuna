@@ -58,10 +58,10 @@ export function DraftsModal(props: DraftsModalProps) {
       };
       window.addEventListener('keydown', handleKeyDown);
 
-      onCleanup(() => {
+      return () => {
         removeBack();
         window.removeEventListener('keydown', handleKeyDown);
-      });
+      };
     }
   );
 

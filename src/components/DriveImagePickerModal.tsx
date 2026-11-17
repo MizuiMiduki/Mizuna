@@ -105,10 +105,10 @@ export function DriveImagePickerModal(props: DriveImagePickerModalProps) {
           }
         };
         window.addEventListener('keydown', handleKeyDown);
-        onCleanup(() => {
+        return () => {
           cleanupBack();
           window.removeEventListener('keydown', handleKeyDown);
-        });
+        };
       }
     }
   );
