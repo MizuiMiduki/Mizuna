@@ -94,9 +94,9 @@ function ToastCard(props: { item: ToastItem; onDismiss: (id: string) => void }) 
       ref={cardRef}
       class={`mizuna-toast-card is-${props.item.type}`}
       role="status"
-      onMouseEnter={() => progressTween?.pause()}
+      onMouseEnter={() => progressAnim?.pause()}
       onMouseLeave={() => {
-        if (!isClosing) progressTween?.resume();
+        if (!isClosing) progressAnim?.play();
       }}
     >
       <div class={`mizuna-toast-icon is-${props.item.type}`}>

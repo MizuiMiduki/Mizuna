@@ -10,6 +10,8 @@
     "build:canary": "vite build --mode canary",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm type-check && pnpm test && pnpm build",
     "preview": "vite preview"
   },
   "dependencies": {
