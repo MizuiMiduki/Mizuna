@@ -192,18 +192,21 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: '24'
-          cache: 'npm'
+          package-manager-cache: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v5
 
       - name: Install dependencies & Build
         env:
           DEPLOY_TARGET: ${{ inputs.deploy_target }}
           GA_SECRET: ${{ secrets.VITE_GA_MEASUREMENT_ID }}
         run: |
-          npm ci
+          pnpm install --frozen-lockfile
           if [ "$DEPLOY_TARGET" = "prerelease" ]; then
-            npm run build:canary
+            pnpm run build:canary
           else
-            VITE_GA_MEASUREMENT_ID="$GA_SECRET" npm run build
+            VITE_GA_MEASUREMENT_ID="$GA_SECRET" pnpm run build
           fi
 
       # ========================================================
