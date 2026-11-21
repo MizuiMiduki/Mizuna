@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@solidjs/testing-library';
+import { flush } from 'solid-js';
 import {
   AppProvider,
   useApp,
@@ -39,12 +40,16 @@ describe('appStore', () => {
       });
 
       result.setCurrentView('about');
+      flush();
       expect(result.currentView()).toBe('about');
       result.setCurrentView('shortcuts');
+      flush();
       expect(result.currentView()).toBe('shortcuts');
       result.setCurrentView('announcements');
+      flush();
       expect(result.currentView()).toBe('announcements');
       result.setCurrentView('add_account');
+      flush();
       expect(result.currentView()).toBe('add_account');
     });
 
@@ -54,15 +59,19 @@ describe('appStore', () => {
       });
 
       result.setNoteText('テストノート本文');
+      flush();
       expect(result.noteText()).toBe('テストノート本文');
 
       result.setCwText('注釈');
+      flush();
       expect(result.cwText()).toBe('注釈');
 
       result.setVisibility('home');
+      flush();
       expect(result.visibility()).toBe('home');
 
       result.setEndMizuna(true);
+      flush();
       expect(result.endMizuna()).toBe(true);
     });
 
@@ -75,12 +84,14 @@ describe('appStore', () => {
       const fakeFile = new File([fakeBlob], 'test.png', { type: 'image/png' });
 
       await result.addAttachedFiles([fakeFile]);
+      flush();
       expect(result.attachedImages().length).toBe(1);
       expect(result.attachedImages()[0].name).toBe('test.png');
       expect(result.attachedImages()[0].rawFile).toBe(fakeFile);
 
       const targetId = result.attachedImages()[0].id;
       result.removeAttachedImage(targetId);
+      flush();
       expect(result.attachedImages().length).toBe(0);
     });
 
@@ -94,6 +105,7 @@ describe('appStore', () => {
       const file3 = new File(['3'], 'img3.png', { type: 'image/png' });
 
       result.addAttachedFiles([file1, file2, file3]);
+      flush();
       expect(result.attachedImages().length).toBe(3);
 
       const [item1, item2, item3] = result.attachedImages();
@@ -103,14 +115,17 @@ describe('appStore', () => {
 
       // item1 を右に移動 (index 0 -> index 1)
       result.moveAttachedImage(item1.id, 1);
+      flush();
       expect(result.attachedImages().map((x) => x.name)).toEqual(['img2.png', 'img1.png', 'img3.png']);
 
       // item3 を左に移動 (index 2 -> index 1)
       result.moveAttachedImage(item3.id, -1);
+      flush();
       expect(result.attachedImages().map((x) => x.name)).toEqual(['img2.png', 'img3.png', 'img1.png']);
 
       // 任意の順序指定で並べ替え
       result.reorderAttachedImages([item1.id, item2.id, item3.id]);
+      flush();
       expect(result.attachedImages().map((x) => x.name)).toEqual(['img1.png', 'img2.png', 'img3.png']);
     });
 
@@ -121,6 +136,7 @@ describe('appStore', () => {
 
       const originalFile = new File(['orig-bytes'], 'original.png', { type: 'image/png' });
       result.addAttachedFiles([originalFile]);
+      flush();
       expect(result.attachedImages().length).toBe(1);
 
       const imgItem = result.attachedImages()[0];
@@ -152,6 +168,7 @@ describe('appStore', () => {
       };
 
       result.updateAttachedImage(imgItem.id, editedFile, dummyEditState);
+      flush();
 
       const updated = result.attachedImages()[0];
       expect(updated.file).toBe(editedFile);
@@ -160,6 +177,7 @@ describe('appStore', () => {
 
       // 加工をリセットして元画像に戻す
       result.revertAttachedImage(imgItem.id);
+      flush();
 
       const reverted = result.attachedImages()[0];
       expect(reverted.file).toBe(originalFile); // 元画像に戻る
@@ -173,12 +191,14 @@ describe('appStore', () => {
       });
 
       result.showToast('テストメッセージ', 'info', 'タイトル');
+      flush();
       expect(result.toasts().length).toBe(1);
       expect(result.toasts()[0].message).toBe('テストメッセージ');
       expect(result.toasts()[0].type).toBe('info');
 
       const toastId = result.toasts()[0].id;
       result.dismissToast(toastId);
+      flush();
       expect(result.toasts().length).toBe(0);
     });
 
@@ -192,11 +212,13 @@ describe('appStore', () => {
         contentText: 'よろしいですか？',
         buttons: [{ label: 'OK' }],
       });
+      flush();
 
       expect(result.dialogConfig()).not.toBeNull();
       expect(result.dialogConfig()?.title).toBe('確認ダイアログ');
 
       result.closeDialog();
+      flush();
       expect(result.dialogConfig()).toBeNull();
     });
 
@@ -303,10 +325,12 @@ describe('appStore', () => {
 
       // 設定画面へ遷移
       result.setCurrentView('about');
+      flush();
       expect(result.currentView()).toBe('about');
 
       // Android の戻るボタン（popstate）が押された場合 -> note 画面に戻る
       window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      flush();
       expect(result.currentView()).toBe('note');
 
       // モーダルハンドラーの登録（画像編集等）
@@ -317,11 +341,13 @@ describe('appStore', () => {
 
       // モーダルが開いている時に戻るボタン（popstate）が押された場合 -> モーダルが閉じる
       window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      flush();
       expect(modalClosed).toBe(true);
       expect(result.currentView()).toBe('note');
 
       // ホーム画面で1回目の戻るが押された場合 -> 二度押し防止トーストが表示される
       window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      flush();
       const exitConfirmMsg = result.t('common.exit_confirm');
       expect(result.toasts().some((t) => t.message === exitConfirmMsg)).toBe(true);
 
@@ -337,6 +363,7 @@ describe('appStore', () => {
       unregisterUiModal();
       // ブラウザが history.back() 起因で発火する popstate をシミュレート
       window.dispatchEvent(new PopStateEvent('popstate', { state: {} }));
+      flush();
       // トーストが増えていないこと
       expect(result.toasts().length).toBe(initialToastCount);
       expect(uiModalClosed).toBe(false);

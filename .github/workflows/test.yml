@@ -62,3 +62,6 @@ jobs:
 
             - name: Run Unit Tests
               run: pnpm test
+
+            - name: Verify Production Build
+              run: pnpm run build

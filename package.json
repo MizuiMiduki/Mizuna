@@ -1,7 +1,7 @@
 {
   "name": "mizuna",
   "private": true,
-  "version": "4.0.0",
+  "version": "4.1.0",
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "scripts": {
@@ -10,24 +10,26 @@
     "build:canary": "vite build --mode canary",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "pnpm type-check && pnpm test && pnpm build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@solidjs/web": "^2.0.0",
     "dexie": "^4.0.11",
-    "gsap": "^3.12.7",
     "material-dynamic-colors": "^1.1.2",
     "mfm-js": "^0.28.0",
     "pulltorefreshjs": "^0.1.22",
-    "solid-js": "^1.9.4"
+    "solid-js": "^2.0.0"
   },
   "devDependencies": {
-    "@solidjs/testing-library": "^0.8.10",
+    "@solidjs/testing-library": "^1.0.0-rc.2",
     "@testing-library/jest-dom": "^7.0.1",
     "fake-indexeddb": "^6.2.6",
     "jsdom": "^26.0.0",
     "typescript": "^5.7.3",
-    "vite": "^6.1.0",
-    "vite-plugin-solid": "^2.11.2",
-    "vitest": "^4.1.12"
+    "vite": "^8.3.5",
+    "vite-plugin-solid": "^3.0.0-next.27",
+    "vitest": "^5.0.5"
   }
 }

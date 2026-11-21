@@ -1,5 +1,4 @@
-import { createEffect, Match, onCleanup, onMount, Show, Switch } from 'solid-js';
-import gsap from 'gsap';
+import { createEffect, Match, onCleanup, onSettled, Show, Switch } from 'solid-js';
 import { AboutView } from './components/AboutView';
 import { AccountView } from './components/AccountView';
 import { AddAccountView } from './components/AddAccountView';
@@ -17,6 +16,8 @@ import { SnackbarHost } from './components/SnackbarHost';
 import { AppProvider, useApp, type ViewType } from './store/appStore';
 import { initAnalytics, trackPageView } from './utils/analytics';
 
+import { EASING, safeAnimate } from './utils/animation';
+
 const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'history'];
 
 function MainContent() {
@@ -24,7 +25,7 @@ function MainContent() {
   let mainContainerRef: HTMLElement | undefined;
   let prevView: ViewType = currentView();
 
-  onMount(() => {
+  onSettled(() => {
     initAnalytics();
 
     const isButtonElement = (target: EventTarget | null): boolean => {
@@ -46,79 +47,90 @@ function MainContent() {
     document.addEventListener('selectstart', handlePreventButtonSelection);
     document.addEventListener('contextmenu', handlePreventButtonSelection);
 
-    onCleanup(() => {
+    return () => {
       document.removeEventListener('selectstart', handlePreventButtonSelection);
       document.removeEventListener('contextmenu', handlePreventButtonSelection);
-    });
+    };
   });
 
-  createEffect(() => {
-    trackPageView(currentView());
-  });
+  createEffect(
+    () => currentView(),
+    (view) => {
+      trackPageView(view);
+    }
+  );
 
   // ページ遷移（currentView の切り替え）時にスクロール量を最上部 (0) にリセット
-  createEffect(() => {
-    currentView();
-    if (typeof window !== 'undefined') {
-      window.scrollTo(0, 0);
-      if (document.documentElement) document.documentElement.scrollTop = 0;
-      if (document.body) document.body.scrollTop = 0;
-
-      requestAnimationFrame(() => {
+  createEffect(
+    () => currentView(),
+    () => {
+      if (typeof window !== 'undefined') {
         window.scrollTo(0, 0);
         if (document.documentElement) document.documentElement.scrollTop = 0;
         if (document.body) document.body.scrollTop = 0;
-      });
-    }
-  });
 
-  // メニューバー画面間（アカウント・投稿・設定）の遷移時にiOS風の方向連動スライド演出
-  createEffect(() => {
-    const nextView = currentView();
-    const prev = prevView;
-    prevView = nextView;
-
-    const prevIdx = DOCK_VIEWS.indexOf(prev);
-    const nextIdx = DOCK_VIEWS.indexOf(nextView);
-
-    if (prevIdx !== -1 && nextIdx !== -1 && prevIdx !== nextIdx && mainContainerRef) {
-      const direction = nextIdx > prevIdx ? 1 : -1;
-      const prefersReduced =
-        typeof window !== 'undefined' &&
-        window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-
-      if (!prefersReduced) {
-        gsap.killTweensOf(mainContainerRef);
-        gsap.fromTo(
-          mainContainerRef,
-          { opacity: 0.65, x: direction * 24 },
-          {
-            opacity: 1,
-            x: 0,
-            duration: 0.22,
-            ease: 'power2.out',
-            clearProps: 'transform',
-          }
-        );
+        requestAnimationFrame(() => {
+          window.scrollTo(0, 0);
+          if (document.documentElement) document.documentElement.scrollTop = 0;
+          if (document.body) document.body.scrollTop = 0;
+        });
       }
     }
-  });
+  );
 
-  createEffect(() => {
-    const mode = settings().ui_mode;
-    if (typeof document !== 'undefined') {
-      const root = document.documentElement;
-      root.classList.toggle('is-simple-mode', mode === 2);
-      root.classList.toggle('ui-size-large', mode === 3);
-      root.classList.toggle('ui-size-medium', mode === 4);
-      root.classList.toggle('ui-size-small', mode === 5);
+  // メニューバー画面間（アカウント・投稿・設定）の遷移時にiOS風の方向連動スライド演出
+  createEffect(
+    () => currentView(),
+    (nextView) => {
+      const prev = prevView;
+      prevView = nextView;
 
-      document.body.classList.toggle('is-simple-mode', mode === 2);
-      document.body.classList.toggle('ui-size-large', mode === 3);
-      document.body.classList.toggle('ui-size-medium', mode === 4);
-      document.body.classList.toggle('ui-size-small', mode === 5);
+      const prevIdx = DOCK_VIEWS.indexOf(prev);
+      const nextIdx = DOCK_VIEWS.indexOf(nextView);
+
+      if (prevIdx !== -1 && nextIdx !== -1 && prevIdx !== nextIdx && mainContainerRef) {
+        const direction = nextIdx > prevIdx ? 1 : -1;
+        const prefersReduced =
+          typeof window !== 'undefined' &&
+          window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+        if (!prefersReduced) {
+          if (typeof mainContainerRef.getAnimations === 'function') {
+            mainContainerRef.getAnimations().forEach((a) => a.cancel());
+          }
+          safeAnimate(
+            mainContainerRef,
+            [
+              { opacity: 0.65, transform: `translateX(${direction * 24}px)` },
+              { opacity: 1, transform: 'translateX(0)' },
+            ],
+            {
+              duration: 220,
+              easing: EASING.outQuad,
+            }
+          );
+        }
+      }
     }
-  });
+  );
+
+  createEffect(
+    () => settings().ui_mode,
+    (mode) => {
+      if (typeof document !== 'undefined') {
+        const root = document.documentElement;
+        root.classList.toggle('is-simple-mode', mode === 2);
+        root.classList.toggle('ui-size-large', mode === 3);
+        root.classList.toggle('ui-size-medium', mode === 4);
+        root.classList.toggle('ui-size-small', mode === 5);
+
+        document.body.classList.toggle('is-simple-mode', mode === 2);
+        document.body.classList.toggle('ui-size-large', mode === 3);
+        document.body.classList.toggle('ui-size-medium', mode === 4);
+        document.body.classList.toggle('ui-size-small', mode === 5);
+      }
+    }
+  );
 
   const appShellClasses = () => {
     const mode = settings().ui_mode;

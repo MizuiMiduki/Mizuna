@@ -1,7 +1,7 @@
-import gsap from 'gsap';
-import { createSignal, For, onMount, Show } from 'solid-js';
+import { createSignal, For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { FloatingBackButton } from './FloatingBackButton';
+import { animateViewEnter } from '../utils/animation';
 import {
   fetchAnnouncements,
   formatAnnouncementDate,
@@ -27,13 +27,7 @@ export function AnnouncementsView() {
       setCurrentPage(res.currentPage);
       setTotalPages(res.totalPages);
 
-      if (listRef) {
-        gsap.fromTo(
-          listRef,
-          { opacity: 0, y: 8 },
-          { opacity: 1, y: 0, duration: 0.22, ease: 'power2.out' }
-        );
-      }
+      animateViewEnter(listRef, 8);
     } catch (err) {
       console.error('Failed to load announcements:', err);
       setIsError(true);
@@ -42,14 +36,8 @@ export function AnnouncementsView() {
     }
   };
 
-  onMount(() => {
-    if (containerRef) {
-      gsap.fromTo(
-        containerRef,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+  onSettled(() => {
+    animateViewEnter(containerRef);
     loadPage(1);
   });
 

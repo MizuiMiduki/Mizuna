@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { createEffect, createSignal, onCleanup, onSettled, Show } from 'solid-js';
 import { useApp, type ViewType } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { HoldHoverTip } from './HoldHoverTip';
@@ -17,6 +17,7 @@ function FooterNavContent() {
   const [isSwiping, setIsSwiping] = createSignal(false);
   const [dragOffset, setDragOffset] = createSignal(0);
 
+  let isDraggingLocal = false;
   let startX = 0;
   let startY = 0;
   let startTime = 0;
@@ -95,6 +96,7 @@ function FooterNavContent() {
     lastMoveTime = startTime;
     currentVelocityX = 0;
     dragDeltaX = 0;
+    isDraggingLocal = false;
     setIsDragging(false);
   };
 
@@ -103,14 +105,15 @@ function FooterNavContent() {
     const dx = clientX - startX;
     const dy = clientY - startY;
 
-    if (!isDragging()) {
+    if (!isDraggingLocal) {
       // 5px以上動き、かつ水平方向の移動が優位な場合にドラッグ開始
       if (Math.abs(dx) > 5 && Math.abs(dx) > Math.abs(dy)) {
+        isDraggingLocal = true;
         setIsDragging(true);
       }
     }
 
-    if (isDragging()) {
+    if (isDraggingLocal) {
       dragDeltaX = dx;
       const now = Date.now();
       const dt = now - lastMoveTime;
@@ -148,7 +151,8 @@ function FooterNavContent() {
   const handleEnd = () => {
     if (startTime === 0) return;
 
-    if (isDragging()) {
+    if (isDraggingLocal || isDragging()) {
+      isDraggingLocal = false;
       const totalElapsed = Date.now() - startTime;
       let vx = currentVelocityX;
       // 指を止めてから離した場合、またはテスト等の極小時間（< 40ms）は速度ゼロ
@@ -296,7 +300,7 @@ function FooterNavContent() {
     }));
   };
 
-  onMount(() => {
+  onSettled(() => {
     // マウント直後に即時位置合わせを試みる
     updatePill(false);
 
@@ -308,43 +312,51 @@ function FooterNavContent() {
       });
     });
 
+    let ro: ResizeObserver | undefined;
     if (typeof ResizeObserver !== 'undefined' && dockRef) {
-      const ro = new ResizeObserver(() => {
+      ro = new ResizeObserver(() => {
         updatePill(false);
       });
       ro.observe(dockRef);
       if (avatarBtnRef) ro.observe(avatarBtnRef);
       if (noteBtnRef) ro.observe(noteBtnRef);
       if (historyBtnRef) ro.observe(historyBtnRef);
-      onCleanup(() => ro.disconnect());
     }
 
     const handleResize = () => updatePill(false);
     window.addEventListener('resize', handleResize);
-    onCleanup(() => window.removeEventListener('resize', handleResize));
 
     if (typeof document !== 'undefined' && 'fonts' in document) {
       document.fonts.ready.then(() => {
         updatePill(false);
       });
     }
+
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
   });
 
-  createEffect(() => {
-    currentView();
-    // ビュー変更時にピルを滑らかに移動
-    requestAnimationFrame(() => {
-      updatePill(true);
-    });
-  });
+  createEffect(
+    () => currentView(),
+    () => {
+      // ビュー変更時にピルを滑らかに移動
+      requestAnimationFrame(() => {
+        updatePill(true);
+      });
+    }
+  );
 
-  createEffect(() => {
-    // 表示サイズ切り替え時にもピルサイズと位置を即座に追従
-    settings().ui_mode;
-    requestAnimationFrame(() => {
-      updatePill(false);
-    });
-  });
+  createEffect(
+    () => settings().ui_mode,
+    () => {
+      // 表示サイズ切り替え時にもピルサイズと位置を即座に追従
+      requestAnimationFrame(() => {
+        updatePill(false);
+      });
+    }
+  );
 
   const avatarSrc = () =>
     getDisplayAvatarUrl(currentUser()?.avatarurl, settings().is_visible_icon);

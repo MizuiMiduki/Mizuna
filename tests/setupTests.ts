@@ -1,8 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import 'fake-indexeddb/auto';
-import { vi, afterEach } from 'vitest';
+import { vi } from 'vitest';
 import { configure } from '@solidjs/testing-library';
-import gsap from 'gsap';
 
 // 非同期テストの安定化のためタイムアウトを調整
 configure({ asyncUtilTimeout: 4000 });
@@ -127,10 +126,25 @@ if (typeof globalThis.fetch === 'undefined' || !vi.isMockFunction(globalThis.fet
   })) as any;
 }
 
-// 6. 各テスト終了時に GSAP のアクティブなトゥイーンをすべて停止
-afterEach(() => {
-  gsap.killTweensOf('*');
-});
+// Element.prototype.animate mock for jsdom
+if (typeof Element !== 'undefined' && typeof Element.prototype.animate !== 'function') {
+  Element.prototype.animate = vi.fn().mockImplementation(() => {
+    return {
+      finished: Promise.resolve(),
+      cancel: vi.fn(),
+      play: vi.fn(),
+      pause: vi.fn(),
+      reverse: vi.fn(),
+      currentTime: 0,
+      onfinish: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    } as any;
+  });
+}
+if (typeof Element !== 'undefined' && typeof (Element.prototype as any).getAnimations !== 'function') {
+  (Element.prototype as any).getAnimations = vi.fn().mockReturnValue([]);
+}
 
 // 7. navigator.serviceWorker mock (jsdom lacks serviceWorker implementation)
 if (typeof navigator !== 'undefined') {

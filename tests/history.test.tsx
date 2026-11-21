@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@solidjs/testing-library';
+import { flush } from 'solid-js';
 import { AppProvider, useApp } from '../src/store/appStore';
 import { clearHistoryCache } from '../src/store/historyStore';
 import { HistoryView } from '../src/components/HistoryView';
@@ -345,6 +346,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     // 「返信する」ボタンをクリック
     const replyActionBtns = screen.getAllByTitle(/(返信する|Reply)/);
     fireEvent.click(replyActionBtns[0]);
+    flush();
 
     // ノート投稿画面へ遷移し、返信先ノートがセットされること
     expect(currentAppView()).toBe('note');
@@ -411,6 +413,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
 
     // 1枚目の画像をタップしてプレビューを開く
     fireEvent.click(fileItems[0]);
+    flush();
 
     const lightbox = document.querySelector('.mizuna-lightbox');
     expect(lightbox).toBeInTheDocument();
@@ -421,6 +424,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     const nextBtn = document.querySelector('.mizuna-lightbox-nav-btn.is-next') as HTMLButtonElement;
     expect(nextBtn).toBeInTheDocument();
     fireEvent.click(nextBtn);
+    flush();
 
     expect(document.querySelector('.mizuna-lightbox-order-badge')?.textContent).toBe('2 / 2');
     expect(document.querySelector('.mizuna-lightbox-filename')?.textContent).toBe('photo2.webp');
@@ -429,6 +433,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     fireEvent.touchStart(lightbox!, { touches: [{ clientX: 100, clientY: 200 }] });
     fireEvent.touchMove(lightbox!, { touches: [{ clientX: 220, clientY: 202 }] });
     fireEvent.touchEnd(lightbox!);
+    flush();
 
     expect(document.querySelector('.mizuna-lightbox-order-badge')?.textContent).toBe('1 / 2');
     expect(document.querySelector('.mizuna-lightbox-filename')?.textContent).toBe('photo1.webp');
@@ -508,6 +513,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
       name: /(選択した画像を追加|Add selected)/,
     });
     fireEvent.click(confirmAddBtn);
+    flush();
 
     // 添付ギャラリーに drive101.webp が追加されていること
     const attachedThumb = await screen.findByAltText('drive101.webp');
@@ -536,10 +542,12 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     const textarea = document.querySelector('.note_content') as HTMLTextAreaElement;
     expect(textarea).toBeInTheDocument();
     fireEvent.input(textarea, { target: { value: '新規投稿即時反映テスト！' } });
+    flush();
 
     const submitBtn = document.querySelector('.note_submit') as HTMLButtonElement;
     expect(submitBtn).toBeInTheDocument();
     fireEvent.click(submitBtn);
+    flush();
 
     // 投稿した内容が HistoryView に即座に表示されること
     expect(await screen.findByText(/新規投稿即時反映テスト！/)).toBeInTheDocument();
@@ -590,6 +598,7 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
     const reauthBtn = screen.getByRole('button', { name: /(アカウントを再認証する|Re-authenticate Account)/ });
     expect(reauthBtn).toBeInTheDocument();
     fireEvent.click(reauthBtn);
+    flush();
     expect(currentAppView()).toBe('add_account');
 
     // fetchで /api/users/notes や /api/notes/mentions が呼ばれていないこと

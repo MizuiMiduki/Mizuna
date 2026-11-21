@@ -1,12 +1,11 @@
-import { Portal } from 'solid-js/web';
-import gsap from 'gsap';
+import { Portal } from '@solidjs/web';
 import {
   createEffect,
   createMemo,
   createSignal,
   For,
   onCleanup,
-  onMount,
+  onSettled,
   Show,
 } from 'solid-js';
 import { createMisskeyNote, uploadImagesToDrive, type MisskeyFile } from '../services/misskeyApi';
@@ -23,6 +22,14 @@ import { getDisplayAvatarUrl } from '../utils/image';
 import { type ImageEditState } from '../utils/imageEditor';
 import { comparisonVersion, hasDrivePermission } from '../utils/version';
 import { renderMfm, insertMfmTag } from '../utils/mfm';
+import {
+  animateModalEnter,
+  animateModalLeave,
+  animatePop,
+  animateViewEnter,
+  EASING,
+  safeAnimate,
+} from '../utils/animation';
 import {
   type MfmSuggestion,
   getMfmTriggerInfo,
@@ -118,6 +125,8 @@ export function NoteView() {
   let lightboxTouchVelocityX = 0;
   let isLightboxHorizontalSwipe = false;
   let hasLightboxSwiped = false;
+  let isLightboxDraggingLocal = false;
+  let lightboxDragXLocal = 0;
   let lightboxSwipeResetTimer: any = null;
 
   const handleLightboxTouchStart = (e: TouchEvent) => {
@@ -129,12 +138,14 @@ export function NoteView() {
     lightboxTouchLastTime = Date.now();
     lightboxTouchVelocityX = 0;
     isLightboxHorizontalSwipe = false;
+    isLightboxDraggingLocal = true;
+    lightboxDragXLocal = 0;
     setIsLightboxDragging(true);
     setLightboxDragX(0);
   };
 
   const handleLightboxTouchMove = (e: TouchEvent) => {
-    if (!isLightboxDragging() || e.touches.length !== 1) return;
+    if (!isLightboxDraggingLocal || e.touches.length !== 1) return;
     const touch = e.touches[0];
     const dx = touch.clientX - lightboxTouchStartX;
     const dy = touch.clientY - lightboxTouchStartY;
@@ -146,6 +157,8 @@ export function NoteView() {
       if (absX >= absY) {
         isLightboxHorizontalSwipe = true;
       } else {
+        isLightboxDraggingLocal = false;
+        lightboxDragXLocal = 0;
         setIsLightboxDragging(false);
         setLightboxDragX(0);
         return;
@@ -182,15 +195,17 @@ export function NoteView() {
         effectiveDx = dx * 0.3;
       }
 
+      lightboxDragXLocal = effectiveDx;
       setLightboxDragX(effectiveDx);
     }
   };
 
   const handleLightboxTouchEnd = () => {
-    if (!isLightboxDragging()) return;
+    if (!isLightboxDraggingLocal) return;
+    isLightboxDraggingLocal = false;
     setIsLightboxDragging(false);
 
-    const dx = lightboxDragX();
+    const dx = lightboxDragXLocal;
     const images = attachedImages();
     const idx = currentPreviewIndex();
 
@@ -227,21 +242,24 @@ export function NoteView() {
   };
 
   // プレビューモーダル表示中の左右キーナビゲーション
-  createEffect(() => {
-    if (previewModalImageId()) {
-      const handleLightboxKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'ArrowLeft') {
-          e.preventDefault();
-          handlePrevPreviewImage();
-        } else if (e.key === 'ArrowRight') {
-          e.preventDefault();
-          handleNextPreviewImage();
-        }
-      };
-      window.addEventListener('keydown', handleLightboxKeyDown);
-      onCleanup(() => window.removeEventListener('keydown', handleLightboxKeyDown));
+  createEffect(
+    () => previewModalImageId(),
+    (id) => {
+      if (id) {
+        const handleLightboxKeyDown = (e: KeyboardEvent) => {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            handlePrevPreviewImage();
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            handleNextPreviewImage();
+          }
+        };
+        window.addEventListener('keydown', handleLightboxKeyDown);
+        return () => window.removeEventListener('keydown', handleLightboxKeyDown);
+      }
     }
-  });
+  );
 
   // サムネイルのドラッグ＆ドロップ並べ替えステート（マウスおよびタッチ端末対応）
   const [draggedImageId, setDraggedImageId] = createSignal<string | null>(null);
@@ -415,32 +433,41 @@ export function NoteView() {
   const acSuggestions = createMemo(() => filterMfmSuggestions(acQuery()));
 
   // Androidの戻るボタン対応：画像加工モーダル・プレビュー・アカウントピッカーを戻る操作で安全に閉じる
-  createEffect(() => {
-    if (editingImageItem()) {
-      const unregister = pushModalBackHandler(() => {
-        setEditingImageItem(null);
-      });
-      onCleanup(unregister);
+  createEffect(
+    () => editingImageItem(),
+    (item) => {
+      if (item) {
+        const unregister = pushModalBackHandler(() => {
+          setEditingImageItem(null);
+        });
+        return unregister;
+      }
     }
-  });
+  );
 
-  createEffect(() => {
-    if (previewModalImageId()) {
-      const unregister = pushModalBackHandler(() => {
-        setPreviewModalImageId(null);
-      });
-      onCleanup(unregister);
+  createEffect(
+    () => previewModalImageId(),
+    (id) => {
+      if (id) {
+        const unregister = pushModalBackHandler(() => {
+          setPreviewModalImageId(null);
+        });
+        return unregister;
+      }
     }
-  });
+  );
 
-  createEffect(() => {
-    if (isAccountPickerOpen()) {
-      const unregister = pushModalBackHandler(() => {
-        setIsAccountPickerOpen(false);
-      });
-      onCleanup(unregister);
+  createEffect(
+    () => isAccountPickerOpen(),
+    (open) => {
+      if (open) {
+        const unregister = pushModalBackHandler(() => {
+          setIsAccountPickerOpen(false);
+        });
+        return unregister;
+      }
     }
-  });
+  );
 
   let viewContainerRef: HTMLDivElement | undefined;
   let composerRef: HTMLElement | undefined;
@@ -448,7 +475,6 @@ export function NoteView() {
   let cwInputRef: HTMLTextAreaElement | undefined;
   let noteInputRef: HTMLTextAreaElement | undefined;
   let fileInputRef: HTMLInputElement | undefined;
-  let modalContentRef: HTMLImageElement | undefined;
   let pickerCardRef: HTMLDivElement | undefined;
   let pickerBackdropRef: HTMLDivElement | undefined;
 
@@ -638,18 +664,23 @@ export function NoteView() {
     return '';
   });
 
-  // CWエリア開閉のGSAPアニメーション
-  createEffect(() => {
-    const open = cwEnabled();
-    if (!cwSectionRef) return;
-    if (open) {
-      gsap.fromTo(
-        cwSectionRef,
-        { height: 0, opacity: 0, y: -6 },
-        { height: 'auto', opacity: 1, y: 0, duration: 0.28, ease: 'power3.out' }
-      );
+  // CWエリア開閉のアニメーション
+  createEffect(
+    () => cwEnabled(),
+    (open) => {
+      if (!cwSectionRef) return;
+      if (open) {
+        safeAnimate(
+          cwSectionRef,
+          [
+            { opacity: 0, transform: 'translateY(-6px)' },
+            { opacity: 1, transform: 'translateY(0)' },
+          ],
+          { duration: 240, easing: EASING.outCubic }
+        );
+      }
     }
-  });
+  );
 
   // ノート送信処理
   const handleSendNote = async () => {
@@ -773,14 +804,8 @@ export function NoteView() {
   };
 
   // キーボードショートカット (Ctrl + Alt + Key)
-  onMount(() => {
-    if (viewContainerRef) {
-      gsap.fromTo(
-        viewContainerRef,
-        { opacity: 0, y: 14, scale: 0.99 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+  onSettled(() => {
+    animateViewEnter(viewContainerRef, 14);
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.ctrlKey && event.altKey) {
@@ -862,21 +887,28 @@ export function NoteView() {
 
     document.addEventListener('keydown', handleKeyDown);
     window.addEventListener('resize', handleResize);
-    onCleanup(() => {
+    return () => {
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleResize);
-    });
+    };
   });
 
   const handleOpenPreview = (item: AttachedImageItem) => {
     if (isDraggingItem || justFinishedDrag || draggedImageId()) return;
     setPreviewModalImageId(item.id);
     setTimeout(() => {
-      if (modalContentRef) {
-        gsap.fromTo(
-          modalContentRef,
-          { scale: 0.88, opacity: 0 },
-          { scale: 1, opacity: 1, duration: 0.24, ease: 'back.out(1.5)', clearProps: 'transform' }
+      const el = document.getElementById('modalImage');
+      if (el) {
+        safeAnimate(
+          el,
+          [
+            { transform: 'scale(0.88)', opacity: 0 },
+            { transform: 'scale(1)', opacity: 1 },
+          ],
+          {
+            duration: 240,
+            easing: EASING.outBack,
+          }
         );
       }
     }, 10);
@@ -927,7 +959,7 @@ export function NoteView() {
   };
 
   const selectVisibility = (val: VisibilityType, el: HTMLElement) => {
-    gsap.fromTo(el, { scale: 0.92 }, { scale: 1, duration: 0.22, ease: 'back.out(2)' });
+    animatePop(el);
     setVisibility(val);
   };
 
@@ -937,10 +969,7 @@ export function NoteView() {
 
   const closeAccountPicker = async () => {
     if (pickerCardRef && pickerBackdropRef) {
-      await Promise.all([
-        gsap.to(pickerCardRef, { opacity: 0, scale: 0.94, y: 8, duration: 0.15, ease: 'power2.in' }),
-        gsap.to(pickerBackdropRef, { opacity: 0, duration: 0.15, ease: 'power2.in' }),
-      ]);
+      await animateModalLeave(pickerCardRef, pickerBackdropRef);
     }
     setIsAccountPickerOpen(false);
   };
@@ -1006,7 +1035,7 @@ export function NoteView() {
                   <div
                     class={`mizuna-mfm-ac-item ${index() === acIndex() ? 'is-selected' : ''}`}
                     role="option"
-                    aria-selected={index() === acIndex()}
+                    aria-selected={index() === acIndex() ? 'true' : 'false'}
                     title={item.desc}
                     onMouseDown={(e) => {
                       e.preventDefault();
@@ -1114,22 +1143,22 @@ export function NoteView() {
         </div>
 
         {/* 返信先カード (リプライ時のみ表示) */}
-        <Show when={replyTargetNote()}>
+        <Show when={replyTargetNote()} keyed>
           {(target) => (
             <div class="mizuna-reply-target-card">
               <div class="mizuna-reply-target-main">
                 <i class="mizuna-reply-target-icon">reply</i>
                 <img
-                  src={getDisplayAvatarUrl(target().user.avatarUrl, settings().is_visible_icon)}
+                  src={getDisplayAvatarUrl(target.user.avatarUrl, settings().is_visible_icon)}
                   alt=""
                   class="mizuna-reply-target-avatar"
                 />
                 <div class="mizuna-reply-target-content">
                   <span class="mizuna-reply-target-user">
-                    {target().user.name || target().user.username} <span class="mizuna-reply-target-handle">@{target().user.username}</span>
+                    {target.user.name || target.user.username} <span class="mizuna-reply-target-handle">@{target.user.username}</span>
                   </span>
                   <p class="mizuna-reply-target-text">
-                    {target().cw ? `[CW] ${target().cw}` : target().text || '（添付画像またはファイル）'}
+                    {target.cw ? `[CW] ${target.cw}` : target.text || '（添付画像またはファイル）'}
                   </p>
                 </div>
               </div>
@@ -1247,7 +1276,7 @@ export function NoteView() {
               id="preview_toggle_button"
               class={`mizuna-mfm-preview-btn ${showPreview() ? 'is-active' : ''}`}
               onClick={() => setShowPreview((prev) => !prev)}
-              aria-pressed={showPreview()}
+              aria-pressed={showPreview() ? 'true' : 'false'}
               aria-label={t('note.preview_tab_preview')}
               title={t('note.preview_tab_preview')}
             >
@@ -1264,7 +1293,7 @@ export function NoteView() {
               <textarea
                 ref={cwInputRef}
                 class="cw_content mizuna-cw-textarea"
-                maxLength={100}
+                maxlength={100}
                 rows={1}
                 placeholder={t('note.cw_placeholder')}
                 value={cwText()}
@@ -1301,7 +1330,7 @@ export function NoteView() {
           <textarea
             ref={noteInputRef}
             class="note_content mizuna-main-textarea"
-            maxLength={3000}
+            maxlength={3000}
             rows={6}
             placeholder={t('note.placeholder')}
             value={noteText()}
@@ -1393,7 +1422,7 @@ export function NoteView() {
                       dragOverIndex() === index() ? 'is-drag-over' : ''
                     }`}
                     data-index={index()}
-                    draggable={attachedImages().length > 1}
+                    draggable={attachedImages().length > 1 ? 'true' : 'false'}
                     onDragStart={(e) => handleImageDragStart(e, item.id)}
                     onDragOver={(e) => handleImageDragOver(e, index())}
                     onDragLeave={handleImageDragEnd}
@@ -1405,11 +1434,11 @@ export function NoteView() {
                     onTouchCancel={handleThumbTouchEnd}
                     onClick={() => handleOpenPreview(item)}
                   >
-                    <Show when={item.thumbUrl}>
+                    <Show when={item.thumbUrl} keyed>
                       {(thumb) => (
                         <img
                           class="input_image_preview"
-                          src={thumb()}
+                          src={thumb}
                           alt={item.name}
                           data-name={item.name}
                           loading="lazy"
@@ -1633,11 +1662,6 @@ export function NoteView() {
             <div
               ref={(el) => {
                 pickerBackdropRef = el;
-                gsap.fromTo(
-                  el,
-                  { opacity: 0 },
-                  { opacity: 1, duration: 0.22, ease: 'power2.out' }
-                );
               }}
               class="mizuna-modal-backdrop"
               style={{ opacity: 0 }}
@@ -1647,11 +1671,7 @@ export function NoteView() {
             <div
               ref={(el) => {
                 pickerCardRef = el;
-                gsap.fromTo(
-                  el,
-                  { opacity: 0, scale: 0.92, y: 14 },
-                  { opacity: 1, scale: 1, y: 0, duration: 0.28, ease: 'back.out(1.5)' }
-                );
+                animateModalEnter(pickerCardRef, pickerBackdropRef);
               }}
               class="mizuna-picker-modal"
               style={{ opacity: 0 }}
@@ -1785,31 +1805,33 @@ export function NoteView() {
                 }}
               >
                 <For each={attachedImages()}>
-                  {(item) => (
-                    <div
-                      class="mizuna-lightbox-slide"
-                      onClick={() => {
-                        if (hasLightboxSwiped) {
-                          hasLightboxSwiped = false;
-                          return;
-                        }
-                        setPreviewModalImageId(null);
-                      }}
-                    >
-                      <img
-                        ref={item.id === previewModalImageId() ? (el) => { modalContentRef = el; } : undefined}
-                        id={item.id === previewModalImageId() ? 'modalImage' : undefined}
-                        class="mizuna-lightbox-img"
-                        src={item.dataUrl}
-                        alt={item.name || ''}
-                        data-name={item.name || ''}
-                        decoding="async"
-                        draggable={false}
-                        onDragStart={(e) => e.preventDefault()}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                    </div>
-                  )}
+                  {(item) => {
+                    const isSelected = createMemo(() => item.id === previewModalImageId());
+                    return (
+                      <div
+                        class="mizuna-lightbox-slide"
+                        onClick={() => {
+                          if (hasLightboxSwiped) {
+                            hasLightboxSwiped = false;
+                            return;
+                          }
+                          setPreviewModalImageId(null);
+                        }}
+                      >
+                        <img
+                          id={isSelected() ? 'modalImage' : undefined}
+                          class="mizuna-lightbox-img"
+                          src={item.dataUrl}
+                          alt={item.name || ''}
+                          data-name={item.name || ''}
+                          decoding="async"
+                          draggable={false}
+                          onDragStart={(e) => e.preventDefault()}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    );
+                  }}
                 </For>
               </div>
             </div>
@@ -1817,90 +1839,96 @@ export function NoteView() {
             {/* ボトムバー: ファイル情報・WebP削減率 & リセットボタン & 閉じるボタン */}
             <div class="mizuna-lightbox-bottombar">
               <div class="mizuna-lightbox-bottombar-inner" onClick={(e) => e.stopPropagation()}>
-                <div class="mizuna-lightbox-fileinfo">
-                  <div class="mizuna-lightbox-filename-row">
-                    <Show when={attachedImages().length > 1}>
-                      <span class="mizuna-lightbox-order-badge">
-                        {currentPreviewIndex() + 1} / {attachedImages().length}
-                      </span>
-                    </Show>
-                    <span class="mizuna-lightbox-filename" title={previewModalImage()?.name}>
-                      {previewModalImage()?.name}
-                    </span>
-                  </div>
-                  <div class="mizuna-lightbox-meta">
-                    <Show
-                      when={!previewModalImage()?.driveFileId}
-                      fallback={
-                        <span class="mizuna-lightbox-badge">
-                          {t('note.drive_badge_uploaded')}
-                        </span>
-                      }
-                    >
-                      <span class="mizuna-lightbox-raw-size">
-                        {(((previewModalImage()?.originalSize ?? 0) / 1024)).toFixed(1)} KB
-                      </span>
-                      <Show
-                        when={previewModalImage()?.compressedSize}
-                        fallback={
-                          <div class="mizuna-lightbox-compressing-wrap">
-                            <span class="mizuna-lightbox-compressing">
-                              <span class="mizuna-lightbox-compressing-spinner" />
-                              WebP圧縮中...
+                <Show when={previewModalImage()} keyed>
+                  {(img) => (
+                    <>
+                      <div class="mizuna-lightbox-fileinfo">
+                        <div class="mizuna-lightbox-filename-row">
+                          <Show when={attachedImages().length > 1}>
+                            <span class="mizuna-lightbox-order-badge">
+                              {currentPreviewIndex() + 1} / {attachedImages().length}
                             </span>
-                            <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
-                              <div class="mizuna-lightbox-mini-bar-fill" />
-                            </div>
-                          </div>
-                        }
-                      >
-                        {(compSize) => {
-                          const originalSize = previewModalImage()?.originalSize ?? 1;
-                          const savedPercent = Math.max(
-                            0,
-                            Math.round(((originalSize - compSize()) / originalSize) * 100)
-                          );
-                          return (
-                            <>
-                              <i class="mizuna-lightbox-meta-arrow">arrow_forward</i>
-                              <span class="mizuna-lightbox-webp-size">
-                                {(compSize() / 1024).toFixed(1)} KB (WebP)
-                              </span>
+                          </Show>
+                          <span class="mizuna-lightbox-filename" title={img.name}>
+                            {img.name}
+                          </span>
+                        </div>
+                        <div class="mizuna-lightbox-meta">
+                          <Show
+                            when={!img.driveFileId}
+                            fallback={
                               <span class="mizuna-lightbox-badge">
-                                {savedPercent}% 削減
+                                {t('note.drive_badge_uploaded')}
                               </span>
-                            </>
-                          );
-                        }}
-                      </Show>
-                    </Show>
-                  </div>
-                </div>
+                            }
+                          >
+                            <span class="mizuna-lightbox-raw-size">
+                              {(((img.originalSize ?? 0) / 1024)).toFixed(1)} KB
+                            </span>
+                            <Show
+                              when={img.compressedSize}
+                              keyed
+                              fallback={
+                                <div class="mizuna-lightbox-compressing-wrap">
+                                  <span class="mizuna-lightbox-compressing">
+                                    <span class="mizuna-lightbox-compressing-spinner" />
+                                    WebP圧縮中...
+                                  </span>
+                                  <div class="mizuna-lightbox-mini-bar" role="progressbar" aria-label="WebP圧縮中">
+                                    <div class="mizuna-lightbox-mini-bar-fill" />
+                                  </div>
+                                </div>
+                              }
+                            >
+                              {(compSize) => {
+                                const originalSize = img.originalSize ?? 1;
+                                const savedPercent = Math.max(
+                                  0,
+                                  Math.round(((originalSize - compSize) / originalSize) * 100)
+                                );
+                                return (
+                                  <>
+                                    <i class="mizuna-lightbox-meta-arrow">arrow_forward</i>
+                                    <span class="mizuna-lightbox-webp-size">
+                                      {(compSize / 1024).toFixed(1)} KB (WebP)
+                                    </span>
+                                    <span class="mizuna-lightbox-badge">
+                                      {savedPercent}% 削減
+                                    </span>
+                                  </>
+                                );
+                              }}
+                            </Show>
+                          </Show>
+                        </div>
+                      </div>
 
-                <div class="mizuna-lightbox-actions">
-                  <Show when={previewModalImage()?.editState}>
-                    <button
-                      type="button"
-                      class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
-                      onClick={() => {
-                        const img = previewModalImage();
-                        if (img) handleResetImage(img.id);
-                      }}
-                    >
-                      <i>restart_alt</i>
-                      <span>加工をリセット</span>
-                    </button>
-                  </Show>
+                      <div class="mizuna-lightbox-actions">
+                        <Show when={img.editState}>
+                          <button
+                            type="button"
+                            class="mizuna-btn mizuna-btn-ghost mizuna-lightbox-action-btn"
+                            onClick={() => {
+                              handleResetImage(img.id);
+                            }}
+                          >
+                            <i>restart_alt</i>
+                            <span>加工をリセット</span>
+                          </button>
+                        </Show>
 
-                  <button
-                    type="button"
-                    class="circle mizuna-lightbox-close-icon-btn"
-                    onClick={() => setPreviewModalImageId(null)}
-                    aria-label="閉じる"
-                  >
-                    <i>close</i>
-                  </button>
-                </div>
+                        <button
+                          type="button"
+                          class="circle mizuna-lightbox-close-icon-btn"
+                          onClick={() => setPreviewModalImageId(null)}
+                          aria-label="閉じる"
+                        >
+                          <i>close</i>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </Show>
               </div>
             </div>
           </div>
@@ -1908,14 +1936,14 @@ export function NoteView() {
       </Show>
 
       {/* 画像加工モーダル */}
-      <Show when={editingImageItem()}>
+      <Show when={editingImageItem()} keyed>
         {(item) => (
           <ImageEditorModal
-            file={item().rawFile || item().file}
-            initialState={item().editState}
+            file={item.rawFile || item.file}
+            initialState={item.editState}
             onClose={() => setEditingImageItem(null)}
             onSave={(updatedFile, editState) =>
-              handleSaveEditedImage(item().id, updatedFile, editState)
+              handleSaveEditedImage(item.id, updatedFile, editState)
             }
           />
         )}

@@ -1,5 +1,5 @@
-import { createSignal, createEffect, onMount, onCleanup, Show, For } from 'solid-js';
-import { Portal } from 'solid-js/web';
+import { createSignal, createEffect, onSettled, onCleanup, Show, For, untrack } from 'solid-js';
+import { Portal } from '@solidjs/web';
 import {
   CropRect,
   MosaicRect,
@@ -48,6 +48,23 @@ const EDITOR_COLOR_PALETTE = [
   '#ec4899',
 ];
 
+function MosaicPixelCanvas(props: {
+  rect: { x: number; y: number; w: number; h: number; granularity?: number; type?: MosaicType };
+  renderCanvas: (el: HTMLCanvasElement | undefined, m: { x: number; y: number; w: number; h: number; granularity?: number; type?: MosaicType }) => void;
+  deps: unknown[];
+}) {
+  let canvasRef: HTMLCanvasElement | undefined;
+  createEffect(
+    () => props.deps,
+    () => {
+      if (canvasRef) {
+        props.renderCanvas(canvasRef, props.rect);
+      }
+    }
+  );
+  return <canvas ref={canvasRef} class="mizuna-mosaic-pixel-canvas" />;
+}
+
 export function ImageEditorModal(props: ImageEditorModalProps) {
   const { currentUser, settings, showToast } = useApp();
 
@@ -55,6 +72,8 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   const [isProcessing, setIsProcessing] = createSignal(false);
 
   const init = props.initialState;
+  const initialSettings = untrack(settings);
+  const initialUser = untrack(currentUser);
 
   // 編集ステート（前回の加工設定があればそのまま復元して継続編集を可能にする）
   const [rotation, setRotation] = createSignal<number>(init?.rotation ?? 0); // 0, 90, 180, 270
@@ -67,19 +86,18 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   // 1. 画像透かしステート (画像全面パターン)
   const getInitialWatermarkText = () => {
     if (init?.watermarkText !== undefined) return init.watermarkText;
-    const custom = settings().watermark_text?.trim();
+    const custom = initialSettings.watermark_text?.trim();
     if (custom) return custom;
-    const user = currentUser();
-    if (user) return `@${user.username}@${user.address}`;
+    if (initialUser) return `@${initialUser.username}@${initialUser.address}`;
     return '@username@instance';
   };
 
   const [watermarkEnabled, setWatermarkEnabled] = createSignal<boolean>(
-    init?.watermarkEnabled ?? (settings().watermark_enabled ?? false)
+    init?.watermarkEnabled ?? (initialSettings.watermark_enabled ?? false)
   );
   const [watermarkText, setWatermarkText] = createSignal<string>(getInitialWatermarkText());
   const [watermarkPattern, setWatermarkPattern] = createSignal<WatermarkPattern>(
-    init?.watermarkPattern ?? (settings().watermark_pattern ?? 'diagonal')
+    init?.watermarkPattern ?? (initialSettings.watermark_pattern ?? 'diagonal')
   );
   const [watermarkOpacity, setWatermarkOpacity] = createSignal<number>(init?.watermarkOpacity ?? 22);
   const [watermarkScale, setWatermarkScale] = createSignal<number>(init?.watermarkScale ?? 100);
@@ -87,24 +105,23 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   // 2. 署名ステート (四隅クレジット表記)
   const getInitialSignatureText = () => {
     if (init?.signatureText !== undefined) return init.signatureText;
-    const custom = settings().signature_text?.trim() || settings().watermark_text?.trim();
+    const custom = initialSettings.signature_text?.trim() || initialSettings.watermark_text?.trim();
     if (custom) return custom;
-    const user = currentUser();
-    if (user) return `@${user.username}@${user.address}`;
+    if (initialUser) return `@${initialUser.username}@${initialUser.address}`;
     return '';
   };
 
   const getInitialSignaturePosition = (): SignaturePosition => {
     if (init?.signaturePosition !== undefined) return init.signaturePosition;
-    const pos = settings().signature_position ?? settings().watermark_position;
+    const pos = initialSettings.signature_position ?? initialSettings.watermark_position;
     if (pos && pos !== 'none') return pos;
     return 'bottom-right';
   };
 
   const [signatureEnabled, setSignatureEnabled] = createSignal<boolean>(
     init?.signatureEnabled ?? (
-      (settings().signature_position && settings().signature_position !== 'none') ||
-      (settings().watermark_position && settings().watermark_position !== 'none')
+      (initialSettings.signature_position && initialSettings.signature_position !== 'none') ||
+      (initialSettings.watermark_position && initialSettings.watermark_position !== 'none')
         ? true
         : false
     )
@@ -336,12 +353,14 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   };
 
   // ペン描画ステート変更時の再描画
-  createEffect(() => {
-    drawings();
-    renderAllDrawingsToCanvas();
-  });
+  createEffect(
+    () => drawings(),
+    () => {
+      renderAllDrawingsToCanvas();
+    }
+  );
 
-  onMount(() => {
+  onSettled(() => {
     const url = URL.createObjectURL(props.file);
     setPreviewUrl(url);
 
@@ -372,49 +391,56 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
       ro.observe(tabsRef);
     }
 
-    onCleanup(() => {
+    return () => {
       URL.revokeObjectURL(url);
       window.removeEventListener('pointermove', onGlobalMove);
       window.removeEventListener('pointerup', onGlobalUp);
       window.removeEventListener('pointercancel', onGlobalUp);
       window.removeEventListener('resize', onWindowResize);
       ro?.disconnect();
-    });
+    };
   });
 
   // アクティブタブ切り替え時にスクロール状態を更新し、選択項目を見える位置へスクロール
-  createEffect(() => {
-    activeTab();
-    if (tabsRef) {
-      setTimeout(() => {
-        updateTabsScrollState();
-        const activeBtn = tabsRef?.querySelector<HTMLElement>('.mizuna-editor-tab-btn.is-active');
-        if (typeof activeBtn?.scrollIntoView === 'function') {
-          activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
-        }
-      }, 40);
+  createEffect(
+    () => activeTab(),
+    () => {
+      if (tabsRef) {
+        setTimeout(() => {
+          updateTabsScrollState();
+          const activeBtn = tabsRef?.querySelector<HTMLElement>('.mizuna-editor-tab-btn.is-active');
+          if (typeof activeBtn?.scrollIntoView === 'function') {
+            activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+          }
+        }, 40);
+      }
     }
-  });
+  );
 
   // 編集パラメータ変更時にプレビューを自動再描画
-  createEffect(() => {
-    rotation();
-    flipX();
-    brightness();
-    contrast();
-    saturation();
-    watermarkEnabled();
-    watermarkText();
-    watermarkPattern();
-    watermarkOpacity();
-    watermarkScale();
-    signatureEnabled();
-    signatureText();
-    signaturePosition();
-    signatureOpacity();
-    signatureScale();
-    renderPreview();
-  });
+  createEffect(
+    () =>
+      [
+        rotation(),
+        flipX(),
+        brightness(),
+        contrast(),
+        saturation(),
+        watermarkEnabled(),
+        watermarkText(),
+        watermarkPattern(),
+        watermarkOpacity(),
+        watermarkScale(),
+        signatureEnabled(),
+        signatureText(),
+        signaturePosition(),
+        signatureOpacity(),
+        signatureScale(),
+      ] as const,
+    () => {
+      renderPreview();
+    }
+  );
 
   // クロップ比率変更時
   const handleSetAspectRatio = (ratio: AspectRatioType) => {
@@ -1136,18 +1162,16 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                   onPointerDown={(e) => startMosaicMove(e, index())}
                 >
                   <Show when={(m.type || 'blur') === 'pixelate'}>
-                    <canvas
-                      ref={(el) => {
-                        createEffect(() => {
-                          rotation();
-                          flipX();
-                          brightness();
-                          contrast();
-                          saturation();
-                          renderMosaicPreviewCanvas(el, m);
-                        });
-                      }}
-                      class="mizuna-mosaic-pixel-canvas"
+                    <MosaicPixelCanvas
+                      rect={m}
+                      renderCanvas={renderMosaicPreviewCanvas}
+                      deps={[
+                        rotation(),
+                        flipX(),
+                        brightness(),
+                        contrast(),
+                        saturation(),
+                      ]}
                     />
                   </Show>
                   <Show when={activeTab() === 'mosaic'}>
@@ -1173,15 +1197,15 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             </For>
 
             {/* クロップ枠オーバーレイ */}
-            <Show when={cropBox()}>
+            <Show when={cropBox()} keyed>
               {(cb) => (
                 <div
                   class="mizuna-crop-box"
                   style={{
-                    left: `${cb().x * 100}%`,
-                    top: `${cb().y * 100}%`,
-                    width: `${cb().w * 100}%`,
-                    height: `${cb().h * 100}%`,
+                    left: `${cb.x * 100}%`,
+                    top: `${cb.y * 100}%`,
+                    width: `${cb.w * 100}%`,
+                    height: `${cb.h * 100}%`,
                   }}
                   onPointerDown={startCropMove}
                 >
@@ -1207,7 +1231,7 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
             </Show>
 
             {/* 現在ドラッグ中の矩形 */}
-            <Show when={currentDragRect()}>
+            <Show when={currentDragRect()} keyed>
               {(dr) => (
                 <div
                   class={`mizuna-drag-preview-box ${
@@ -1218,23 +1242,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
                       : 'is-blur'
                   }`}
                   style={{
-                    left: `${dr().x * 100}%`,
-                    top: `${dr().y * 100}%`,
-                    width: `${dr().w * 100}%`,
-                    height: `${dr().h * 100}%`,
+                    left: `${dr.x * 100}%`,
+                    top: `${dr.y * 100}%`,
+                    width: `${dr.w * 100}%`,
+                    height: `${dr.h * 100}%`,
                     'backdrop-filter': activeTab() === 'mosaic' && mosaicType() === 'blur' ? `blur(${blurGranularity()}px)` : undefined,
                     '-webkit-backdrop-filter': activeTab() === 'mosaic' && mosaicType() === 'blur' ? `blur(${blurGranularity()}px)` : undefined,
                   }}
                 >
                   <Show when={activeTab() === 'mosaic' && mosaicType() === 'pixelate'}>
-                    <canvas
-                      ref={(el) => {
-                        createEffect(() => {
-                          const rect = currentDragRect();
-                          if (rect) renderMosaicPreviewCanvas(el, { ...rect, granularity: pixelateGranularity() });
-                        });
-                      }}
-                      class="mizuna-mosaic-pixel-canvas"
+                    <MosaicPixelCanvas
+                      rect={{ ...dr, granularity: pixelateGranularity() }}
+                      renderCanvas={renderMosaicPreviewCanvas}
+                      deps={[dr, pixelateGranularity()]}
                     />
                   </Show>
                 </div>

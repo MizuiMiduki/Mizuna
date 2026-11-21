@@ -84,8 +84,11 @@ export default defineConfig(({ mode }) => {
   const isCanary = mode === 'canary';
 
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(packageJson.version),
+    },
     plugins: [
-      solidPlugin({ hot: false }),
+      solidPlugin({ refresh: false }),
       syncSwVersionPlugin(),
       {
         name: 'mizuna-pwa-channel',
@@ -109,11 +112,7 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       conditions: mode === 'test' ? ['development', 'browser'] : [],
-      alias: {
-        'solid-js/web': path.resolve(__dirname, 'node_modules/solid-js/web'),
-        'solid-js': path.resolve(__dirname, 'node_modules/solid-js'),
-      },
-      dedupe: ['solid-js', 'solid-js/web'],
+      dedupe: ['solid-js', '@solidjs/web', '@solidjs/signals'],
     },
     server: {
       port: 3000,
@@ -126,7 +125,6 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('gsap')) return 'vendor-gsap';
               if (id.includes('dexie')) return 'vendor-db';
               if (id.includes('mfm-js')) return 'vendor-mfm';
               if (id.includes('solid-js')) return 'vendor-solid';
@@ -141,14 +139,14 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./tests/setupTests.ts'],
       deps: {
         optimizer: {
-          web: {
-            include: ['solid-js', 'solid-js/web', '@solidjs/testing-library'],
+          client: {
+            include: ['solid-js', '@solidjs/web', '@solidjs/testing-library'],
           },
         },
       },
       server: {
         deps: {
-          inline: [/solid-js/, /@solidjs\/testing-library/],
+          inline: [/solid-js/, /@solidjs/],
         },
       },
     },

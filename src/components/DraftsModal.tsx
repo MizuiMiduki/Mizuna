@@ -1,9 +1,9 @@
-import gsap from 'gsap';
 import { createEffect, For, onCleanup, Show } from 'solid-js';
-import { Portal } from 'solid-js/web';
+import { Portal } from '@solidjs/web';
 import { useApp } from '../store/appStore';
 import { type DraftRecord } from '../db/database';
 import { getDisplayAvatarUrl } from '../utils/image';
+import { animateModalEnter } from '../utils/animation';
 
 export interface DraftsModalProps {
   isOpen: boolean;
@@ -44,23 +44,26 @@ export function DraftsModal(props: DraftsModalProps) {
   let cardRef: HTMLDivElement | undefined;
 
   // ESCキー / 戻るボタンのハンドリング
-  createEffect(() => {
-    if (!props.isOpen) return;
+  createEffect(
+    () => props.isOpen,
+    (isOpen) => {
+      if (!isOpen) return;
 
-    const removeBack = pushModalBackHandler(() => props.onClose());
+      const removeBack = pushModalBackHandler(() => props.onClose());
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        props.onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          props.onClose();
+        }
+      };
+      window.addEventListener('keydown', handleKeyDown);
 
-    onCleanup(() => {
-      removeBack();
-      window.removeEventListener('keydown', handleKeyDown);
-    });
-  });
+      return () => {
+        removeBack();
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  );
 
   const handleRestore = async (draft: DraftRecord) => {
     const success = await restoreDraft(draft);
@@ -127,11 +130,6 @@ export function DraftsModal(props: DraftsModalProps) {
           <div
             ref={(el) => {
               backdropRef = el;
-              gsap.fromTo(
-                el,
-                { opacity: 0 },
-                { opacity: 1, duration: 0.22, ease: 'power2.out' }
-              );
             }}
             class="mizuna-modal-backdrop"
             style={{ opacity: 0 }}
@@ -141,11 +139,7 @@ export function DraftsModal(props: DraftsModalProps) {
           <div
             ref={(el) => {
               cardRef = el;
-              gsap.fromTo(
-                el,
-                { opacity: 0, scale: 0.94, y: 14 },
-                { opacity: 1, scale: 1, y: 0, duration: 0.26, ease: 'back.out(1.4)' }
-              );
+              animateModalEnter(cardRef, backdropRef);
             }}
             class="mizuna-drafts-modal"
             style={{ opacity: 0 }}
