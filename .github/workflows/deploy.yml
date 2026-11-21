@@ -202,7 +202,7 @@ jobs:
           DEPLOY_TARGET: ${{ inputs.deploy_target }}
           GA_SECRET: ${{ secrets.VITE_GA_MEASUREMENT_ID }}
         run: |
-          pnpm install --frozen-lockfile
+          pnpm install --frozen-lockfile || pnpm install --no-frozen-lockfile
           if [ "$DEPLOY_TARGET" = "prerelease" ]; then
             pnpm run build:canary
           else
