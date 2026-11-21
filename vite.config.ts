@@ -84,6 +84,9 @@ export default defineConfig(({ mode }) => {
   const isCanary = mode === 'canary';
 
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(packageJson.version),
+    },
     plugins: [
       solidPlugin({ refresh: false }),
       syncSwVersionPlugin(),
