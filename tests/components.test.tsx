@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@solidjs/testing-library';
 import { onSettled, flush } from 'solid-js';
+import PullToRefresh from 'pulltorefreshjs';
 import { AppProvider } from '../src/store/appStore';
 import { Header } from '../src/components/Header';
 import { FooterNav } from '../src/components/FooterNav';
@@ -69,6 +70,46 @@ describe('UI Components', () => {
       fireEvent.click(settingsBtn);
       flush();
       expect(currentAppView()).toBe('settings');
+    });
+
+    it('ヘッダーで PullToRefresh がヘッダー要素をターゲットに初期化され、多言語メッセージが設定されること', async () => {
+      const initSpy = vi.spyOn(PullToRefresh, 'init');
+
+      const { unmount } = render(() => (
+        <AppProvider>
+          <Header />
+        </AppProvider>
+      ));
+
+      await new Promise((r) => setTimeout(r, 60));
+
+      expect(initSpy).toHaveBeenCalled();
+      const lastCall = initSpy.mock.calls[initSpy.mock.calls.length - 1][0];
+      expect(lastCall).toBeDefined();
+      expect(lastCall?.instructionsPullToRefresh).toMatch(/(下に引っ張って再読み込み|Pull down to refresh)/);
+      expect(lastCall?.instructionsReleaseToRefresh).toMatch(/(指を離して再読み込み|Release to reload)/);
+      expect(lastCall?.instructionsRefreshing).toMatch(/(再読み込み中\.\.\.|Reloading\.\.\.)/);
+      expect(lastCall?.shouldPullToRefresh?.()).toBe(true);
+
+      const destroySpy = vi.spyOn(PullToRefresh, 'destroyAll');
+      unmount();
+      expect(destroySpy).toHaveBeenCalled();
+
+      initSpy.mockRestore();
+      destroySpy.mockRestore();
+    });
+
+    it('CSSでブラウザデフォルトの pull-to-refresh が無効化されていること', async () => {
+      // @ts-ignore
+      const fs = await import('node:fs');
+      // @ts-ignore
+      const path = await import('node:path');
+      // @ts-ignore
+      const cssPath = path.resolve(process.cwd(), 'src/styles/app.css');
+      const cssContent = fs.readFileSync(cssPath, 'utf-8');
+
+      expect(cssContent).toMatch(/overscroll-behavior-y:\s*none/);
+      expect(cssContent).toMatch(/\.mizuna-topbar\s*\{[^}]*overscroll-behavior:\s*none/);
     });
 
     it('フッターナビゲーションにアカウント管理ボタンと投稿履歴ボタンが存在すること', async () => {

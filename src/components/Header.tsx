@@ -44,7 +44,7 @@ export function Header() {
       );
     }
 
-    // pulltorefreshjs ライブラリによる Pull-to-Refresh 初期化
+    // pulltorefreshjs ライブラリによる Pull-to-Refresh 初期化 (ヘッダーのプル操作に一本化)
     if (topbarRef) {
       PullToRefresh.init({
         mainElement: topbarRef,
@@ -54,9 +54,9 @@ export function Header() {
         distReload: 56,
         iconArrow: '<i>arrow_downward</i>',
         iconRefreshing: '<i>sync</i>',
-        instructionsPullToRefresh: '下に引っ張って再読み込み',
-        instructionsReleaseToRefresh: '指を離して再読み込み',
-        instructionsRefreshing: '再読み込み中...',
+        instructionsPullToRefresh: t('header.pull_down') || '下に引っ張って再読み込み',
+        instructionsReleaseToRefresh: t('header.release_to_reload') || '指を離して再読み込み',
+        instructionsRefreshing: t('header.reloading') || '再読み込み中...',
         shouldPullToRefresh: () => window.scrollY === 0,
         onRefresh: () => {
           window.location.reload();
