@@ -566,6 +566,11 @@ export function NoteView() {
             onClick: () => {
               closeDialog();
               setCurrentView('settings');
+              setTimeout(() => {
+                document
+                  .getElementById('setting_enable_custom_emoji')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 150);
             },
           },
           {

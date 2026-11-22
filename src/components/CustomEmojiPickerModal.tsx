@@ -19,6 +19,8 @@ interface CustomEmojiPickerModalProps {
   onSelectEmoji: (emojiName: string) => void;
 }
 
+const PAGE_SIZE = 120;
+
 export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
   const { currentUser, pushModalBackHandler, t } = useApp();
 
@@ -27,6 +29,7 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
   const [errorMessage, setErrorMessage] = createSignal<string | null>(null);
   const [searchQuery, setSearchQuery] = createSignal('');
   const [selectedCategory, setSelectedCategory] = createSignal<string>('all');
+  const [displayLimit, setDisplayLimit] = createSignal(PAGE_SIZE);
 
   let backdropRef: HTMLDivElement | undefined;
   let cardRef: HTMLDivElement | undefined;
@@ -45,7 +48,7 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
     try {
       const list = await fetchServerCustomEmojiList(address);
       setEmojis(list);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load custom emojis:', err);
       setErrorMessage(t('emoji_picker.error'));
     } finally {
@@ -59,6 +62,7 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
       if (isOpen) {
         setSearchQuery('');
         setSelectedCategory('all');
+        setDisplayLimit(PAGE_SIZE);
 
         if (user && user.address) {
           loadEmojis(user.address);
@@ -76,13 +80,9 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
 
         window.addEventListener('keydown', handleKeyDown);
 
-        if (cardRef) {
-          animateModalEnter(cardRef);
-        }
-
         setTimeout(() => {
           searchInputRef?.focus();
-        }, 100);
+        }, 80);
 
         return () => {
           cleanupBack();
@@ -92,23 +92,27 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
     }
   );
 
-  // カテゴリー一覧（重複排除＆ソート）
+  // カテゴリー一覧と件数（重複排除＆ソート）
   const categories = createMemo(() => {
-    const set = new Set<string>();
+    const map = new Map<string, number>();
     for (const item of emojis()) {
-      if (item.category) {
-        set.add(item.category);
-      }
+      const cat = item.category || 'その他';
+      map.set(cat, (map.get(cat) || 0) + 1);
     }
-    const sorted = Array.from(set).sort((a, b) => {
+
+    const sortedNames = Array.from(map.keys()).sort((a, b) => {
       if (a === 'その他') return 1;
       if (b === 'その他') return -1;
       return a.localeCompare(b);
     });
-    return ['all', ...sorted];
+
+    return sortedNames.map((name) => ({
+      name,
+      count: map.get(name) || 0,
+    }));
   });
 
-  // 検索＆カテゴリーでフィルタリング
+  // 検索＆カテゴリーで絞り込み
   const filteredEmojis = createMemo(() => {
     const q = searchQuery().trim().toLowerCase();
     const cat = selectedCategory();
@@ -131,6 +135,30 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
     });
   });
 
+  // 表示件数分だけスライス（大量描画によるフリーズを完全防止）
+  const displayedEmojis = createMemo(() => {
+    return filteredEmojis().slice(0, displayLimit());
+  });
+
+  const hasMore = createMemo(() => {
+    return filteredEmojis().length > displayLimit();
+  });
+
+  const remainingCount = createMemo(() => {
+    return Math.max(0, filteredEmojis().length - displayLimit());
+  });
+
+  const handleLoadMore = () => {
+    setDisplayLimit((prev) => prev + PAGE_SIZE);
+  };
+
+  const handleScroll = (e: Event) => {
+    const el = e.currentTarget as HTMLDivElement;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight < 240 && hasMore()) {
+      handleLoadMore();
+    }
+  };
+
   const handleSelect = (name: string) => {
     props.onSelectEmoji(name);
     props.onClose();
@@ -140,34 +168,43 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
     <Show when={props.isOpen}>
       <Portal>
         <div
-          ref={backdropRef}
-          class="mizuna-modal-backdrop is-visible mizuna-emoji-picker-portal"
-          onClick={(e) => {
-            if (e.target === backdropRef) {
-              props.onClose();
-            }
-          }}
-          role="presentation"
+          class="mizuna-modal-portal mizuna-emoji-picker-portal"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t('emoji_picker.title')}
         >
+          {/* 背景オーバーレイ */}
           <div
-            ref={cardRef}
-            class="mizuna-modal-card mizuna-emoji-picker-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('emoji_picker.title')}
+            ref={(el) => {
+              backdropRef = el;
+            }}
+            class="mizuna-modal-backdrop"
+            onClick={() => props.onClose()}
+          />
+
+          {/* モーダルカード */}
+          <div
+            ref={(el) => {
+              cardRef = el;
+              if (el) animateModalEnter(cardRef, backdropRef);
+            }}
+            class="mizuna-picker-modal mizuna-emoji-picker-modal"
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* モーダルヘッダー */}
-            <div class="mizuna-modal-header">
-              <div class="mizuna-modal-title">
+            {/* ヘッダー */}
+            <div class="mizuna-picker-header">
+              <div class="mizuna-picker-title-wrap">
                 <i class="mizuna-dialog-icon">add_reaction</i>
-                <span>{t('emoji_picker.title')}</span>
-                <Show when={currentUser()}>
-                  {(user) => (
-                    <span class="mizuna-emoji-picker-instance-badge">
-                      @{user().address}
-                    </span>
-                  )}
-                </Show>
+                <div class="mizuna-emoji-picker-title-row">
+                  <h3 class="mizuna-picker-title">{t('emoji_picker.title')}</h3>
+                  <Show when={currentUser()}>
+                    {(user) => (
+                      <span class="mizuna-emoji-picker-instance-badge">
+                        @{user().address}
+                      </span>
+                    )}
+                  </Show>
+                </div>
               </div>
               <button
                 type="button"
@@ -179,8 +216,9 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
               </button>
             </div>
 
-            {/* 検索バー */}
-            <div class="mizuna-emoji-picker-search-wrap">
+            {/* フィルター・検索エリア */}
+            <div class="mizuna-emoji-picker-controls">
+              {/* 検索バー */}
               <div class="mizuna-emoji-picker-search-bar">
                 <i class="mizuna-search-icon">search</i>
                 <input
@@ -189,7 +227,10 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
                   class="mizuna-emoji-picker-search-input"
                   placeholder={t('emoji_picker.search_placeholder')}
                   value={searchQuery()}
-                  onInput={(e) => setSearchQuery(e.currentTarget.value)}
+                  onInput={(e) => {
+                    setSearchQuery(e.currentTarget.value);
+                    setDisplayLimit(PAGE_SIZE);
+                  }}
                 />
                 <Show when={searchQuery().length > 0}>
                   <button
@@ -197,6 +238,7 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
                     class="mizuna-search-clear-btn"
                     onClick={() => {
                       setSearchQuery('');
+                      setDisplayLimit(PAGE_SIZE);
                       searchInputRef?.focus();
                     }}
                     aria-label="検索クリア"
@@ -205,31 +247,36 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
                   </button>
                 </Show>
               </div>
+
+              {/* カテゴリー選択ドロップダウン（500件以上ある場合も瞬時に選べる） */}
+              <Show when={!isLoading() && categories().length > 0}>
+                <div class="mizuna-emoji-category-select-wrap">
+                  <i class="mizuna-category-icon">folder</i>
+                  <select
+                    class="mizuna-emoji-category-select"
+                    value={selectedCategory()}
+                    onChange={(e) => {
+                      setSelectedCategory(e.currentTarget.value);
+                      setDisplayLimit(PAGE_SIZE);
+                    }}
+                  >
+                    <option value="all">
+                      {t('emoji_picker.category_all')} ({emojis().length})
+                    </option>
+                    <For each={categories()}>
+                      {(cat) => (
+                        <option value={cat.name}>
+                          {cat.name} ({cat.count})
+                        </option>
+                      )}
+                    </For>
+                  </select>
+                </div>
+              </Show>
             </div>
 
-            {/* カテゴリー一覧タブ */}
-            <Show when={!isLoading() && categories().length > 1}>
-              <div class="mizuna-emoji-category-strip" role="tablist">
-                <For each={categories()}>
-                  {(cat) => (
-                    <button
-                      type="button"
-                      role="tab"
-                      class={`mizuna-emoji-category-chip ${
-                        selectedCategory() === cat ? 'is-active' : ''
-                      }`}
-                      aria-selected={selectedCategory() === cat ? 'true' : 'false'}
-                      onClick={() => setSelectedCategory(cat)}
-                    >
-                      {cat === 'all' ? t('emoji_picker.category_all') : cat}
-                    </button>
-                  )}
-                </For>
-              </div>
-            </Show>
-
             {/* 絵文字グリッドコンテンツ */}
-            <div class="mizuna-emoji-picker-body">
+            <div class="mizuna-emoji-picker-body" onScroll={handleScroll}>
               <Show when={isLoading()}>
                 <div class="mizuna-emoji-state-box">
                   <div class="mizuna-spinner" />
@@ -263,7 +310,7 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
                   }
                 >
                   <div class="mizuna-emoji-grid" role="list">
-                    <For each={filteredEmojis()}>
+                    <For each={displayedEmojis()}>
                       {(item) => (
                         <button
                           type="button"
@@ -280,11 +327,24 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
                             loading="lazy"
                             decoding="async"
                           />
-                          <span class="mizuna-emoji-cell-name">:{item.name}:</span>
                         </button>
                       )}
                     </For>
                   </div>
+
+                  {/* 「さらに表示」ボタン（自動スクロール読み込みに加えて手動ボタンも配置） */}
+                  <Show when={hasMore()}>
+                    <div class="mizuna-emoji-more-wrap">
+                      <button
+                        type="button"
+                        class="mizuna-btn mizuna-btn-outline mizuna-emoji-more-btn"
+                        onClick={handleLoadMore}
+                      >
+                        <i>expand_more</i>
+                        <span>さらに表示 (残り {remainingCount()} 件)</span>
+                      </button>
+                    </div>
+                  </Show>
                 </Show>
               </Show>
             </div>

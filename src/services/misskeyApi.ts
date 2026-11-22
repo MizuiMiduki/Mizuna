@@ -282,7 +282,10 @@ export async function fetchServerCustomEmojiList(rawAddress: string): Promise<Cu
 
       serverEmojiListCache.set(address, list);
       try {
-        safeSessionStorage.setItem(storageKey, JSON.stringify(list));
+        // 絵文字件数が過大な場合はセッションストレージのQuota制限(約5MB)を回避するためインメモリのみ保持
+        if (list.length <= 1000) {
+          safeSessionStorage.setItem(storageKey, JSON.stringify(list));
+        }
       } catch {
         // 容量制限時はインメモリのみ保持
       }
@@ -305,11 +308,12 @@ export async function fetchServerCustomEmojiList(rawAddress: string): Promise<Cu
 
       return list;
     }
+
+    throw new Error(`Failed to fetch emojis from ${address} (HTTP status: ${res.status})`);
   } catch (err) {
     console.warn(`Failed to fetch custom emoji list from ${address}:`, err);
+    throw err;
   }
-
-  return [];
 }
 
 /**

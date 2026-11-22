@@ -347,7 +347,7 @@ export function SettingsView() {
 
                 {/* カスタム絵文字の入力 */}
                 <Show when={showEnableCustomEmoji()}>
-                  <div class="mizuna-setting-row">
+                  <div class="mizuna-setting-row" id="setting_enable_custom_emoji">
                     <div class="mizuna-setting-info">
                       <div class="mizuna-setting-title">{t('settings.enable_custom_emoji')}</div>
                       <div class="mizuna-setting-desc">{t('settings.enable_custom_emoji_desc')}</div>
