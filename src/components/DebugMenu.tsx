@@ -115,7 +115,7 @@ export function DebugMenu() {
   // Web Share Target シミュレート
   const simulateWebShareTarget = () => {
     const title = `Mizuna ${MIZUNA_VERSION} リリース記事`;
-    const text = 'Solid.js + GSAP でモダンに生まれ変わりました！';
+    const text = 'Solid.js でモダンに生まれ変わりました！';
     const url = 'https://mizuna.blossomsarchive.com/';
     safeLocalStorage.setItem(WST_TITLE_KEY, title);
     safeLocalStorage.setItem(WST_TEXT_KEY, text);

@@ -8,6 +8,7 @@ import {
 } from '../src/store/appStore';
 import { db, DEFAULT_USER_SETTINGS } from '../src/db/database';
 import { safeLocalStorage } from '../src/utils/storage';
+import { MIZUNA_VERSION } from '../src/config/mizunaOptions';
 
 describe('appStore', () => {
   beforeEach(async () => {
@@ -576,7 +577,7 @@ describe('appStore', () => {
       expect(accountsInDb[0].token).toBe('fresh_reauth_token_999');
       expect(accountsInDb[0].name).toBe('最新のユーザー名');
       expect(accountsInDb[0].avatarurl).toBe('https://example.com/fresh_avatar.webp');
-      expect(accountsInDb[0].add_mizuna_versinon).toBe('4.0.0');
+      expect(accountsInDb[0].add_mizuna_versinon).toBe(MIZUNA_VERSION);
 
       // window.location を復元
       Object.defineProperty(window, 'location', {
