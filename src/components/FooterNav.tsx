@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onCleanup, onSettled, Show } from 'solid-js';
+import { createEffect, createSignal, onSettled, Show } from 'solid-js';
 import { useApp, type ViewType } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
 import { HoldHoverTip } from './HoldHoverTip';

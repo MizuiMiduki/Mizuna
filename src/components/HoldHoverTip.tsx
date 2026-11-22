@@ -1,4 +1,4 @@
-import { createSignal, onCleanup, onSettled, Show } from 'solid-js';
+import { createSignal, onSettled, Show } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { EASING, safeAnimate } from '../utils/animation';
 

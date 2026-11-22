@@ -3,7 +3,6 @@ import {
   createMemo,
   createSignal,
   For,
-  onCleanup,
   onSettled,
   Show,
   untrack,
@@ -439,6 +438,10 @@ export function HistoryView() {
 
   onSettled(() => {
     animateViewEnter(containerRef);
+    return () => {
+      spinAnim?.cancel();
+      settleAnim?.cancel();
+    };
   });
 
   // リフレッシュアイコンの滑らかな回転・減速着地アニメーション
@@ -503,11 +506,6 @@ export function HistoryView() {
       }
     }
   );
-
-  onCleanup(() => {
-    spinAnim?.cancel();
-    settleAnim?.cancel();
-  });
 
   // リプライの開閉と取得 (Issue #130)
   const toggleReplies = async (noteId: string) => {

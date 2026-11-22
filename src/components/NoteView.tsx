@@ -4,7 +4,6 @@ import {
   createMemo,
   createSignal,
   For,
-  onCleanup,
   onSettled,
   Show,
 } from 'solid-js';
@@ -412,9 +411,6 @@ export function NoteView() {
     setDragOverIndex(null);
   };
 
-  onCleanup(() => {
-    cancelLongPress();
-  });
   const [editingImageItem, setEditingImageItem] = createSignal<AttachedImageItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = createSignal(false);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = createSignal(false);
@@ -888,6 +884,7 @@ export function NoteView() {
     document.addEventListener('keydown', handleKeyDown);
     window.addEventListener('resize', handleResize);
     return () => {
+      cancelLongPress();
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('resize', handleResize);
     };
