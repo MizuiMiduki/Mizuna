@@ -2,7 +2,7 @@ import { For, onCleanup, onSettled } from 'solid-js';
 import { useApp, type ToastItem } from '../store/appStore';
 import { EASING, safeAnimate } from '../utils/animation';
 
-const TOAST_DURATION_SEC = 3.5;
+const TOAST_DURATION_SEC = 1.75;
 
 function ToastCard(props: { item: ToastItem; onDismiss: (id: string) => void }) {
   let cardRef: HTMLDivElement | undefined;
