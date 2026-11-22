@@ -8654,8 +8654,17 @@ body.dark .mizuna-mfm-toolbar-divider {
   gap: 6px;
 }
 
-.mizuna-emoji-cell {
+.mizuna-emoji-cell-wrap {
   aspect-ratio: 1 / 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mizuna-emoji-cell {
+  width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -8666,13 +8675,17 @@ body.dark .mizuna-mfm-toolbar-divider {
   padding: 4px;
   cursor: pointer;
   transition: transform 0.1s ease, background 0.12s ease;
-  position: relative;
 }
 
-.mizuna-emoji-cell:hover {
+.mizuna-emoji-cell-wrap:hover .mizuna-emoji-cell {
   background: var(--surface-container-high);
-  transform: scale(1.15);
+  transform: scale(1.12);
   z-index: 2;
+}
+
+.mizuna-emoji-cell-wrap.is-pinned .mizuna-emoji-cell {
+  border-color: color-mix(in srgb, var(--primary) 35%, transparent);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
 }
 
 .mizuna-emoji-cell:focus-visible {
@@ -8685,6 +8698,80 @@ body.dark .mizuna-mfm-toolbar-divider {
   height: 32px;
   object-fit: contain;
   pointer-events: none;
+}
+
+/* ピン留めボタン */
+.mizuna-emoji-pin-btn {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: none;
+  background: color-mix(in srgb, var(--surface-container-highest) 90%, transparent);
+  color: var(--on-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease;
+  z-index: 3;
+}
+
+.mizuna-emoji-pin-btn i {
+  font-size: 11px;
+}
+
+.mizuna-emoji-cell-wrap:hover .mizuna-emoji-pin-btn,
+.mizuna-emoji-pin-btn.is-active,
+.mizuna-emoji-cell-wrap.is-pinned .mizuna-emoji-pin-btn {
+  opacity: 1;
+}
+
+.mizuna-emoji-pin-btn.is-active,
+.mizuna-emoji-cell-wrap.is-pinned .mizuna-emoji-pin-btn {
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* セクション分割表示 (固定・最近) */
+.mizuna-emoji-section {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed color-mix(in srgb, var(--outline-variant) 40%, transparent);
+}
+
+.mizuna-emoji-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--on-surface-variant);
+  margin-bottom: 8px;
+  padding: 0 2px;
+}
+
+.mizuna-emoji-section-divider {
+  margin-top: 6px;
+  margin-bottom: 10px;
+}
+
+.mizuna-section-icon {
+  font-size: 14px;
+}
+
+.mizuna-section-icon.is-pinned {
+  color: var(--primary);
+}
+
+.mizuna-section-count {
+  font-size: 0.72rem;
+  font-weight: 500;
+  opacity: 0.7;
 }
 
 .mizuna-emoji-more-wrap {

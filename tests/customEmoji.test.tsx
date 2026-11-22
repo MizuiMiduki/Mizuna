@@ -187,7 +187,7 @@ describe('Custom Emoji Feature (v4.2.0)', () => {
       expect(screen.getByText('カスタム絵文字を選択')).toBeInTheDocument();
 
       // 絵文字セルが表示される
-      const emojiCell = await screen.findByTitle(':mizuna_cat:');
+      const emojiCell = await screen.findByTitle(/:mizuna_cat:/);
       expect(emojiCell).toBeInTheDocument();
 
       // 絵文字をクリック
@@ -198,6 +198,64 @@ describe('Custom Emoji Feature (v4.2.0)', () => {
       // テキストエリアに `:mizuna_cat: ` が挿入されていること
       const textarea = document.querySelector('textarea.note_content') as HTMLTextAreaElement;
       expect(textarea.value).toBe(':mizuna_cat: ');
+
+      fetchSpy.mockRestore();
+    });
+
+    it('絵文字を選択すると最近使った絵文字に登録され、ピン留め操作ができること', async () => {
+      await db.setting.update(1, { is_enable_custom_emoji: true });
+
+      const mockEmojis = [
+        { name: 'star_emoji', url: 'https://misskey.io/emojis/star.webp', category: '記号', aliases: [] },
+        { name: 'heart_emoji', url: 'https://misskey.io/emojis/heart.webp', category: '記号', aliases: [] },
+      ];
+
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url: any) => {
+        if (String(url).includes('/api/emojis')) {
+          return {
+            ok: true,
+            json: async () => ({ emojis: mockEmojis }),
+          } as any;
+        }
+        return { ok: false } as any;
+      });
+
+      render(() => (
+        <AppProvider>
+          <NoteView />
+        </AppProvider>
+      ));
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      flush();
+
+      const emojiBtn = document.getElementById('select_custom_emoji_button');
+      fireEvent.click(emojiBtn!);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      flush();
+
+      // star_emoji を選択
+      const starCell = await screen.findByTitle(/:star_emoji:/);
+      fireEvent.click(starCell);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      flush();
+
+      // 再度ピッカーを開く
+      fireEvent.click(emojiBtn!);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      flush();
+
+      // 「最近使った絵文字」セクションが表示されていること
+      expect(screen.getByText('最近使った絵文字')).toBeInTheDocument();
+
+      // ピン留めボタンをクリック
+      const pinBtn = screen.getAllByLabelText('ピン留め')[0];
+      fireEvent.click(pinBtn);
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      flush();
+
+      // 「固定した絵文字」セクションが表示されていること
+      expect(screen.getByText('固定した絵文字')).toBeInTheDocument();
 
       fetchSpy.mockRestore();
     });

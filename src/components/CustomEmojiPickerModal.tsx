@@ -10,6 +10,12 @@ import {
   fetchServerCustomEmojiList,
   type CustomEmojiItem,
 } from '../services/misskeyApi';
+import {
+  getRecentEmojis,
+  addRecentEmoji,
+  getPinnedEmojis,
+  togglePinnedEmoji,
+} from '../utils/customEmojiStorage';
 import { useApp } from '../store/appStore';
 import { animateModalEnter } from '../utils/animation';
 
@@ -31,12 +37,17 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
   const [selectedCategory, setSelectedCategory] = createSignal<string>('all');
   const [displayLimit, setDisplayLimit] = createSignal(PAGE_SIZE);
 
+  const [pinnedNames, setPinnedNames] = createSignal<string[]>([]);
+  const [recentNames, setRecentNames] = createSignal<string[]>([]);
+
   let backdropRef: HTMLDivElement | undefined;
   let cardRef: HTMLDivElement | undefined;
   let searchInputRef: HTMLInputElement | undefined;
 
+  const currentAddress = () => currentUser()?.address || '';
+
   const loadEmojis = async (targetAddress?: string) => {
-    const address = targetAddress || currentUser()?.address;
+    const address = targetAddress || currentAddress();
     if (!address) {
       setErrorMessage(t('note.custom_emoji_no_account'));
       return;
@@ -64,8 +75,11 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
         setSelectedCategory('all');
         setDisplayLimit(PAGE_SIZE);
 
-        if (user && user.address) {
-          loadEmojis(user.address);
+        const addr = user?.address || '';
+        if (addr) {
+          setPinnedNames(getPinnedEmojis(addr));
+          setRecentNames(getRecentEmojis(addr));
+          loadEmojis(addr);
         } else {
           setErrorMessage(t('note.custom_emoji_no_account'));
         }
@@ -92,7 +106,34 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
     }
   );
 
-  // カテゴリー一覧と件数（重複排除＆ソート）
+  // 絵文字名から絵文字オブジェクトへのマップ
+  const emojiMap = createMemo(() => {
+    const map = new Map<string, CustomEmojiItem>();
+    for (const item of emojis()) {
+      map.set(item.name, item);
+    }
+    return map;
+  });
+
+  // 固定した絵文字一覧
+  const pinnedEmojiItems = createMemo(() => {
+    const map = emojiMap();
+    return pinnedNames()
+      .map((name) => map.get(name))
+      .filter((item): item is CustomEmojiItem => Boolean(item));
+  });
+
+  // 最近使った絵文字一覧（固定済みは除外して重複をなくす）
+  const recentEmojiItems = createMemo(() => {
+    const map = emojiMap();
+    const pinnedSet = new Set(pinnedNames());
+    return recentNames()
+      .filter((name) => !pinnedSet.has(name))
+      .map((name) => map.get(name))
+      .filter((item): item is CustomEmojiItem => Boolean(item));
+  });
+
+  // カテゴリー一覧と件数
   const categories = createMemo(() => {
     const map = new Map<string, number>();
     for (const item of emojis()) {
@@ -135,7 +176,7 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
     });
   });
 
-  // 表示件数分だけスライス（大量描画によるフリーズを完全防止）
+  // 表示件数分だけスライス
   const displayedEmojis = createMemo(() => {
     return filteredEmojis().slice(0, displayLimit());
   });
@@ -159,9 +200,67 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
     }
   };
 
+  // 絵文字選択時
   const handleSelect = (name: string) => {
+    const addr = currentAddress();
+    if (addr) {
+      const nextRecent = addRecentEmoji(addr, name);
+      setRecentNames(nextRecent);
+    }
     props.onSelectEmoji(name);
     props.onClose();
+  };
+
+  // ピン留めトグル
+  const handleTogglePin = (name: string) => {
+    const addr = currentAddress();
+    if (!addr) return;
+    const { list } = togglePinnedEmoji(addr, name);
+    setPinnedNames(list);
+  };
+
+  const isPinned = (name: string) => pinnedNames().includes(name);
+
+  // 絵文字セルコンポーネント（固定・最近・全一覧で再利用）
+  const renderEmojiCell = (item: CustomEmojiItem) => {
+    const pinned = () => isPinned(item.name);
+
+    return (
+      <div class={`mizuna-emoji-cell-wrap ${pinned() ? 'is-pinned' : ''}`}>
+        <button
+          type="button"
+          class="mizuna-emoji-cell"
+          role="listitem"
+          onClick={() => handleSelect(item.name)}
+          onContextMenu={(e) => {
+            e.preventDefault();
+            handleTogglePin(item.name);
+          }}
+          title={`:${item.name}: (右クリック/ピンで固定)`}
+          aria-label={`:${item.name}:`}
+        >
+          <img
+            class="mizuna-emoji-cell-img"
+            src={item.url}
+            alt={item.name}
+            loading="lazy"
+            decoding="async"
+          />
+        </button>
+        <button
+          type="button"
+          class={`mizuna-emoji-pin-btn ${pinned() ? 'is-active' : ''}`}
+          title={pinned() ? t('emoji_picker.unpin_tooltip') : t('emoji_picker.pin_tooltip')}
+          aria-label={pinned() ? t('emoji_picker.unpin_tooltip') : t('emoji_picker.pin_tooltip')}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleTogglePin(item.name);
+          }}
+        >
+          <i>push_pin</i>
+        </button>
+      </div>
+    );
   };
 
   return (
@@ -252,7 +351,7 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
                 </Show>
               </div>
 
-              {/* カテゴリー選択ドロップダウン（500件以上ある場合も瞬時に選べる） */}
+              {/* カテゴリー選択ドロップダウン */}
               <Show when={!isLoading() && categories().length > 0}>
                 <div class="mizuna-emoji-category-select-wrap">
                   <i class="mizuna-category-icon">folder</i>
@@ -313,30 +412,55 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
                     </div>
                   }
                 >
+                  {/* 検索なし かつ カテゴリ全選択時: 固定 & 最近 セクションを表示 */}
+                  <Show when={searchQuery().trim() === '' && selectedCategory() === 'all'}>
+                    {/* 固定した絵文字 */}
+                    <Show when={pinnedEmojiItems().length > 0}>
+                      <div class="mizuna-emoji-section">
+                        <div class="mizuna-emoji-section-header">
+                          <i class="mizuna-section-icon is-pinned">push_pin</i>
+                          <span>{t('emoji_picker.section_pinned')}</span>
+                          <span class="mizuna-section-count">({pinnedEmojiItems().length})</span>
+                        </div>
+                        <div class="mizuna-emoji-grid" role="list">
+                          <For each={pinnedEmojiItems()}>
+                            {(item) => renderEmojiCell(item)}
+                          </For>
+                        </div>
+                      </div>
+                    </Show>
+
+                    {/* 最近使った絵文字 */}
+                    <Show when={recentEmojiItems().length > 0}>
+                      <div class="mizuna-emoji-section">
+                        <div class="mizuna-emoji-section-header">
+                          <i class="mizuna-section-icon">history</i>
+                          <span>{t('emoji_picker.section_recent')}</span>
+                          <span class="mizuna-section-count">({recentEmojiItems().length})</span>
+                        </div>
+                        <div class="mizuna-emoji-grid" role="list">
+                          <For each={recentEmojiItems()}>
+                            {(item) => renderEmojiCell(item)}
+                          </For>
+                        </div>
+                      </div>
+                    </Show>
+
+                    <div class="mizuna-emoji-section-header mizuna-emoji-section-divider">
+                      <i class="mizuna-section-icon">grid_view</i>
+                      <span>{t('emoji_picker.section_all')}</span>
+                      <span class="mizuna-section-count">({emojis().length})</span>
+                    </div>
+                  </Show>
+
+                  {/* メインの絵文字グリッド */}
                   <div class="mizuna-emoji-grid" role="list">
                     <For each={displayedEmojis()}>
-                      {(item) => (
-                        <button
-                          type="button"
-                          class="mizuna-emoji-cell"
-                          role="listitem"
-                          onClick={() => handleSelect(item.name)}
-                          title={`:${item.name}:`}
-                          aria-label={`:${item.name}:`}
-                        >
-                          <img
-                            class="mizuna-emoji-cell-img"
-                            src={item.url}
-                            alt={item.name}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        </button>
-                      )}
+                      {(item) => renderEmojiCell(item)}
                     </For>
                   </div>
 
-                  {/* 「さらに表示」ボタン（自動スクロール読み込みに加えて手動ボタンも配置） */}
+                  {/* 「さらに表示」ボタン */}
                   <Show when={hasMore()}>
                     <div class="mizuna-emoji-more-wrap">
                       <button
