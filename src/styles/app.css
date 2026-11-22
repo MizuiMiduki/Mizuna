@@ -310,7 +310,10 @@ textarea,
 
 html {
   scrollbar-gutter: stable;
-  overscroll-behavior-y: none;
+}
+
+body {
+  overscroll-behavior-y: contain;
 }
 
 html,
@@ -322,7 +325,6 @@ body {
   font-family: "IBM Plex Sans JP", "Inter", system-ui, -apple-system, sans-serif;
   background-color: var(--surface);
   color: var(--on-surface);
-  overscroll-behavior-y: none;
 }
 
 /* アプリ全体のシェル（アンビエント背景グラデーション付き） */
@@ -333,7 +335,6 @@ body {
   padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
   position: relative;
   overflow-x: hidden;
-  overscroll-behavior-y: none;
   background:
     radial-gradient(
       800px circle at 15% -10%,
@@ -366,8 +367,6 @@ body {
   align-items: center;
   padding: 0 20px;
   user-select: none;
-  overscroll-behavior: none;
-  touch-action: pan-x pan-down;
 }
 
 .mizuna-topbar-inner {

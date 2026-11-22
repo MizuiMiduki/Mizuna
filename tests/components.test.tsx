@@ -99,7 +99,7 @@ describe('UI Components', () => {
       destroySpy.mockRestore();
     });
 
-    it('CSSでブラウザデフォルトの pull-to-refresh が無効化されていること', async () => {
+    it('CSSでブラウザデフォルトの pull-to-refresh が抑制され、通常スクロールが維持されていること', async () => {
       // @ts-ignore
       const fs = await import('node:fs');
       // @ts-ignore
@@ -108,8 +108,7 @@ describe('UI Components', () => {
       const cssPath = path.resolve(process.cwd(), 'src/styles/app.css');
       const cssContent = fs.readFileSync(cssPath, 'utf-8');
 
-      expect(cssContent).toMatch(/overscroll-behavior-y:\s*none/);
-      expect(cssContent).toMatch(/\.mizuna-topbar\s*\{[^}]*overscroll-behavior:\s*none/);
+      expect(cssContent).toMatch(/overscroll-behavior-y:\s*contain/);
     });
 
     it('フッターナビゲーションにアカウント管理ボタンと投稿履歴ボタンが存在すること', async () => {
