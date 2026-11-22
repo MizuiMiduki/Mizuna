@@ -52,8 +52,16 @@ export interface NoteParam {
 export interface MisskeyCustomEmoji {
   name: string;
   url: string;
+  category?: string | null;
   host?: string | null;
   aliases?: string[];
+}
+
+export interface CustomEmojiItem {
+  name: string;
+  url: string;
+  category: string;
+  aliases: string[];
 }
 
 export interface MisskeyNoteUser {
@@ -105,6 +113,10 @@ const userIdCache = new Map<string, string>();
 // サーバーカスタム絵文字のインメモリキャッシュ (address -> Map<emojiName, emojiUrl>)
 const serverEmojiCache = new Map<string, Map<string, string>>();
 const EMOJI_CACHE_KEY_PREFIX = 'mizuna_emojis:';
+
+// サーバーカスタム絵文字リストのインメモリキャッシュ (address -> CustomEmojiItem[])
+const serverEmojiListCache = new Map<string, CustomEmojiItem[]>();
+const EMOJI_LIST_CACHE_KEY_PREFIX = 'mizuna_emoji_list:';
 
 /**
  * インスタンスのカスタム絵文字一覧 (/api/emojis) を取得し、絵文字名からURLへのマップを返す
@@ -196,6 +208,108 @@ export async function fetchServerEmojis(rawAddress: string): Promise<Map<string,
 
 export function clearServerEmojiCache(): void {
   serverEmojiCache.clear();
+  serverEmojiListCache.clear();
+}
+
+/**
+ * インスタンスのカスタム絵文字一覧 (/api/emojis) を取得し、絵文字ピッカー用のリストを返す
+ * メモリキャッシュおよびセッションキャッシュを活用して高速化・通信量削減
+ */
+export async function fetchServerCustomEmojiList(rawAddress: string): Promise<CustomEmojiItem[]> {
+  const address = rawAddress.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  if (!address || address.includes(' ') || !address.includes('.')) {
+    return [];
+  }
+
+  const cached = serverEmojiListCache.get(address);
+  if (cached) {
+    return cached;
+  }
+
+  // セッションストレージキャッシュを確認
+  const storageKey = `${EMOJI_LIST_CACHE_KEY_PREFIX}${address}`;
+  const storedJson = safeSessionStorage.getItem(storageKey);
+  if (storedJson) {
+    try {
+      const parsed: CustomEmojiItem[] = JSON.parse(storedJson);
+      if (Array.isArray(parsed)) {
+        serverEmojiListCache.set(address, parsed);
+        return parsed;
+      }
+    } catch {
+      // JSON parse error
+    }
+  }
+
+  try {
+    const res = await fetch(`https://${address}/api/emojis`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+
+    let data: any;
+    if (res.ok) {
+      data = await res.json();
+    } else {
+      const getRes = await fetch(`https://${address}/api/emojis`);
+      if (getRes.ok) {
+        data = await getRes.json();
+      }
+    }
+
+    if (data) {
+      const rawList: MisskeyCustomEmoji[] = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.emojis)
+        ? data.emojis
+        : [];
+
+      const list: CustomEmojiItem[] = [];
+      const seen = new Set<string>();
+
+      for (const item of rawList) {
+        if (item && item.name && item.url && !seen.has(item.name)) {
+          seen.add(item.name);
+          list.push({
+            name: item.name,
+            url: item.url,
+            category: item.category?.trim() || 'その他',
+            aliases: Array.isArray(item.aliases) ? item.aliases.filter(Boolean) : [],
+          });
+        }
+      }
+
+      serverEmojiListCache.set(address, list);
+      try {
+        safeSessionStorage.setItem(storageKey, JSON.stringify(list));
+      } catch {
+        // 容量制限時はインメモリのみ保持
+      }
+
+      // serverEmojiCache (Map) も同期
+      if (!serverEmojiCache.has(address)) {
+        const map = new Map<string, string>();
+        for (const item of list) {
+          const lower = item.name.toLowerCase();
+          map.set(lower, item.url);
+          map.set(`${lower}@.`, item.url);
+          for (const alias of item.aliases) {
+            const lowerAlias = alias.toLowerCase();
+            map.set(lowerAlias, item.url);
+            map.set(`${lowerAlias}@.`, item.url);
+          }
+        }
+        serverEmojiCache.set(address, map);
+      }
+
+      return list;
+    }
+  } catch (err) {
+    console.warn(`Failed to fetch custom emoji list from ${address}:`, err);
+  }
+
+  return [];
 }
 
 /**

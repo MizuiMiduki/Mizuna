@@ -1827,6 +1827,7 @@ export function AppProvider(props: { children: JSX.Element }) {
       watermark_opacity: current.watermark_opacity ?? 22,
       signature_text: current.signature_text ?? '',
       signature_position: current.signature_position ?? 'none',
+      is_enable_custom_emoji: current.is_enable_custom_emoji ?? false,
     };
     const fileName = generateSettingBackupFileName();
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
@@ -1922,6 +1923,9 @@ export function AppProvider(props: { children: JSX.Element }) {
                 ['none', 'bottom-right', 'bottom-left', 'top-right', 'top-left'].includes(parsed.signature_position)
               ) {
                 changes.signature_position = parsed.signature_position;
+              }
+              if (typeof parsed.is_enable_custom_emoji === 'boolean') {
+                changes.is_enable_custom_emoji = parsed.is_enable_custom_emoji;
               }
 
               // アカウント順序や選択ユーザーは、端末に存在するアカウントIDと照合して安全に復元
