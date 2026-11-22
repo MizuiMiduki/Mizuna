@@ -32,7 +32,13 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
   let cardRef: HTMLDivElement | undefined;
   let searchInputRef: HTMLInputElement | undefined;
 
-  const loadEmojis = async (address: string) => {
+  const loadEmojis = async (targetAddress?: string) => {
+    const address = targetAddress || currentUser()?.address;
+    if (!address) {
+      setErrorMessage(t('note.custom_emoji_no_account'));
+      return;
+    }
+
     setIsLoading(true);
     setErrorMessage(null);
 
@@ -238,7 +244,7 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
                   <button
                     type="button"
                     class="mizuna-btn mizuna-btn-outline"
-                    onClick={loadEmojis}
+                    onClick={() => loadEmojis()}
                   >
                     <i>refresh</i>
                     <span>{t('emoji_picker.retry')}</span>
