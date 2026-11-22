@@ -405,7 +405,8 @@ export function HistoryView() {
     }
   };
 
-  // タブ・アカウント切り替え、またはノート投稿によるキャッシュ更新時に確認。キャッシュがあれば復元し、なければ初回フェッチ
+  // タブ・アカウント切り替え、またはノート投稿によるキャッシュ更新時に確認。
+  // キャッシュ（セッションストレージ／メモリ）があれば 0ms で即座に復元描画し、不要な通信をスキップ
   createEffect(
     () => ({
       _v: historyCacheVersion(),
@@ -420,7 +421,7 @@ export function HistoryView() {
       const cached = getHistoryCache(key, tab);
 
       if (cached && cached.isLoaded) {
-        // キャッシュが存在する場合は復元し、API 通信はスキップ
+        // キャッシュが存在する場合は復元し、API 通信はスキップ（通信量削減 & 0ms即時表示）
         setNotes(cached.notes);
         setHasMore(cached.hasMore);
         setRepliesMap(cached.repliesMap);

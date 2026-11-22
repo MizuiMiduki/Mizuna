@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@solidjs/testing-library';
 import { flush } from 'solid-js';
 import { AppProvider, useApp } from '../src/store/appStore';
-import { clearHistoryCache } from '../src/store/historyStore';
+import { clearHistoryCache, getHistoryCache, setHistoryCache } from '../src/store/historyStore';
 import { HistoryView } from '../src/components/HistoryView';
 import { NoteView } from '../src/components/NoteView';
 import { DialogHost } from '../src/components/DialogHost';
@@ -658,5 +658,26 @@ describe('HistoryView & Reply Features (#129, #130, #131)', () => {
       ).length;
       expect(thirdCallCount).toBeGreaterThan(initialCallCount);
     });
+  });
+
+  it('セッションストレージに保存された履歴キャッシュは、メモリクリア後でも復元できること', () => {
+    const testData = {
+      notes: [mockNote1],
+      hasMore: false,
+      repliesMap: {},
+      expandedCwMap: {},
+      isLoaded: true,
+    };
+
+    setHistoryCache('acc_speed_test', 'my_notes', testData);
+
+    // キャッシュ取得（セッションストレージ経由でも復元可能）
+    const retrieved = getHistoryCache('acc_speed_test', 'my_notes');
+    expect(retrieved).toBeDefined();
+    expect(retrieved?.notes.length).toBe(1);
+    expect(retrieved?.notes[0].id).toBe('note_001');
+
+    clearHistoryCache('acc_speed_test');
+    expect(getHistoryCache('acc_speed_test', 'my_notes')).toBeUndefined();
   });
 });

@@ -10,6 +10,8 @@ import {
   fetchAnnouncements,
   formatAnnouncementDate,
   fetchDriveImages,
+  fetchMyUserId,
+  fetchServerEmojis,
   MisskeyApiError,
 } from '../src/services/misskeyApi';
 import type { AccountRecord } from '../src/db/database';
@@ -234,7 +236,7 @@ describe('misskeyApi service', () => {
         excerpt: { rendered: `<p>概要文 ${i + 1}</p>` },
       }));
 
-      vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
         new Response(JSON.stringify(mockPosts), {
           status: 200,
           headers: {
@@ -245,6 +247,9 @@ describe('misskeyApi service', () => {
       );
 
       const result = await fetchAnnouncements(1, 10);
+      expect(fetchSpy).toHaveBeenCalledWith(
+        expect.stringContaining('_fields=id,date,link,title,excerpt')
+      );
       expect(result.items.length).toBe(10);
       expect(result.totalPages).toBe(3);
       expect(result.totalItems).toBe(26);
@@ -277,6 +282,52 @@ describe('misskeyApi service', () => {
       const files = await fetchDriveImages(mockAccount);
       expect(files.length).toBe(1);
       expect(files[0].id).toBe('df_1');
+    });
+  });
+
+  describe('fetchMyUserId & fetchServerEmojis caching', () => {
+    const mockAccount: AccountRecord = {
+      id: 2,
+      token: 'tok_speed_test',
+      name: 'SpeedUser',
+      username: 'speed_user',
+      address: 'speed.misskey.test',
+      avatarurl: '',
+      add_mizuna_versinon: '4.1.0',
+    };
+
+    it('fetchMyUserId は初回フェッチ後にストレージへ保存し、次回は通信せずに即時IDを返すこと', async () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify({ id: 'uid_98765' }), { status: 200 })
+      );
+
+      // 初回取得
+      const id1 = await fetchMyUserId(mockAccount);
+      expect(id1).toBe('uid_98765');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // 2回目の取得: 通信なしでキャッシュから即座に返却
+      const id2 = await fetchMyUserId(mockAccount);
+      expect(id2).toBe('uid_98765');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('fetchServerEmojis はセッションキャッシュがある場合にフェッチをスキップすること', async () => {
+      const mockEmojis = [
+        { name: 'mizuna_cat', url: 'https://speed.misskey.test/emojis/cat.png' },
+      ];
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
+        new Response(JSON.stringify(mockEmojis), { status: 200 })
+      );
+
+      const map1 = await fetchServerEmojis('speed.misskey.test');
+      expect(map1.get('mizuna_cat')).toBe('https://speed.misskey.test/emojis/cat.png');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // 2回目はキャッシュから取得
+      const map2 = await fetchServerEmojis('speed.misskey.test');
+      expect(map2.get('mizuna_cat')).toBe('https://speed.misskey.test/emojis/cat.png');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -1,5 +1,6 @@
 import { createSignal } from 'solid-js';
 import type { MisskeyNote } from '../services/misskeyApi';
+import { safeSessionStorage } from '../utils/storage';
 
 export type HistoryTab = 'my_notes' | 'mentions';
 
@@ -19,9 +20,10 @@ export interface TabCache {
 }
 
 // メモリ内キャッシュ (accountKey:tab -> TabCache)
-// ページ遷移（画面切り替え）を行ってもメモリ内にデータを保持し、
-// 再訪問時の不要な通信を防ぐ
+// ページ遷移（画面切り替え）を行ってもメモリ内にデータを保持し、再訪問時の不要な通信を防ぐ
 const cache = new Map<string, TabCache>();
+const HISTORY_STORAGE_PREFIX = 'mizuna_hist_cache:';
+const MAX_STORED_HISTORY_NOTES = 20;
 
 // キャッシュ更新を購読するためのリアクティブシグナル
 const [historyCacheVersion, setHistoryCacheVersion] = createSignal(0);
@@ -39,11 +41,41 @@ function getCacheKey(accountKey: string | number, tab: HistoryTab): string {
 }
 
 export function getHistoryCache(accountKey: string | number, tab: HistoryTab): TabCache | undefined {
-  return cache.get(getCacheKey(accountKey, tab));
+  const key = getCacheKey(accountKey, tab);
+  const memoryCached = cache.get(key);
+  if (memoryCached) return memoryCached;
+
+  // セッションストレージから復元（Stale-While-Revalidate: SWR）
+  const storedJson = safeSessionStorage.getItem(`${HISTORY_STORAGE_PREFIX}${key}`);
+  if (storedJson) {
+    try {
+      const parsed: TabCache = JSON.parse(storedJson);
+      if (parsed && Array.isArray(parsed.notes)) {
+        cache.set(key, parsed);
+        return parsed;
+      }
+    } catch {
+      // ignore parse error
+    }
+  }
+
+  return undefined;
 }
 
 export function setHistoryCache(accountKey: string | number, tab: HistoryTab, data: TabCache): void {
-  cache.set(getCacheKey(accountKey, tab), data);
+  const key = getCacheKey(accountKey, tab);
+  cache.set(key, data);
+
+  // セッションストレージに軽量永続化
+  try {
+    const lightweightData: TabCache = {
+      ...data,
+      notes: data.notes.slice(0, MAX_STORED_HISTORY_NOTES),
+    };
+    safeSessionStorage.setItem(`${HISTORY_STORAGE_PREFIX}${key}`, JSON.stringify(lightweightData));
+  } catch {
+    // quota exceeded or ignore
+  }
 }
 
 /**
@@ -123,10 +155,26 @@ export function clearHistoryCache(accountKey?: string | number): void {
     for (const key of cache.keys()) {
       if (key.startsWith(`${accountKey}:`)) {
         cache.delete(key);
+        safeSessionStorage.removeItem(`${HISTORY_STORAGE_PREFIX}${key}`);
       }
     }
   } else {
     cache.clear();
+    // セッションストレージ内の全履歴キャッシュを消去
+    if (typeof window !== 'undefined') {
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const k = sessionStorage.key(i);
+          if (k && k.startsWith(HISTORY_STORAGE_PREFIX)) {
+            keysToRemove.push(k);
+          }
+        }
+        keysToRemove.forEach((k) => safeSessionStorage.removeItem(k));
+      } catch {
+        // ignore
+      }
+    }
   }
   setHistoryCacheVersion((v) => v + 1);
 }
