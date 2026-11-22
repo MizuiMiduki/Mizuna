@@ -1,4 +1,4 @@
-import { For, onCleanup, onSettled } from 'solid-js';
+import { For, onSettled } from 'solid-js';
 import { useApp, type ToastItem } from '../store/appStore';
 import { EASING, safeAnimate } from '../utils/animation';
 

@@ -1,4 +1,4 @@
-import { createSignal, createEffect, onSettled, onCleanup, Show, For, untrack } from 'solid-js';
+import { createSignal, createEffect, onSettled, Show, For, untrack } from 'solid-js';
 import { Portal } from '@solidjs/web';
 import {
   CropRect,
@@ -182,7 +182,6 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
   const [penSize, setPenSize] = createSignal<number>(6);
 
   // プレビュー表示用
-  const [previewUrl, setPreviewUrl] = createSignal<string>('');
   const [imgNaturalSize, setImgNaturalSize] = createSignal<{ w: number; h: number }>({ w: 0, h: 0 });
 
   // タブバーの横スクロール検知 & インジケーター表示ステート
@@ -362,7 +361,6 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
 
   onSettled(() => {
     const url = URL.createObjectURL(props.file);
-    setPreviewUrl(url);
 
     const img = new Image();
     img.onload = () => {
@@ -392,6 +390,19 @@ export function ImageEditorModal(props: ImageEditorModalProps) {
     }
 
     return () => {
+      if (drawingRafId !== null) {
+        cancelAnimationFrame(drawingRafId);
+        drawingRafId = null;
+      }
+      if (canvasRef) {
+        canvasRef.width = 0;
+        canvasRef.height = 0;
+      }
+      if (drawingCanvasRef) {
+        drawingCanvasRef.width = 0;
+        drawingCanvasRef.height = 0;
+      }
+      sourceImage = null;
       URL.revokeObjectURL(url);
       window.removeEventListener('pointermove', onGlobalMove);
       window.removeEventListener('pointerup', onGlobalUp);

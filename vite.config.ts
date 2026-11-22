@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
-import packageJson from './package.json';
+import packageJson from './package.json' with { type: 'json' };
 
 /**
  * Service Worker のバージョン自動同期プラグイン
@@ -35,7 +35,8 @@ function syncSwVersionPlugin() {
   return {
     name: 'mizuna-sync-sw-version',
     buildStart() {
-      const publicSwPath = path.resolve(__dirname, 'public/sw.js');
+      const rootDir = import.meta.dirname;
+      const publicSwPath = path.resolve(rootDir, 'public/sw.js');
       if (fs.existsSync(publicSwPath)) {
         const original = fs.readFileSync(publicSwPath, 'utf-8');
         const updated = updateSwContent(original);
@@ -43,13 +44,13 @@ function syncSwVersionPlugin() {
           fs.writeFileSync(publicSwPath, updated, 'utf-8');
         }
       }
-      const publicVersionPath = path.resolve(__dirname, 'public/version.json');
+      const publicVersionPath = path.resolve(rootDir, 'public/version.json');
       updateVersionJson(publicVersionPath);
     },
     configureServer(server: any) {
       server.middlewares.use((req: any, res: any, next: any) => {
         if (req.url === '/sw.js') {
-          const publicSwPath = path.resolve(__dirname, 'public/sw.js');
+          const publicSwPath = path.resolve(import.meta.dirname, 'public/sw.js');
           if (fs.existsSync(publicSwPath)) {
             const content = fs.readFileSync(publicSwPath, 'utf-8');
             res.setHeader('Content-Type', 'application/javascript');
@@ -66,7 +67,8 @@ function syncSwVersionPlugin() {
       });
     },
     closeBundle() {
-      const distSwPath = path.resolve(__dirname, 'dist/sw.js');
+      const rootDir = import.meta.dirname;
+      const distSwPath = path.resolve(rootDir, 'dist/sw.js');
       if (fs.existsSync(distSwPath)) {
         const original = fs.readFileSync(distSwPath, 'utf-8');
         const updated = updateSwContent(original);
@@ -74,7 +76,7 @@ function syncSwVersionPlugin() {
           fs.writeFileSync(distSwPath, updated, 'utf-8');
         }
       }
-      const distVersionPath = path.resolve(__dirname, 'dist/version.json');
+      const distVersionPath = path.resolve(rootDir, 'dist/version.json');
       updateVersionJson(distVersionPath);
     },
   };
@@ -127,7 +129,7 @@ export default defineConfig(({ mode }) => {
             if (id.includes('node_modules')) {
               if (id.includes('dexie')) return 'vendor-db';
               if (id.includes('mfm-js')) return 'vendor-mfm';
-              if (id.includes('solid-js')) return 'vendor-solid';
+              if (id.includes('solid-js') || id.includes('@solidjs')) return 'vendor-solid';
             }
           },
         },

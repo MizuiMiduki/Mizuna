@@ -1105,6 +1105,50 @@ export function AppProvider(props: { children: JSX.Element }) {
     };
   });
 
+  const processThumbnailAndCompression = async (
+    id: string,
+    file: File,
+    fallbackUrl: string
+  ) => {
+    const thumbUrl = (await createThumbnailUrl(file)) ?? fallbackUrl;
+    let alive = false;
+    setAttachedImages((prev) =>
+      prev.map((img) => {
+        if (img.id !== id) return img;
+        alive = true;
+        return { ...img, thumbUrl };
+      })
+    );
+    if (!alive) {
+      if (thumbUrl !== fallbackUrl) URL.revokeObjectURL(thumbUrl);
+      return;
+    }
+
+    if (file.type === 'image/webp') {
+      setAttachedImages((prev) =>
+        prev.map((img) =>
+          img.id === id
+            ? { ...img, compressedFile: file, compressedSize: file.size }
+            : img
+        )
+      );
+      return;
+    }
+
+    try {
+      const compressed = await compressAndConvertToWebP(file, 0.75);
+      setAttachedImages((prev) =>
+        prev.map((img) =>
+          img.id === id
+            ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
+            : img
+        )
+      );
+    } catch (err) {
+      console.warn('Pre-compression failed:', err);
+    }
+  };
+
   // 添付画像の追加（Base64変換ではなくゼロコピーの ObjectURL を使用してCPU・メモリ・バッテリー消費を削減）
   const addAttachedFiles = (fileList: FileList | File[]) => {
     const incoming = Array.from(fileList).filter((f) => f.type.startsWith('image/'));
@@ -1201,30 +1245,7 @@ export function AppProvider(props: { children: JSX.Element }) {
           }
         }
 
-        const thumbUrl = (await createThumbnailUrl(activeFile)) ?? activeDataUrl; // 生成不可なら原寸にフォールバック
-        {
-          let alive = false;
-          setAttachedImages((prev) =>
-            prev.map((img) => {
-              if (img.id !== item.id) return img;
-              alive = true;
-              return { ...img, thumbUrl };
-            })
-          );
-          if (!alive && thumbUrl !== activeDataUrl) URL.revokeObjectURL(thumbUrl);
-        }
-        try {
-          const compressed = await compressAndConvertToWebP(activeFile, 0.75);
-          setAttachedImages((prev) =>
-            prev.map((img) =>
-              img.id === item.id
-                ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
-                : img
-            )
-          );
-        } catch (err) {
-          console.warn('Pre-compression failed:', err);
-        }
+        await processThumbnailAndCompression(item.id, activeFile, activeDataUrl);
       });
     });
 
@@ -1308,31 +1329,9 @@ export function AppProvider(props: { children: JSX.Element }) {
       prev.map((item) => (item.id === id ? updatedItem : item))
     );
 
-    attachProcessQueue = attachProcessQueue.then(async () => {
-      const thumbUrl = (await createThumbnailUrl(updatedFile)) ?? newDataUrl;
-      let alive = false;
-      setAttachedImages((prev) =>
-        prev.map((img) => {
-          if (img.id !== id) return img;
-          alive = true;
-          return { ...img, thumbUrl };
-        })
-      );
-      if (!alive && thumbUrl !== newDataUrl) URL.revokeObjectURL(thumbUrl);
-
-      try {
-        const compressed = await compressAndConvertToWebP(updatedFile, 0.75);
-        setAttachedImages((prev) =>
-          prev.map((img) =>
-            img.id === id
-              ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
-              : img
-          )
-        );
-      } catch (err) {
-        console.warn('Pre-compression failed for edited image:', err);
-      }
-    });
+    attachProcessQueue = attachProcessQueue.then(() =>
+      processThumbnailAndCompression(id, updatedFile, newDataUrl)
+    );
   };
 
   const revertAttachedImage = (id: string) => {
@@ -1359,31 +1358,9 @@ export function AppProvider(props: { children: JSX.Element }) {
       prev.map((item) => (item.id === id ? revertedItem : item))
     );
 
-    attachProcessQueue = attachProcessQueue.then(async () => {
-      const thumbUrl = (await createThumbnailUrl(target.rawFile)) ?? newDataUrl;
-      let alive = false;
-      setAttachedImages((prev) =>
-        prev.map((img) => {
-          if (img.id !== id) return img;
-          alive = true;
-          return { ...img, thumbUrl };
-        })
-      );
-      if (!alive && thumbUrl !== newDataUrl) URL.revokeObjectURL(thumbUrl);
-
-      try {
-        const compressed = await compressAndConvertToWebP(target.rawFile, 0.75);
-        setAttachedImages((prev) =>
-          prev.map((img) =>
-            img.id === id
-              ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
-              : img
-          )
-        );
-      } catch (err) {
-        console.warn('Pre-compression failed for reverted image:', err);
-      }
-    });
+    attachProcessQueue = attachProcessQueue.then(() =>
+      processThumbnailAndCompression(id, target.rawFile, newDataUrl)
+    );
   };
 
   const reorderAttachedImages = (newOrderedIds: string[]) => {
@@ -1563,7 +1540,7 @@ export function AppProvider(props: { children: JSX.Element }) {
             file: restoredFile,
             rawFile: restoredRawFile,
             dataUrl,
-            thumbUrl: img.driveFileId ? (img.remoteThumbUrl || img.remoteUrl) : undefined,
+            thumbUrl: img.driveFileId ? (img.remoteThumbUrl || img.remoteUrl) : dataUrl,
             originalSize: img.originalSize ?? restoredFile.size,
             compressedSize: img.compressedSize,
             editState: img.editState,
@@ -1571,6 +1548,13 @@ export function AppProvider(props: { children: JSX.Element }) {
           };
         });
         setAttachedImages(restoredItems);
+        restoredItems.forEach((item) => {
+          if (!item.driveFileId) {
+            attachProcessQueue = attachProcessQueue.then(() =>
+              processThumbnailAndCompression(item.id, item.file, item.dataUrl)
+            );
+          }
+        });
       }
 
       showToast(t('draft.restored'), 'success');
@@ -2001,14 +1985,27 @@ export function AppProvider(props: { children: JSX.Element }) {
                 throw new Error('Invalid JSON format');
               }
 
-              const sanitized: AccountRecord[] = parsed.map((item: Record<string, unknown>) => ({
-                token: String(item.token ?? ''),
-                name: String(item.name ?? item.username ?? ''),
-                username: String(item.username ?? ''),
-                address: String(item.address ?? ''),
-                avatarurl: String(item.avatarurl ?? '/icon.png'),
-                add_mizuna_versinon: String(item.add_mizuna_versinon ?? MIZUNA_VERSION),
-              }));
+              const sanitized: AccountRecord[] = parsed
+                .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object'))
+                .map((item) => {
+                  const cleanAddr = String(item.address ?? '')
+                    .trim()
+                    .replace(/^https?:\/\//i, '')
+                    .replace(/\/+$/, '');
+                  const rawAvatar = String(item.avatarurl ?? '/icon.png').trim();
+                  const safeAvatar =
+                    /^https?:\/\//i.test(rawAvatar) || (rawAvatar.startsWith('/') && !rawAvatar.startsWith('//'))
+                      ? rawAvatar
+                      : '/icon.png';
+                  return {
+                    token: String(item.token ?? '').trim(),
+                    name: String(item.name ?? item.username ?? ''),
+                    username: String(item.username ?? '').trim(),
+                    address: /[/?#\s]/.test(cleanAddr) ? '' : cleanAddr,
+                    avatarurl: safeAvatar,
+                    add_mizuna_versinon: String(item.add_mizuna_versinon ?? MIZUNA_VERSION),
+                  };
+                });
 
               const allExistingAccounts = await db.account.toArray();
               const recordsToInsert: AccountRecord[] = [];

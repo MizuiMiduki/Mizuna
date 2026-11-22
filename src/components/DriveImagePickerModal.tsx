@@ -3,7 +3,6 @@ import {
   createMemo,
   createSignal,
   For,
-  onCleanup,
   Show,
 } from 'solid-js';
 import { Portal } from '@solidjs/web';

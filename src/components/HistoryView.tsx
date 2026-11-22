@@ -305,16 +305,20 @@ export function HistoryView() {
   }));
 
   const getAccountKey = () => getAccountCacheKey(currentUser());
+  let loadNotesSeq = 0;
 
-  const syncCache = (updated?: {
-    notes?: MisskeyNote[];
-    hasMore?: boolean;
-    repliesMap?: Record<string, RepliesState>;
-    expandedCwMap?: Record<string, boolean>;
-  }) => {
-    const key = getAccountKey();
-    if (!key) return;
-    setHistoryCache(key, activeTab(), {
+  const syncCache = (
+    updated?: {
+      notes?: MisskeyNote[];
+      hasMore?: boolean;
+      repliesMap?: Record<string, RepliesState>;
+      expandedCwMap?: Record<string, boolean>;
+    },
+    targetKey = getAccountKey(),
+    targetTab = activeTab()
+  ) => {
+    if (!targetKey) return;
+    setHistoryCache(targetKey, targetTab, {
       notes: updated?.notes ?? notes(),
       hasMore: updated?.hasMore ?? hasMore(),
       repliesMap: updated?.repliesMap ?? repliesMap(),
@@ -342,6 +346,9 @@ export function HistoryView() {
     const user = targetUser;
     if (!user || !untrack(isHistorySupported)) return;
 
+    const reqSeq = ++loadNotesSeq;
+    const reqAccountKey = getAccountCacheKey(user);
+
     if (reset) {
       setIsLoading(true);
       setErrorMessage(null);
@@ -361,6 +368,8 @@ export function HistoryView() {
         fetched = await fetchUserMentions(user, { limit: 10, untilId });
       }
 
+      if (reqSeq !== loadNotesSeq) return;
+
       const nextHasMore = fetched.length >= 10;
       if (!nextHasMore) {
         setHasMore(false);
@@ -376,17 +385,24 @@ export function HistoryView() {
       }
 
       // キャッシュを更新（ページ遷移しても再取得不要にする）
-      syncCache({
-        notes: newNotes,
-        hasMore: nextHasMore,
-      });
+      syncCache(
+        {
+          notes: newNotes,
+          hasMore: nextHasMore,
+        },
+        reqAccountKey,
+        targetTab
+      );
     } catch (err) {
+      if (reqSeq !== loadNotesSeq) return;
       console.error('Failed to fetch history:', err);
       setErrorMessage(t('history.error_load'));
       showToast(t('history.error_load'), 'error');
     } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
+      if (reqSeq === loadNotesSeq) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
     }
   };
 
@@ -801,7 +817,8 @@ export function HistoryView() {
                             class="mizuna-note-avatar"
                             loading="lazy"
                             onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).src = '/icon.png';
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = '/icon.png';
                             }}
                           />
                           <div class="mizuna-note-author-info">
@@ -993,6 +1010,10 @@ export function HistoryView() {
                                           alt=""
                                           class="mizuna-reply-avatar"
                                           loading="lazy"
+                                          onError={(e) => {
+                                            e.currentTarget.onerror = null;
+                                            e.currentTarget.src = '/icon.png';
+                                          }}
                                         />
                                         <div class="mizuna-reply-author">
                                           <span class="mizuna-reply-name" innerHTML={renderInlineEmoji(childName(), childNote.user.emojis, mfmOptions())} />

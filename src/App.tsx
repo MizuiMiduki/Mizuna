@@ -1,4 +1,4 @@
-import { createEffect, Match, onCleanup, onSettled, Show, Switch } from 'solid-js';
+import { createEffect, Match, onSettled, Show, Switch } from 'solid-js';
 import { AboutView } from './components/AboutView';
 import { AccountView } from './components/AccountView';
 import { AddAccountView } from './components/AddAccountView';
@@ -19,6 +19,8 @@ import { initAnalytics, trackPageView } from './utils/analytics';
 import { EASING, safeAnimate } from './utils/animation';
 
 const DOCK_VIEWS: ViewType[] = ['accounts', 'note', 'history'];
+
+const renderDevDebugMenu = () => (import.meta.env.DEV ? <DebugMenu /> : null);
 
 function MainContent() {
   const { isInitializing, currentView, settings } = useApp();
@@ -53,17 +55,12 @@ function MainContent() {
     };
   });
 
+  // ページ遷移（currentView の切り替え）時のPV計測・スクロールリセット・スライド演出を1つのeffectに統合
   createEffect(
     () => currentView(),
-    (view) => {
-      trackPageView(view);
-    }
-  );
+    (nextView) => {
+      trackPageView(nextView);
 
-  // ページ遷移（currentView の切り替え）時にスクロール量を最上部 (0) にリセット
-  createEffect(
-    () => currentView(),
-    () => {
       if (typeof window !== 'undefined') {
         window.scrollTo(0, 0);
         if (document.documentElement) document.documentElement.scrollTop = 0;
@@ -75,13 +72,7 @@ function MainContent() {
           if (document.body) document.body.scrollTop = 0;
         });
       }
-    }
-  );
 
-  // メニューバー画面間（アカウント・投稿・設定）の遷移時にiOS風の方向連動スライド演出
-  createEffect(
-    () => currentView(),
-    (nextView) => {
       const prev = prevView;
       prevView = nextView;
 
@@ -190,9 +181,7 @@ function MainContent() {
       <FooterNav />
       <SnackbarHost />
       <DialogHost />
-      <Show when={import.meta.env.DEV}>
-        <DebugMenu />
-      </Show>
+      {renderDevDebugMenu()}
     </div>
   );
 }

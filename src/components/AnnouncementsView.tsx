@@ -2,6 +2,7 @@ import { createSignal, For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { FloatingBackButton } from './FloatingBackButton';
 import { animateViewEnter } from '../utils/animation';
+import { isSafeHttpUrl } from '../utils/mfm';
 import {
   fetchAnnouncements,
   formatAnnouncementDate,
@@ -114,7 +115,7 @@ export function AnnouncementsView() {
                     <span>{formatAnnouncementDate(item.date)}</span>
                   </span>
                   <a
-                    href={item.link}
+                    href={isSafeHttpUrl(item.link) ? item.link : 'https://blossomsarchive.com/blog/category/mizuna/'}
                     target="_blank"
                     rel="noopener noreferrer"
                     class="mizuna-announcement-ext-btn"
@@ -127,7 +128,11 @@ export function AnnouncementsView() {
                 </div>
 
                 <h3 class="mizuna-announcement-title">
-                  <a href={item.link} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={isSafeHttpUrl(item.link) ? item.link : 'https://blossomsarchive.com/blog/category/mizuna/'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     {item.title}
                   </a>
                 </h3>

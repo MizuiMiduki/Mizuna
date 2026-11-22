@@ -1,4 +1,4 @@
-import { createEffect, For, onCleanup, Show } from 'solid-js';
+import { createEffect, For, Show } from 'solid-js';
 import { Portal } from '@solidjs/web';
 import { useApp } from '../store/appStore';
 import { type DraftRecord } from '../db/database';
@@ -230,8 +230,8 @@ export function DraftsModal(props: DraftsModalProps) {
                               class="mizuna-draft-avatar"
                               loading="lazy"
                               onError={(e) => {
-                                (e.currentTarget as HTMLImageElement).src =
-                                  'https://dummyimage.com/64x64/333333/ffffff.png&text=?';
+                                e.currentTarget.onerror = null;
+                                e.currentTarget.src = '/icon.png';
                               }}
                             />
                             <div class="mizuna-draft-account-info">

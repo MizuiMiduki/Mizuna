@@ -2,6 +2,7 @@ import { createEffect, For, Show } from 'solid-js';
 import { Portal } from '@solidjs/web';
 import { useApp, type DialogButton } from '../store/appStore';
 import { animateModalEnter, animateModalLeave } from '../utils/animation';
+import { isSafeHttpUrl } from '../utils/mfm';
 
 export function DialogHost() {
   const { dialogConfig, closeDialog, setCurrentView } = useApp();
@@ -82,7 +83,7 @@ export function DialogHost() {
                 <Show when={cfg.linkCard} keyed>
                   {(link) => (
                     <a
-                      href={link.url}
+                      href={isSafeHttpUrl(link.url) ? link.url : '#'}
                       target="_blank"
                       rel="noopener noreferrer"
                       class="mizuna-modal-linkcard"

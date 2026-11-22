@@ -522,13 +522,16 @@ export function applyDrawingsToContext(
   const scale = Math.max(0.4, Math.min(stageWidth, stageHeight) / 700);
 
   // モザイクストローク用のテクスチャキャッシュ（すりガラス / ブロック）
-  let blurredTexture: HTMLCanvasElement | OffscreenCanvas | null = null;
-  let pixelatedTexture: HTMLCanvasElement | OffscreenCanvas | null = null;
+  const mosaicTextureCache = new Map<string, HTMLCanvasElement | OffscreenCanvas>();
 
   const effectiveSource = sourceCanvas || ((ctx as unknown as { canvas?: CanvasImageSource }).canvas ?? null);
 
   const getMosaicTexture = (type: MosaicType, granularity?: number) => {
     if (!effectiveSource) return null;
+    const cacheKey = `${type}:${granularity ?? ''}`;
+    const cached = mosaicTextureCache.get(cacheKey);
+    if (cached) return cached;
+
     if (type === 'pixelate') {
       try {
         const blockSize = Math.max(6, Math.round((granularity || 24) * scale));
@@ -539,6 +542,7 @@ export function applyDrawingsToContext(
         const { canvas: pCanvas, ctx: pCtx } = createCanvas2D(stageWidth, stageHeight);
         pCtx.imageSmoothingEnabled = false;
         pCtx.drawImage(sCanvas, 0, 0, stageWidth, stageHeight);
+        mosaicTextureCache.set(cacheKey, pCanvas);
         return pCanvas;
       } catch {
         return null;
@@ -560,6 +564,7 @@ export function applyDrawingsToContext(
         const { canvas: bCanvas, ctx: bCtx } = createCanvas2D(stageWidth, stageHeight);
         bCtx.imageSmoothingEnabled = true;
         bCtx.drawImage(sCanvas, 0, 0, stageWidth, stageHeight);
+        mosaicTextureCache.set(cacheKey, bCanvas);
         return bCanvas;
       } catch {
         return null;
