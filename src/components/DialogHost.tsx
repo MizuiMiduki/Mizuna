@@ -49,13 +49,22 @@ export function DialogHost() {
           <Portal>
             <div class="mizuna-modal-portal mizuna-dialog-portal" role="dialog" aria-modal="true">
             <div
-              ref={backdropRef}
+              ref={(el) => {
+                backdropRef = el;
+              }}
               class="mizuna-modal-backdrop"
               onClick={() => closeDialog()}
             />
 
             <div
-              ref={modalRef}
+              ref={(el) => {
+                modalRef = el;
+                if (el) {
+                  requestAnimationFrame(() => {
+                    animateModalEnter(modalRef, backdropRef);
+                  });
+                }
+              }}
               class={`mizuna-modal-card is-${tone}`}
               onClick={(e) => e.stopPropagation()}
             >

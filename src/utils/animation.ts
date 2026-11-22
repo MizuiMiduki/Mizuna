@@ -75,7 +75,14 @@ export function animateModalEnter(
   cardEl: HTMLElement | undefined | null,
   backdropEl?: HTMLElement | undefined | null
 ) {
-  if (prefersReducedMotion()) return;
+  if (prefersReducedMotion()) {
+    if (backdropEl) backdropEl.style.opacity = '1';
+    if (cardEl) {
+      cardEl.style.opacity = '1';
+      cardEl.style.transform = 'none';
+    }
+    return;
+  }
 
   if (backdropEl) {
     safeAnimate(

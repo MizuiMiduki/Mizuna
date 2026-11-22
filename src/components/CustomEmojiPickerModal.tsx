@@ -186,7 +186,11 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
           <div
             ref={(el) => {
               cardRef = el;
-              if (el) animateModalEnter(cardRef, backdropRef);
+              if (el) {
+                requestAnimationFrame(() => {
+                  animateModalEnter(cardRef, backdropRef);
+                });
+              }
             }}
             class="mizuna-picker-modal mizuna-emoji-picker-modal"
             onClick={(e) => e.stopPropagation()}
