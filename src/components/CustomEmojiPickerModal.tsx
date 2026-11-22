@@ -94,10 +94,6 @@ export function CustomEmojiPickerModal(props: CustomEmojiPickerModalProps) {
 
         window.addEventListener('keydown', handleKeyDown);
 
-        setTimeout(() => {
-          searchInputRef?.focus();
-        }, 80);
-
         return () => {
           cleanupBack();
           window.removeEventListener('keydown', handleKeyDown);
