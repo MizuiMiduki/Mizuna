@@ -1,9 +1,9 @@
-import gsap from 'gsap';
 import PullToRefresh from 'pulltorefreshjs';
-import { createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { createSignal, onSettled, Show } from 'solid-js';
 import { mizuna_options } from '../config/mizunaOptions';
 import { useApp, type ViewType } from '../store/appStore';
 import { HoldHoverTip } from './HoldHoverTip';
+import { EASING, safeAnimate } from '../utils/animation';
 
 export function Header() {
   const {
@@ -29,16 +29,22 @@ export function Header() {
     }
   };
 
-  onMount(() => {
+  onSettled(() => {
     if (newsRef && showNews()) {
-      gsap.fromTo(
+      safeAnimate(
         newsRef,
-        { opacity: 0, y: -10 },
-        { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out' }
+        [
+          { opacity: 0, transform: 'translateY(-10px)' },
+          { opacity: 1, transform: 'translateY(0)' },
+        ],
+        {
+          duration: 350,
+          easing: EASING.outCubic,
+        }
       );
     }
 
-    // pulltorefreshjs ライブラリによる Pull-to-Refresh 初期化
+    // pulltorefreshjs ライブラリによる Pull-to-Refresh 初期化 (ヘッダーのプル操作に一本化)
     if (topbarRef) {
       PullToRefresh.init({
         mainElement: topbarRef,
@@ -48,9 +54,9 @@ export function Header() {
         distReload: 56,
         iconArrow: '<i>arrow_downward</i>',
         iconRefreshing: '<i>sync</i>',
-        instructionsPullToRefresh: '下に引っ張って再読み込み',
-        instructionsReleaseToRefresh: '指を離して再読み込み',
-        instructionsRefreshing: '再読み込み中...',
+        instructionsPullToRefresh: t('header.pull_down') || '下に引っ張って再読み込み',
+        instructionsReleaseToRefresh: t('header.release_to_reload') || '指を離して再読み込み',
+        instructionsRefreshing: t('header.reloading') || '再読み込み中...',
         shouldPullToRefresh: () => window.scrollY === 0,
         onRefresh: () => {
           window.location.reload();
@@ -58,24 +64,31 @@ export function Header() {
       });
     }
 
-    onCleanup(() => {
+    return () => {
       PullToRefresh.destroyAll();
-    });
+    };
   });
 
   const handleCloseNews = (e: MouseEvent) => {
     e.stopPropagation();
     if (newsRef) {
-      gsap.to(newsRef, {
-        opacity: 0,
-        height: 0,
-        marginTop: 0,
-        paddingTop: 0,
-        paddingBottom: 0,
-        duration: 0.25,
-        ease: 'power2.in',
-        onComplete: () => setShowNews(false),
-      });
+      const anim = safeAnimate(
+        newsRef,
+        [
+          { opacity: 1, maxHeight: `${newsRef.offsetHeight}px`, overflow: 'hidden' },
+          { opacity: 0, maxHeight: '0px', marginTop: '0px', paddingTop: '0px', paddingBottom: '0px', overflow: 'hidden' },
+        ],
+        {
+          duration: 250,
+          easing: EASING.inQuad,
+          fill: 'forwards',
+        }
+      );
+      if (anim) {
+        anim.onfinish = () => setShowNews(false);
+      } else {
+        setShowNews(false);
+      }
     } else {
       setShowNews(false);
     }

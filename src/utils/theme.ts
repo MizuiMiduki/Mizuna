@@ -14,6 +14,10 @@ interface ExtractedPalette {
 
 // アバターURLごとの抽出済みカラーパレットキャッシュ（通信・Canvas演算の節約）
 const memoryPaletteCache = new Map<string, ExtractedPalette>();
+// テーマHEXごとの Material Dynamic Colors 演算結果キャッシュ
+const dynamicThemeCache = new Map<string, any>();
+// camelCase -> kebab-case トークン名変換キャッシュ
+const kebabKeyCache = new Map<string, string>();
 let lastAppliedThemeMode: 'light' | 'dark' | null = null;
 let lastAppliedThemeHex: string | null = null;
 let currentDynamicTheme: any = null;
@@ -23,7 +27,11 @@ function applyDynamicColorTokens(tokens: Record<string, any>): void {
   const target = document.documentElement;
   for (const [key, value] of Object.entries(tokens)) {
     if (typeof value === 'string') {
-      const kebab = key.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
+      let kebab = kebabKeyCache.get(key);
+      if (!kebab) {
+        kebab = key.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase();
+        kebabKeyCache.set(key, kebab);
+      }
       target.style.setProperty(`--${kebab}`, value);
     }
   }
@@ -371,7 +379,13 @@ export async function applyThemeAndMode(
   if (lastAppliedThemeHex !== themeHex || lastAppliedThemeMode !== activeMode || !currentDynamicTheme) {
     try {
       if (typeof materialDynamicColors === 'function') {
-        const theme = await materialDynamicColors(themeHex);
+        let theme = dynamicThemeCache.get(themeHex);
+        if (!theme) {
+          theme = await materialDynamicColors(themeHex);
+          if (theme) {
+            dynamicThemeCache.set(themeHex, theme);
+          }
+        }
         if (theme && theme[activeMode]) {
           currentDynamicTheme = theme;
           applyDynamicColorTokens(theme[activeMode]);

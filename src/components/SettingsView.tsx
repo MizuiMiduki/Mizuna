@@ -1,9 +1,9 @@
-import gsap from 'gsap';
-import { createEffect, createSignal, For, onMount, Show } from 'solid-js';
+import { createEffect, createSignal, For, onSettled, Show, untrack } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { SUPPORTED_LANGUAGES } from '../i18n';
 import { applyCustomCss, sanitizeCustomCss } from '../utils/customCss';
 import { safeSessionStorage } from '../utils/storage';
+import { animateViewEnter } from '../utils/animation';
 
 export function SettingsView() {
   const {
@@ -23,25 +23,32 @@ export function SettingsView() {
   let panelRef: HTMLDivElement | undefined;
   let settingFileInputRef: HTMLInputElement | undefined;
 
-  const [customCssValue, setCustomCssValue] = createSignal(settings().custom_css ?? '');
+  const initialSettings = untrack(settings);
+  const [customCssValue, setCustomCssValue] = createSignal(initialSettings.custom_css ?? '');
   const [cssWarnings, setCssWarnings] = createSignal<string[]>([]);
   const [isCssDirty, setIsCssDirty] = createSignal(false);
-  const [signatureValue, setSignatureValue] = createSignal(settings().signature_text ?? '');
+  const [signatureValue, setSignatureValue] = createSignal(initialSettings.signature_text ?? '');
   const [isSignatureDirty, setIsSignatureDirty] = createSignal(false);
-  const [watermarkValue, setWatermarkValue] = createSignal(settings().watermark_text ?? '');
+  const [watermarkValue, setWatermarkValue] = createSignal(initialSettings.watermark_text ?? '');
   const [isWatermarkDirty, setIsWatermarkDirty] = createSignal(false);
 
-  createEffect(() => {
-    if (!isSignatureDirty()) {
-      setSignatureValue(settings().signature_text ?? '');
+  createEffect(
+    () => [settings().signature_text, isSignatureDirty()] as const,
+    ([sig, dirty]) => {
+      if (!dirty) {
+        setSignatureValue(sig ?? '');
+      }
     }
-  });
+  );
 
-  createEffect(() => {
-    if (!isWatermarkDirty()) {
-      setWatermarkValue(settings().watermark_text ?? '');
+  createEffect(
+    () => [settings().watermark_text, isWatermarkDirty()] as const,
+    ([wm, dirty]) => {
+      if (!dirty) {
+        setWatermarkValue(wm ?? '');
+      }
     }
-  });
+  );
 
   const defaultSignaturePlaceholder = () => {
     const user = currentUser();
@@ -55,12 +62,15 @@ export function SettingsView() {
     return `@${user.username}@${user.address}`;
   };
 
-  createEffect(() => {
-    // 外部から設定が更新された場合にシグナルと同期（編集中でない場合）
-    if (!isCssDirty()) {
-      setCustomCssValue(settings().custom_css ?? '');
+  createEffect(
+    () => [settings().custom_css, isCssDirty()] as const,
+    ([css, dirty]) => {
+      // 外部から設定が更新された場合にシグナルと同期（編集中でない場合）
+      if (!dirty) {
+        setCustomCssValue(css ?? '');
+      }
     }
-  });
+  );
 
   const handleSaveCustomCss = async () => {
     const raw = customCssValue();
@@ -87,14 +97,8 @@ export function SettingsView() {
     showToast(t('settings.custom_css_saved'), 'success');
   };
 
-  onMount(() => {
-    if (panelRef) {
-      gsap.fromTo(
-        panelRef,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+  onSettled(() => {
+    animateViewEnter(panelRef);
   });
 
   const [isClearingCache, setIsClearingCache] = createSignal(false);

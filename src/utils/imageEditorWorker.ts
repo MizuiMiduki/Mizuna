@@ -24,8 +24,8 @@ export interface WorkerEditResponse {
 self.onmessage = async (e: MessageEvent<WorkerEditRequest>) => {
   const { id, bitmap, blob, options } = e.data;
 
+  let sourceBitmap = bitmap;
   try {
-    let sourceBitmap = bitmap;
     if (!sourceBitmap && blob) {
       sourceBitmap = await createImageBitmap(blob);
     }
@@ -115,7 +115,6 @@ self.onmessage = async (e: MessageEvent<WorkerEditRequest>) => {
     }
 
     const resultBlob = await finalCanvas.convertToBlob({ type: 'image/webp', quality });
-    sourceBitmap.close();
 
     const response: WorkerEditResponse = {
       id,
@@ -130,5 +129,11 @@ self.onmessage = async (e: MessageEvent<WorkerEditRequest>) => {
       error: err instanceof Error ? err.message : String(err),
     };
     self.postMessage(response);
+  } finally {
+    try {
+      sourceBitmap?.close();
+    } catch {
+      // ignore
+    }
   }
 };

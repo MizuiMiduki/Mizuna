@@ -1,16 +1,14 @@
 import { compressAndConvertToWebP, createThumbnailUrl } from '../utils/image';
 import { editImageOptimized, type ImageEditState, type SignaturePosition } from '../utils/imageEditor';
-import gsap from 'gsap';
 import {
   createContext,
   createSignal,
-  onCleanup,
-  onMount,
+  onSettled,
   useContext,
   type Accessor,
-  type JSX,
   type Setter,
 } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 import { MIZUNA_VERSION, mizuna_options } from '../config/mizunaOptions';
 import {
   db,
@@ -693,7 +691,7 @@ export function AppProvider(props: { children: JSX.Element }) {
    * MiAuthコールバック (?session=...) の処理
    */
   const handleMiAuthCallbackIfPresent = async (): Promise<boolean> => {
-    const search = location.search;
+    const search = typeof window !== 'undefined' ? window.location.search : '';
     if (!search || !search.includes('session=')) {
       return false;
     }
@@ -849,32 +847,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   };
 
   // 初回マウント時の初期化フロー
-  onMount(async () => {
-    // Canary / 本番のタイトル・PWAマニフェスト同期
-    document.title = `${mizuna_options.app_name} -ノート専用Misskeyクライアント`;
-    const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
-    if (appleMeta) {
-      appleMeta.setAttribute('content', mizuna_options.app_name);
-    }
-    const manifestLink = document.getElementById('mizuna-manifest-link');
-    if (manifestLink) {
-      manifestLink.setAttribute(
-        'href',
-        mizuna_options.is_canary ? '/manifest-canary.json' : '/manifest.json'
-      );
-    }
-
-    // 省電力設定: GSAPティッカーの自動スリープを早め、バックグラウンド時は完全停止させる
-    gsap.config({ autoSleep: 60, nullTargetWarn: false });
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        gsap.globalTimeline.pause();
-      } else {
-        gsap.globalTimeline.resume();
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
+  onSettled(() => {
     // オンライン・オフライン検知
     const handleOnline = () => {
       showToast('インターネット接続が回復しました', 'success');
@@ -884,6 +857,18 @@ export function AppProvider(props: { children: JSX.Element }) {
     };
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // OSのカラースキーム変更を監視（端末設定モード時）
+    const mediaQuery =
+      typeof window !== 'undefined' && typeof window.matchMedia === 'function'
+        ? window.matchMedia('(prefers-color-scheme: dark)')
+        : null;
+    const handleSchemeChange = () => {
+      if (settings().is_darkmode === 2) {
+        applyThemeAndMode(settings(), currentUser()?.avatarurl, currentUser()?.address);
+      }
+    };
+    mediaQuery?.addEventListener?.('change', handleSchemeChange);
 
     // Service Worker の登録とPWA更新待機監視
     let handleControllerChange: (() => void) | null = null;
@@ -926,26 +911,29 @@ export function AppProvider(props: { children: JSX.Element }) {
       };
 
       // 既存の登録を確認。すでに登録済みの場合は register を呼ばず、勝手なバックグラウンドダウンロード・更新を抑止する
-      navigator.serviceWorker.getRegistration?.().then((existingReg) => {
-        if (existingReg) {
-          setupRegistration(existingReg);
-        } else {
-          // 初回起動時のみ Service Worker を登録
+      navigator.serviceWorker
+        .getRegistration?.()
+        .then((existingReg) => {
+          if (existingReg) {
+            setupRegistration(existingReg);
+          } else {
+            // 初回起動時のみ Service Worker を登録
+            navigator.serviceWorker
+              .register?.('/sw.js', { updateViaCache: 'all' })
+              ?.then(setupRegistration)
+              ?.catch((error) => {
+                console.error('Service Worker registration error:', error);
+              });
+          }
+        })
+        .catch(() => {
           navigator.serviceWorker
             .register?.('/sw.js', { updateViaCache: 'all' })
             ?.then(setupRegistration)
             ?.catch((error) => {
               console.error('Service Worker registration error:', error);
             });
-        }
-      }).catch(() => {
-        navigator.serviceWorker
-          .register?.('/sw.js', { updateViaCache: 'all' })
-          ?.then(setupRegistration)
-          ?.catch((error) => {
-            console.error('Service Worker registration error:', error);
-          });
-      });
+        });
     }
 
     // 起動時にサーバー上の最新バージョン情報を軽量チェック（アップデートの有無を自動検知）
@@ -962,6 +950,7 @@ export function AppProvider(props: { children: JSX.Element }) {
       window.history.replaceState({}, document.title, cleanUrl || '/');
     }
 
+    let handlePopState: ((e: PopStateEvent) => void) | null = null;
     // Android / ブラウザの戻る操作 (PopState) をハンドリング
     if (typeof window !== 'undefined') {
       try {
@@ -970,7 +959,7 @@ export function AppProvider(props: { children: JSX.Element }) {
         // ignore
       }
 
-      const handlePopState = (e: PopStateEvent) => {
+      handlePopState = (e: PopStateEvent) => {
         // UI操作（閉じるボタンや背景タップ）によってプログラムで history.back() された時は何もしない
         if (ignoreNextPopState) {
           ignoreNextPopState = false;
@@ -1023,92 +1012,142 @@ export function AppProvider(props: { children: JSX.Element }) {
       };
 
       window.addEventListener('popstate', handlePopState);
-      onCleanup(() => {
-        window.removeEventListener('popstate', handlePopState);
-      });
     }
 
-    const hasShareParams = captureWebShareTargetFromUrl();
-    const savedView = getSavedView();
-
-    try {
-      const loadedSettings = await loadOrCreateSettings();
-      setSettings(loadedSettings);
-      applyCustomCss(loadedSettings.custom_css ?? '');
-      setVisibility(visibilityNumToString(loadedSettings.default_visibility));
-      setEndMizuna(loadedSettings.is_note_end_mizuna);
-
-      // MiAuthのコールバックがあれば処理
-      const addedViaMiAuth = await handleMiAuthCallbackIfPresent();
-
-      // アカウント読み込み
-      const loadedAccounts = await reloadAccounts();
-
-      if (loadedAccounts && loadedAccounts.length > 0) {
-        applyWebShareTargetToForm();
-        if (addedViaMiAuth || hasShareParams) {
-          setCurrentViewInternal('note');
-        } else if (savedView && savedView !== 'add_account') {
-          setCurrentViewInternal(savedView);
-        } else {
-          setCurrentViewInternal('note');
-        }
-      } else {
-        if (savedView === 'shortcuts' || savedView === 'about') {
-          setCurrentViewInternal(savedView);
-        } else {
-          setCurrentViewInternal('add_account');
-        }
+    void (async () => {
+      // Canary / 本番のタイトル・PWAマニフェスト同期
+      document.title = `${mizuna_options.app_name} -ノート専用Misskeyクライアント`;
+      const appleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+      if (appleMeta) {
+        appleMeta.setAttribute('content', mizuna_options.app_name);
+      }
+      const manifestLink = document.getElementById('mizuna-manifest-link');
+      if (manifestLink) {
+        manifestLink.setAttribute(
+          'href',
+          mizuna_options.is_canary ? '/manifest-canary.json' : '/manifest.json'
+        );
       }
 
-      // リリースノート確認
-      await checkNewReleaseNote(loadedSettings);
+      const hasShareParams = captureWebShareTargetFromUrl();
+      const savedView = getSavedView();
 
-      // 下書きのロード
-      await loadDrafts();
-    } catch (err) {
-      console.error('Initialization failed:', err);
-      showToast('データベースの読み込みに失敗しました', 'error');
-    } finally {
-      setIsInitializing(false);
-    }
+      try {
+        const loadedSettings = await loadOrCreateSettings();
+        setSettings(loadedSettings);
+        applyCustomCss(loadedSettings.custom_css ?? '');
+        setVisibility(visibilityNumToString(loadedSettings.default_visibility));
+        setEndMizuna(loadedSettings.is_note_end_mizuna);
 
-    // OSのカラースキーム変更を監視（端末設定モード時）
-    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleSchemeChange = () => {
-        if (settings().is_darkmode === 2) {
-          applyThemeAndMode(settings(), currentUser()?.avatarurl, currentUser()?.address);
+        // MiAuthのコールバックがあれば処理
+        const addedViaMiAuth = await handleMiAuthCallbackIfPresent();
+
+        // アカウント読み込み
+        const loadedAccounts = await reloadAccounts();
+
+        if (loadedAccounts && loadedAccounts.length > 0) {
+          applyWebShareTargetToForm();
+          if (addedViaMiAuth || hasShareParams) {
+            setCurrentViewInternal('note');
+          } else if (savedView && savedView !== 'add_account') {
+            setCurrentViewInternal(savedView);
+          } else {
+            setCurrentViewInternal('note');
+          }
+        } else {
+          if (savedView === 'shortcuts' || savedView === 'about') {
+            setCurrentViewInternal(savedView);
+          } else {
+            setCurrentViewInternal('add_account');
+          }
         }
-      };
-      mediaQuery.addEventListener?.('change', handleSchemeChange);
-      onCleanup(() => {
+
+        // リリースノート確認
+        await checkNewReleaseNote(loadedSettings);
+
+        // 下書きのロード
+        await loadDrafts();
+      } catch (err) {
+        console.error('Initialization failed:', err);
+        showToast('データベースの読み込みに失敗しました', 'error');
+      } finally {
+        setIsInitializing(false);
+      }
+    })();
+
+    return () => {
+      try {
+        mediaQuery?.removeEventListener?.('change', handleSchemeChange);
+      } catch {
+        // テスト環境等のティアダウン時は無視
+      }
+      if (typeof window !== 'undefined') {
         try {
-          mediaQuery.removeEventListener?.('change', handleSchemeChange);
+          window.removeEventListener('online', handleOnline);
+          window.removeEventListener('offline', handleOffline);
+          if (
+            'serviceWorker' in navigator &&
+            navigator.serviceWorker?.removeEventListener &&
+            handleControllerChange
+          ) {
+            navigator.serviceWorker.removeEventListener(
+              'controllerchange',
+              handleControllerChange
+            );
+          }
+          if (handlePopState) {
+            window.removeEventListener('popstate', handlePopState);
+          }
         } catch {
-          // テスト環境等のティアダウン時は無視
+          // 無視
         }
-        if (typeof document !== 'undefined') {
-          try {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-          } catch {
-            // 無視
-          }
-        }
-        if (typeof window !== 'undefined') {
-          try {
-            window.removeEventListener('online', handleOnline);
-            window.removeEventListener('offline', handleOffline);
-            if ('serviceWorker' in navigator && navigator.serviceWorker?.removeEventListener && handleControllerChange) {
-              navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange);
-            }
-          } catch {
-            // 無視
-          }
-        }
-      });
-    }
+      }
+    };
   });
+
+  const processThumbnailAndCompression = async (
+    id: string,
+    file: File,
+    fallbackUrl: string
+  ) => {
+    const thumbUrl = (await createThumbnailUrl(file)) ?? fallbackUrl;
+    let alive = false;
+    setAttachedImages((prev) =>
+      prev.map((img) => {
+        if (img.id !== id) return img;
+        alive = true;
+        return { ...img, thumbUrl };
+      })
+    );
+    if (!alive) {
+      if (thumbUrl !== fallbackUrl) URL.revokeObjectURL(thumbUrl);
+      return;
+    }
+
+    if (file.type === 'image/webp') {
+      setAttachedImages((prev) =>
+        prev.map((img) =>
+          img.id === id
+            ? { ...img, compressedFile: file, compressedSize: file.size }
+            : img
+        )
+      );
+      return;
+    }
+
+    try {
+      const compressed = await compressAndConvertToWebP(file, 0.75);
+      setAttachedImages((prev) =>
+        prev.map((img) =>
+          img.id === id
+            ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
+            : img
+        )
+      );
+    } catch (err) {
+      console.warn('Pre-compression failed:', err);
+    }
+  };
 
   // 添付画像の追加（Base64変換ではなくゼロコピーの ObjectURL を使用してCPU・メモリ・バッテリー消費を削減）
   const addAttachedFiles = (fileList: FileList | File[]) => {
@@ -1206,30 +1245,7 @@ export function AppProvider(props: { children: JSX.Element }) {
           }
         }
 
-        const thumbUrl = (await createThumbnailUrl(activeFile)) ?? activeDataUrl; // 生成不可なら原寸にフォールバック
-        {
-          let alive = false;
-          setAttachedImages((prev) =>
-            prev.map((img) => {
-              if (img.id !== item.id) return img;
-              alive = true;
-              return { ...img, thumbUrl };
-            })
-          );
-          if (!alive && thumbUrl !== activeDataUrl) URL.revokeObjectURL(thumbUrl);
-        }
-        try {
-          const compressed = await compressAndConvertToWebP(activeFile, 0.75);
-          setAttachedImages((prev) =>
-            prev.map((img) =>
-              img.id === item.id
-                ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
-                : img
-            )
-          );
-        } catch (err) {
-          console.warn('Pre-compression failed:', err);
-        }
+        await processThumbnailAndCompression(item.id, activeFile, activeDataUrl);
       });
     });
 
@@ -1313,31 +1329,9 @@ export function AppProvider(props: { children: JSX.Element }) {
       prev.map((item) => (item.id === id ? updatedItem : item))
     );
 
-    attachProcessQueue = attachProcessQueue.then(async () => {
-      const thumbUrl = (await createThumbnailUrl(updatedFile)) ?? newDataUrl;
-      let alive = false;
-      setAttachedImages((prev) =>
-        prev.map((img) => {
-          if (img.id !== id) return img;
-          alive = true;
-          return { ...img, thumbUrl };
-        })
-      );
-      if (!alive && thumbUrl !== newDataUrl) URL.revokeObjectURL(thumbUrl);
-
-      try {
-        const compressed = await compressAndConvertToWebP(updatedFile, 0.75);
-        setAttachedImages((prev) =>
-          prev.map((img) =>
-            img.id === id
-              ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
-              : img
-          )
-        );
-      } catch (err) {
-        console.warn('Pre-compression failed for edited image:', err);
-      }
-    });
+    attachProcessQueue = attachProcessQueue.then(() =>
+      processThumbnailAndCompression(id, updatedFile, newDataUrl)
+    );
   };
 
   const revertAttachedImage = (id: string) => {
@@ -1364,31 +1358,9 @@ export function AppProvider(props: { children: JSX.Element }) {
       prev.map((item) => (item.id === id ? revertedItem : item))
     );
 
-    attachProcessQueue = attachProcessQueue.then(async () => {
-      const thumbUrl = (await createThumbnailUrl(target.rawFile)) ?? newDataUrl;
-      let alive = false;
-      setAttachedImages((prev) =>
-        prev.map((img) => {
-          if (img.id !== id) return img;
-          alive = true;
-          return { ...img, thumbUrl };
-        })
-      );
-      if (!alive && thumbUrl !== newDataUrl) URL.revokeObjectURL(thumbUrl);
-
-      try {
-        const compressed = await compressAndConvertToWebP(target.rawFile, 0.75);
-        setAttachedImages((prev) =>
-          prev.map((img) =>
-            img.id === id
-              ? { ...img, compressedFile: compressed, compressedSize: compressed.size }
-              : img
-          )
-        );
-      } catch (err) {
-        console.warn('Pre-compression failed for reverted image:', err);
-      }
-    });
+    attachProcessQueue = attachProcessQueue.then(() =>
+      processThumbnailAndCompression(id, target.rawFile, newDataUrl)
+    );
   };
 
   const reorderAttachedImages = (newOrderedIds: string[]) => {
@@ -1568,7 +1540,7 @@ export function AppProvider(props: { children: JSX.Element }) {
             file: restoredFile,
             rawFile: restoredRawFile,
             dataUrl,
-            thumbUrl: img.driveFileId ? (img.remoteThumbUrl || img.remoteUrl) : undefined,
+            thumbUrl: img.driveFileId ? (img.remoteThumbUrl || img.remoteUrl) : dataUrl,
             originalSize: img.originalSize ?? restoredFile.size,
             compressedSize: img.compressedSize,
             editState: img.editState,
@@ -1576,6 +1548,13 @@ export function AppProvider(props: { children: JSX.Element }) {
           };
         });
         setAttachedImages(restoredItems);
+        restoredItems.forEach((item) => {
+          if (!item.driveFileId) {
+            attachProcessQueue = attachProcessQueue.then(() =>
+              processThumbnailAndCompression(item.id, item.file, item.dataUrl)
+            );
+          }
+        });
       }
 
       showToast(t('draft.restored'), 'success');
@@ -2006,14 +1985,27 @@ export function AppProvider(props: { children: JSX.Element }) {
                 throw new Error('Invalid JSON format');
               }
 
-              const sanitized: AccountRecord[] = parsed.map((item: Record<string, unknown>) => ({
-                token: String(item.token ?? ''),
-                name: String(item.name ?? item.username ?? ''),
-                username: String(item.username ?? ''),
-                address: String(item.address ?? ''),
-                avatarurl: String(item.avatarurl ?? '/icon.png'),
-                add_mizuna_versinon: String(item.add_mizuna_versinon ?? MIZUNA_VERSION),
-              }));
+              const sanitized: AccountRecord[] = parsed
+                .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === 'object'))
+                .map((item) => {
+                  const cleanAddr = String(item.address ?? '')
+                    .trim()
+                    .replace(/^https?:\/\//i, '')
+                    .replace(/\/+$/, '');
+                  const rawAvatar = String(item.avatarurl ?? '/icon.png').trim();
+                  const safeAvatar =
+                    /^https?:\/\//i.test(rawAvatar) || (rawAvatar.startsWith('/') && !rawAvatar.startsWith('//'))
+                      ? rawAvatar
+                      : '/icon.png';
+                  return {
+                    token: String(item.token ?? '').trim(),
+                    name: String(item.name ?? item.username ?? ''),
+                    username: String(item.username ?? '').trim(),
+                    address: /[/?#\s]/.test(cleanAddr) ? '' : cleanAddr,
+                    avatarurl: safeAvatar,
+                    add_mizuna_versinon: String(item.add_mizuna_versinon ?? MIZUNA_VERSION),
+                  };
+                });
 
               const allExistingAccounts = await db.account.toArray();
               const recordsToInsert: AccountRecord[] = [];
@@ -2126,7 +2118,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     t,
   };
 
-  return <AppContext.Provider value={contextValue}>{props.children}</AppContext.Provider>;
+  return <AppContext value={contextValue}>{props.children}</AppContext>;
 }
 
 export function useApp(): AppContextValue {

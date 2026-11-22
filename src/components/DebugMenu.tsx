@@ -1,4 +1,3 @@
-import gsap from 'gsap';
 import { createSignal, For, Show } from 'solid-js';
 import { MIZUNA_VERSION, mizuna_options } from '../config/mizunaOptions';
 import { db, DEFAULT_USER_SETTINGS, updateSettingDb } from '../db/database';
@@ -7,6 +6,7 @@ import { useApp, type ViewType } from '../store/appStore';
 import { applyCustomThemeColor } from '../utils/theme';
 import { safeLocalStorage } from '../utils/storage';
 import { WST_TITLE_KEY, WST_TEXT_KEY, WST_URL_KEY } from '../utils/webShare';
+import { EASING, safeAnimate } from '../utils/animation';
 
 const PRESET_COLORS = [
   { label: 'Sky', hex: '#2b8cbe' },
@@ -41,23 +41,38 @@ export function DebugMenu() {
       setIsOpen(true);
       setTimeout(() => {
         if (panelRef) {
-          gsap.fromTo(
+          safeAnimate(
             panelRef,
-            { opacity: 0, y: 18, scale: 0.94 },
-            { opacity: 1, y: 0, scale: 1, duration: 0.26, ease: 'back.out(1.5)' }
+            [
+              { opacity: 0, transform: 'translateY(18px) scale(0.94)' },
+              { opacity: 1, transform: 'translateY(0) scale(1)' },
+            ],
+            {
+              duration: 260,
+              easing: EASING.outBack,
+            }
           );
         }
       }, 10);
     } else {
       if (panelRef) {
-        gsap.to(panelRef, {
-          opacity: 0,
-          y: 12,
-          scale: 0.95,
-          duration: 0.16,
-          ease: 'power2.in',
-          onComplete: () => setIsOpen(false),
-        });
+        const anim = safeAnimate(
+          panelRef,
+          [
+            { opacity: 1, transform: 'translateY(0) scale(1)' },
+            { opacity: 0, transform: 'translateY(12px) scale(0.95)' },
+          ],
+          {
+            duration: 160,
+            easing: EASING.inQuad,
+            fill: 'forwards',
+          }
+        );
+        if (anim) {
+          anim.onfinish = () => setIsOpen(false);
+        } else {
+          setIsOpen(false);
+        }
       } else {
         setIsOpen(false);
       }
@@ -100,7 +115,7 @@ export function DebugMenu() {
   // Web Share Target シミュレート
   const simulateWebShareTarget = () => {
     const title = `Mizuna ${MIZUNA_VERSION} リリース記事`;
-    const text = 'Solid.js + GSAP でモダンに生まれ変わりました！';
+    const text = 'Solid.js でモダンに生まれ変わりました！';
     const url = 'https://mizuna.blossomsarchive.com/';
     safeLocalStorage.setItem(WST_TITLE_KEY, title);
     safeLocalStorage.setItem(WST_TEXT_KEY, text);

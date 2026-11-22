@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@solidjs/testing-library';
+import { flush } from 'solid-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppProvider, useApp } from '../src/store/appStore';
 import { PrivacyPolicyView } from '../src/components/PrivacyPolicyView';
@@ -26,10 +27,10 @@ describe('PrivacyPolicyView & Dialog Privacy Link', () => {
   });
 
   it('戻るボタンをクリックするとビューが切り替わること', () => {
-    let currentViewVal = '';
+    let currentAppView: any;
     function TestConsumer() {
       const { currentView } = useApp();
-      currentViewVal = currentView();
+      currentAppView = currentView;
       return <PrivacyPolicyView />;
     }
 
@@ -42,12 +43,13 @@ describe('PrivacyPolicyView & Dialog Privacy Link', () => {
     const backButtons = screen.getAllByRole('button', { name: /もどる/ });
     expect(backButtons.length).toBeGreaterThanOrEqual(1);
     fireEvent.click(backButtons[0]);
+    flush();
 
     // アカウントが0件の場合は add_account、ある場合は note
-    expect(['add_account', 'note']).toContain(currentViewVal);
+    expect(['add_account', 'note']).toContain(currentAppView());
   });
 
-  it('DialogHost で showPrivacyPolicy が有効な場合にプライバシーポリシーリンクが表示され遷移すること', () => {
+  it('DialogHost で showPrivacyPolicy が有効な場合にプライバシーポリシーリンクが表示され遷移すること', async () => {
     function TestHost() {
       const { openDialog, currentView } = useApp();
 
@@ -82,15 +84,15 @@ describe('PrivacyPolicyView & Dialog Privacy Link', () => {
     fireEvent.click(screen.getByTestId('trigger-dialog'));
 
     // プライバシーポリシーリンク（カード）が表示されていること
-    const privacyBtn = screen.getByRole('button', { name: /PRIVACY POLICY/ });
+    const privacyBtn = await screen.findByRole('button', { name: /PRIVACY POLICY/ });
     expect(privacyBtn).toBeInTheDocument();
 
     // クリックするとダイアログが閉じ、privacy ビューへ切り替わること
     fireEvent.click(privacyBtn);
-    expect(screen.getByTestId('current-view').textContent).toBe('privacy');
+    expect(await screen.findByText('privacy')).toBeInTheDocument();
   });
 
-  it('DialogHost で showPrivacyPolicy が指定されていない場合はプライバシーポリシーリンクが表示されないこと', () => {
+  it('DialogHost で showPrivacyPolicy が指定されていない場合はプライバシーポリシーリンクが表示されないこと', async () => {
     function TestHost() {
       const { openDialog } = useApp();
 
@@ -126,6 +128,6 @@ describe('PrivacyPolicyView & Dialog Privacy Link', () => {
 
     fireEvent.click(screen.getByTestId('trigger-dialog'));
     expect(screen.queryByRole('button', { name: /PRIVACY POLICY/ })).toBeNull();
-    expect(screen.getByText('RELEASE NOTE')).toBeInTheDocument();
+    expect(await screen.findByText('RELEASE NOTE')).toBeInTheDocument();
   });
 });

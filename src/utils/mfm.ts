@@ -21,7 +21,24 @@ const TIME_NUM_RE = /^-?[0-9.]+$/;
 const HEX_COLOR_RE = /^[0-9a-fA-F]{3,6}$/;
 const COLON_TRIM_RE = /^:|:$/g;
 const INLINE_EMOJI_RE = /:([a-zA-Z0-9_@.-]+):/g;
+const SAFE_HTTP_URL_RE = /^https?:\/\//i;
+const SAFE_EMOJI_DATA_URI_RE = /^data:image\/(?:png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=]+$/i;
 const EMPTY_EMOJI_MAP = new Map<string, string>();
+
+export function isSafeHttpUrl(url: unknown): boolean {
+  if (typeof url !== 'string') return false;
+  return SAFE_HTTP_URL_RE.test(url.trim());
+}
+
+function isSafeEmojiUrl(url: unknown): boolean {
+  if (typeof url !== 'string') return false;
+  const trimmed = url.trim();
+  return (
+    SAFE_HTTP_URL_RE.test(trimmed) ||
+    (trimmed.startsWith('/') && !trimmed.startsWith('//')) ||
+    SAFE_EMOJI_DATA_URI_RE.test(trimmed)
+  );
+}
 
 /**
  * HTML特殊文字をエスケープして安全にする
@@ -146,10 +163,10 @@ function resolveCustomEmojiImg(
     emojiUrl = `https://${options.serverAddress}/emoji/${encodeURIComponent(withoutHost)}.webp`;
   }
 
-  if (!emojiUrl) return null;
+  if (!emojiUrl || !isSafeEmojiUrl(emojiUrl)) return null;
   const escapedName = escapeHtml(rawName);
   const escapedUrl = escapeHtml(emojiUrl);
-  return `<img class="mfm-custom-emoji" src="${escapedUrl}" alt=":${escapedName}:" title=":${escapedName}:" loading="lazy" decoding="async" onerror="this.outerHTML=':${escapedName}:'" />`;
+  return `<img class="mfm-custom-emoji" src="${escapedUrl}" alt=":${escapedName}:" title=":${escapedName}:" loading="lazy" decoding="async" onerror="this.replaceWith(this.alt)" />`;
 }
 
 /**
@@ -372,13 +389,18 @@ function renderNode(
       return `<blockquote class="mfm-quote">${renderNodes(node.children, emojiMap, options)}</blockquote>`;
 
     case 'url': {
-      const url = escapeHtml(node.props.url);
+      const rawUrl = node.props.url;
+      const url = escapeHtml(rawUrl);
+      if (!isSafeHttpUrl(rawUrl)) return url;
       return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer" class="mfm-link">${url}</a>`;
     }
 
     case 'link': {
-      const url = escapeHtml(node.props.url);
-      return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer" class="mfm-link">${renderNodes(node.children, emojiMap, options)}</a>`;
+      const rawUrl = node.props.url;
+      const childrenHtml = renderNodes(node.children, emojiMap, options);
+      if (!isSafeHttpUrl(rawUrl)) return childrenHtml;
+      const url = escapeHtml(rawUrl);
+      return `<a href="${url}" target="_blank" rel="nofollow noopener noreferrer" class="mfm-link">${childrenHtml}</a>`;
     }
 
     case 'mention': {
@@ -445,7 +467,7 @@ export function renderMfm(
     return renderNodes(parsed, emojiMap, options);
   } catch (err) {
     console.error('MFM parse error:', err);
-    return renderInlineEmoji(escapeHtml(text).replace(/\n/g, '<br>'), emojis, options);
+    return renderInlineEmoji(text, emojis, options).replace(/\n/g, '<br>');
   }
 }
 

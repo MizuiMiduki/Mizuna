@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@solidjs/testing-library';
+import { flush } from 'solid-js';
 import {
   db,
   DEFAULT_USER_SETTINGS,
@@ -169,8 +170,10 @@ describe('Drafts feature', () => {
       result.setCwEnabled(true);
       result.setVisibility('followers');
       result.setEndMizuna(true);
+      flush();
 
       const success = await result.saveCurrentAsDraft();
+      flush();
       expect(success).toBe(true);
 
       expect(result.drafts().length).toBe(1);
@@ -246,11 +249,14 @@ describe('Drafts feature', () => {
       await new Promise((r) => setTimeout(r, 60));
 
       result.setNoteText('削除テスト');
+      flush();
       await result.saveCurrentAsDraft();
+      flush();
       expect(result.drafts().length).toBe(1);
 
       const draftId = result.drafts()[0].id!;
       await result.deleteDraftById(draftId);
+      flush();
 
       expect(result.drafts().length).toBe(0);
       expect(result.draftCount()).toBe(0);

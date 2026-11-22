@@ -1,6 +1,7 @@
 import { mizuna_options } from '../config/mizunaOptions';
 import { type AccountRecord } from '../db/database';
 import { compressAndConvertToWebP } from '../utils/image';
+import { safeLocalStorage, safeSessionStorage } from '../utils/storage';
 
 export interface MiAuthCheckResponse {
   ok: boolean;
@@ -103,9 +104,11 @@ const userIdCache = new Map<string, string>();
 
 // サーバーカスタム絵文字のインメモリキャッシュ (address -> Map<emojiName, emojiUrl>)
 const serverEmojiCache = new Map<string, Map<string, string>>();
+const EMOJI_CACHE_KEY_PREFIX = 'mizuna_emojis:';
 
 /**
  * インスタンスのカスタム絵文字一覧 (/api/emojis) を取得し、絵文字名からURLへのマップを返す
+ * メモリキャッシュおよびセッションキャッシュを活用して高速化
  */
 export async function fetchServerEmojis(rawAddress: string): Promise<Map<string, string>> {
   const address = rawAddress.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
@@ -116,6 +119,22 @@ export async function fetchServerEmojis(rawAddress: string): Promise<Map<string,
   const cached = serverEmojiCache.get(address);
   if (cached) {
     return cached;
+  }
+
+  // セッションストレージキャッシュを確認
+  const storageKey = `${EMOJI_CACHE_KEY_PREFIX}${address}`;
+  const storedJson = safeSessionStorage.getItem(storageKey);
+  if (storedJson) {
+    try {
+      const parsed: [string, string][] = JSON.parse(storedJson);
+      if (Array.isArray(parsed)) {
+        const restoredMap = new Map<string, string>(parsed);
+        serverEmojiCache.set(address, restoredMap);
+        return restoredMap;
+      }
+    } catch {
+      // JSON parse error, fallback to fetch
+    }
   }
 
   try {
@@ -161,6 +180,11 @@ export async function fetchServerEmojis(rawAddress: string): Promise<Map<string,
       }
 
       serverEmojiCache.set(address, map);
+      try {
+        safeSessionStorage.setItem(storageKey, JSON.stringify(Array.from(map.entries())));
+      } catch {
+        // 容量制限時はインメモリのみ保持
+      }
       return map;
     }
   } catch (err) {
@@ -450,13 +474,23 @@ export async function createMisskeyNote(
   return createdNote;
 }
 
+const USER_ID_STORAGE_PREFIX = 'mizuna_uid:';
+
 /**
- * 自身のMisskeyアカウントIDを取得（キャッシュ対応）
+ * 自身のMisskeyアカウントIDを取得（ストレージ＆メモリキャッシュ対応）
+ * キャッシュが存在する場合は /api/i の往復通信を省略して即座に返却
  */
 export async function fetchMyUserId(account: AccountRecord): Promise<string> {
   const cacheKey = `${account.address}:${account.token}`;
   const cached = userIdCache.get(cacheKey);
   if (cached) return cached;
+
+  const storageKey = `${USER_ID_STORAGE_PREFIX}${account.address}:${account.username}`;
+  const storedId = safeLocalStorage.getItem(storageKey);
+  if (storedId) {
+    userIdCache.set(cacheKey, storedId);
+    return storedId;
+  }
 
   const res = await fetch(`https://${account.address}/api/i`, {
     method: 'POST',
@@ -477,6 +511,7 @@ export async function fetchMyUserId(account: AccountRecord): Promise<string> {
   }
 
   userIdCache.set(cacheKey, data.id);
+  safeLocalStorage.setItem(storageKey, data.id);
   return data.id;
 }
 
@@ -818,9 +853,9 @@ function stripHtmlTags(input: string): string {
 }
 
 export async function fetchAnnouncements(page = 1, perPage = 10): Promise<AnnouncementsResult> {
-  // 1. まず CORS サポートがある WordPress REST API を優先試行
+  // 1. まず CORS サポートがある WordPress REST API を優先試行 (_fields で必要項目のみ取得し高速化)
   try {
-    const apiUrl = `https://blossomsarchive.com/wp-json/wp/v2/posts?categories=162&per_page=${perPage}&page=${page}`;
+    const apiUrl = `https://blossomsarchive.com/wp-json/wp/v2/posts?categories=162&per_page=${perPage}&page=${page}&_fields=id,date,link,title,excerpt`;
     const res = await fetch(apiUrl);
     if (res.ok) {
       const totalPages = parseInt(res.headers.get('x-wp-totalpages') || '1', 10);

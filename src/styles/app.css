@@ -312,6 +312,10 @@ html {
   scrollbar-gutter: stable;
 }
 
+body {
+  overscroll-behavior-y: none;
+}
+
 html,
 body {
   margin: 0;
@@ -321,6 +325,7 @@ body {
   font-family: "IBM Plex Sans JP", "Inter", system-ui, -apple-system, sans-serif;
   background-color: var(--surface);
   color: var(--on-surface);
+  overscroll-behavior-y: none;
 }
 
 /* アプリ全体のシェル（アンビエント背景グラデーション付き） */

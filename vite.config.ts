@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { defineConfig } from 'vite';
 import solidPlugin from 'vite-plugin-solid';
-import packageJson from './package.json';
+import packageJson from './package.json' with { type: 'json' };
 
 /**
  * Service Worker のバージョン自動同期プラグイン
@@ -35,7 +35,8 @@ function syncSwVersionPlugin() {
   return {
     name: 'mizuna-sync-sw-version',
     buildStart() {
-      const publicSwPath = path.resolve(__dirname, 'public/sw.js');
+      const rootDir = import.meta.dirname;
+      const publicSwPath = path.resolve(rootDir, 'public/sw.js');
       if (fs.existsSync(publicSwPath)) {
         const original = fs.readFileSync(publicSwPath, 'utf-8');
         const updated = updateSwContent(original);
@@ -43,13 +44,13 @@ function syncSwVersionPlugin() {
           fs.writeFileSync(publicSwPath, updated, 'utf-8');
         }
       }
-      const publicVersionPath = path.resolve(__dirname, 'public/version.json');
+      const publicVersionPath = path.resolve(rootDir, 'public/version.json');
       updateVersionJson(publicVersionPath);
     },
     configureServer(server: any) {
       server.middlewares.use((req: any, res: any, next: any) => {
         if (req.url === '/sw.js') {
-          const publicSwPath = path.resolve(__dirname, 'public/sw.js');
+          const publicSwPath = path.resolve(import.meta.dirname, 'public/sw.js');
           if (fs.existsSync(publicSwPath)) {
             const content = fs.readFileSync(publicSwPath, 'utf-8');
             res.setHeader('Content-Type', 'application/javascript');
@@ -66,7 +67,8 @@ function syncSwVersionPlugin() {
       });
     },
     closeBundle() {
-      const distSwPath = path.resolve(__dirname, 'dist/sw.js');
+      const rootDir = import.meta.dirname;
+      const distSwPath = path.resolve(rootDir, 'dist/sw.js');
       if (fs.existsSync(distSwPath)) {
         const original = fs.readFileSync(distSwPath, 'utf-8');
         const updated = updateSwContent(original);
@@ -74,7 +76,7 @@ function syncSwVersionPlugin() {
           fs.writeFileSync(distSwPath, updated, 'utf-8');
         }
       }
-      const distVersionPath = path.resolve(__dirname, 'dist/version.json');
+      const distVersionPath = path.resolve(rootDir, 'dist/version.json');
       updateVersionJson(distVersionPath);
     },
   };
@@ -84,8 +86,11 @@ export default defineConfig(({ mode }) => {
   const isCanary = mode === 'canary';
 
   return {
+    define: {
+      __APP_VERSION__: JSON.stringify(packageJson.version),
+    },
     plugins: [
-      solidPlugin({ hot: false }),
+      solidPlugin({ refresh: false }),
       syncSwVersionPlugin(),
       {
         name: 'mizuna-pwa-channel',
@@ -109,11 +114,7 @@ export default defineConfig(({ mode }) => {
     ],
     resolve: {
       conditions: mode === 'test' ? ['development', 'browser'] : [],
-      alias: {
-        'solid-js/web': path.resolve(__dirname, 'node_modules/solid-js/web'),
-        'solid-js': path.resolve(__dirname, 'node_modules/solid-js'),
-      },
-      dedupe: ['solid-js', 'solid-js/web'],
+      dedupe: ['solid-js', '@solidjs/web', '@solidjs/signals'],
     },
     server: {
       port: 3000,
@@ -126,10 +127,9 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('gsap')) return 'vendor-gsap';
               if (id.includes('dexie')) return 'vendor-db';
               if (id.includes('mfm-js')) return 'vendor-mfm';
-              if (id.includes('solid-js')) return 'vendor-solid';
+              if (id.includes('solid-js') || id.includes('@solidjs')) return 'vendor-solid';
             }
           },
         },
@@ -141,14 +141,14 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./tests/setupTests.ts'],
       deps: {
         optimizer: {
-          web: {
-            include: ['solid-js', 'solid-js/web', '@solidjs/testing-library'],
+          client: {
+            include: ['solid-js', '@solidjs/web', '@solidjs/testing-library'],
           },
         },
       },
       server: {
         deps: {
-          inline: [/solid-js/, /@solidjs\/testing-library/],
+          inline: [/solid-js/, /@solidjs/],
         },
       },
     },

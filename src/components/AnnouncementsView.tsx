@@ -1,12 +1,17 @@
-import gsap from 'gsap';
-import { createSignal, For, onMount, Show } from 'solid-js';
+import { createSignal, For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { FloatingBackButton } from './FloatingBackButton';
+import { animateViewEnter } from '../utils/animation';
+import { isSafeHttpUrl } from '../utils/mfm';
+import { safeSessionStorage } from '../utils/storage';
 import {
   fetchAnnouncements,
   formatAnnouncementDate,
   type AnnouncementItem,
+  type AnnouncementsResult,
 } from '../services/misskeyApi';
+
+const ANNOUNCEMENTS_CACHE_PREFIX = 'mizuna_announcements_cache_p';
 
 export function AnnouncementsView() {
   const { accounts, setCurrentView } = useApp();
@@ -19,37 +24,59 @@ export function AnnouncementsView() {
   let listRef: HTMLDivElement | undefined;
 
   const loadPage = async (page: number) => {
-    setIsLoading(true);
+    // 1. セッションキャッシュを即座に適用（Stale-While-Revalidate: SWR）
+    const cacheKey = `${ANNOUNCEMENTS_CACHE_PREFIX}${page}`;
+    const cachedJson = safeSessionStorage.getItem(cacheKey);
+    let hasValidCache = false;
+
+    if (cachedJson) {
+      try {
+        const cached: AnnouncementsResult = JSON.parse(cachedJson);
+        if (cached && Array.isArray(cached.items) && cached.items.length > 0) {
+          setAnnouncements(cached.items);
+          setCurrentPage(cached.currentPage || page);
+          setTotalPages(cached.totalPages || 1);
+          setIsLoading(false);
+          hasValidCache = true;
+        }
+      } catch {
+        // ignore parse error
+      }
+    }
+
+    if (!hasValidCache) {
+      setIsLoading(true);
+    }
     setIsError(false);
+
     try {
       const res = await fetchAnnouncements(page, 10);
       setAnnouncements(res.items);
       setCurrentPage(res.currentPage);
       setTotalPages(res.totalPages);
 
-      if (listRef) {
-        gsap.fromTo(
-          listRef,
-          { opacity: 0, y: 8 },
-          { opacity: 1, y: 0, duration: 0.22, ease: 'power2.out' }
-        );
+      // キャッシュを更新
+      try {
+        safeSessionStorage.setItem(cacheKey, JSON.stringify(res));
+      } catch {
+        // quota exceeded or ignore
+      }
+
+      if (!hasValidCache) {
+        animateViewEnter(listRef, 8);
       }
     } catch (err) {
       console.error('Failed to load announcements:', err);
-      setIsError(true);
+      if (!hasValidCache) {
+        setIsError(true);
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
-  onMount(() => {
-    if (containerRef) {
-      gsap.fromTo(
-        containerRef,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
+  onSettled(() => {
+    animateViewEnter(containerRef);
     loadPage(1);
   });
 
@@ -126,7 +153,7 @@ export function AnnouncementsView() {
                     <span>{formatAnnouncementDate(item.date)}</span>
                   </span>
                   <a
-                    href={item.link}
+                    href={isSafeHttpUrl(item.link) ? item.link : 'https://blossomsarchive.com/blog/category/mizuna/'}
                     target="_blank"
                     rel="noopener noreferrer"
                     class="mizuna-announcement-ext-btn"
@@ -139,7 +166,11 @@ export function AnnouncementsView() {
                 </div>
 
                 <h3 class="mizuna-announcement-title">
-                  <a href={item.link} target="_blank" rel="noopener noreferrer">
+                  <a
+                    href={isSafeHttpUrl(item.link) ? item.link : 'https://blossomsarchive.com/blog/category/mizuna/'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     {item.title}
                   </a>
                 </h3>

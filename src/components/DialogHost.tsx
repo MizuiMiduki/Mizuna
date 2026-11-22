@@ -1,35 +1,26 @@
-import gsap from 'gsap';
 import { createEffect, For, Show } from 'solid-js';
-import { Portal } from 'solid-js/web';
+import { Portal } from '@solidjs/web';
 import { useApp, type DialogButton } from '../store/appStore';
+import { animateModalEnter, animateModalLeave } from '../utils/animation';
+import { isSafeHttpUrl } from '../utils/mfm';
 
 export function DialogHost() {
   const { dialogConfig, closeDialog, setCurrentView } = useApp();
   let modalRef: HTMLDivElement | undefined;
   let backdropRef: HTMLDivElement | undefined;
 
-  createEffect(() => {
-    const cfg = dialogConfig();
-    if (cfg && modalRef && backdropRef) {
-      gsap.fromTo(
-        backdropRef,
-        { opacity: 0 },
-        { opacity: 1, duration: 0.22, ease: 'power2.out' }
-      );
-      gsap.fromTo(
-        modalRef,
-        { opacity: 0, scale: 0.9, y: 18 },
-        { opacity: 1, scale: 1, y: 0, duration: 0.3, ease: 'back.out(1.5)' }
-      );
+  createEffect(
+    () => dialogConfig(),
+    (cfg) => {
+      if (cfg && modalRef && backdropRef) {
+        animateModalEnter(modalRef, backdropRef);
+      }
     }
-  });
+  );
 
   const handleAction = async (btn: DialogButton) => {
     if (modalRef && backdropRef) {
-      await Promise.all([
-        gsap.to(modalRef, { opacity: 0, scale: 0.94, y: 10, duration: 0.16 }),
-        gsap.to(backdropRef, { opacity: 0, duration: 0.16 }),
-      ]);
+      await animateModalLeave(modalRef, backdropRef);
     }
     closeDialog();
     await btn.onClick?.();
@@ -49,10 +40,10 @@ export function DialogHost() {
   };
 
   return (
-    <Show when={dialogConfig()}>
+    <Show when={dialogConfig()} keyed>
       {(cfg) => {
-        const tone = () => cfg().tone ?? 'primary';
-        const iconName = () => cfg().icon ?? getDefaultIcon(cfg().tone);
+        const tone = cfg.tone ?? 'primary';
+        const iconName = cfg.icon ?? getDefaultIcon(cfg.tone);
 
         return (
           <Portal>
@@ -65,34 +56,34 @@ export function DialogHost() {
 
             <div
               ref={modalRef}
-              class={`mizuna-modal-card is-${tone()}`}
+              class={`mizuna-modal-card is-${tone}`}
               onClick={(e) => e.stopPropagation()}
             >
               {/* 上部アイコン＆バッジ */}
               <div class="mizuna-modal-top">
-                <div class={`mizuna-modal-icon is-${tone()}`}>
-                  <i>{iconName()}</i>
+                <div class={`mizuna-modal-icon is-${tone}`}>
+                  <i>{iconName}</i>
                 </div>
-                <Show when={cfg().badgeText}>
-                  <span class={`mizuna-modal-badge is-${tone()}`}>{cfg().badgeText}</span>
+                <Show when={cfg.badgeText}>
+                  <span class={`mizuna-modal-badge is-${tone}`}>{cfg.badgeText}</span>
                 </Show>
-                <h3 class="mizuna-modal-title">{cfg().title}</h3>
+                <h3 class="mizuna-modal-title">{cfg.title}</h3>
               </div>
 
               {/* 本文エリア */}
               <div class="mizuna-modal-body">
                 <Show
-                  when={cfg().contentHtml}
-                  fallback={<p class="mizuna-modal-text">{cfg().contentText}</p>}
+                  when={cfg.contentHtml}
+                  fallback={<p class="mizuna-modal-text">{cfg.contentText}</p>}
                 >
-                  <div class="mizuna-modal-html" innerHTML={cfg().contentHtml} />
+                  <div class="mizuna-modal-html" innerHTML={cfg.contentHtml} />
                 </Show>
 
                 {/* リンクカード（リリースノート等） */}
-                <Show when={cfg().linkCard}>
+                <Show when={cfg.linkCard} keyed>
                   {(link) => (
                     <a
-                      href={link().url}
+                      href={isSafeHttpUrl(link.url) ? link.url : '#'}
                       target="_blank"
                       rel="noopener noreferrer"
                       class="mizuna-modal-linkcard"
@@ -101,8 +92,8 @@ export function DialogHost() {
                         <i>article</i>
                       </div>
                       <div class="mizuna-modal-linkcard-meta">
-                        <span class="mizuna-modal-linkcard-label">{link().label}</span>
-                        <span class="mizuna-modal-linkcard-title">{link().title}</span>
+                        <span class="mizuna-modal-linkcard-label">{link.label}</span>
+                        <span class="mizuna-modal-linkcard-title">{link.title}</span>
                       </div>
                       <i class="mizuna-modal-linkcard-arrow">open_in_new</i>
                     </a>
@@ -110,7 +101,7 @@ export function DialogHost() {
                 </Show>
 
                 {/* プライバシーポリシーリンク */}
-                <Show when={cfg().showPrivacyPolicy}>
+                <Show when={cfg.showPrivacyPolicy}>
                   <button
                     type="button"
                     class="mizuna-modal-linkcard mizuna-modal-privacy-card"
@@ -134,10 +125,10 @@ export function DialogHost() {
               {/* アクションボタン行 */}
               <div
                 class={`mizuna-modal-actions ${
-                  cfg().buttons.length === 1 ? 'is-single' : 'is-split'
+                  cfg.buttons.length === 1 ? 'is-single' : 'is-split'
                 }`}
               >
-                <For each={cfg().buttons}>
+                <For each={cfg.buttons}>
                   {(btn) => (
                     <button
                       type="button"

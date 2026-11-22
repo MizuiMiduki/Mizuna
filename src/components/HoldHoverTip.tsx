@@ -1,5 +1,6 @@
-import gsap from 'gsap';
-import { createSignal, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { createSignal, onSettled, Show } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { EASING, safeAnimate } from '../utils/animation';
 
 export interface HoldHoverTipProps {
   /** メインのTIPSテキストまたはJSX */
@@ -83,11 +84,20 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
       setXOffset(shift);
 
       if (tipRef) {
-        gsap.killTweensOf(tipRef);
-        gsap.fromTo(
+        if (typeof tipRef.getAnimations === 'function') {
+          tipRef.getAnimations().forEach((a) => a.cancel());
+        }
+        safeAnimate(
           tipRef,
-          { opacity: 0, y: dir, scale: 0.92, xPercent: -50, x: shift },
-          { opacity: 1, y: 0, scale: 1, xPercent: -50, x: shift, duration: 0.2, ease: 'back.out(1.7)' }
+          [
+            { opacity: 0, transform: `translate(calc(-50% + ${shift}px), ${dir}px) scale(0.92)` },
+            { opacity: 1, transform: `translate(calc(-50% + ${shift}px), 0) scale(1)` },
+          ],
+          {
+            duration: 200,
+            easing: EASING.outBackStrong,
+            fill: 'forwards',
+          }
         );
       }
     });
@@ -97,22 +107,32 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
     clearTimers();
     if (!visible()) return;
     if (tipRef) {
-      gsap.killTweensOf(tipRef);
+      if (typeof tipRef.getAnimations === 'function') {
+        tipRef.getAnimations().forEach((a) => a.cancel());
+      }
       const dir = props.placement === 'bottom' ? -6 : 6;
       const currentShift = xOffset();
-      gsap.to(tipRef, {
-        opacity: 0,
-        y: dir,
-        scale: 0.94,
-        xPercent: -50,
-        x: currentShift,
-        duration: 0.14,
-        ease: 'power2.in',
-        onComplete: () => {
+      const anim = safeAnimate(
+        tipRef,
+        [
+          { opacity: 1, transform: `translate(calc(-50% + ${currentShift}px), 0) scale(1)` },
+          { opacity: 0, transform: `translate(calc(-50% + ${currentShift}px), ${dir}px) scale(0.94)` },
+        ],
+        {
+          duration: 140,
+          easing: EASING.inQuad,
+          fill: 'forwards',
+        }
+      );
+      if (anim) {
+        anim.onfinish = () => {
           setVisible(false);
           setXOffset(0);
-        },
-      });
+        };
+      } else {
+        setVisible(false);
+        setXOffset(0);
+      }
     } else {
       setVisible(false);
       setXOffset(0);
@@ -164,13 +184,12 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
     hideTip();
   };
 
-  onMount(() => {
+  onSettled(() => {
     anchorRef?.addEventListener('click', handleClickCapture, true);
-  });
-
-  onCleanup(() => {
-    anchorRef?.removeEventListener('click', handleClickCapture, true);
-    clearTimers();
+    return () => {
+      anchorRef?.removeEventListener('click', handleClickCapture, true);
+      clearTimers();
+    };
   });
 
   return (

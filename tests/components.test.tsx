@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@solidjs/testing-library';
+import { onSettled, flush } from 'solid-js';
+import PullToRefresh from 'pulltorefreshjs';
 import { AppProvider } from '../src/store/appStore';
 import { Header } from '../src/components/Header';
 import { FooterNav } from '../src/components/FooterNav';
@@ -66,7 +68,47 @@ describe('UI Components', () => {
       const settingsBtn = screen.getByRole('button', { name: /(設定|Settings)/ });
       expect(settingsBtn).toBeInTheDocument();
       fireEvent.click(settingsBtn);
+      flush();
       expect(currentAppView()).toBe('settings');
+    });
+
+    it('ヘッダーで PullToRefresh がヘッダー要素をターゲットに初期化され、多言語メッセージが設定されること', async () => {
+      const initSpy = vi.spyOn(PullToRefresh, 'init');
+
+      const { unmount } = render(() => (
+        <AppProvider>
+          <Header />
+        </AppProvider>
+      ));
+
+      await new Promise((r) => setTimeout(r, 60));
+
+      expect(initSpy).toHaveBeenCalled();
+      const lastCall = initSpy.mock.calls[initSpy.mock.calls.length - 1][0];
+      expect(lastCall).toBeDefined();
+      expect(lastCall?.instructionsPullToRefresh).toMatch(/(下に引っ張って再読み込み|Pull down to refresh)/);
+      expect(lastCall?.instructionsReleaseToRefresh).toMatch(/(指を離して再読み込み|Release to reload)/);
+      expect(lastCall?.instructionsRefreshing).toMatch(/(再読み込み中\.\.\.|Reloading\.\.\.)/);
+      expect(lastCall?.shouldPullToRefresh?.()).toBe(true);
+
+      const destroySpy = vi.spyOn(PullToRefresh, 'destroyAll');
+      unmount();
+      expect(destroySpy).toHaveBeenCalled();
+
+      initSpy.mockRestore();
+      destroySpy.mockRestore();
+    });
+
+    it('CSSでブラウザデフォルトの pull-to-refresh が無効化されていること', async () => {
+      // @ts-ignore
+      const fs = await import('node:fs');
+      // @ts-ignore
+      const path = await import('node:path');
+      // @ts-ignore
+      const cssPath = path.resolve(process.cwd(), 'src/styles/app.css');
+      const cssContent = fs.readFileSync(cssPath, 'utf-8');
+
+      expect(cssContent).toMatch(/overscroll-behavior-y:\s*none/);
     });
 
     it('フッターナビゲーションにアカウント管理ボタンと投稿履歴ボタンが存在すること', async () => {
@@ -138,26 +180,32 @@ describe('UI Components', () => {
 
       // 1回目のクリック: 投稿履歴画面へ遷移
       fireEvent.click(historyBtn);
+      flush();
       expect(currentAppView()).toBe('history');
 
       // 2回目のクリック: 投稿画面（note）に戻らず history のまま維持されること
       fireEvent.click(historyBtn);
+      flush();
       expect(currentAppView()).toBe('history');
 
       // アカウントボタンも同様
       const accountBtn = await screen.findByRole('button', { name: /(アカウント管理|Accounts)/ });
       fireEvent.click(accountBtn);
+      flush();
       expect(currentAppView()).toBe('accounts');
 
       // 2回目のクリックでも accounts のまま維持されること
       fireEvent.click(accountBtn);
+      flush();
       expect(currentAppView()).toBe('accounts');
     });
 
     it('メニューバーに定義されていない画面（about, shortcuts, announcements等）ではメニューバーが表示されないこと', async () => {
       function TestWrapper() {
         const { forceSetCurrentView } = useApp();
-        forceSetCurrentView('about');
+        onSettled(() => {
+          forceSetCurrentView('about');
+        });
         return <FooterNav />;
       }
 
@@ -166,6 +214,7 @@ describe('UI Components', () => {
           <TestWrapper />
         </AppProvider>
       ));
+      flush();
 
       expect(container.querySelector('.mizuna-floating-dock')).not.toBeInTheDocument();
     });
@@ -174,7 +223,9 @@ describe('UI Components', () => {
       let currentAppView: any;
       function TestConsumer() {
         const { currentView, forceSetCurrentView } = useApp();
-        forceSetCurrentView('note');
+        onSettled(() => {
+          forceSetCurrentView('note');
+        });
         currentAppView = currentView;
         return null;
       }
@@ -185,6 +236,7 @@ describe('UI Components', () => {
           <TestConsumer />
         </AppProvider>
       ));
+      flush();
 
       await screen.findByRole('button', { name: /(投稿履歴|History)/ });
       const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
@@ -197,6 +249,7 @@ describe('UI Components', () => {
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 160, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 160, clientY: 100 }));
+      flush();
 
       expect(currentAppView()).toBe('history');
 
@@ -204,6 +257,7 @@ describe('UI Components', () => {
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 140, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 140, clientY: 100 }));
+      flush();
 
       expect(currentAppView()).toBe('note');
 
@@ -211,6 +265,7 @@ describe('UI Components', () => {
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 140, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 140, clientY: 100 }));
+      flush();
 
       expect(currentAppView()).toBe('accounts');
     });
@@ -219,7 +274,9 @@ describe('UI Components', () => {
       let currentAppView: any;
       function TestConsumer() {
         const { currentView, forceSetCurrentView } = useApp();
-        forceSetCurrentView('accounts');
+        onSettled(() => {
+          forceSetCurrentView('accounts');
+        });
         currentAppView = currentView;
         return null;
       }
@@ -230,6 +287,7 @@ describe('UI Components', () => {
           <TestConsumer />
         </AppProvider>
       ));
+      flush();
 
       await screen.findByRole('button', { name: /(投稿履歴|History)/ });
       const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
@@ -242,6 +300,7 @@ describe('UI Components', () => {
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 50, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 190, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 190, clientY: 100 }));
+      flush();
 
       expect(currentAppView()).toBe('history');
 
@@ -249,6 +308,7 @@ describe('UI Components', () => {
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 200, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 60, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 60, clientY: 100 }));
+      flush();
 
       expect(currentAppView()).toBe('accounts');
     });
@@ -258,7 +318,9 @@ describe('UI Components', () => {
       let forceSetView: any;
       function TestConsumer() {
         const { currentView, forceSetCurrentView } = useApp();
-        forceSetCurrentView('note');
+        onSettled(() => {
+          forceSetCurrentView('note');
+        });
         currentAppView = currentView;
         forceSetView = forceSetCurrentView;
         return null;
@@ -270,6 +332,7 @@ describe('UI Components', () => {
           <TestConsumer />
         </AppProvider>
       ));
+      flush();
 
       await screen.findByRole('button', { name: /(投稿履歴|History)/ });
       const dock = container.querySelector('.mizuna-floating-dock') as HTMLElement;
@@ -281,17 +344,20 @@ describe('UI Components', () => {
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 300, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 300, clientY: 100 }));
+      flush();
 
       expect(currentAppView()).toBe('history');
 
       // 再度 note に戻す
       forceSetView('note');
+      flush();
       expect(currentAppView()).toBe('note');
 
       // note から左へ大きくスワイプ (dx: -200) -> 左端（accounts）でバウンドして accounts に着地
       fireEvent(dock, new PointerEvent('pointerdown', { bubbles: true, clientX: 250, clientY: 100, button: 0 }));
       fireEvent(dock, new PointerEvent('pointermove', { bubbles: true, clientX: 50, clientY: 100 }));
       fireEvent(dock, new PointerEvent('pointerup', { bubbles: true, clientX: 50, clientY: 100 }));
+      flush();
 
       expect(currentAppView()).toBe('accounts');
     });
@@ -476,12 +542,14 @@ describe('UI Components', () => {
 
       // CSS を入力
       fireEvent.input(textarea, { target: { value: 'body { background: #123; }' } });
+      flush();
       expect(textarea.value).toBe('body { background: #123; }');
 
       // 保存ボタンをクリック
       const saveBtn = screen.getByRole('button', { name: /(適用して保存|Save & Apply)/ });
       expect(saveBtn).toBeInTheDocument();
       fireEvent.click(saveBtn);
+      flush();
 
       // スタイル要素が DOM に反映されていること
       const styleEl = document.getElementById('mizuna-user-custom-css');
@@ -491,6 +559,7 @@ describe('UI Components', () => {
       // クリアボタンをクリック
       const clearBtn = screen.getByRole('button', { name: /(クリア|Clear)/ });
       fireEvent.click(clearBtn);
+      flush();
       expect(textarea.value).toBe('');
       expect(styleEl?.textContent).toBe('');
     });
@@ -513,12 +582,14 @@ describe('UI Components', () => {
 
       // 「透かし」で絞り込み
       fireEvent.input(searchInput, { target: { value: '透かし' } });
+      flush();
       expect(screen.getAllByText(/(画像透かし|Watermark)/).length).toBeGreaterThan(0);
       // カスタムCSSグループは非表示になる
       expect(screen.queryAllByText(/(カスタムCSS|Custom CSS)/).length).toBe(0);
 
       // 一致しないキーワードを入力
       fireEvent.input(searchInput, { target: { value: 'nonexistent_setting_query_12345' } });
+      flush();
       // 空状態メッセージと検索クリアボタンが表示される
       expect(await screen.findByText(/(一致する設定が見つかりません|No matching settings found)/)).toBeInTheDocument();
       const clearButtons = screen.getAllByRole('button', { name: /(検索をクリア|Clear search)/i });
@@ -526,6 +597,7 @@ describe('UI Components', () => {
 
       // クリアボタンをクリックしてリセット
       fireEvent.click(clearButtons[0]);
+      flush();
       expect(searchInput.value).toBe('');
       expect(screen.getByText(/(投稿のデフォルト設定|Default Post Settings)/)).toBeInTheDocument();
       expect(screen.getAllByText(/(カスタムCSS|Custom CSS)/).length).toBeGreaterThan(0);
@@ -588,6 +660,7 @@ describe('UI Components', () => {
       const reorderBtn = await screen.findByRole('button', { name: /(並べ替え|swap_vert)/ });
       expect(reorderBtn).toBeInTheDocument();
       fireEvent.click(reorderBtn);
+      flush();
 
       // ドラッグハンドルが表示されること
       const dragHandles = screen.getAllByTitle('ドラッグして並べ替え');
@@ -599,6 +672,7 @@ describe('UI Components', () => {
 
       // 完了ボタンをクリックして終了
       fireEvent.click(completeBtns[0]);
+      flush();
       expect(screen.queryByTitle('ドラッグして並べ替え')).not.toBeInTheDocument();
     });
 
@@ -790,6 +864,7 @@ describe('UI Components', () => {
 
       // リセットをクリック
       fireEvent.click(resetBtn);
+      flush();
 
       // リセット後は editState が消え、「加工をリセット」ボタンも消えること
       expect(screen.queryByRole('button', { name: /(加工をリセット|元画像に戻す)/ })).not.toBeInTheDocument();
@@ -897,6 +972,7 @@ describe('UI Components', () => {
       fireEvent.dragStart(itemA, { dataTransfer });
       fireEvent.dragOver(itemB, { dataTransfer });
       fireEvent.drop(itemB, { dataTransfer });
+      flush();
 
       // 順序が image_b, image_a に入れ替わっていること
       const currentImages = appHook!.attachedImages();
@@ -910,6 +986,7 @@ describe('UI Components', () => {
       await new Promise((r) => setTimeout(r, 200));
       const updatedThumbB = screen.getByAltText('image_b.png');
       fireEvent.click(updatedThumbB.closest('.mizuna-media-item')!);
+      flush();
       expect(document.getElementById('imageModal')).toBeInTheDocument();
       expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_b.png');
 
@@ -921,6 +998,7 @@ describe('UI Components', () => {
       const nextModalBtn = screen.getByTitle(/次の画像/i);
       expect(nextModalBtn).toBeInTheDocument();
       fireEvent.click(nextModalBtn);
+      flush();
 
       // プレビュー表示が image_a.png に切り替わること
       expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_a.png');
@@ -929,6 +1007,7 @@ describe('UI Components', () => {
       const prevModalBtn = screen.getByTitle(/前の画像/i);
       expect(prevModalBtn).toBeInTheDocument();
       fireEvent.click(prevModalBtn);
+      flush();
       expect(document.getElementById('modalImage')?.getAttribute('data-name')).toBe('image_b.png');
 
       // スワイプ操作によるダイレクト追従と画像切り替えの検証
@@ -941,6 +1020,7 @@ describe('UI Components', () => {
       fireEvent.touchMove(lightboxModal, {
         touches: [{ clientX: 120, clientY: 100 }],
       });
+      flush();
 
       // カルーセルトラックが指の移動にダイレクト追従して transform がリアルタイム更新されること
       const track = document.querySelector('.mizuna-lightbox-track') as HTMLElement;
@@ -990,6 +1070,7 @@ describe('UI Components', () => {
       // 揺らすボタンをクリック
       const shakeBtn = screen.getByRole('button', { name: /(揺らす|Shake)/i });
       fireEvent.click(shakeBtn);
+      flush();
 
       const textarea = screen.getByPlaceholderText(/(いまどうしてる？|What's happening)/i) as HTMLTextAreaElement;
       expect(textarea.value).toContain('$[shake text]');
@@ -997,6 +1078,7 @@ describe('UI Components', () => {
       // プレビュートグルボタンをクリック
       const previewBtn = screen.getByRole('button', { name: /(プレビュー|Preview)/i });
       fireEvent.click(previewBtn);
+      flush();
 
       // プレビューエリアが表示され、テキストエリアも同時に表示されていること（入力しながら確認可能）
       expect(document.querySelector('.mizuna-preview-area')).toBeInTheDocument();
@@ -1006,15 +1088,18 @@ describe('UI Components', () => {
 
       // プレビュー表示中に入力内容を変更すると、プレビューがリアルタイム更新されること
       fireEvent.input(textarea, { target: { value: '$[shake リアルタイム更新]' } });
+      flush();
       expect(document.querySelector('.mfm-shake')?.textContent).toBe('リアルタイム更新');
 
       // from Mizuna トグルを有効にした場合、本文プレビュー要素内に (from Mizuna) が含まれること
       const endMizunaBtn = document.getElementById('note_end_mizuna_checkbox') as HTMLButtonElement;
       fireEvent.click(endMizunaBtn);
+      flush();
       expect(document.querySelector('.mizuna-preview-content')?.textContent).toContain('(from Mizuna)');
 
       // トグルボタンを再度押すとプレビューエリアが非表示になること
       fireEvent.click(previewBtn);
+      flush();
       expect(document.querySelector('.mizuna-preview-area')).not.toBeInTheDocument();
       expect(document.querySelector('.mizuna-main-textarea')).toBeInTheDocument();
     });
@@ -1025,21 +1110,24 @@ describe('UI Components', () => {
           <NoteView />
         </AppProvider>
       ));
+      flush();
 
       const textarea = screen.getByPlaceholderText(/(いまどうしてる？|What's happening)/i) as HTMLTextAreaElement;
 
       // $[ と入力
       fireEvent.input(textarea, { target: { value: '$[' } });
+      flush();
 
       // 予測変換ポップアップが表示されていること
-      const popup = screen.getByRole('listbox', { name: 'MFM Suggestions' });
+      const popup = await screen.findByRole('listbox', { name: 'MFM Suggestions' });
       expect(popup).toBeInTheDocument();
 
       // shake 候補が存在すること
-      expect(screen.getByText('$[shake]')).toBeInTheDocument();
+      expect(await screen.findByText('$[shake]')).toBeInTheDocument();
 
       // Enterキーで一番目の候補（shake）を選択確定
       fireEvent.keyDown(textarea, { key: 'Enter' });
+      flush();
 
       // ポップアップが消え、テキストエリアに $[shake テキスト] が展開されること
       expect(document.querySelector('.mizuna-mfm-autocomplete-popup')).not.toBeInTheDocument();

@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import packageJson from '../package.json';
+import { MIZUNA_VERSION, mizuna_options } from '../src/config/mizunaOptions';
 import {
   comparisonVersion,
   hasDrivePermission,
@@ -87,6 +89,13 @@ describe('comparisonVersion', () => {
       expect(getMissingPermissions('4.0.0')).toEqual([]);
       expect(getMissingPermissions('4.0.1')).toEqual([]);
       expect(getMissingPermissions('4.1.0')).toEqual([]);
+    });
+  });
+
+  describe('MIZUNA_VERSION synchronization', () => {
+    it('package.json のバージョンと MIZUNA_VERSION が完全に一致していること', () => {
+      expect(MIZUNA_VERSION).toBe(packageJson.version);
+      expect(mizuna_options.mizuna_version).toBe(packageJson.version);
     });
   });
 });

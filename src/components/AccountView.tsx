@@ -1,9 +1,10 @@
-import gsap from 'gsap';
-import { createSignal, For, onMount, Show } from 'solid-js';
+import { createSignal, For, onSettled, Show } from 'solid-js';
 import { useApp } from '../store/appStore';
 import { getDisplayAvatarUrl } from '../utils/image';
+import { escapeHtml } from '../utils/mfm';
 import { hasDrivePermission, hasHistoryPermission, getMissingPermissions } from '../utils/version';
 import type { AccountRecord } from '../db/database';
+import { EASING, prefersReducedMotion, safeAnimate } from '../utils/animation';
 
 export function AccountView() {
   const {
@@ -25,15 +26,25 @@ export function AccountView() {
   const [dragOverIndex, setDragOverIndex] = createSignal<number | null>(null);
   let listRef: HTMLDivElement | undefined;
 
-  onMount(() => {
+  onSettled(() => {
     if (listRef) {
-      const cards = listRef.querySelectorAll('.mizuna-acc-card');
-      if (cards.length > 0) {
-        gsap.fromTo(
-          cards,
-          { opacity: 0, y: 14 },
-          { opacity: 1, y: 0, duration: 0.3, stagger: 0.045, ease: 'power3.out' }
-        );
+      const cards = listRef.querySelectorAll<HTMLElement>('.mizuna-acc-card');
+      if (cards.length > 0 && !prefersReducedMotion()) {
+        cards.forEach((card, i) => {
+          safeAnimate(
+            card,
+            [
+              { opacity: 0, transform: 'translateY(14px)' },
+              { opacity: 1, transform: 'translateY(0)' },
+            ],
+            {
+              duration: 300,
+              delay: i * 45,
+              easing: EASING.outCubic,
+              fill: 'backwards',
+            }
+          );
+        });
       }
     }
   });
@@ -60,6 +71,10 @@ export function AccountView() {
       'read:notifications': 'メンション一覧取得権限',
     };
 
+    const safeUser = escapeHtml(account.username);
+    const safeAddr = escapeHtml(account.address);
+    const safeVer = escapeHtml(account.add_mizuna_versinon);
+
     openDialog({
       title: 'アカウント権限の確認',
       icon: 'warning',
@@ -67,7 +82,7 @@ export function AccountView() {
       badgeText: 'PERMISSION NOTICE',
       contentHtml: `
         <div style="font-size: 0.95rem; line-height: 1.6; margin-bottom: 12px;">
-          <strong>@${account.username}@${account.address}</strong> は <strong>v${account.add_mizuna_versinon}</strong> で追加されたため、最新の機能に必要な権限が不足しています。
+          <strong>@${safeUser}@${safeAddr}</strong> は <strong>v${safeVer}</strong> で追加されたため、最新の機能に必要な権限が不足しています。
         </div>
         <div class="mizuna-modal-AlertBox" style="margin-bottom: 12px;">
           <div style="font-weight: 700; margin-bottom: 6px;">不足している権限:</div>
@@ -75,7 +90,7 @@ export function AccountView() {
             ${missingPerms
               .map(
                 (p) =>
-                  `<li><code>${p}</code> (${permDescriptions[p] || '追加機能権限'})</li>`
+                  `<li><code>${escapeHtml(p)}</code> (${permDescriptions[p] || '追加機能権限'})</li>`
               )
               .join('')}
           </ul>
@@ -278,7 +293,7 @@ export function AccountView() {
               <div
                 id="account_card"
                 data-id={account.id}
-                draggable={isReorderMode()}
+                draggable={isReorderMode() ? 'true' : 'false'}
                 onDragStart={(e) => handleDragStart(e, index())}
                 onDragOver={(e) => handleDragOver(e, index())}
                 onDragLeave={handleDragLeave}

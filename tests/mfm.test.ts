@@ -158,6 +158,17 @@ describe('MFM Parser (renderMfm)', () => {
     expect(rendered).toContain('<img class="mfm-custom-emoji"');
     expect(rendered).toContain('src="https://example.com/blobcat.webp"');
   });
+
+  it('javascript: や不正スキームを含むMFMリンク・絵文字URLが無害化されること (XSS防止)', () => {
+    const linkRendered = renderMfm('[悪意あるリンク](javascript:alert(1))');
+    expect(linkRendered).not.toContain('href="javascript:');
+    expect(linkRendered).toContain('悪意あるリンク');
+
+    const unsafeEmojis = [{ name: 'evil', url: 'javascript:alert(1)' }];
+    const emojiRendered = renderMfm(':evil:', unsafeEmojis);
+    expect(emojiRendered).not.toContain('src="javascript:');
+    expect(emojiRendered).toBe(':evil:');
+  });
 });
 
 describe('insertMfmTag helper', () => {

@@ -1,14 +1,13 @@
-import gsap from 'gsap';
 import {
   createEffect,
   createMemo,
   createSignal,
   For,
-  onCleanup,
-  onMount,
+  onSettled,
   Show,
+  untrack,
 } from 'solid-js';
-import { Portal } from 'solid-js/web';
+import { Portal } from '@solidjs/web';
 import {
   deleteMisskeyNote,
   fetchNoteChildren,
@@ -19,6 +18,7 @@ import {
   type MisskeyNote,
 } from '../services/misskeyApi';
 import { useApp } from '../store/appStore';
+import { animateViewEnter, EASING, safeAnimate } from '../utils/animation';
 import {
   type HistoryTab,
   type RepliesState,
@@ -68,8 +68,9 @@ export function HistoryView() {
 
   let containerRef: HTMLDivElement | undefined;
   let refreshIconRef: HTMLElement | undefined;
-  let spinTween: gsap.core.Tween | null = null;
-  let settleTween: gsap.core.Tween | null = null;
+  let spinAnim: Animation | null = null;
+  let settleAnim: Animation | null = null;
+  let startAngle = 0;
 
   const isHistorySupported = createMemo(() =>
     hasHistoryPermission(currentUser()?.add_mizuna_versinon)
@@ -146,6 +147,8 @@ export function HistoryView() {
   let lightboxTouchVelocityX = 0;
   let isLightboxHorizontalSwipe = false;
   let hasLightboxSwiped = false;
+  let isLightboxDraggingLocal = false;
+  let lightboxDragXLocal = 0;
   let lightboxSwipeResetTimer: ReturnType<typeof setTimeout> | undefined;
 
   const handleLightboxTouchStart = (e: TouchEvent) => {
@@ -157,12 +160,14 @@ export function HistoryView() {
     lightboxTouchLastTime = Date.now();
     lightboxTouchVelocityX = 0;
     isLightboxHorizontalSwipe = false;
+    isLightboxDraggingLocal = true;
+    lightboxDragXLocal = 0;
     setIsLightboxDragging(true);
     setLightboxDragX(0);
   };
 
   const handleLightboxTouchMove = (e: TouchEvent) => {
-    if (!isLightboxDragging() || e.touches.length !== 1) return;
+    if (!isLightboxDraggingLocal || e.touches.length !== 1) return;
     const touch = e.touches[0];
     const dx = touch.clientX - lightboxTouchStartX;
     const dy = touch.clientY - lightboxTouchStartY;
@@ -173,6 +178,8 @@ export function HistoryView() {
       if (absX >= absY) {
         isLightboxHorizontalSwipe = true;
       } else {
+        isLightboxDraggingLocal = false;
+        lightboxDragXLocal = 0;
         setIsLightboxDragging(false);
         setLightboxDragX(0);
         return;
@@ -208,15 +215,17 @@ export function HistoryView() {
         effectiveDx = dx * 0.3;
       }
 
+      lightboxDragXLocal = effectiveDx;
       setLightboxDragX(effectiveDx);
     }
   };
 
   const handleLightboxTouchEnd = () => {
-    if (!isLightboxDragging()) return;
+    if (!isLightboxDraggingLocal) return;
+    isLightboxDraggingLocal = false;
     setIsLightboxDragging(false);
 
-    const dx = lightboxDragX();
+    const dx = lightboxDragXLocal;
     const files = previewFiles();
     const idx = previewIndex();
 
@@ -248,39 +257,46 @@ export function HistoryView() {
     }, 120);
   };
 
-  createEffect(() => {
-    if (isPreviewOpen()) {
-      const cleanupBack = pushModalBackHandler(() => closePreview());
-      const handleLightboxKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'ArrowLeft') {
-          e.preventDefault();
-          handlePrevPreviewImage();
-        } else if (e.key === 'ArrowRight') {
-          e.preventDefault();
-          handleNextPreviewImage();
-        } else if (e.key === 'Escape') {
-          e.preventDefault();
-          closePreview();
-        }
-      };
-      window.addEventListener('keydown', handleLightboxKeyDown);
-      onCleanup(() => {
-        cleanupBack();
-        window.removeEventListener('keydown', handleLightboxKeyDown);
-      });
+  createEffect(
+    () => isPreviewOpen(),
+    (isOpen) => {
+      if (isOpen) {
+        const cleanupBack = pushModalBackHandler(() => closePreview());
+        const handleLightboxKeyDown = (e: KeyboardEvent) => {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            handlePrevPreviewImage();
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            handleNextPreviewImage();
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            closePreview();
+          }
+        };
+        window.addEventListener('keydown', handleLightboxKeyDown);
+        return () => {
+          cleanupBack();
+          window.removeEventListener('keydown', handleLightboxKeyDown);
+        };
+      }
     }
-  });
+  );
 
   // サーバーカスタム絵文字マップ (/api/emojis キャッシュ)
   const [serverEmojiMap, setServerEmojiMap] = createSignal<Map<string, string>>(new Map());
 
-  createEffect(async () => {
-    const address = currentUser()?.address;
-    if (address) {
-      const map = await fetchServerEmojis(address);
-      setServerEmojiMap(map);
+  createEffect(
+    () => currentUser()?.address,
+    (address) => {
+      if (address) {
+        void (async () => {
+          const map = await fetchServerEmojis(address);
+          setServerEmojiMap(map);
+        })();
+      }
     }
-  });
+  );
 
   const mfmOptions = createMemo<RenderMfmOptions>(() => ({
     serverAddress: currentUser()?.address,
@@ -288,16 +304,20 @@ export function HistoryView() {
   }));
 
   const getAccountKey = () => getAccountCacheKey(currentUser());
+  let loadNotesSeq = 0;
 
-  const syncCache = (updated?: {
-    notes?: MisskeyNote[];
-    hasMore?: boolean;
-    repliesMap?: Record<string, RepliesState>;
-    expandedCwMap?: Record<string, boolean>;
-  }) => {
-    const key = getAccountKey();
-    if (!key) return;
-    setHistoryCache(key, activeTab(), {
+  const syncCache = (
+    updated?: {
+      notes?: MisskeyNote[];
+      hasMore?: boolean;
+      repliesMap?: Record<string, RepliesState>;
+      expandedCwMap?: Record<string, boolean>;
+    },
+    targetKey = getAccountKey(),
+    targetTab = activeTab()
+  ) => {
+    if (!targetKey) return;
+    setHistoryCache(targetKey, targetTab, {
       notes: updated?.notes ?? notes(),
       hasMore: updated?.hasMore ?? hasMore(),
       repliesMap: updated?.repliesMap ?? repliesMap(),
@@ -317,9 +337,16 @@ export function HistoryView() {
     });
   };
 
-  const loadNotes = async (reset = false) => {
-    const user = currentUser();
-    if (!user || !isHistorySupported()) return;
+  const loadNotes = async (
+    reset = false,
+    targetUser = untrack(currentUser),
+    targetTab = untrack(activeTab)
+  ) => {
+    const user = targetUser;
+    if (!user || !untrack(isHistorySupported)) return;
+
+    const reqSeq = ++loadNotesSeq;
+    const reqAccountKey = getAccountCacheKey(user);
 
     if (reset) {
       setIsLoading(true);
@@ -330,15 +357,17 @@ export function HistoryView() {
     }
 
     try {
-      const currentNotes = reset ? [] : notes();
+      const currentNotes = reset ? [] : untrack(notes);
       const untilId = currentNotes.length > 0 ? currentNotes[currentNotes.length - 1].id : undefined;
 
       let fetched: MisskeyNote[] = [];
-      if (activeTab() === 'my_notes') {
+      if (targetTab === 'my_notes') {
         fetched = await fetchUserNotes(user, { limit: 10, untilId });
       } else {
         fetched = await fetchUserMentions(user, { limit: 10, untilId });
       }
+
+      if (reqSeq !== loadNotesSeq) return;
 
       const nextHasMore = fetched.length >= 10;
       if (!nextHasMore) {
@@ -355,108 +384,129 @@ export function HistoryView() {
       }
 
       // キャッシュを更新（ページ遷移しても再取得不要にする）
-      syncCache({
-        notes: newNotes,
-        hasMore: nextHasMore,
-      });
+      syncCache(
+        {
+          notes: newNotes,
+          hasMore: nextHasMore,
+        },
+        reqAccountKey,
+        targetTab
+      );
     } catch (err) {
+      if (reqSeq !== loadNotesSeq) return;
       console.error('Failed to fetch history:', err);
       setErrorMessage(t('history.error_load'));
       showToast(t('history.error_load'), 'error');
     } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
+      if (reqSeq === loadNotesSeq) {
+        setIsLoading(false);
+        setIsLoadingMore(false);
+      }
     }
   };
 
-  // タブ・アカウント切り替え、またはノート投稿によるキャッシュ更新時に確認。キャッシュがあれば復元し、なければ初回フェッチ
-  createEffect(() => {
-    historyCacheVersion();
-    const tab = activeTab();
-    const user = currentUser();
-    if (!user || !isHistorySupported()) return;
+  // タブ・アカウント切り替え、またはノート投稿によるキャッシュ更新時に確認。
+  // キャッシュ（セッションストレージ／メモリ）があれば 0ms で即座に復元描画し、不要な通信をスキップ
+  createEffect(
+    () => ({
+      _v: historyCacheVersion(),
+      tab: activeTab(),
+      user: currentUser(),
+      supported: isHistorySupported(),
+    }),
+    ({ tab, user, supported }) => {
+      if (!user || !supported) return;
 
-    const key = getAccountKey();
-    const cached = getHistoryCache(key, tab);
+      const key = getAccountCacheKey(user);
+      const cached = getHistoryCache(key, tab);
 
-    if (cached && cached.isLoaded) {
-      // キャッシュが存在する場合は復元し、API 通信はスキップ
-      setNotes(cached.notes);
-      setHasMore(cached.hasMore);
-      setRepliesMap(cached.repliesMap);
-      setExpandedCwMap(cached.expandedCwMap);
-      setErrorMessage(null);
-    } else {
-      // キャッシュがない場合のみ初回フェッチ
-      setNotes([]);
-      setRepliesMap({});
-      setExpandedCwMap({});
-      loadNotes(true);
+      if (cached && cached.isLoaded) {
+        // キャッシュが存在する場合は復元し、API 通信はスキップ（通信量削減 & 0ms即時表示）
+        setNotes(cached.notes);
+        setHasMore(cached.hasMore);
+        setRepliesMap(cached.repliesMap);
+        setExpandedCwMap(cached.expandedCwMap);
+        setErrorMessage(null);
+      } else {
+        // キャッシュがない場合のみ初回フェッチ
+        setNotes([]);
+        setRepliesMap({});
+        setExpandedCwMap({});
+        void loadNotes(true, user, tab);
+      }
     }
+  );
+
+  onSettled(() => {
+    animateViewEnter(containerRef);
+    return () => {
+      spinAnim?.cancel();
+      settleAnim?.cancel();
+    };
   });
 
-  onMount(() => {
-    if (containerRef) {
-      gsap.fromTo(
-        containerRef,
-        { opacity: 0, y: 12 },
-        { opacity: 1, y: 0, duration: 0.28, ease: 'power3.out', clearProps: 'transform' }
-      );
-    }
-
-    // リフレッシュアイコンの滑らかな回転・減速着地アニメーション
-    createEffect(() => {
-      const loading = isLoading();
+  // リフレッシュアイコンの滑らかな回転・減速着地アニメーション
+  createEffect(
+    () => isLoading(),
+    (loading) => {
       if (!refreshIconRef) return;
 
       if (loading) {
-        if (settleTween) {
-          settleTween.kill();
-          settleTween = null;
+        if (settleAnim) {
+          settleAnim.cancel();
+          settleAnim = null;
         }
-        if (spinTween) {
-          spinTween.kill();
+        if (spinAnim) {
+          spinAnim.cancel();
         }
-        const currentRot = Number(gsap.getProperty(refreshIconRef, 'rotation')) || 0;
-        const normalizedRot = ((currentRot % 360) + 360) % 360;
-        gsap.set(refreshIconRef, { rotation: normalizedRot });
-
-        spinTween = gsap.to(refreshIconRef, {
-          rotation: normalizedRot + 360,
-          duration: 0.85,
-          ease: 'none',
-          repeat: -1,
-        });
+        spinAnim = safeAnimate(
+          refreshIconRef,
+          [
+            { transform: `rotate(${startAngle}deg)` },
+            { transform: `rotate(${startAngle + 360}deg)` },
+          ],
+          {
+            duration: 850,
+            iterations: Infinity,
+            easing: 'linear',
+          }
+        );
       } else {
-        if (spinTween) {
-          spinTween.kill();
-          spinTween = null;
+        if (spinAnim) {
+          const progress = (Number(spinAnim.currentTime) || 0) % 850;
+          const currentRot = (startAngle + (progress / 850) * 360) % 360;
+          spinAnim.cancel();
+          spinAnim = null;
 
-          const currentRot = Number(gsap.getProperty(refreshIconRef, 'rotation')) || 0;
           const nextTarget = Math.ceil(currentRot / 360) * 360;
           // 残り角度が少なすぎる場合はもう1周回して自然に減速させる
           const finalTarget = (nextTarget - currentRot < 70) ? nextTarget + 360 : nextTarget;
 
-          settleTween = gsap.to(refreshIconRef, {
-            rotation: finalTarget,
-            duration: 0.45,
-            ease: 'power2.out',
-            onComplete: () => {
+          settleAnim = safeAnimate(
+            refreshIconRef,
+            [
+              { transform: `rotate(${currentRot}deg)` },
+              { transform: `rotate(${finalTarget}deg)` },
+            ],
+            {
+              duration: 450,
+              easing: EASING.outQuad,
+              fill: 'forwards',
+            }
+          );
+          if (settleAnim) {
+            settleAnim.onfinish = () => {
               if (refreshIconRef) {
-                gsap.set(refreshIconRef, { rotation: 0 });
+                refreshIconRef.style.transform = 'rotate(0deg)';
               }
-              settleTween = null;
-            },
-          });
+              startAngle = 0;
+              settleAnim = null;
+            };
+          }
         }
       }
-    });
-  });
-
-  onCleanup(() => {
-    spinTween?.kill();
-    settleTween?.kill();
-  });
+    }
+  );
 
   // リプライの開閉と取得 (Issue #130)
   const toggleReplies = async (noteId: string) => {
@@ -608,7 +658,7 @@ export function HistoryView() {
             disabled={isLoading() || !isHistorySupported()}
             title={t('history.refresh')}
             aria-label={t('history.refresh')}
-            aria-busy={isLoading()}
+            aria-busy={isLoading() ? 'true' : 'false'}
           >
             <i ref={refreshIconRef} aria-hidden="true">refresh</i>
           </button>
@@ -656,7 +706,7 @@ export function HistoryView() {
             role="tab"
             class={`mizuna-history-tab ${activeTab() === 'my_notes' ? 'is-active' : ''}`}
             onClick={() => setActiveTab('my_notes')}
-            aria-selected={activeTab() === 'my_notes'}
+            aria-selected={activeTab() === 'my_notes' ? 'true' : 'false'}
           >
             <i>person</i>
             <span>{t('history.tab_my_notes')}</span>
@@ -667,7 +717,7 @@ export function HistoryView() {
             role="tab"
             class={`mizuna-history-tab ${activeTab() === 'mentions' ? 'is-active' : ''}`}
             onClick={() => setActiveTab('mentions')}
-            aria-selected={activeTab() === 'mentions'}
+            aria-selected={activeTab() === 'mentions' ? 'true' : 'false'}
           >
             <i>alternate_email</i>
             <span>{t('history.tab_mentions')}</span>
@@ -727,11 +777,12 @@ export function HistoryView() {
                             <i class="mizuna-note-reply-icon">reply</i>
                             <Show
                               when={note.reply?.user}
+                              keyed
                               fallback={<span>{t('history.reply_badge')}</span>}
                             >
                               {(replyUser) => (
                                 <span class="mizuna-note-reply-banner-user">
-                                  {t('history.reply_to_user', { user: replyUser().username })}
+                                  {t('history.reply_to_user', { user: replyUser.username })}
                                 </span>
                               )}
                             </Show>
@@ -765,7 +816,8 @@ export function HistoryView() {
                             class="mizuna-note-avatar"
                             loading="lazy"
                             onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).src = '/icon.png';
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = '/icon.png';
                             }}
                           />
                           <div class="mizuna-note-author-info">
@@ -821,10 +873,10 @@ export function HistoryView() {
                         </Show>
 
                         {/* リノート元の抜粋（本文のみ・一部抜粋） */}
-                        <Show when={note.renote}>
+                        <Show when={note.renote} keyed>
                           {(rn) => {
                             const excerpt = () => {
-                              const src = rn().cw || rn().text || '';
+                              const src = rn.cw || rn.text || '';
                               return src.length > 80 ? `${src.slice(0, 80)}…` : src;
                             };
                             return (
@@ -835,8 +887,8 @@ export function HistoryView() {
                                   <span
                                     class="mizuna-note-renote-user"
                                     innerHTML={renderInlineEmoji(
-                                      rn().user.name || rn().user.username,
-                                      rn().user.emojis,
+                                      rn.user.name || rn.user.username,
+                                      rn.user.emojis,
                                       mfmOptions()
                                     )}
                                   />
@@ -844,7 +896,7 @@ export function HistoryView() {
                                 <Show when={excerpt()}>
                                   <div
                                     class="mizuna-note-renote-excerpt"
-                                    innerHTML={renderInlineEmoji(excerpt(), rn().emojis, mfmOptions())}
+                                    innerHTML={renderInlineEmoji(excerpt(), rn.emojis, mfmOptions())}
                                   />
                                 </Show>
                               </div>
@@ -957,6 +1009,10 @@ export function HistoryView() {
                                           alt=""
                                           class="mizuna-reply-avatar"
                                           loading="lazy"
+                                          onError={(e) => {
+                                            e.currentTarget.onerror = null;
+                                            e.currentTarget.src = '/icon.png';
+                                          }}
                                         />
                                         <div class="mizuna-reply-author">
                                           <span class="mizuna-reply-name" innerHTML={renderInlineEmoji(childName(), childNote.user.emojis, mfmOptions())} />
