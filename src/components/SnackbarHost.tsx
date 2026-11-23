@@ -13,7 +13,7 @@ function ToastCard(props: { item: ToastItem; onDismiss: (id: string) => void }) 
   const handleClose = () => {
     if (isClosing) return;
     isClosing = true;
-    progressAnim?.cancel();
+    progressAnim?.pause();
 
     if (cardRef) {
       const closeAnim = safeAnimate(
