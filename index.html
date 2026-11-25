@@ -29,6 +29,10 @@
         if (appleMeta) appleMeta.setAttribute('content', 'Mizuna Canary');
         var manifestLink = document.getElementById('mizuna-manifest-link');
         if (manifestLink) manifestLink.setAttribute('href', '/manifest-canary.json');
+        var robotsMeta = document.createElement('meta');
+        robotsMeta.name = 'robots';
+        robotsMeta.content = 'noindex, nofollow';
+        document.head.appendChild(robotsMeta);
       }
     })();
   </script>

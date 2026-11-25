@@ -242,7 +242,10 @@ jobs:
       # ========================================================
       # 3. IndexNow への通知 (本番リリース時のみ、ルートURLを送信)
       # ========================================================
-      - name: Submit Root URL to IndexNow
+      - name: Submit Root URL to IndexNow (Production Only)
         if: inputs.deploy_target == 'release'
+        env:
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
+          NODE_ENV: production
         run: |
           node scripts/indexnow.cjs
