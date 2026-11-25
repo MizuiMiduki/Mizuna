@@ -123,6 +123,22 @@ function MainContent() {
     }
   );
 
+  createEffect(
+    () => settings().language,
+    (lang) => {
+      if (typeof document !== 'undefined') {
+        const langMap: Record<string, string> = {
+          ja_jp: 'ja',
+          en_us: 'en',
+          ru_ru: 'ru',
+          ko_kr: 'ko',
+          zh_cn: 'zh-CN',
+        };
+        document.documentElement.lang = (lang && langMap[lang]) || 'ja';
+      }
+    }
+  );
+
   const appShellClasses = () => {
     const mode = settings().ui_mode;
     const classes = ['mizuna-app-shell'];

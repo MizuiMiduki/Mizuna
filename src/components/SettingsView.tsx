@@ -136,7 +136,22 @@ export function SettingsView() {
   const showGroupAppearance = () => showUiMode() || showColorMode() || showPickTheme() || showHideAvatar();
 
   // 5. 言語設定
-  const showLanguage = () => matches(t('settings.group_language'), t('settings.language'), t('settings.language_desc'), '言語', 'language', '日本語', 'English');
+  const showLanguage = () =>
+    matches(
+      t('settings.group_language'),
+      t('settings.language'),
+      t('settings.language_desc'),
+      '言語',
+      'language',
+      '日本語',
+      'English',
+      'Русский',
+      '한국어',
+      '简体中文',
+      'russian',
+      'korean',
+      'chinese'
+    );
   const showGroupLanguage = () => showLanguage();
 
   // 6. アカウント同期・バックアップ設定
