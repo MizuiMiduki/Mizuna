@@ -4,10 +4,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-  <title>Mizuna -ノート専用Misskeyクライアント</title>
+  <title>Mizuna - ノート専用Misskeyクライアント | Lightweight Misskey Client</title>
   <meta name="apple-mobile-web-app-title" content="Mizuna" />
-  <meta content="Mizunaは機能をノート送信のみにすることで通信量削減に重点を置いたMisskeyクライアントです" name="description" />
-  <meta property="og:title" content="Mizuna - ノート専用Misskeyクライアント" />
+  <meta content="Mizunaは機能をノート送信のみにすることで通信量削減に重点を置いた軽量Misskeyクライアントです。A lightweight Misskey client focusing on note posting to minimize network usage." name="description" />
+  <meta property="og:title" content="Mizuna - ノート専用Misskeyクライアント | Lightweight Misskey Client" />
   <meta property="og:description" content="Mizunaは機能をノート送信のみにすることで通信量削減に重点を置いた軽量Misskeyクライアントです。A lightweight Misskey client focusing on note posting to minimize network usage." />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://mizuna.blossomsarchive.com/" />
@@ -19,12 +19,27 @@
   <meta property="og:locale:alternate" content="ko_KR" />
   <meta property="og:locale:alternate" content="zh_CN" />
   <meta name="twitter:card" content="summary" />
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Mizuna",
+      "alternateName": ["Mizuna Misskey Client"],
+      "applicationCategory": "SocialNetworkingApplication",
+      "operatingSystem": "All",
+      "browserRequirements": "Requires JavaScript. Requires HTML5.",
+      "inLanguage": ["ja", "en", "ru", "ko", "zh-CN"],
+      "description": "Mizunaは機能をノート送信のみにすることで通信量削減に重点を置いた軽量Misskeyクライアントです。A lightweight Misskey client focusing on note posting to minimize network usage.",
+      "url": "https://mizuna.blossomsarchive.com/",
+      "image": "https://mizuna.blossomsarchive.com/icon.png"
+    }
+  </script>
   <link id="mizuna-manifest-link" href="/manifest.json" rel="manifest" />
   <script>
     (function () {
       var h = location.hostname.toLowerCase();
       if (h.indexOf('canary') !== -1 || h.indexOf('test') !== -1) {
-        document.title = 'Mizuna Canary -ノート専用Misskeyクライアント';
+        document.title = 'Mizuna Canary - ノート専用Misskeyクライアント | Lightweight Misskey Client';
         var appleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]');
         if (appleMeta) appleMeta.setAttribute('content', 'Mizuna Canary');
         var manifestLink = document.getElementById('mizuna-manifest-link');
