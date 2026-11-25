@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "pnpm type-check && pnpm test && pnpm build",
+    "indexnow": "node scripts/indexnow.cjs",
     "preview": "vite preview"
   },
   "dependencies": {
