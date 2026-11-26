@@ -1,7 +1,7 @@
 {
   "name": "mizuna",
   "private": true,
-  "version": "4.1.0",
+  "version": "4.2.0",
   "type": "module",
   "packageManager": "pnpm@11.7.0",
   "scripts": {
@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "pnpm type-check && pnpm test && pnpm build",
+    "indexnow": "node scripts/indexnow.cjs",
     "preview": "vite preview"
   },
   "dependencies": {

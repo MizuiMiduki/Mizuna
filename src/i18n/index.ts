@@ -1,10 +1,16 @@
 import { ja } from './locales/ja';
 import { en } from './locales/en';
+import { ru } from './locales/ru';
+import { ko } from './locales/ko';
+import { zh } from './locales/zh';
 import type { I18nKey, LanguageCode, LanguageOption, LocaleDictionary } from './types';
 
 export * from './types';
 export { ja } from './locales/ja';
 export { en } from './locales/en';
+export { ru } from './locales/ru';
+export { ko } from './locales/ko';
+export { zh } from './locales/zh';
 
 // 対応外の言語の場合は英語で表示する
 export const DEFAULT_FALLBACK_LANGUAGE: LanguageCode = 'en_us';
@@ -13,16 +19,22 @@ export const DEFAULT_LANGUAGE: LanguageCode = DEFAULT_FALLBACK_LANGUAGE;
 export const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: 'ja_jp', label: '日本語' },
   { code: 'en_us', label: 'English' },
+  { code: 'ru_ru', label: 'Русский' },
+  { code: 'ko_kr', label: '한국어' },
+  { code: 'zh_cn', label: '简体中文' },
 ];
 
 const dictionaries: Record<LanguageCode, LocaleDictionary> = {
   ja_jp: ja,
   en_us: en,
+  ru_ru: ru,
+  ko_kr: ko,
+  zh_cn: zh,
 };
 
 /**
  * ブラウザまたはOSの言語設定を判定します。
- * 日本語環境の場合は 'ja_jp' を、それ以外（対応外の言語含む）は英語 'en_us' を返します。
+ * 日本語、ロシア語、韓国語、中国語、英語を判定し、それ以外の対応外言語は英語 'en_us' を返します。
  */
 export function detectBrowserLanguage(): LanguageCode {
   if (typeof navigator === 'undefined') {
@@ -35,6 +47,18 @@ export function detectBrowserLanguage(): LanguageCode {
     const lower = lang.toLowerCase();
     if (lower.startsWith('ja')) {
       return 'ja_jp';
+    }
+    if (lower.startsWith('ru')) {
+      return 'ru_ru';
+    }
+    if (lower.startsWith('ko')) {
+      return 'ko_kr';
+    }
+    if (lower.startsWith('zh')) {
+      return 'zh_cn';
+    }
+    if (lower.startsWith('en')) {
+      return 'en_us';
     }
   }
 
@@ -56,7 +80,7 @@ export function translate(
   lang?: string
 ): string {
   const targetCode: LanguageCode =
-    lang === 'ja_jp' || lang === 'en_us' ? lang : DEFAULT_FALLBACK_LANGUAGE;
+    lang && lang in dictionaries ? (lang as LanguageCode) : DEFAULT_FALLBACK_LANGUAGE;
   const dict = dictionaries[targetCode] || en;
   const segments = key.split('.');
 

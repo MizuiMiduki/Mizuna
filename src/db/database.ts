@@ -111,6 +111,8 @@ export interface SettingRecord {
   signature_text?: string;
   /** 画像署名の自動付与位置 ('none' | 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left') */
   signature_position?: AutoWatermarkPosition;
+  /** カスタム絵文字の入力機能を有効にするか (通信量節約のためデフォルト無効) */
+  is_enable_custom_emoji?: boolean;
 }
 
 export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
@@ -135,6 +137,7 @@ export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
   watermark_opacity: 22,
   signature_text: '',
   signature_position: 'none',
+  is_enable_custom_emoji: false,
 };
 
 export class MizunaDatabase extends Dexie {
@@ -205,6 +208,7 @@ export async function loadOrCreateSettings(): Promise<SettingRecord> {
         : (DEFAULT_USER_SETTINGS.watermark_opacity ?? 22),
       signature_text: typeof settingData.signature_text === 'string' ? settingData.signature_text : (typeof settingData.watermark_text === 'string' ? settingData.watermark_text : DEFAULT_USER_SETTINGS.signature_text),
       signature_position: (settingData.signature_position as AutoWatermarkPosition) ?? (settingData.watermark_position as AutoWatermarkPosition) ?? DEFAULT_USER_SETTINGS.signature_position,
+      is_enable_custom_emoji: typeof settingData.is_enable_custom_emoji === 'boolean' ? settingData.is_enable_custom_emoji : DEFAULT_USER_SETTINGS.is_enable_custom_emoji,
     };
   }
 

@@ -238,3 +238,14 @@ jobs:
           password: ${{ steps.target_release.outputs.ftp_pass }}
           local-dir: "./dist/"
           server-dir: "${{ secrets.FTP_TARGET_DIR }}"
+
+      # ========================================================
+      # 3. IndexNow への通知 (本番リリース時のみ、ルートURLを送信)
+      # ========================================================
+      - name: Submit Root URL to IndexNow (Production Only)
+        if: inputs.deploy_target == 'release'
+        env:
+          DEPLOY_TARGET: ${{ inputs.deploy_target }}
+          NODE_ENV: production
+        run: |
+          node scripts/indexnow.cjs

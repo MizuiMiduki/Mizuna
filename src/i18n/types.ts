@@ -1,6 +1,6 @@
 import type { ja } from './locales/ja';
 
-export type LanguageCode = 'ja_jp' | 'en_us';
+export type LanguageCode = 'ja_jp' | 'en_us' | 'ru_ru' | 'ko_kr' | 'zh_cn';
 
 type Join<K, P> = K extends string | number
   ? P extends string | number

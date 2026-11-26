@@ -40,6 +40,7 @@ import { HoldHoverTip } from './HoldHoverTip';
 import { ImageEditorModal } from './ImageEditorModal';
 import { DraftsModal } from './DraftsModal';
 import { DriveImagePickerModal } from './DriveImagePickerModal';
+import { CustomEmojiPickerModal } from './CustomEmojiPickerModal';
 
 export function NoteView() {
   const {
@@ -47,6 +48,7 @@ export function NoteView() {
     currentUser,
     settings,
     switchAccount,
+    setCurrentView,
     noteText,
     setNoteText,
     cwText,
@@ -71,12 +73,15 @@ export function NoteView() {
     replyTargetNote,
     cancelReply,
     showToast,
+    openDialog,
+    closeDialog,
     pushModalBackHandler,
     t,
   } = useApp();
 
   const [isDraftsModalOpen, setIsDraftsModalOpen] = createSignal(false);
   const [isDrivePickerOpen, setIsDrivePickerOpen] = createSignal(false);
+  const [isCustomEmojiPickerOpen, setIsCustomEmojiPickerOpen] = createSignal(false);
   const [isInputFocused, setIsInputFocused] = createSignal(false);
   const [isSending, setIsSending] = createSignal(false);
   const [sendingStatus, setSendingStatus] = createSignal('');
@@ -519,6 +524,71 @@ export function NoteView() {
       targetRef.focus();
       targetRef.setSelectionRange(newCursorStart, newCursorEnd);
     }, 0);
+  };
+
+  const handleSelectCustomEmoji = (emojiName: string) => {
+    const isCw = lastFocusedField() === 'cw' && cwEnabled();
+    const targetRef = isCw ? cwInputRef : noteInputRef;
+    const currentText = isCw ? cwText() : noteText();
+    const setText = isCw ? setCwText : setNoteText;
+
+    const emojiCode = `:${emojiName}: `;
+    if (!targetRef) {
+      setText(currentText + emojiCode);
+      return;
+    }
+
+    const start = targetRef.selectionStart ?? currentText.length;
+    const end = targetRef.selectionEnd ?? currentText.length;
+    const before = currentText.substring(0, start);
+    const after = currentText.substring(end);
+    const nextText = `${before}${emojiCode}${after}`;
+    const nextCursor = start + emojiCode.length;
+
+    setText(nextText);
+    setTimeout(() => {
+      targetRef.focus();
+      targetRef.setSelectionRange(nextCursor, nextCursor);
+    }, 0);
+  };
+
+  const handleOpenCustomEmoji = () => {
+    if (!settings().is_enable_custom_emoji) {
+      openDialog({
+        title: t('note.custom_emoji_dialog_title'),
+        icon: 'add_reaction',
+        tone: 'info',
+        contentText: t('note.custom_emoji_dialog_desc'),
+        buttons: [
+          {
+            label: t('note.custom_emoji_dialog_go_settings'),
+            variant: 'fill',
+            onClick: () => {
+              closeDialog();
+              setCurrentView('settings');
+              setTimeout(() => {
+                document
+                  .getElementById('setting_enable_custom_emoji')
+                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }, 150);
+            },
+          },
+          {
+            label: '閉じる',
+            variant: 'border',
+            onClick: () => closeDialog(),
+          },
+        ],
+      });
+      return;
+    }
+
+    if (!currentUser()) {
+      showToast(t('note.custom_emoji_no_account'), 'warning');
+      return;
+    }
+
+    setIsCustomEmojiPickerOpen(true);
   };
 
   const updateAutocompletePosition = (targetEl: HTMLTextAreaElement, triggerPos: number) => {
@@ -1177,6 +1247,20 @@ export function NoteView() {
           <div class="mizuna-mfm-toolbar" role="toolbar" aria-label="MFM Insertion Toolbar">
             <button
               type="button"
+              id="mfm_custom_emoji_button"
+              class={`mizuna-mfm-chip ${isCustomEmojiPickerOpen() ? 'is-active' : ''}`}
+              onClick={handleOpenCustomEmoji}
+              title={
+                settings().is_enable_custom_emoji
+                  ? t('note.custom_emoji_tip')
+                  : t('note.custom_emoji_disabled_tip')
+              }
+            >
+              <i>add_reaction</i>
+              <span>{t('note.custom_emoji_label')}</span>
+            </button>
+            <button
+              type="button"
               class="mizuna-mfm-chip"
               onClick={() => handleInsertMfm('$[shake ', ']', 'text')}
               title="揺らす ($[shake ...])"
@@ -1576,6 +1660,32 @@ export function NoteView() {
               </button>
             </HoldHoverTip>
 
+            {/* カスタム絵文字選択ボタン */}
+            <HoldHoverTip
+              label={
+                settings().is_enable_custom_emoji
+                  ? t('note.custom_emoji_tip')
+                  : t('note.custom_emoji_disabled_tip')
+              }
+              sublabel={
+                settings().is_enable_custom_emoji
+                  ? t('note.custom_emoji_tip_sub')
+                  : t('note.custom_emoji_disabled_tip_sub')
+              }
+              placement="top"
+            >
+              <button
+                type="button"
+                id="select_custom_emoji_button"
+                class={`mizuna-tool-chip ${isCustomEmojiPickerOpen() ? 'is-active' : ''}`}
+                onClick={handleOpenCustomEmoji}
+                aria-label={t('note.custom_emoji_label')}
+              >
+                <i>add_reaction</i>
+                <span>{t('note.custom_emoji_label')}</span>
+              </button>
+            </HoldHoverTip>
+
             {/* フォームクリアボタン */}
             <HoldHoverTip label={t('note.clear_form_tip')} sublabel={t('note.clear_form_tip_sub')} placement="top">
               <button
@@ -1957,6 +2067,13 @@ export function NoteView() {
         isOpen={isDrivePickerOpen()}
         onClose={() => setIsDrivePickerOpen(false)}
         onOpenLocalFilePicker={() => fileInputRef?.click()}
+      />
+
+      {/* カスタム絵文字ピッカーモーダル */}
+      <CustomEmojiPickerModal
+        isOpen={isCustomEmojiPickerOpen()}
+        onClose={() => setIsCustomEmojiPickerOpen(false)}
+        onSelectEmoji={handleSelectCustomEmoji}
       />
     </div>
   );

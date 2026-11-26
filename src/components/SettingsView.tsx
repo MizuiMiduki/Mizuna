@@ -113,7 +113,8 @@ export function SettingsView() {
   // 1. 投稿設定
   const showPostVisibility = () => matches(t('settings.group_post'), t('settings.default_visibility'), t('settings.visibility_public'), t('settings.visibility_home'), t('settings.visibility_followers'), '公開範囲', 'visibility');
   const showAppendMizuna = () => matches(t('settings.group_post'), t('settings.append_mizuna'), 'from mizuna', 'ミズナ');
-  const showGroupPost = () => showPostVisibility() || showAppendMizuna();
+  const showEnableCustomEmoji = () => matches(t('settings.group_post'), t('settings.enable_custom_emoji'), t('settings.enable_custom_emoji_desc'), 'カスタム絵文字', '絵文字', 'emoji', 'custom emoji', '通信量');
+  const showGroupPost = () => showPostVisibility() || showAppendMizuna() || showEnableCustomEmoji();
 
   // 2. 画像署名設定
   const showSignaturePos = () => matches(t('settings.group_signature'), t('settings.signature_auto_position'), t('settings.signature_auto_position_desc'), t('settings.signature_pos_none'), t('settings.signature_pos_bottom_right'), t('settings.signature_pos_bottom_left'), t('settings.signature_pos_top_right'), t('settings.signature_pos_top_left'), '署名', 'クレジット', 'signature', 'credit');
@@ -135,7 +136,22 @@ export function SettingsView() {
   const showGroupAppearance = () => showUiMode() || showColorMode() || showPickTheme() || showHideAvatar();
 
   // 5. 言語設定
-  const showLanguage = () => matches(t('settings.group_language'), t('settings.language'), t('settings.language_desc'), '言語', 'language', '日本語', 'English');
+  const showLanguage = () =>
+    matches(
+      t('settings.group_language'),
+      t('settings.language'),
+      t('settings.language_desc'),
+      '言語',
+      'language',
+      '日本語',
+      'English',
+      'Русский',
+      '한국어',
+      '简体中文',
+      'russian',
+      'korean',
+      'chinese'
+    );
   const showGroupLanguage = () => showLanguage();
 
   // 6. アカウント同期・バックアップ設定
@@ -337,6 +353,38 @@ export function SettingsView() {
                           settings().is_note_end_mizuna ? 'is-active' : ''
                         }`}
                         onClick={() => updateSettings({ is_note_end_mizuna: true })}
+                      >
+                        <span>ON</span>
+                      </button>
+                    </div>
+                  </div>
+                </Show>
+
+                {/* カスタム絵文字の入力 */}
+                <Show when={showEnableCustomEmoji()}>
+                  <div class="mizuna-setting-row" id="setting_enable_custom_emoji">
+                    <div class="mizuna-setting-info">
+                      <div class="mizuna-setting-title">{t('settings.enable_custom_emoji')}</div>
+                      <div class="mizuna-setting-desc">{t('settings.enable_custom_emoji_desc')}</div>
+                    </div>
+                    <div class="mizuna-seg-pills">
+                      <button
+                        type="button"
+                        id="is_enable_custom_emoji_false"
+                        class={`mizuna-seg-pill ${
+                          !settings().is_enable_custom_emoji ? 'is-active' : ''
+                        }`}
+                        onClick={() => updateSettings({ is_enable_custom_emoji: false })}
+                      >
+                        <span>OFF</span>
+                      </button>
+                      <button
+                        type="button"
+                        id="is_enable_custom_emoji_true"
+                        class={`mizuna-seg-pill ${
+                          settings().is_enable_custom_emoji ? 'is-active' : ''
+                        }`}
+                        onClick={() => updateSettings({ is_enable_custom_emoji: true })}
                       >
                         <span>ON</span>
                       </button>

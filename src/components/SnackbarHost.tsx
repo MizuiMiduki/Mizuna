@@ -2,7 +2,7 @@ import { For, onSettled } from 'solid-js';
 import { useApp, type ToastItem } from '../store/appStore';
 import { EASING, safeAnimate } from '../utils/animation';
 
-const TOAST_DURATION_SEC = 1.75;
+const TOAST_DURATION_SEC = 1;
 
 function ToastCard(props: { item: ToastItem; onDismiss: (id: string) => void }) {
   let cardRef: HTMLDivElement | undefined;
@@ -13,7 +13,7 @@ function ToastCard(props: { item: ToastItem; onDismiss: (id: string) => void }) 
   const handleClose = () => {
     if (isClosing) return;
     isClosing = true;
-    progressAnim?.cancel();
+    progressAnim?.pause();
 
     if (cardRef) {
       const closeAnim = safeAnimate(
