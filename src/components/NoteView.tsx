@@ -1378,12 +1378,12 @@ export function NoteView() {
               <button
                 type="button"
                 id="local_only_toggle"
-                class={`mizuna-composer-federation-btn ${!localOnly() ? 'is-active' : ''}`}
+                class={`mizuna-composer-federation-btn ${!localOnly() ? 'is-active' : 'is-local-only'}`}
                 onClick={() => setLocalOnly((prev) => !prev)}
                 aria-pressed={!localOnly() ? 'true' : 'false'}
+                aria-label={localOnly() ? t('note.federation_off_tip') : t('note.federation_on_tip')}
               >
-                <i>{localOnly() ? 'public_off' : 'public'}</i>
-                <span>{t('note.federation_label')}</span>
+                <i>rocket_launch</i>
               </button>
             </HoldHoverTip>
 
