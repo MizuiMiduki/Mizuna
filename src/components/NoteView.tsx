@@ -1923,22 +1923,6 @@ export function NoteView() {
 
           {/* 右側：文字数リングゲージ ＆ 下書きボタン ＆ 送信ボタン */}
           <div class="mizuna-submit-group">
-            <HoldHoverTip label={t('draft.title')} sublabel={t('draft.tip_save_and_restore')} placement="top">
-              <button
-                type="button"
-                id="draft_button"
-                class={`mizuna-composer-draft-btn ${draftCount() > 0 ? 'has-badge' : ''}`}
-                onClick={() => setIsDraftsModalOpen(true)}
-                aria-label={t('draft.title')}
-                title={t('draft.title')}
-              >
-                <i>drafts</i>
-                <Show when={draftCount() > 0}>
-                  <span class="mizuna-chip-count">{draftCount()}</span>
-                </Show>
-              </button>
-            </HoldHoverTip>
-
             <div class={`mizuna-char-counter ${noteCountStatus()}`}>
               <svg class="mizuna-progress-ring" width="26" height="26" viewBox="0 0 26 26">
                 <circle
@@ -1972,6 +1956,22 @@ export function NoteView() {
                 </span>
               </span>
             </div>
+
+            <HoldHoverTip label={t('draft.title')} sublabel={t('draft.tip_save_and_restore')} placement="top">
+              <button
+                type="button"
+                id="draft_button"
+                class={`mizuna-composer-draft-btn ${draftCount() > 0 ? 'has-badge' : ''}`}
+                onClick={() => setIsDraftsModalOpen(true)}
+                aria-label={t('draft.title')}
+                title={t('draft.title')}
+              >
+                <i>drafts</i>
+                <Show when={draftCount() > 0}>
+                  <span class="mizuna-chip-count">{draftCount()}</span>
+                </Show>
+              </button>
+            </HoldHoverTip>
 
             <button
               type="button"
