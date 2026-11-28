@@ -113,8 +113,9 @@ export function SettingsView() {
   // 1. 投稿設定
   const showPostVisibility = () => matches(t('settings.group_post'), t('settings.default_visibility'), t('settings.visibility_public'), t('settings.visibility_home'), t('settings.visibility_followers'), '公開範囲', 'visibility');
   const showAppendMizuna = () => matches(t('settings.group_post'), t('settings.append_mizuna'), 'from mizuna', 'ミズナ');
+  const showDefaultFederation = () => matches(t('settings.group_post'), t('settings.default_federation'), t('settings.default_federation_desc'), '連合', 'ローカル', 'federation', 'local', 'localOnly');
   const showEnableCustomEmoji = () => matches(t('settings.group_post'), t('settings.enable_custom_emoji'), t('settings.enable_custom_emoji_desc'), 'カスタム絵文字', '絵文字', 'emoji', 'custom emoji', '通信量');
-  const showGroupPost = () => showPostVisibility() || showAppendMizuna() || showEnableCustomEmoji();
+  const showGroupPost = () => showPostVisibility() || showAppendMizuna() || showDefaultFederation() || showEnableCustomEmoji();
 
   // 2. 画像署名設定
   const showSignaturePos = () => matches(t('settings.group_signature'), t('settings.signature_auto_position'), t('settings.signature_auto_position_desc'), t('settings.signature_pos_none'), t('settings.signature_pos_bottom_right'), t('settings.signature_pos_bottom_left'), t('settings.signature_pos_top_right'), t('settings.signature_pos_top_left'), '署名', 'クレジット', 'signature', 'credit');
@@ -148,9 +149,19 @@ export function SettingsView() {
       'Русский',
       '한국어',
       '简体中文',
+      '繁體中文',
+      'Deutsch',
+      'Français',
+      'Español',
+      'Português (Brasil)',
       'russian',
       'korean',
-      'chinese'
+      'chinese',
+      'traditional chinese',
+      'german',
+      'french',
+      'spanish',
+      'portuguese'
     );
   const showGroupLanguage = () => showLanguage();
 
@@ -353,6 +364,38 @@ export function SettingsView() {
                           settings().is_note_end_mizuna ? 'is-active' : ''
                         }`}
                         onClick={() => updateSettings({ is_note_end_mizuna: true })}
+                      >
+                        <span>ON</span>
+                      </button>
+                    </div>
+                  </div>
+                </Show>
+
+                {/* デフォルトの連合機能 */}
+                <Show when={showDefaultFederation()}>
+                  <div class="mizuna-setting-row">
+                    <div class="mizuna-setting-info">
+                      <div class="mizuna-setting-title">{t('settings.default_federation')}</div>
+                      <div class="mizuna-setting-desc">{t('settings.default_federation_desc')}</div>
+                    </div>
+                    <div class="mizuna-seg-pills">
+                      <button
+                        type="button"
+                        id="default_federation_false"
+                        class={`mizuna-seg-pill ${
+                          settings().default_local_only ? 'is-active' : ''
+                        }`}
+                        onClick={() => updateSettings({ default_local_only: true })}
+                      >
+                        <span>OFF</span>
+                      </button>
+                      <button
+                        type="button"
+                        id="default_federation_true"
+                        class={`mizuna-seg-pill ${
+                          !settings().default_local_only ? 'is-active' : ''
+                        }`}
+                        onClick={() => updateSettings({ default_local_only: false })}
                       >
                         <span>ON</span>
                       </button>

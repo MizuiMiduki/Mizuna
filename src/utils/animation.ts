@@ -75,17 +75,26 @@ export function animateModalEnter(
   cardEl: HTMLElement | undefined | null,
   backdropEl?: HTMLElement | undefined | null
 ) {
-  if (prefersReducedMotion()) {
-    if (backdropEl) backdropEl.style.opacity = '1';
+  const finalizeBackdrop = () => {
+    if (backdropEl) {
+      backdropEl.style.opacity = '1';
+    }
+  };
+  const finalizeCard = () => {
     if (cardEl) {
       cardEl.style.opacity = '1';
       cardEl.style.transform = 'none';
     }
+  };
+
+  if (prefersReducedMotion()) {
+    finalizeBackdrop();
+    finalizeCard();
     return;
   }
 
   if (backdropEl) {
-    safeAnimate(
+    const anim = safeAnimate(
       backdropEl,
       [{ opacity: 0 }, { opacity: 1 }],
       {
@@ -94,10 +103,16 @@ export function animateModalEnter(
         fill: 'forwards',
       }
     );
+    if (anim) {
+      anim.onfinish = finalizeBackdrop;
+      setTimeout(finalizeBackdrop, 260);
+    } else {
+      finalizeBackdrop();
+    }
   }
 
   if (cardEl) {
-    safeAnimate(
+    const anim = safeAnimate(
       cardEl,
       [
         { opacity: 0, transform: 'scale(0.92) translateY(14px)' },
@@ -109,6 +124,12 @@ export function animateModalEnter(
         fill: 'forwards',
       }
     );
+    if (anim) {
+      anim.onfinish = finalizeCard;
+      setTimeout(finalizeCard, 320);
+    } else {
+      finalizeCard();
+    }
   }
 }
 

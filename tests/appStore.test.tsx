@@ -421,6 +421,7 @@ describe('appStore', () => {
 
       const backupData = {
         default_visibility: 2,
+        default_local_only: true,
         is_note_end_mizuna: true,
         ui_mode: 3,
         is_darkmode: 3,
@@ -447,6 +448,8 @@ describe('appStore', () => {
 
       // 設定が更新されていること
       expect(result.settings().default_visibility).toBe(2);
+      expect(result.settings().default_local_only).toBe(true);
+      expect(result.localOnly()).toBe(true);
       expect(result.settings().is_note_end_mizuna).toBe(true);
       expect(result.settings().ui_mode).toBe(3);
       expect(result.settings().is_darkmode).toBe(3);

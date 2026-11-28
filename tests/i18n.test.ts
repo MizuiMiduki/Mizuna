@@ -21,7 +21,7 @@ describe('i18n (Internationalization) Foundation & Multi-language Support', () =
     });
   });
 
-  it('サポート対象の言語として 日本語 (ja_jp)、英語 (en_us)、ロシア語 (ru_ru)、韓国語 (ko_kr)、簡体字中国語 (zh_cn) が定義されていること', () => {
+  it('サポート対象の言語として 10 言語 (ja_jp, en_us, ru_ru, ko_kr, zh_cn, zh_tw, de_de, fr_fr, es_es, pt_br) が定義されていること', () => {
     expect(DEFAULT_FALLBACK_LANGUAGE).toBe('en_us');
     expect(SUPPORTED_LANGUAGES.map((l) => l.code)).toEqual([
       'ja_jp',
@@ -29,6 +29,11 @@ describe('i18n (Internationalization) Foundation & Multi-language Support', () =
       'ru_ru',
       'ko_kr',
       'zh_cn',
+      'zh_tw',
+      'de_de',
+      'fr_fr',
+      'es_es',
+      'pt_br',
     ]);
   });
 
@@ -71,7 +76,7 @@ describe('i18n (Internationalization) Foundation & Multi-language Support', () =
       expect(detectBrowserLanguage()).toBe('ko_kr');
     });
 
-    it('中国語環境 (zh-CN, zh) では zh_cn が判定されること', () => {
+    it('簡体字中国語環境 (zh-CN, zh) では zh_cn が判定されること', () => {
       Object.defineProperty(navigator, 'languages', {
         value: ['zh-CN', 'zh'],
         configurable: true,
@@ -79,21 +84,79 @@ describe('i18n (Internationalization) Foundation & Multi-language Support', () =
       expect(detectBrowserLanguage()).toBe('zh_cn');
     });
 
-    it('対応外の言語 (fr-FR, de-DE, es-ES 等) の場合は英語 (en_us) にフォールバックすること', () => {
+    it('繁体字中国語環境 (zh-TW, zh-HK, zh-MO, zh-Hant) では zh_tw が判定されること', () => {
+      Object.defineProperty(navigator, 'languages', {
+        value: ['zh-TW', 'zh'],
+        configurable: true,
+      });
+      expect(detectBrowserLanguage()).toBe('zh_tw');
+
+      Object.defineProperty(navigator, 'languages', {
+        value: ['zh-HK'],
+        configurable: true,
+      });
+      expect(detectBrowserLanguage()).toBe('zh_tw');
+
+      Object.defineProperty(navigator, 'languages', {
+        value: ['zh-MO'],
+        configurable: true,
+      });
+      expect(detectBrowserLanguage()).toBe('zh_tw');
+
+      Object.defineProperty(navigator, 'languages', {
+        value: ['zh-Hant'],
+        configurable: true,
+      });
+      expect(detectBrowserLanguage()).toBe('zh_tw');
+    });
+
+    it('ドイツ語環境 (de, de-DE) では de_de が判定されること', () => {
+      Object.defineProperty(navigator, 'languages', {
+        value: ['de-DE', 'de'],
+        configurable: true,
+      });
+      expect(detectBrowserLanguage()).toBe('de_de');
+    });
+
+    it('フランス語環境 (fr, fr-FR) では fr_fr が判定されること', () => {
       Object.defineProperty(navigator, 'languages', {
         value: ['fr-FR', 'fr'],
         configurable: true,
       });
-      expect(detectBrowserLanguage()).toBe('en_us');
+      expect(detectBrowserLanguage()).toBe('fr_fr');
+    });
 
+    it('スペイン語環境 (es, es-ES) では es_es が判定されること', () => {
       Object.defineProperty(navigator, 'languages', {
-        value: ['de-DE'],
+        value: ['es-ES', 'es'],
+        configurable: true,
+      });
+      expect(detectBrowserLanguage()).toBe('es_es');
+    });
+
+    it('ポルトガル語環境 (pt-BR, pt) では pt_br が判定されること', () => {
+      Object.defineProperty(navigator, 'languages', {
+        value: ['pt-BR', 'pt'],
+        configurable: true,
+      });
+      expect(detectBrowserLanguage()).toBe('pt_br');
+    });
+
+    it('対応外の言語 (it-IT, pl-PL, th-TH 等) の場合は英語 (en_us) にフォールバックすること', () => {
+      Object.defineProperty(navigator, 'languages', {
+        value: ['it-IT', 'it'],
         configurable: true,
       });
       expect(detectBrowserLanguage()).toBe('en_us');
 
       Object.defineProperty(navigator, 'languages', {
-        value: ['es-ES'],
+        value: ['pl-PL'],
+        configurable: true,
+      });
+      expect(detectBrowserLanguage()).toBe('en_us');
+
+      Object.defineProperty(navigator, 'languages', {
+        value: ['th-TH'],
         configurable: true,
       });
       expect(detectBrowserLanguage()).toBe('en_us');
@@ -156,6 +219,61 @@ describe('i18n (Internationalization) Foundation & Multi-language Support', () =
       expect(translate('offline.title', undefined, 'zh_cn')).toBe('未连接到互联网');
     });
 
+    it('繁体字中国語 (zh_tw) の翻訳テキストを正しく取得できること', () => {
+      expect(translate('common.app_name', undefined, 'zh_tw')).toBe('Mizuna');
+      expect(translate('common.back', undefined, 'zh_tw')).toBe('返回');
+      expect(translate('header.announcements', undefined, 'zh_tw')).toBe('公告');
+      expect(translate('dock.note', undefined, 'zh_tw')).toBe('貼文');
+      expect(translate('note.placeholder', undefined, 'zh_tw')).toBe('在想些什麼？');
+      expect(translate('settings.title', undefined, 'zh_tw')).toBe('設定');
+      expect(translate('update.available', undefined, 'zh_tw')).toBe('有新版本可用');
+      expect(translate('offline.title', undefined, 'zh_tw')).toBe('未連線至網際網路');
+    });
+
+    it('ドイツ語 (de_de) の翻訳テキストを正しく取得できること', () => {
+      expect(translate('common.app_name', undefined, 'de_de')).toBe('Mizuna');
+      expect(translate('common.back', undefined, 'de_de')).toBe('Zurück');
+      expect(translate('header.announcements', undefined, 'de_de')).toBe('Ankündigungen');
+      expect(translate('dock.note', undefined, 'de_de')).toBe('Notiz');
+      expect(translate('note.placeholder', undefined, 'de_de')).toBe('Was gibt es Neues?');
+      expect(translate('settings.title', undefined, 'de_de')).toBe('Einstellungen');
+      expect(translate('update.available', undefined, 'de_de')).toBe('Eine neue Version ist verfügbar');
+      expect(translate('offline.title', undefined, 'de_de')).toBe('Keine Internetverbindung');
+    });
+
+    it('フランス語 (fr_fr) の翻訳テキストを正しく取得できること', () => {
+      expect(translate('common.app_name', undefined, 'fr_fr')).toBe('Mizuna');
+      expect(translate('common.back', undefined, 'fr_fr')).toBe('Retour');
+      expect(translate('header.announcements', undefined, 'fr_fr')).toBe('Annonces');
+      expect(translate('dock.note', undefined, 'fr_fr')).toBe('Note');
+      expect(translate('note.placeholder', undefined, 'fr_fr')).toBe('Quoi de neuf ?');
+      expect(translate('settings.title', undefined, 'fr_fr')).toBe('Paramètres');
+      expect(translate('update.available', undefined, 'fr_fr')).toBe('Une nouvelle version est disponible');
+      expect(translate('offline.title', undefined, 'fr_fr')).toBe('Aucune connexion Internet');
+    });
+
+    it('スペイン語 (es_es) の翻訳テキストを正しく取得できること', () => {
+      expect(translate('common.app_name', undefined, 'es_es')).toBe('Mizuna');
+      expect(translate('common.back', undefined, 'es_es')).toBe('Volver');
+      expect(translate('header.announcements', undefined, 'es_es')).toBe('Anuncios');
+      expect(translate('dock.note', undefined, 'es_es')).toBe('Nota');
+      expect(translate('note.placeholder', undefined, 'es_es')).toBe('¿Qué está pasando?');
+      expect(translate('settings.title', undefined, 'es_es')).toBe('Ajustes');
+      expect(translate('update.available', undefined, 'es_es')).toBe('Hay una nueva versión disponible');
+      expect(translate('offline.title', undefined, 'es_es')).toBe('Sin conexión a Internet');
+    });
+
+    it('ポルトガル語（ブラジル）(pt_br) の翻訳テキストを正しく取得できること', () => {
+      expect(translate('common.app_name', undefined, 'pt_br')).toBe('Mizuna');
+      expect(translate('common.back', undefined, 'pt_br')).toBe('Voltar');
+      expect(translate('header.announcements', undefined, 'pt_br')).toBe('Anúncios');
+      expect(translate('dock.note', undefined, 'pt_br')).toBe('Nota');
+      expect(translate('note.placeholder', undefined, 'pt_br')).toBe('O que está acontecendo?');
+      expect(translate('settings.title', undefined, 'pt_br')).toBe('Configurações');
+      expect(translate('update.available', undefined, 'pt_br')).toBe('Uma nova versão está disponível');
+      expect(translate('offline.title', undefined, 'pt_br')).toBe('Sem conexão com a internet');
+    });
+
     it('プレースホルダー置換が各言語で正常に動作すること', () => {
       const textJa = translate('update.dialog_content', { version: '3.11.0' }, 'ja_jp');
       expect(textJa).toContain('Mizuna v3.11.0 への更新が完了しました');
@@ -176,6 +294,26 @@ describe('i18n (Internationalization) Foundation & Multi-language Support', () =
       const textZh = translate('update.dialog_content', { version: '3.11.0' }, 'zh_cn');
       expect(textZh).toContain('Mizuna v3.11.0 更新已完成');
       expect(textZh).not.toContain('{version}');
+
+      const textZhTw = translate('update.dialog_content', { version: '3.11.0' }, 'zh_tw');
+      expect(textZhTw).toContain('Mizuna v3.11.0 更新已完成');
+      expect(textZhTw).not.toContain('{version}');
+
+      const textDe = translate('update.dialog_content', { version: '3.11.0' }, 'de_de');
+      expect(textDe).toContain('Update auf v3.11.0 ist abgeschlossen');
+      expect(textDe).not.toContain('{version}');
+
+      const textFr = translate('update.dialog_content', { version: '3.11.0' }, 'fr_fr');
+      expect(textFr).toContain('mise à jour vers la v3.11.0 est terminée');
+      expect(textFr).not.toContain('{version}');
+
+      const textEs = translate('update.dialog_content', { version: '3.11.0' }, 'es_es');
+      expect(textEs).toContain('actualización a v3.11.0 se ha completado');
+      expect(textEs).not.toContain('{version}');
+
+      const textPtBr = translate('update.dialog_content', { version: '3.11.0' }, 'pt_br');
+      expect(textPtBr).toContain('atualização para v3.11.0 foi concluída');
+      expect(textPtBr).not.toContain('{version}');
     });
 
     it('未知または未対応の言語コードが渡された場合、英語 (en_us) にフォールバックすること', () => {
@@ -184,8 +322,8 @@ describe('i18n (Internationalization) Foundation & Multi-language Support', () =
       expect(text).toBe('Back');
 
       // @ts-ignore
-      const textFr = translate('common.close', undefined, 'fr_fr');
-      expect(textFr).toBe('Close');
+      const textIt = translate('common.close', undefined, 'it_it');
+      expect(textIt).toBe('Close');
     });
 
     it('存在しないキーが渡された場合、キー文字列そのものが安全に返ること', () => {

@@ -1,6 +1,6 @@
 // Mizuna Service Worker - App Cache & Controlled Update
-const SW_VERSION = '4.2.0';
-const CACHE_NAME = 'mizuna-cache-v4.2.0';
+const SW_VERSION = '4.3.0';
+const CACHE_NAME = 'mizuna-cache-v4.3.0';
 const OFFLINE_URL = '/offline.html';
 
 // 事前キャッシュするコアアセット

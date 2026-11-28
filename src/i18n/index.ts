@@ -3,6 +3,11 @@ import { en } from './locales/en';
 import { ru } from './locales/ru';
 import { ko } from './locales/ko';
 import { zh } from './locales/zh';
+import { zhTw } from './locales/zh_tw';
+import { de } from './locales/de';
+import { fr } from './locales/fr';
+import { es } from './locales/es';
+import { ptBr } from './locales/pt_br';
 import type { I18nKey, LanguageCode, LanguageOption, LocaleDictionary } from './types';
 
 export * from './types';
@@ -11,6 +16,11 @@ export { en } from './locales/en';
 export { ru } from './locales/ru';
 export { ko } from './locales/ko';
 export { zh } from './locales/zh';
+export { zhTw } from './locales/zh_tw';
+export { de } from './locales/de';
+export { fr } from './locales/fr';
+export { es } from './locales/es';
+export { ptBr } from './locales/pt_br';
 
 // 対応外の言語の場合は英語で表示する
 export const DEFAULT_FALLBACK_LANGUAGE: LanguageCode = 'en_us';
@@ -22,6 +32,11 @@ export const SUPPORTED_LANGUAGES: LanguageOption[] = [
   { code: 'ru_ru', label: 'Русский' },
   { code: 'ko_kr', label: '한국어' },
   { code: 'zh_cn', label: '简体中文' },
+  { code: 'zh_tw', label: '繁體中文' },
+  { code: 'de_de', label: 'Deutsch' },
+  { code: 'fr_fr', label: 'Français' },
+  { code: 'es_es', label: 'Español' },
+  { code: 'pt_br', label: 'Português (Brasil)' },
 ];
 
 const dictionaries: Record<LanguageCode, LocaleDictionary> = {
@@ -30,6 +45,11 @@ const dictionaries: Record<LanguageCode, LocaleDictionary> = {
   ru_ru: ru,
   ko_kr: ko,
   zh_cn: zh,
+  zh_tw: zhTw,
+  de_de: de,
+  fr_fr: fr,
+  es_es: es,
+  pt_br: ptBr,
 };
 
 /**
@@ -55,7 +75,27 @@ export function detectBrowserLanguage(): LanguageCode {
       return 'ko_kr';
     }
     if (lower.startsWith('zh')) {
+      if (
+        lower.includes('tw') ||
+        lower.includes('hk') ||
+        lower.includes('mo') ||
+        lower.includes('hant')
+      ) {
+        return 'zh_tw';
+      }
       return 'zh_cn';
+    }
+    if (lower.startsWith('de')) {
+      return 'de_de';
+    }
+    if (lower.startsWith('fr')) {
+      return 'fr_fr';
+    }
+    if (lower.startsWith('es')) {
+      return 'es_es';
+    }
+    if (lower.startsWith('pt')) {
+      return 'pt_br';
     }
     if (lower.startsWith('en')) {
       return 'en_us';

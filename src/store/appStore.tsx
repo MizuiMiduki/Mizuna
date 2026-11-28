@@ -145,6 +145,8 @@ interface AppContextValue {
   setCwEnabled: Setter<boolean>;
   visibility: Accessor<VisibilityType>;
   setVisibility: Setter<VisibilityType>;
+  localOnly: Accessor<boolean>;
+  setLocalOnly: Setter<boolean>;
   endMizuna: Accessor<boolean>;
   setEndMizuna: Setter<boolean>;
   attachedImages: Accessor<AttachedImageItem[]>;
@@ -258,6 +260,7 @@ export function AppProvider(props: { children: JSX.Element }) {
   const [cwText, setCwText] = createSignal('');
   const [cwEnabled, setCwEnabled] = createSignal(false);
   const [visibility, setVisibility] = createSignal<VisibilityType>('public');
+  const [localOnly, setLocalOnly] = createSignal(false);
   const [endMizuna, setEndMizuna] = createSignal(false);
   const [attachedImages, setAttachedImages] = createSignal<AttachedImageItem[]>([]);
 
@@ -1037,6 +1040,7 @@ export function AppProvider(props: { children: JSX.Element }) {
         setSettings(loadedSettings);
         applyCustomCss(loadedSettings.custom_css ?? '');
         setVisibility(visibilityNumToString(loadedSettings.default_visibility));
+        setLocalOnly(Boolean(loadedSettings.default_local_only));
         setEndMizuna(loadedSettings.is_note_end_mizuna);
 
         // MiAuthのコールバックがあれば処理
@@ -1489,6 +1493,7 @@ export function AppProvider(props: { children: JSX.Element }) {
         cwText: cwText(),
         cwEnabled: cwEnabled(),
         visibility: visibility(),
+        localOnly: localOnly(),
         endMizuna: endMizuna(),
         images: draftImages,
       });
@@ -1518,6 +1523,7 @@ export function AppProvider(props: { children: JSX.Element }) {
       setCwText(draft.cwText || '');
       setCwEnabled(Boolean(draft.cwEnabled));
       setVisibility(draft.visibility || 'public');
+      setLocalOnly(Boolean(draft.localOnly));
       setEndMizuna(Boolean(draft.endMizuna));
 
       setAttachedImages((prev) => {
@@ -1674,6 +1680,9 @@ export function AppProvider(props: { children: JSX.Element }) {
     if (changes.default_visibility !== undefined) {
       setVisibility(visibilityNumToString(changes.default_visibility));
     }
+    if (changes.default_local_only !== undefined) {
+      setLocalOnly(changes.default_local_only);
+    }
     if (changes.is_note_end_mizuna !== undefined) {
       setEndMizuna(changes.is_note_end_mizuna);
     }
@@ -1810,6 +1819,7 @@ export function AppProvider(props: { children: JSX.Element }) {
     const exportData: Omit<SettingRecord, 'id'> = {
       select_user: current.select_user,
       default_visibility: current.default_visibility,
+      default_local_only: current.default_local_only ?? false,
       is_note_end_mizuna: current.is_note_end_mizuna,
       is_visible_icon: current.is_visible_icon,
       ui_mode: current.ui_mode,
@@ -1869,6 +1879,9 @@ export function AppProvider(props: { children: JSX.Element }) {
 
               if (typeof parsed.default_visibility === 'number' && [1, 2, 3].includes(parsed.default_visibility)) {
                 changes.default_visibility = parsed.default_visibility as 1 | 2 | 3;
+              }
+              if (typeof parsed.default_local_only === 'boolean') {
+                changes.default_local_only = parsed.default_local_only;
               }
               if (typeof parsed.is_note_end_mizuna === 'boolean') {
                 changes.is_note_end_mizuna = parsed.is_note_end_mizuna;
@@ -2068,6 +2081,8 @@ export function AppProvider(props: { children: JSX.Element }) {
     setCwEnabled,
     visibility,
     setVisibility,
+    localOnly,
+    setLocalOnly,
     endMizuna,
     setEndMizuna,
     attachedImages,

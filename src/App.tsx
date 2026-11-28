@@ -133,6 +133,11 @@ function MainContent() {
           ru_ru: 'ru',
           ko_kr: 'ko',
           zh_cn: 'zh-CN',
+          zh_tw: 'zh-TW',
+          de_de: 'de',
+          fr_fr: 'fr',
+          es_es: 'es',
+          pt_br: 'pt-BR',
         };
         document.documentElement.lang = (lang && langMap[lang]) || 'ja';
       }

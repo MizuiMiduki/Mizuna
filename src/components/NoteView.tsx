@@ -57,6 +57,8 @@ export function NoteView() {
     setCwEnabled,
     visibility,
     setVisibility,
+    localOnly,
+    setLocalOnly,
     endMizuna,
     setEndMizuna,
     attachedImages,
@@ -419,6 +421,20 @@ export function NoteView() {
   const [editingImageItem, setEditingImageItem] = createSignal<AttachedImageItem | null>(null);
   const [isDraggingOver, setIsDraggingOver] = createSignal(false);
   const [isAccountPickerOpen, setIsAccountPickerOpen] = createSignal(false);
+  const [multiAccountIds, setMultiAccountIds] = createSignal<number[]>([]);
+
+  const targetAccounts = createMemo(() => {
+    const ids = multiAccountIds();
+    if (ids.length === 0) {
+      const u = currentUser();
+      return u ? [u] : [];
+    }
+    const list = accounts().filter((a) => a.id !== undefined && ids.includes(a.id));
+    if (list.length > 0) return list;
+    const u = currentUser();
+    return u ? [u] : [];
+  });
+  const isMultiAccountMode = createMemo(() => targetAccounts().length > 1);
   const [showPreview, setShowPreview] = createSignal(false);
   const [previewCwRevealed, setPreviewCwRevealed] = createSignal(false);
   const [lastFocusedField, setLastFocusedField] = createSignal<'note' | 'cw'>('note');
@@ -526,15 +542,16 @@ export function NoteView() {
     }, 0);
   };
 
-  const handleSelectCustomEmoji = (emojiName: string) => {
+  const insertSnippetAtCursor = (snippet: string, ensureLeadingSpace = false) => {
     const isCw = lastFocusedField() === 'cw' && cwEnabled();
     const targetRef = isCw ? cwInputRef : noteInputRef;
     const currentText = isCw ? cwText() : noteText();
     const setText = isCw ? setCwText : setNoteText;
 
-    const emojiCode = `:${emojiName}: `;
     if (!targetRef) {
-      setText(currentText + emojiCode);
+      const prefix =
+        ensureLeadingSpace && currentText.length > 0 && !/[\s\n]$/.test(currentText) ? ' ' : '';
+      setText(currentText + prefix + snippet);
       return;
     }
 
@@ -542,8 +559,10 @@ export function NoteView() {
     const end = targetRef.selectionEnd ?? currentText.length;
     const before = currentText.substring(0, start);
     const after = currentText.substring(end);
-    const nextText = `${before}${emojiCode}${after}`;
-    const nextCursor = start + emojiCode.length;
+    const prefix = ensureLeadingSpace && before.length > 0 && !/[\s\n]$/.test(before) ? ' ' : '';
+    const inserted = `${prefix}${snippet}`;
+    const nextText = `${before}${inserted}${after}`;
+    const nextCursor = start + inserted.length;
 
     setText(nextText);
     setTimeout(() => {
@@ -552,34 +571,54 @@ export function NoteView() {
     }, 0);
   };
 
+  const handleSelectCustomEmoji = (emojiName: string) => {
+    insertSnippetAtCursor(`:${emojiName}: `);
+  };
+
+  const openFeatureDisabledDialog = (
+    title: string,
+    icon: string,
+    contentText: string,
+    goSettingsLabel: string,
+    targetElementId: string
+  ) => {
+    openDialog({
+      title,
+      icon,
+      tone: 'info',
+      contentText,
+      buttons: [
+        {
+          label: goSettingsLabel,
+          variant: 'fill',
+          onClick: () => {
+            closeDialog();
+            setCurrentView('settings');
+            setTimeout(() => {
+              document
+                .getElementById(targetElementId)
+                ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+          },
+        },
+        {
+          label: '閉じる',
+          variant: 'border',
+          onClick: () => closeDialog(),
+        },
+      ],
+    });
+  };
+
   const handleOpenCustomEmoji = () => {
     if (!settings().is_enable_custom_emoji) {
-      openDialog({
-        title: t('note.custom_emoji_dialog_title'),
-        icon: 'add_reaction',
-        tone: 'info',
-        contentText: t('note.custom_emoji_dialog_desc'),
-        buttons: [
-          {
-            label: t('note.custom_emoji_dialog_go_settings'),
-            variant: 'fill',
-            onClick: () => {
-              closeDialog();
-              setCurrentView('settings');
-              setTimeout(() => {
-                document
-                  .getElementById('setting_enable_custom_emoji')
-                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }, 150);
-            },
-          },
-          {
-            label: '閉じる',
-            variant: 'border',
-            onClick: () => closeDialog(),
-          },
-        ],
-      });
+      openFeatureDisabledDialog(
+        t('note.custom_emoji_dialog_title'),
+        'add_reaction',
+        t('note.custom_emoji_dialog_desc'),
+        t('note.custom_emoji_dialog_go_settings'),
+        'setting_enable_custom_emoji'
+      );
       return;
     }
 
@@ -589,6 +628,51 @@ export function NoteView() {
     }
 
     setIsCustomEmojiPickerOpen(true);
+  };
+
+  const handlePreviewClick = (e: MouseEvent) => {
+    const target = e.target as HTMLElement | null;
+    const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
+    if (!anchor) return;
+
+    const href = anchor.getAttribute('href') || anchor.href;
+    if (!href) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    let resolvedUrl = href;
+    try {
+      const parsed = new URL(href, window.location.origin);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return;
+      }
+      resolvedUrl = parsed.href;
+    } catch {
+      return;
+    }
+
+    openDialog({
+      title: t('note.preview_link_confirm_title'),
+      icon: 'open_in_new',
+      tone: 'info',
+      contentText: t('note.preview_link_confirm_desc', { url: resolvedUrl }),
+      buttons: [
+        {
+          label: t('note.preview_link_open'),
+          variant: 'fill',
+          onClick: () => {
+            closeDialog();
+            window.open(resolvedUrl, '_blank', 'noopener,noreferrer');
+          },
+        },
+        {
+          label: t('common.cancel'),
+          variant: 'border',
+          onClick: () => closeDialog(),
+        },
+      ],
+    });
   };
 
   const updateAutocompletePosition = (targetEl: HTMLTextAreaElement, triggerPos: number) => {
@@ -757,6 +841,12 @@ export function NoteView() {
       return;
     }
 
+    const targets = targetAccounts();
+    if (targets.length === 0) {
+      showToast(t('note.no_account'), 'error');
+      return;
+    }
+
     const rawNote = noteText();
     const rawCw = cwText();
 
@@ -787,78 +877,179 @@ export function NoteView() {
 
     const images = attachedImages();
     if (images.length > 0) {
-      if (!isImageSupported()) {
-        showToast(
-          'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
-          'warning',
-          'このアカウントでは画像付きノートが出来ません'
-        );
-        return;
+      if (targets.length === 1) {
+        if (!hasDrivePermission(targets[0].add_mizuna_versinon)) {
+          showToast(
+            'Mizuna 3.5.0以上のバージョンでアカウントを追加してください',
+            'warning',
+            'このアカウントでは画像付きノートが出来ません'
+          );
+          return;
+        }
+      } else {
+        const unsupported = targets.filter((acc) => !hasDrivePermission(acc.add_mizuna_versinon));
+        if (unsupported.length > 0) {
+          showToast(
+            t('note.multi_image_unsupported', {
+              accounts: unsupported.map((a) => `@${a.username}`).join(', '),
+            }),
+            'warning'
+          );
+          return;
+        }
+        const hasDriveImages = images.some((item) => Boolean(item.driveFileId));
+        if (hasDriveImages && targets.some((acc) => acc.id !== user.id)) {
+          showToast(t('note.multi_drive_unsupported'), 'warning');
+          return;
+        }
       }
     }
 
     setIsSending(true);
     try {
-      let fileIds: string[] | undefined;
-      if (images.length > 0) {
-        const localFiles: File[] = [];
-        for (const item of images) {
-          if (!item.driveFileId) {
-            localFiles.push(item.compressedFile ?? item.file);
-          }
+      const localFiles: File[] = [];
+      for (const item of images) {
+        if (!item.driveFileId) {
+          localFiles.push(item.compressedFile ?? item.file);
         }
-
-        let uploadedIds: string[] = [];
-        if (localFiles.length > 0) {
-          uploadedIds = await uploadImagesToDrive(
-            localFiles,
-            user,
-            (status) => setSendingStatus(status)
-          );
-        }
-
-        let uploadCursor = 0;
-        fileIds = images.map((item) => {
-          if (item.driveFileId) {
-            return item.driveFileId;
-          }
-          return uploadedIds[uploadCursor++];
-        });
       }
 
-      setSendingStatus(t('note.submitting'));
-      const fallbackFiles: MisskeyFile[] = images.map((item, idx) => ({
-        id: fileIds?.[idx] || item.driveFileId || item.id,
-        url: item.dataUrl,
-        thumbnailUrl: item.thumbUrl || item.dataUrl,
-        name: item.name,
-        type: item.file.type || 'image/webp',
-        size: item.compressedSize ?? item.originalSize,
-      }));
+      if (targets.length === 1) {
+        const targetAcc = targets[0];
+        let fileIds: string[] | undefined;
+        if (images.length > 0) {
+          let uploadedIds: string[] = [];
+          if (localFiles.length > 0) {
+            uploadedIds = await uploadImagesToDrive(
+              localFiles,
+              targetAcc,
+              (status) => setSendingStatus(status)
+            );
+          }
 
-      const createdNote = await createMisskeyNote(
-        user,
-        rawNote,
-        cwEnabled() ? rawCw : null,
-        visibility(),
-        endMizuna(),
-        fileIds,
-        replyTargetNote()?.id,
-        {
-          replyNote: replyTargetNote(),
-          files: fallbackFiles,
+          let uploadCursor = 0;
+          fileIds = images.map((item) => {
+            if (item.driveFileId) {
+              return item.driveFileId;
+            }
+            return uploadedIds[uploadCursor++];
+          });
         }
-      );
 
-      // fetch を行わずに投稿履歴の先頭にそのまま反映する
-      prependNoteToHistoryCache(getAccountCacheKey(user), createdNote);
+        setSendingStatus(t('note.submitting'));
+        const fallbackFiles: MisskeyFile[] = images.map((item, idx) => ({
+          id: fileIds?.[idx] || item.driveFileId || item.id,
+          url: item.dataUrl,
+          thumbnailUrl: item.thumbUrl || item.dataUrl,
+          name: item.name,
+          type: item.file.type || 'image/webp',
+          size: item.compressedSize ?? item.originalSize,
+        }));
 
-      showToast(t('note.sent'), 'success');
-      clearNoteForm(false);
-      cancelReply();
-      setShowPreview(false);
-      if (fileInputRef) {
-        fileInputRef.value = '';
+        const createdNote = await createMisskeyNote(
+          targetAcc,
+          rawNote,
+          cwEnabled() ? rawCw : null,
+          visibility(),
+          endMizuna(),
+          fileIds,
+          replyTargetNote()?.id,
+          {
+            replyNote: replyTargetNote(),
+            files: fallbackFiles,
+            localOnly: localOnly(),
+          }
+        );
+
+        // fetch を行わずに投稿履歴の先頭にそのまま反映する
+        prependNoteToHistoryCache(getAccountCacheKey(targetAcc), createdNote);
+
+        showToast(t('note.sent'), 'success');
+        clearNoteForm(false);
+        setMultiAccountIds([]);
+        cancelReply();
+        setShowPreview(false);
+        if (fileInputRef) {
+          fileInputRef.value = '';
+        }
+      } else {
+        setSendingStatus(t('note.submitting'));
+        const results = await Promise.allSettled(
+          targets.map(async (targetAcc) => {
+            let accFileIds: string[] | undefined;
+            if (images.length > 0) {
+              let uploadedIds: string[] = [];
+              if (localFiles.length > 0) {
+                uploadedIds = await uploadImagesToDrive(localFiles, targetAcc);
+              }
+              let uploadCursor = 0;
+              accFileIds = images.map((item) => {
+                if (item.driveFileId) {
+                  return item.driveFileId;
+                }
+                return uploadedIds[uploadCursor++];
+              });
+            }
+
+            const accFallbackFiles: MisskeyFile[] = images.map((item, idx) => ({
+              id: accFileIds?.[idx] || item.driveFileId || item.id,
+              url: item.dataUrl,
+              thumbnailUrl: item.thumbUrl || item.dataUrl,
+              name: item.name,
+              type: item.file.type || 'image/webp',
+              size: item.compressedSize ?? item.originalSize,
+            }));
+
+            const createdNote = await createMisskeyNote(
+              targetAcc,
+              rawNote,
+              cwEnabled() ? rawCw : null,
+              visibility(),
+              endMizuna(),
+              accFileIds,
+              undefined,
+              {
+                files: accFallbackFiles,
+                localOnly: localOnly(),
+              }
+            );
+            prependNoteToHistoryCache(getAccountCacheKey(targetAcc), createdNote);
+            return targetAcc;
+          })
+        );
+
+        const failedIds: number[] = [];
+        let successCount = 0;
+        results.forEach((res, idx) => {
+          if (res.status === 'fulfilled') {
+            successCount++;
+          } else {
+            const accId = targets[idx].id;
+            if (accId !== undefined) failedIds.push(accId);
+          }
+        });
+
+        if (failedIds.length === 0) {
+          showToast(t('note.multi_sent', { count: successCount }), 'success');
+          clearNoteForm(false);
+          setMultiAccountIds([]);
+          cancelReply();
+          setShowPreview(false);
+          if (fileInputRef) {
+            fileInputRef.value = '';
+          }
+        } else if (successCount > 0) {
+          showToast(
+            t('note.multi_partial_sent', {
+              success: successCount,
+              failed: failedIds.length,
+            }),
+            'warning'
+          );
+          setMultiAccountIds(failedIds);
+        } else {
+          showToast(t('note.send_failed'), 'error');
+        }
       }
     } catch (err) {
       console.error('Send note error:', err);
@@ -903,6 +1094,10 @@ export function NoteView() {
           case 'm':
             event.preventDefault();
             setEndMizuna((prev) => !prev);
+            break;
+          case 'l':
+            event.preventDefault();
+            setLocalOnly((prev) => !prev);
             break;
           case 'v':
             event.preventDefault();
@@ -1041,10 +1236,65 @@ export function NoteView() {
     setIsAccountPickerOpen(false);
   };
 
+  const isAccountSelectedForMulti = (accountId: number | undefined): boolean => {
+    if (accountId === undefined) return false;
+    const ids = multiAccountIds();
+    if (ids.length === 0) {
+      return currentUser()?.id === accountId;
+    }
+    return ids.includes(accountId);
+  };
+
+  const toggleMultiAccount = (accountId: number | undefined) => {
+    if (accountId === undefined) return;
+    setMultiAccountIds((prev) => {
+      const base =
+        prev.length === 0
+          ? currentUser()?.id !== undefined
+            ? [currentUser()!.id!]
+            : []
+          : prev;
+      if (base.includes(accountId)) {
+        // 最後の1つは解除しない
+        if (base.length <= 1) return base;
+        return base.filter((id) => id !== accountId);
+      }
+      return [...base, accountId];
+    });
+  };
+
+  const selectAllMultiAccounts = () => {
+    const allIds = accounts()
+      .map((a) => a.id)
+      .filter((id): id is number => id !== undefined);
+    if (allIds.length > 0) {
+      setMultiAccountIds(allIds);
+    }
+  };
+
+  const clearMultiAccounts = () => {
+    setMultiAccountIds([]);
+  };
+
   const handleSelectAccountFromPopup = async (accountId: number | undefined) => {
     if (accountId === undefined) return;
+    if (multiAccountIds().length > 0) {
+      toggleMultiAccount(accountId);
+      return;
+    }
     if (currentUser()?.id !== accountId) {
       await switchAccount(accountId);
+    }
+    await closeAccountPicker();
+  };
+
+  const confirmMultiAccounts = async () => {
+    const ids = multiAccountIds();
+    if (ids.length === 1) {
+      if (currentUser()?.id !== ids[0]) {
+        await switchAccount(ids[0]);
+      }
+      setMultiAccountIds([]);
     }
     await closeAccountPicker();
   };
@@ -1131,27 +1381,61 @@ export function NoteView() {
         <div class="mizuna-composer-header">
           <button
             type="button"
-            class="mizuna-author-chip"
+            class={`mizuna-author-chip ${isMultiAccountMode() ? 'is-multi' : ''}`}
             onClick={openAccountPicker}
           >
-            <img
-              class="mizuna-author-avatar"
-              src={getDisplayAvatarUrl(currentUser()?.avatarurl, settings().is_visible_icon)}
-              alt="user_icon"
-              decoding="async"
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = '/icon.png';
-              }}
-            />
-            <div class="mizuna-author-info">
-              <span class="mizuna-author-name">{currentUser()?.name ?? 'User'}</span>
-              <span class="mizuna-author-instance">{currentUser()?.address}</span>
-            </div>
+            <Show
+              when={isMultiAccountMode()}
+              fallback={
+                <>
+                  <img
+                    class="mizuna-author-avatar"
+                    src={getDisplayAvatarUrl(currentUser()?.avatarurl, settings().is_visible_icon)}
+                    alt="user_icon"
+                    decoding="async"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = '/icon.png';
+                    }}
+                  />
+                  <div class="mizuna-author-info">
+                    <span class="mizuna-author-name">{currentUser()?.name ?? 'User'}</span>
+                    <span class="mizuna-author-instance">{currentUser()?.address}</span>
+                  </div>
+                </>
+              }
+            >
+              <div class="mizuna-author-avatar-stack">
+                <For each={targetAccounts().slice(0, 3)}>
+                  {(acc) => (
+                    <img
+                      class="mizuna-author-avatar is-stacked"
+                      src={getDisplayAvatarUrl(acc.avatarurl, settings().is_visible_icon)}
+                      alt={acc.name}
+                      decoding="async"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/icon.png';
+                      }}
+                    />
+                  )}
+                </For>
+              </div>
+              <div class="mizuna-author-info">
+                <span class="mizuna-author-name">
+                  {t('note.multi_account_title', { count: targetAccounts().length })}
+                </span>
+                <span class="mizuna-author-instance">
+                  {targetAccounts()
+                    .map((a) => `@${a.username}`)
+                    .join(', ')}
+                </span>
+              </div>
+            </Show>
             <i class="mizuna-author-chevron">unfold_more</i>
           </button>
 
-          {/* 右側グループ：公開範囲ピル ＆ 下書き統合ボタン */}
+          {/* 右側グループ：公開範囲ピル ＆ 連合トグル ＆ 下書き統合ボタン */}
           <div class="mizuna-composer-header-right">
             {/* モダンなピル型公開範囲セレクター */}
             <div class="mizuna-visibility-pills" role="radiogroup" aria-label={t('settings.default_visibility')}>
@@ -1190,20 +1474,21 @@ export function NoteView() {
               </HoldHoverTip>
             </div>
 
-            {/* 下書き（保存・呼び出し）ボタン */}
-            <HoldHoverTip label={t('draft.title')} sublabel={t('draft.tip_save_and_restore')} placement="bottom">
+            {/* 連合機能オンオフ トグル */}
+            <HoldHoverTip
+              label={localOnly() ? t('note.federation_off_tip') : t('note.federation_on_tip')}
+              sublabel={localOnly() ? t('note.federation_off_tip_sub') : t('note.federation_on_tip_sub')}
+              placement="bottom"
+            >
               <button
                 type="button"
-                id="draft_button"
-                class={`mizuna-composer-draft-btn ${draftCount() > 0 ? 'has-badge' : ''}`}
-                onClick={() => setIsDraftsModalOpen(true)}
-                aria-label={t('draft.title')}
-                title={t('draft.title')}
+                id="local_only_toggle"
+                class={`mizuna-composer-federation-btn ${!localOnly() ? 'is-active' : 'is-local-only'}`}
+                onClick={() => setLocalOnly((prev) => !prev)}
+                aria-pressed={!localOnly() ? 'true' : 'false'}
+                aria-label={localOnly() ? t('note.federation_off_tip') : t('note.federation_on_tip')}
               >
-                <i>drafts</i>
-                <Show when={draftCount() > 0}>
-                  <span class="mizuna-chip-count">{draftCount()}</span>
-                </Show>
+                <i>rocket_launch</i>
               </button>
             </HoldHoverTip>
           </div>
@@ -1439,7 +1724,7 @@ export function NoteView() {
 
         {/* リアルタイムMFMプレビュー枠（トグル表示） */}
         <Show when={showPreview()}>
-          <div class="mizuna-preview-area">
+          <div class="mizuna-preview-area" onClick={handlePreviewClick}>
             <div class="mizuna-preview-header">
               <span class="mizuna-preview-badge">
                 <i>visibility</i>
@@ -1694,6 +1979,7 @@ export function NoteView() {
                 class="mizuna-tool-icon-btn"
                 onClick={() => {
                   clearNoteForm(true);
+                  setMultiAccountIds([]);
                   if (fileInputRef) fileInputRef.value = '';
                 }}
                 aria-label={t('note.clear_form_tip')}
@@ -1703,7 +1989,7 @@ export function NoteView() {
             </HoldHoverTip>
           </div>
 
-          {/* 右側：文字数リングゲージ ＆ 送信ボタン */}
+          {/* 右側：文字数リングゲージ ＆ 下書きボタン ＆ 送信ボタン */}
           <div class="mizuna-submit-group">
             <div class={`mizuna-char-counter ${noteCountStatus()}`}>
               <svg class="mizuna-progress-ring" width="26" height="26" viewBox="0 0 26 26">
@@ -1738,6 +2024,22 @@ export function NoteView() {
                 </span>
               </span>
             </div>
+
+            <HoldHoverTip label={t('draft.title')} sublabel={t('draft.tip_save_and_restore')} placement="top">
+              <button
+                type="button"
+                id="draft_button"
+                class={`mizuna-composer-draft-btn ${draftCount() > 0 ? 'has-badge' : ''}`}
+                onClick={() => setIsDraftsModalOpen(true)}
+                aria-label={t('draft.title')}
+                title={t('draft.title')}
+              >
+                <i>drafts</i>
+                <Show when={draftCount() > 0}>
+                  <span class="mizuna-chip-count">{draftCount()}</span>
+                </Show>
+              </button>
+            </HoldHoverTip>
 
             <button
               type="button"
@@ -1804,43 +2106,125 @@ export function NoteView() {
               </button>
             </div>
 
+            <Show when={accounts().length > 1 && !replyTargetNote()}>
+              <div class="mizuna-picker-multi-bar">
+                <span class="mizuna-picker-multi-status">
+                  {multiAccountIds().length > 0
+                    ? t('note.multi_selected_count', { count: multiAccountIds().length })
+                    : t('note.multi_hint')}
+                </span>
+                <div class="mizuna-picker-multi-actions">
+                  <button
+                    type="button"
+                    class="mizuna-picker-multi-btn"
+                    onClick={selectAllMultiAccounts}
+                  >
+                    {t('note.multi_select_all')}
+                  </button>
+                  <Show when={multiAccountIds().length > 0}>
+                    <button
+                      type="button"
+                      class="mizuna-picker-multi-btn"
+                      onClick={clearMultiAccounts}
+                    >
+                      {t('note.multi_clear')}
+                    </button>
+                  </Show>
+                </div>
+              </div>
+            </Show>
+
             <div class="mizuna-picker-list">
               <For each={accounts()}>
                 {(acc) => {
                   const isCurrent = () => currentUser()?.id === acc.id;
+                  const isMultiChecked = () => isAccountSelectedForMulti(acc.id);
                   return (
-                    <button
-                      type="button"
-                      class={`mizuna-picker-item ${isCurrent() ? 'is-active' : ''}`}
-                      onClick={() => handleSelectAccountFromPopup(acc.id)}
+                    <div
+                      class={`mizuna-picker-item ${
+                        multiAccountIds().length > 0
+                          ? isMultiChecked()
+                            ? 'is-active'
+                            : ''
+                          : isCurrent()
+                          ? 'is-active'
+                          : ''
+                      }`}
                     >
-                      <img
-                        class="mizuna-picker-avatar"
-                        src={getDisplayAvatarUrl(acc.avatarurl, settings().is_visible_icon)}
-                        alt={acc.name}
-                        loading="lazy"
-                        decoding="async"
-                        onError={(e) => {
-                          e.currentTarget.onerror = null;
-                          e.currentTarget.src = '/icon.png';
-                        }}
-                      />
-                      <div class="mizuna-picker-user">
-                        <span class="mizuna-picker-name">{acc.name}</span>
-                        <span class="mizuna-picker-handle">
-                          @{acc.username}@{acc.address}
-                        </span>
-                      </div>
-                      <Show when={isCurrent()}>
-                        <span class="mizuna-picker-active-badge">
-                          <i>check_circle</i>
-                        </span>
+                      <button
+                        type="button"
+                        class="mizuna-picker-item-main"
+                        onClick={() => handleSelectAccountFromPopup(acc.id)}
+                      >
+                        <img
+                          class="mizuna-picker-avatar"
+                          src={getDisplayAvatarUrl(acc.avatarurl, settings().is_visible_icon)}
+                          alt={acc.name}
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = '/icon.png';
+                          }}
+                        />
+                        <div class="mizuna-picker-user">
+                          <span class="mizuna-picker-name">{acc.name}</span>
+                          <span class="mizuna-picker-handle">
+                            @{acc.username}@{acc.address}
+                          </span>
+                        </div>
+                      </button>
+
+                      <Show
+                        when={accounts().length > 1 && !replyTargetNote()}
+                        fallback={
+                          <Show when={isCurrent()}>
+                            <span class="mizuna-picker-active-badge">
+                              <i>check_circle</i>
+                            </span>
+                          </Show>
+                        }
+                      >
+                        <button
+                          type="button"
+                          class={`mizuna-picker-check-btn ${isMultiChecked() ? 'is-checked' : ''}`}
+                          aria-label={acc.name}
+                          aria-checked={isMultiChecked() ? 'true' : 'false'}
+                          role="checkbox"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleMultiAccount(acc.id);
+                          }}
+                        >
+                          <i>
+                            {multiAccountIds().length > 0
+                              ? isMultiChecked()
+                                ? 'check_box'
+                                : 'check_box_outline_blank'
+                              : isCurrent()
+                              ? 'check_circle'
+                              : 'check_box_outline_blank'}
+                          </i>
+                        </button>
                       </Show>
-                    </button>
+                    </div>
                   );
                 }}
               </For>
             </div>
+
+            <Show when={multiAccountIds().length > 0}>
+              <div class="mizuna-picker-footer">
+                <button
+                  type="button"
+                  class="mizuna-btn-primary mizuna-picker-confirm-btn"
+                  onClick={confirmMultiAccounts}
+                >
+                  <i>send</i>
+                  <span>{t('note.multi_confirm', { count: multiAccountIds().length })}</span>
+                </button>
+              </div>
+            </Show>
           </div>
         </div>
         </Portal>
