@@ -41,6 +41,7 @@ import { ImageEditorModal } from './ImageEditorModal';
 import { DraftsModal } from './DraftsModal';
 import { DriveImagePickerModal } from './DriveImagePickerModal';
 import { CustomEmojiPickerModal } from './CustomEmojiPickerModal';
+import { HashtagPickerModal } from './HashtagPickerModal';
 
 export function NoteView() {
   const {
@@ -84,6 +85,7 @@ export function NoteView() {
   const [isDraftsModalOpen, setIsDraftsModalOpen] = createSignal(false);
   const [isDrivePickerOpen, setIsDrivePickerOpen] = createSignal(false);
   const [isCustomEmojiPickerOpen, setIsCustomEmojiPickerOpen] = createSignal(false);
+  const [isHashtagPickerOpen, setIsHashtagPickerOpen] = createSignal(false);
   const [isInputFocused, setIsInputFocused] = createSignal(false);
   const [isSending, setIsSending] = createSignal(false);
   const [sendingStatus, setSendingStatus] = createSignal('');
@@ -542,15 +544,16 @@ export function NoteView() {
     }, 0);
   };
 
-  const handleSelectCustomEmoji = (emojiName: string) => {
+  const insertSnippetAtCursor = (snippet: string, ensureLeadingSpace = false) => {
     const isCw = lastFocusedField() === 'cw' && cwEnabled();
     const targetRef = isCw ? cwInputRef : noteInputRef;
     const currentText = isCw ? cwText() : noteText();
     const setText = isCw ? setCwText : setNoteText;
 
-    const emojiCode = `:${emojiName}: `;
     if (!targetRef) {
-      setText(currentText + emojiCode);
+      const prefix =
+        ensureLeadingSpace && currentText.length > 0 && !/[\s\n]$/.test(currentText) ? ' ' : '';
+      setText(currentText + prefix + snippet);
       return;
     }
 
@@ -558,8 +561,10 @@ export function NoteView() {
     const end = targetRef.selectionEnd ?? currentText.length;
     const before = currentText.substring(0, start);
     const after = currentText.substring(end);
-    const nextText = `${before}${emojiCode}${after}`;
-    const nextCursor = start + emojiCode.length;
+    const prefix = ensureLeadingSpace && before.length > 0 && !/[\s\n]$/.test(before) ? ' ' : '';
+    const inserted = `${prefix}${snippet}`;
+    const nextText = `${before}${inserted}${after}`;
+    const nextCursor = start + inserted.length;
 
     setText(nextText);
     setTimeout(() => {
@@ -568,34 +573,60 @@ export function NoteView() {
     }, 0);
   };
 
+  const handleSelectCustomEmoji = (emojiName: string) => {
+    insertSnippetAtCursor(`:${emojiName}: `);
+  };
+
+  const handleSelectHashtag = (tag: string) => {
+    const cleanTag = tag.replace(/^#+/, '').trim();
+    if (!cleanTag) return;
+    insertSnippetAtCursor(`#${cleanTag} `, true);
+  };
+
+  const openFeatureDisabledDialog = (
+    title: string,
+    icon: string,
+    contentText: string,
+    goSettingsLabel: string,
+    targetElementId: string
+  ) => {
+    openDialog({
+      title,
+      icon,
+      tone: 'info',
+      contentText,
+      buttons: [
+        {
+          label: goSettingsLabel,
+          variant: 'fill',
+          onClick: () => {
+            closeDialog();
+            setCurrentView('settings');
+            setTimeout(() => {
+              document
+                .getElementById(targetElementId)
+                ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 150);
+          },
+        },
+        {
+          label: '閉じる',
+          variant: 'border',
+          onClick: () => closeDialog(),
+        },
+      ],
+    });
+  };
+
   const handleOpenCustomEmoji = () => {
     if (!settings().is_enable_custom_emoji) {
-      openDialog({
-        title: t('note.custom_emoji_dialog_title'),
-        icon: 'add_reaction',
-        tone: 'info',
-        contentText: t('note.custom_emoji_dialog_desc'),
-        buttons: [
-          {
-            label: t('note.custom_emoji_dialog_go_settings'),
-            variant: 'fill',
-            onClick: () => {
-              closeDialog();
-              setCurrentView('settings');
-              setTimeout(() => {
-                document
-                  .getElementById('setting_enable_custom_emoji')
-                  ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }, 150);
-            },
-          },
-          {
-            label: '閉じる',
-            variant: 'border',
-            onClick: () => closeDialog(),
-          },
-        ],
-      });
+      openFeatureDisabledDialog(
+        t('note.custom_emoji_dialog_title'),
+        'add_reaction',
+        t('note.custom_emoji_dialog_desc'),
+        t('note.custom_emoji_dialog_go_settings'),
+        'setting_enable_custom_emoji'
+      );
       return;
     }
 
@@ -605,6 +636,71 @@ export function NoteView() {
     }
 
     setIsCustomEmojiPickerOpen(true);
+  };
+
+  const handleOpenHashtag = () => {
+    if (!settings().is_enable_hashtag) {
+      openFeatureDisabledDialog(
+        t('note.hashtag_dialog_title'),
+        'tag',
+        t('note.hashtag_dialog_desc'),
+        t('note.hashtag_dialog_go_settings'),
+        'setting_enable_hashtag'
+      );
+      return;
+    }
+
+    if (!currentUser()) {
+      showToast(t('note.hashtag_no_account'), 'warning');
+      return;
+    }
+
+    setIsHashtagPickerOpen(true);
+  };
+
+  const handlePreviewClick = (e: MouseEvent) => {
+    const target = e.target as HTMLElement | null;
+    const anchor = target?.closest('a[href]') as HTMLAnchorElement | null;
+    if (!anchor) return;
+
+    const href = anchor.getAttribute('href') || anchor.href;
+    if (!href) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    let resolvedUrl = href;
+    try {
+      const parsed = new URL(href, window.location.origin);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return;
+      }
+      resolvedUrl = parsed.href;
+    } catch {
+      return;
+    }
+
+    openDialog({
+      title: t('note.preview_link_confirm_title'),
+      icon: 'open_in_new',
+      tone: 'info',
+      contentText: t('note.preview_link_confirm_desc', { url: resolvedUrl }),
+      buttons: [
+        {
+          label: t('note.preview_link_open'),
+          variant: 'fill',
+          onClick: () => {
+            closeDialog();
+            window.open(resolvedUrl, '_blank', 'noopener,noreferrer');
+          },
+        },
+        {
+          label: t('common.cancel'),
+          variant: 'border',
+          onClick: () => closeDialog(),
+        },
+      ],
+    });
   };
 
   const updateAutocompletePosition = (targetEl: HTMLTextAreaElement, triggerPos: number) => {
@@ -1656,7 +1752,7 @@ export function NoteView() {
 
         {/* リアルタイムMFMプレビュー枠（トグル表示） */}
         <Show when={showPreview()}>
-          <div class="mizuna-preview-area">
+          <div class="mizuna-preview-area" onClick={handlePreviewClick}>
             <div class="mizuna-preview-header">
               <span class="mizuna-preview-badge">
                 <i>visibility</i>
@@ -1900,6 +1996,32 @@ export function NoteView() {
               >
                 <i>add_reaction</i>
                 <span>{t('note.custom_emoji_label')}</span>
+              </button>
+            </HoldHoverTip>
+
+            {/* ハッシュタグ選択ボタン */}
+            <HoldHoverTip
+              label={
+                settings().is_enable_hashtag
+                  ? t('note.hashtag_tip')
+                  : t('note.hashtag_disabled_tip')
+              }
+              sublabel={
+                settings().is_enable_hashtag
+                  ? t('note.hashtag_tip_sub')
+                  : t('note.hashtag_disabled_tip_sub')
+              }
+              placement="top"
+            >
+              <button
+                type="button"
+                id="select_hashtag_button"
+                class={`mizuna-tool-chip ${isHashtagPickerOpen() ? 'is-active' : ''}`}
+                onClick={handleOpenHashtag}
+                aria-label={t('note.hashtag_label')}
+              >
+                <i>tag</i>
+                <span>{t('note.hashtag_label')}</span>
               </button>
             </HoldHoverTip>
 
@@ -2390,6 +2512,13 @@ export function NoteView() {
         isOpen={isCustomEmojiPickerOpen()}
         onClose={() => setIsCustomEmojiPickerOpen(false)}
         onSelectEmoji={handleSelectCustomEmoji}
+      />
+
+      {/* ハッシュタグピッカーモーダル */}
+      <HashtagPickerModal
+        isOpen={isHashtagPickerOpen()}
+        onClose={() => setIsHashtagPickerOpen(false)}
+        onSelectHashtag={handleSelectHashtag}
       />
     </div>
   );

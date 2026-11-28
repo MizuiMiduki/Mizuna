@@ -1240,5 +1240,50 @@ describe('UI Components', () => {
 
       fetchSpy.mockRestore();
     });
+
+    it('プレビュー内のリンクをクリックしたとき、直接遷移せず確認ダイアログが表示され「リンクを開く」で window.open が呼ばれること', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+      render(() => (
+        <AppProvider>
+          <NoteView />
+          <DialogHost />
+        </AppProvider>
+      ));
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      flush();
+
+      const textarea = screen.getByPlaceholderText(/(いまどうしてる？|What's happening)/i) as HTMLTextAreaElement;
+      fireEvent.input(textarea, { target: { value: 'https://example.com/test' } });
+      flush();
+
+      const previewBtn = screen.getByRole('button', { name: /(プレビュー|Preview)/i });
+      fireEvent.click(previewBtn);
+      flush();
+
+      const link = await screen.findByRole('link', { name: 'https://example.com/test' });
+      fireEvent.click(link);
+      flush();
+
+      // 直接 window.open が呼ばれていないこと
+      expect(openSpy).not.toHaveBeenCalled();
+
+      // 確認ダイアログが表示されていること
+      expect(await screen.findByText(/(外部リンクを開きますか？|Open external link\?)/i)).toBeInTheDocument();
+
+      const openLinkBtn = await screen.findByRole('button', { name: /(リンクを開く|Open Link)/i });
+      fireEvent.click(openLinkBtn);
+
+      await vi.waitFor(() => {
+        expect(openSpy).toHaveBeenCalledWith(
+          'https://example.com/test',
+          '_blank',
+          'noopener,noreferrer'
+        );
+      });
+
+      openSpy.mockRestore();
+    });
   });
 });

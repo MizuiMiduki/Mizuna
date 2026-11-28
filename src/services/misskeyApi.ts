@@ -65,6 +65,11 @@ export interface CustomEmojiItem {
   aliases: string[];
 }
 
+export interface HashtagItem {
+  tag: string;
+  usersCount?: number;
+}
+
 export interface MisskeyNoteUser {
   id: string;
   name: string | null;
@@ -119,6 +124,10 @@ const EMOJI_CACHE_KEY_PREFIX = 'mizuna_emojis:';
 // サーバーカスタム絵文字リストのインメモリキャッシュ (address -> CustomEmojiItem[])
 const serverEmojiListCache = new Map<string, CustomEmojiItem[]>();
 const EMOJI_LIST_CACHE_KEY_PREFIX = 'mizuna_emoji_list:';
+
+// サーバーハッシュタグリストのインメモリキャッシュ (address -> HashtagItem[])
+const serverHashtagListCache = new Map<string, HashtagItem[]>();
+const HASHTAG_LIST_CACHE_KEY_PREFIX = 'mizuna_hashtag_list:';
 
 /**
  * インスタンスのカスタム絵文字一覧 (/api/emojis) を取得し、絵文字名からURLへのマップを返す
@@ -316,6 +325,109 @@ export async function fetchServerCustomEmojiList(rawAddress: string): Promise<Cu
     console.warn(`Failed to fetch custom emoji list from ${address}:`, err);
     throw err;
   }
+}
+
+/**
+ * インスタンスのトレンド/人気ハッシュタグ一覧 (/api/hashtags/trend, /api/hashtags/list) を取得する
+ * メモリキャッシュおよびセッションキャッシュを活用して通信量を削減
+ */
+export async function fetchServerHashtagList(rawAddress: string): Promise<HashtagItem[]> {
+  const address = rawAddress.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '');
+  if (!address || address.includes(' ') || !address.includes('.')) {
+    return [];
+  }
+
+  const cached = serverHashtagListCache.get(address);
+  if (cached) {
+    return cached;
+  }
+
+  const storageKey = `${HASHTAG_LIST_CACHE_KEY_PREFIX}${address}`;
+  const storedJson = safeSessionStorage.getItem(storageKey);
+  if (storedJson) {
+    try {
+      const parsed: HashtagItem[] = JSON.parse(storedJson);
+      if (Array.isArray(parsed)) {
+        serverHashtagListCache.set(address, parsed);
+        return parsed;
+      }
+    } catch {
+      // JSON parse error
+    }
+  }
+
+  try {
+    let rawList: any[] | null = null;
+    let lastStatus = 0;
+
+    const trendRes = await fetch(`https://${address}/api/hashtags/trend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    lastStatus = trendRes.status;
+
+    if (trendRes.ok) {
+      const data = await trendRes.json();
+      if (Array.isArray(data) && data.length > 0) {
+        rawList = data;
+      }
+    }
+
+    if (!rawList) {
+      const listRes = await fetch(`https://${address}/api/hashtags/list`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sort: '+attachedLocalUsers', limit: 100 }),
+      });
+      lastStatus = listRes.status;
+      if (listRes.ok) {
+        const data = await listRes.json();
+        if (Array.isArray(data)) {
+          rawList = data;
+        }
+      }
+    }
+
+    if (rawList) {
+      const list: HashtagItem[] = [];
+      const seen = new Set<string>();
+      for (const item of rawList) {
+        const rawTag = typeof item === 'string' ? item : item?.tag;
+        if (typeof rawTag !== 'string') continue;
+        const cleanTag = rawTag.replace(/^#+/, '').trim();
+        if (!cleanTag || seen.has(cleanTag.toLowerCase())) continue;
+        seen.add(cleanTag.toLowerCase());
+        const usersCount =
+          typeof item?.usersCount === 'number'
+            ? item.usersCount
+            : typeof item?.attachedUsersCount === 'number'
+            ? item.attachedUsersCount
+            : undefined;
+        list.push({ tag: cleanTag, usersCount });
+      }
+
+      serverHashtagListCache.set(address, list);
+      try {
+        if (list.length <= 500) {
+          safeSessionStorage.setItem(storageKey, JSON.stringify(list));
+        }
+      } catch {
+        // 容量制限時はインメモリのみ保持
+      }
+
+      return list;
+    }
+
+    throw new Error(`Failed to fetch hashtags from ${address} (HTTP status: ${lastStatus})`);
+  } catch (err) {
+    console.warn(`Failed to fetch hashtag list from ${address}:`, err);
+    throw err;
+  }
+}
+
+export function clearServerHashtagCache(): void {
+  serverHashtagListCache.clear();
 }
 
 /**
