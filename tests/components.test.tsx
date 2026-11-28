@@ -1324,5 +1324,42 @@ describe('UI Components', () => {
 
       openSpy.mockRestore();
     });
+
+    it('画像ボタンをクリックすると即座に画像追加モーダルが開き、端末からアップロード選択で fileInput.click が呼ばれること', async () => {
+      await db.account.clear();
+      const id1 = await db.account.add({
+        token: 'token_img',
+        name: 'Image User',
+        username: 'imguser',
+        address: 'misskey.test',
+        avatarurl: 'https://example.com/1.png',
+        add_mizuna_versinon: '4.3.0',
+      });
+      await db.setting.update(1, { select_user: id1 as number });
+
+      render(() => (
+        <AppProvider>
+          <NoteView />
+        </AppProvider>
+      ));
+
+      await screen.findByText('Image User');
+
+      const picBtn = document.getElementById('select_picture_button') as HTMLButtonElement;
+      expect(picBtn).not.toBeDisabled();
+      fireEvent.click(picBtn);
+      flush();
+
+      const uploadChoice = await screen.findByText(/(新しくアップロード|Upload New Image)/i);
+      expect(uploadChoice).toBeInTheDocument();
+
+      const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const clickSpy = vi.spyOn(fileInput, 'click').mockImplementation(() => {});
+
+      fireEvent.click(uploadChoice.closest('button')!);
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+
+      clickSpy.mockRestore();
+    });
   });
 });

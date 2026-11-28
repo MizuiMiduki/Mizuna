@@ -113,8 +113,10 @@ export function DriveImagePickerModal(props: DriveImagePickerModalProps) {
   );
 
   const handleSelectFromDevice = () => {
-    props.onClose();
     props.onOpenLocalFilePicker();
+    setTimeout(() => {
+      props.onClose();
+    }, 0);
   };
 
   const handleOpenDriveLibrary = () => {
@@ -167,7 +169,11 @@ export function DriveImagePickerModal(props: DriveImagePickerModalProps) {
           <div
             ref={(el) => {
               cardRef = el;
-              animateModalEnter(cardRef, backdropRef);
+              if (el) {
+                requestAnimationFrame(() => {
+                  animateModalEnter(cardRef, backdropRef);
+                });
+              }
             }}
             class="mizuna-picker-modal mizuna-drive-picker-modal"
             onClick={(e) => e.stopPropagation()}

@@ -1359,6 +1359,8 @@ body {
   font-size: var(--mizuna-chip-font);
   font-weight: 600;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
   box-sizing: border-box;
 }
@@ -1421,6 +1423,8 @@ body {
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
 }
 
@@ -1553,6 +1557,8 @@ body {
   font-size: var(--mizuna-btn-font);
   font-weight: 600;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
   white-space: nowrap;
   box-sizing: border-box;
@@ -4121,9 +4127,9 @@ html.ui-size-large .mizuna-m3e-label {
   position: fixed;
   inset: 0;
   background: rgba(10, 14, 22, 0.62);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  opacity: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  touch-action: manipulation;
 }
 
 .mizuna-modal-card {
@@ -4392,8 +4398,7 @@ html.ui-size-large .mizuna-m3e-label {
   max-height: calc(85svh - 32px);
   border-radius: 28px;
   padding: 18px;
-  background: color-mix(in srgb, var(--surface-container-low) 96%, transparent);
-  backdrop-filter: blur(24px);
+  background: var(--surface-container-low);
   border: 1px solid color-mix(in srgb, var(--outline-variant) 65%, transparent);
   box-shadow:
     0 24px 60px -12px rgba(0, 0, 0, 0.35),
@@ -4401,7 +4406,6 @@ html.ui-size-large .mizuna-m3e-label {
   color: var(--on-surface);
   display: flex;
   flex-direction: column;
-  opacity: 0;
 }
 
 .mizuna-picker-header {
@@ -7104,6 +7108,8 @@ body.dark .mizuna-mfm-toolbar-divider {
   font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
 }
 
@@ -7310,6 +7316,8 @@ body.dark .mizuna-mfm-toolbar-divider {
   color: var(--on-primary);
   border: none;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
 }
 
@@ -7335,6 +7343,8 @@ body.dark .mizuna-mfm-toolbar-divider {
   color: var(--error, #ba1a1a);
   border: 1px solid color-mix(in srgb, var(--error, #ba1a1a) 30%, transparent);
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
 }
 
@@ -7565,6 +7575,8 @@ body.dark .mizuna-mfm-toolbar-divider {
   color: var(--on-primary);
   border: none;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
 }
 
@@ -7587,6 +7599,8 @@ body.dark .mizuna-mfm-toolbar-divider {
   color: var(--on-surface-variant);
   border: 1px solid transparent;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
 }
 
@@ -8448,6 +8462,8 @@ body.dark .mizuna-mfm-toolbar-divider {
   color: var(--primary);
   border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
 }
 
@@ -8510,6 +8526,8 @@ body.dark .mizuna-mfm-toolbar-divider {
   color: var(--on-surface);
   text-align: left;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
   transition: all 0.18s ease;
 }
 
