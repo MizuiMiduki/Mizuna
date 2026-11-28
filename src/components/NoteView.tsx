@@ -1367,26 +1367,8 @@ export function NoteView() {
             <i class="mizuna-author-chevron">unfold_more</i>
           </button>
 
-          {/* 右側グループ：連合トグル ＆ 公開範囲ピル ＆ 下書き統合ボタン */}
+          {/* 右側グループ：公開範囲ピル ＆ 連合トグル ＆ 下書き統合ボタン */}
           <div class="mizuna-composer-header-right">
-            {/* 連合機能オンオフ トグル */}
-            <HoldHoverTip
-              label={localOnly() ? t('note.federation_off_tip') : t('note.federation_on_tip')}
-              sublabel={localOnly() ? t('note.federation_off_tip_sub') : t('note.federation_on_tip_sub')}
-              placement="bottom"
-            >
-              <button
-                type="button"
-                id="local_only_toggle"
-                class={`mizuna-composer-federation-btn ${!localOnly() ? 'is-active' : 'is-local-only'}`}
-                onClick={() => setLocalOnly((prev) => !prev)}
-                aria-pressed={!localOnly() ? 'true' : 'false'}
-                aria-label={localOnly() ? t('note.federation_off_tip') : t('note.federation_on_tip')}
-              >
-                <i>rocket_launch</i>
-              </button>
-            </HoldHoverTip>
-
             {/* モダンなピル型公開範囲セレクター */}
             <div class="mizuna-visibility-pills" role="radiogroup" aria-label={t('settings.default_visibility')}>
               <HoldHoverTip label={t('note.visibility_public')} sublabel="全ユーザーに公開 (Ctrl+Alt+P)" placement="bottom">
@@ -1423,6 +1405,24 @@ export function NoteView() {
                 </button>
               </HoldHoverTip>
             </div>
+
+            {/* 連合機能オンオフ トグル */}
+            <HoldHoverTip
+              label={localOnly() ? t('note.federation_off_tip') : t('note.federation_on_tip')}
+              sublabel={localOnly() ? t('note.federation_off_tip_sub') : t('note.federation_on_tip_sub')}
+              placement="bottom"
+            >
+              <button
+                type="button"
+                id="local_only_toggle"
+                class={`mizuna-composer-federation-btn ${!localOnly() ? 'is-active' : 'is-local-only'}`}
+                onClick={() => setLocalOnly((prev) => !prev)}
+                aria-pressed={!localOnly() ? 'true' : 'false'}
+                aria-label={localOnly() ? t('note.federation_off_tip') : t('note.federation_on_tip')}
+              >
+                <i>rocket_launch</i>
+              </button>
+            </HoldHoverTip>
 
             {/* 下書き（保存・呼び出し）ボタン */}
             <HoldHoverTip label={t('draft.title')} sublabel={t('draft.tip_save_and_restore')} placement="bottom">
