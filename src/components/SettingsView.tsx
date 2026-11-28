@@ -115,8 +115,7 @@ export function SettingsView() {
   const showAppendMizuna = () => matches(t('settings.group_post'), t('settings.append_mizuna'), 'from mizuna', 'ミズナ');
   const showDefaultFederation = () => matches(t('settings.group_post'), t('settings.default_federation'), t('settings.default_federation_desc'), '連合', 'ローカル', 'federation', 'local', 'localOnly');
   const showEnableCustomEmoji = () => matches(t('settings.group_post'), t('settings.enable_custom_emoji'), t('settings.enable_custom_emoji_desc'), 'カスタム絵文字', '絵文字', 'emoji', 'custom emoji', '通信量');
-  const showEnableHashtag = () => matches(t('settings.group_post'), t('settings.enable_hashtag'), t('settings.enable_hashtag_desc'), 'ハッシュタグ', 'タグ', 'hashtag', 'tag', '通信量');
-  const showGroupPost = () => showPostVisibility() || showAppendMizuna() || showDefaultFederation() || showEnableCustomEmoji() || showEnableHashtag();
+  const showGroupPost = () => showPostVisibility() || showAppendMizuna() || showDefaultFederation() || showEnableCustomEmoji();
 
   // 2. 画像署名設定
   const showSignaturePos = () => matches(t('settings.group_signature'), t('settings.signature_auto_position'), t('settings.signature_auto_position_desc'), t('settings.signature_pos_none'), t('settings.signature_pos_bottom_right'), t('settings.signature_pos_bottom_left'), t('settings.signature_pos_top_right'), t('settings.signature_pos_top_left'), '署名', 'クレジット', 'signature', 'credit');
@@ -429,38 +428,6 @@ export function SettingsView() {
                           settings().is_enable_custom_emoji ? 'is-active' : ''
                         }`}
                         onClick={() => updateSettings({ is_enable_custom_emoji: true })}
-                      >
-                        <span>ON</span>
-                      </button>
-                    </div>
-                  </div>
-                </Show>
-
-                {/* ハッシュタグの入力 */}
-                <Show when={showEnableHashtag()}>
-                  <div class="mizuna-setting-row" id="setting_enable_hashtag">
-                    <div class="mizuna-setting-info">
-                      <div class="mizuna-setting-title">{t('settings.enable_hashtag')}</div>
-                      <div class="mizuna-setting-desc">{t('settings.enable_hashtag_desc')}</div>
-                    </div>
-                    <div class="mizuna-seg-pills">
-                      <button
-                        type="button"
-                        id="is_enable_hashtag_false"
-                        class={`mizuna-seg-pill ${
-                          !settings().is_enable_hashtag ? 'is-active' : ''
-                        }`}
-                        onClick={() => updateSettings({ is_enable_hashtag: false })}
-                      >
-                        <span>OFF</span>
-                      </button>
-                      <button
-                        type="button"
-                        id="is_enable_hashtag_true"
-                        class={`mizuna-seg-pill ${
-                          settings().is_enable_hashtag ? 'is-active' : ''
-                        }`}
-                        onClick={() => updateSettings({ is_enable_hashtag: true })}
                       >
                         <span>ON</span>
                       </button>

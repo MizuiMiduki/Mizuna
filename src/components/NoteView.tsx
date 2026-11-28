@@ -41,7 +41,6 @@ import { ImageEditorModal } from './ImageEditorModal';
 import { DraftsModal } from './DraftsModal';
 import { DriveImagePickerModal } from './DriveImagePickerModal';
 import { CustomEmojiPickerModal } from './CustomEmojiPickerModal';
-import { HashtagPickerModal } from './HashtagPickerModal';
 
 export function NoteView() {
   const {
@@ -85,7 +84,6 @@ export function NoteView() {
   const [isDraftsModalOpen, setIsDraftsModalOpen] = createSignal(false);
   const [isDrivePickerOpen, setIsDrivePickerOpen] = createSignal(false);
   const [isCustomEmojiPickerOpen, setIsCustomEmojiPickerOpen] = createSignal(false);
-  const [isHashtagPickerOpen, setIsHashtagPickerOpen] = createSignal(false);
   const [isInputFocused, setIsInputFocused] = createSignal(false);
   const [isSending, setIsSending] = createSignal(false);
   const [sendingStatus, setSendingStatus] = createSignal('');
@@ -577,12 +575,6 @@ export function NoteView() {
     insertSnippetAtCursor(`:${emojiName}: `);
   };
 
-  const handleSelectHashtag = (tag: string) => {
-    const cleanTag = tag.replace(/^#+/, '').trim();
-    if (!cleanTag) return;
-    insertSnippetAtCursor(`#${cleanTag} `, true);
-  };
-
   const openFeatureDisabledDialog = (
     title: string,
     icon: string,
@@ -636,26 +628,6 @@ export function NoteView() {
     }
 
     setIsCustomEmojiPickerOpen(true);
-  };
-
-  const handleOpenHashtag = () => {
-    if (!settings().is_enable_hashtag) {
-      openFeatureDisabledDialog(
-        t('note.hashtag_dialog_title'),
-        'tag',
-        t('note.hashtag_dialog_desc'),
-        t('note.hashtag_dialog_go_settings'),
-        'setting_enable_hashtag'
-      );
-      return;
-    }
-
-    if (!currentUser()) {
-      showToast(t('note.hashtag_no_account'), 'warning');
-      return;
-    }
-
-    setIsHashtagPickerOpen(true);
   };
 
   const handlePreviewClick = (e: MouseEvent) => {
@@ -1999,32 +1971,6 @@ export function NoteView() {
               </button>
             </HoldHoverTip>
 
-            {/* ハッシュタグ選択ボタン */}
-            <HoldHoverTip
-              label={
-                settings().is_enable_hashtag
-                  ? t('note.hashtag_tip')
-                  : t('note.hashtag_disabled_tip')
-              }
-              sublabel={
-                settings().is_enable_hashtag
-                  ? t('note.hashtag_tip_sub')
-                  : t('note.hashtag_disabled_tip_sub')
-              }
-              placement="top"
-            >
-              <button
-                type="button"
-                id="select_hashtag_button"
-                class={`mizuna-tool-chip ${isHashtagPickerOpen() ? 'is-active' : ''}`}
-                onClick={handleOpenHashtag}
-                aria-label={t('note.hashtag_label')}
-              >
-                <i>tag</i>
-                <span>{t('note.hashtag_label')}</span>
-              </button>
-            </HoldHoverTip>
-
             {/* フォームクリアボタン */}
             <HoldHoverTip label={t('note.clear_form_tip')} sublabel={t('note.clear_form_tip_sub')} placement="top">
               <button
@@ -2512,13 +2458,6 @@ export function NoteView() {
         isOpen={isCustomEmojiPickerOpen()}
         onClose={() => setIsCustomEmojiPickerOpen(false)}
         onSelectEmoji={handleSelectCustomEmoji}
-      />
-
-      {/* ハッシュタグピッカーモーダル */}
-      <HashtagPickerModal
-        isOpen={isHashtagPickerOpen()}
-        onClose={() => setIsHashtagPickerOpen(false)}
-        onSelectHashtag={handleSelectHashtag}
       />
     </div>
   );

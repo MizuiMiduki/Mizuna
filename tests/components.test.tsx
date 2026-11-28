@@ -1285,5 +1285,44 @@ describe('UI Components', () => {
 
       openSpy.mockRestore();
     });
+
+    it('プレビュー内のリンクをクリックして「キャンセル」を押したとき、フォームの入力内容がクリアされないこと', async () => {
+      const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+
+      render(() => (
+        <AppProvider>
+          <NoteView />
+          <DialogHost />
+        </AppProvider>
+      ));
+
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      flush();
+
+      const textarea = screen.getByPlaceholderText(/(いまどうしてる？|What's happening)/i) as HTMLTextAreaElement;
+      const sampleText = 'テスト投稿 https://example.com/keep';
+      fireEvent.input(textarea, { target: { value: sampleText } });
+      flush();
+
+      const previewBtn = screen.getByRole('button', { name: /(プレビュー|Preview)/i });
+      fireEvent.click(previewBtn);
+      flush();
+
+      const link = await screen.findByRole('link', { name: 'https://example.com/keep' });
+      fireEvent.click(link);
+      flush();
+
+      const cancelBtn = await screen.findByRole('button', { name: /(キャンセル|Cancel)/i });
+      fireEvent.click(cancelBtn);
+
+      await vi.waitFor(() => {
+        expect(screen.queryByText(/(外部リンクを開きますか？|Open external link\?)/i)).not.toBeInTheDocument();
+      });
+
+      expect(openSpy).not.toHaveBeenCalled();
+      expect(textarea.value).toBe(sampleText);
+
+      openSpy.mockRestore();
+    });
   });
 });
