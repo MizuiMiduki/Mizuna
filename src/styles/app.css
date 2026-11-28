@@ -826,13 +826,51 @@ body {
   flex-shrink: 0;
 }
 
-/* コンポーザーヘッダー右側ラッパー（公開範囲 ＆ 下書き統合ボタン） */
+/* コンポーザーヘッダー右側ラッパー（連合トグル ＆ 公開範囲 ＆ 下書き統合ボタン） */
 .mizuna-composer-header-right {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 8px;
   margin-left: auto;
   flex-shrink: 0;
+}
+
+/* コンポーザー上部：連合オンオフトグル */
+.mizuna-composer-federation-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: var(--mizuna-seg-track-h);
+  padding: 0 11px !important;
+  margin: 0 !important;
+  border-radius: var(--mizuna-radius-pill) !important;
+  background: color-mix(in srgb, var(--surface-container-highest) 70%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--outline-variant) 45%, transparent) !important;
+  color: var(--on-surface-variant) !important;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  text-transform: none;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.15s ease;
+}
+
+.mizuna-composer-federation-btn:hover {
+  background: var(--surface-container-highest) !important;
+}
+
+.mizuna-composer-federation-btn.is-active {
+  background: color-mix(in srgb, var(--primary-container) 75%, var(--surface-container-highest)) !important;
+  border-color: color-mix(in srgb, var(--primary) 45%, transparent) !important;
+  color: var(--on-primary-container) !important;
+}
+
+.mizuna-composer-federation-btn i {
+  font-size: 16px !important;
 }
 
 /* ピル型公開範囲セレクター */

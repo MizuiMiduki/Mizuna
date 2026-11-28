@@ -1367,8 +1367,26 @@ export function NoteView() {
             <i class="mizuna-author-chevron">unfold_more</i>
           </button>
 
-          {/* 右側グループ：公開範囲ピル ＆ 下書き統合ボタン */}
+          {/* 右側グループ：連合トグル ＆ 公開範囲ピル ＆ 下書き統合ボタン */}
           <div class="mizuna-composer-header-right">
+            {/* 連合機能オンオフ トグル */}
+            <HoldHoverTip
+              label={localOnly() ? t('note.federation_off_tip') : t('note.federation_on_tip')}
+              sublabel={localOnly() ? t('note.federation_off_tip_sub') : t('note.federation_on_tip_sub')}
+              placement="bottom"
+            >
+              <button
+                type="button"
+                id="local_only_toggle"
+                class={`mizuna-composer-federation-btn ${!localOnly() ? 'is-active' : ''}`}
+                onClick={() => setLocalOnly((prev) => !prev)}
+                aria-pressed={!localOnly() ? 'true' : 'false'}
+              >
+                <i>{localOnly() ? 'public_off' : 'public'}</i>
+                <span>{t('note.federation_label')}</span>
+              </button>
+            </HoldHoverTip>
+
             {/* モダンなピル型公開範囲セレクター */}
             <div class="mizuna-visibility-pills" role="radiogroup" aria-label={t('settings.default_visibility')}>
               <HoldHoverTip label={t('note.visibility_public')} sublabel="全ユーザーに公開 (Ctrl+Alt+P)" placement="bottom">
@@ -1837,24 +1855,6 @@ export function NoteView() {
               >
                 <i>auto_awesome</i>
                 <span>Mizuna</span>
-              </button>
-            </HoldHoverTip>
-
-            {/* 連合機能オンオフ トグル */}
-            <HoldHoverTip
-              label={localOnly() ? t('note.federation_off_tip') : t('note.federation_on_tip')}
-              sublabel={localOnly() ? t('note.federation_off_tip_sub') : t('note.federation_on_tip_sub')}
-              placement="top"
-            >
-              <button
-                type="button"
-                id="local_only_toggle"
-                class={`mizuna-tool-chip ${!localOnly() ? 'is-active' : ''}`}
-                onClick={() => setLocalOnly((prev) => !prev)}
-                aria-pressed={!localOnly() ? 'true' : 'false'}
-              >
-                <i>{localOnly() ? 'public_off' : 'public'}</i>
-                <span>{t('note.federation_label')}</span>
               </button>
             </HoldHoverTip>
 
