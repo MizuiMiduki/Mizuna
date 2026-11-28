@@ -16,6 +16,10 @@ export interface HoldHoverTipProps {
   children: JSX.Element;
 }
 
+// 通常のタップが長押し扱いでクリックを握りつぶさないよう、長押し判定は余裕を持たせる
+const LONG_PRESS_DEFAULT_MS = 550;
+const TOUCH_MOVE_TOLERANCE_PX = 8;
+
 export function HoldHoverTip(props: HoldHoverTipProps) {
   const [visible, setVisible] = createSignal(false);
   const [xOffset, setXOffset] = createSignal(0);
@@ -23,6 +27,8 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
   let touchTimer: ReturnType<typeof setTimeout> | undefined;
   let didLongPress = false;
   let isTouching = false;
+  let touchStartX = 0;
+  let touchStartY = 0;
   let anchorRef: HTMLDivElement | undefined;
   let tipRef: HTMLDivElement | undefined;
 
@@ -154,14 +160,30 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
   };
 
   // タッチ長押し開始
-  const handleTouchStart = () => {
+  const handleTouchStart = (e: TouchEvent) => {
     isTouching = true;
     clearTimers();
     didLongPress = false;
+    const touch = e.touches[0];
+    touchStartX = touch ? touch.clientX : 0;
+    touchStartY = touch ? touch.clientY : 0;
     touchTimer = setTimeout(() => {
       didLongPress = true;
       showTip();
-    }, props.longPressDelayMs ?? 380);
+    }, props.longPressDelayMs ?? LONG_PRESS_DEFAULT_MS);
+  };
+
+  // 指が少しでも動いた場合は長押しではなくタップ/スクロールとみなし、クリックを妨げない
+  const handleTouchMove = (e: TouchEvent) => {
+    if (!touchTimer) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    if (
+      Math.abs(touch.clientX - touchStartX) > TOUCH_MOVE_TOLERANCE_PX ||
+      Math.abs(touch.clientY - touchStartY) > TOUCH_MOVE_TOLERANCE_PX
+    ) {
+      clearTimers();
+    }
   };
 
   const handleTouchEnd = () => {
@@ -199,6 +221,7 @@ export function HoldHoverTip(props: HoldHoverTipProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onTouchCancel={handleTouchEnd}
       onContextMenu={(e) => {
