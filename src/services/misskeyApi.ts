@@ -44,6 +44,7 @@ export interface NoteParam {
   i: string;
   text: string;
   visibility: 'public' | 'home' | 'followers';
+  localOnly?: boolean;
   cw?: string;
   fileIds?: string[];
   replyId?: string;
@@ -99,6 +100,7 @@ export interface MisskeyNote {
   renoteId?: string | null;
   renote?: MisskeyNote | null;
   visibility: 'public' | 'home' | 'followers' | 'specified';
+  localOnly?: boolean;
   files?: MisskeyFile[];
   repliesCount?: number;
   renoteCount?: number;
@@ -519,6 +521,7 @@ export async function createMisskeyNote(
   extra?: {
     replyNote?: MisskeyNote | null;
     files?: MisskeyFile[];
+    localOnly?: boolean;
   }
 ): Promise<MisskeyNote> {
   const suffix = appendFromMizuna ? '\n(from Mizuna)' : '';
@@ -528,6 +531,10 @@ export async function createMisskeyNote(
     text: finalText,
     visibility,
   };
+
+  if (extra?.localOnly !== undefined) {
+    param.localOnly = extra.localOnly;
+  }
 
   if (cwContent && cwContent.length > 0) {
     param.cw = cwContent;
@@ -579,6 +586,7 @@ export async function createMisskeyNote(
           avatarUrl: account.avatarurl,
         },
     visibility: rawCreated.visibility || visibility,
+    localOnly: rawCreated.localOnly !== undefined ? rawCreated.localOnly : extra?.localOnly,
     replyId: rawCreated.replyId !== undefined ? rawCreated.replyId : replyId || null,
     reply: rawCreated.reply !== undefined ? rawCreated.reply : extra?.replyNote ?? null,
     files:

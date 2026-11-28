@@ -1133,5 +1133,112 @@ describe('UI Components', () => {
       expect(document.querySelector('.mizuna-mfm-autocomplete-popup')).not.toBeInTheDocument();
       expect(textarea.value).toBe('$[shake テキスト]');
     });
+
+    it('複数アカウントを選択して連合OFFで同時投稿でき、送信後に単一選択へ戻ること', async () => {
+      await db.account.clear();
+      const id1 = await db.account.add({
+        token: 'token_1',
+        name: 'User One',
+        username: 'user1',
+        address: 'misskey.test1',
+        avatarurl: 'https://example.com/1.png',
+        add_mizuna_versinon: '4.3.0',
+      });
+      await db.account.add({
+        token: 'token_2',
+        name: 'User Two',
+        username: 'user2',
+        address: 'misskey.test2',
+        avatarurl: 'https://example.com/2.png',
+        add_mizuna_versinon: '4.3.0',
+      });
+      await db.setting.update(1, { select_user: id1 as number });
+
+      const postedRequests: Array<{ url: string; body: any }> = [];
+      const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+        const url = String(input);
+        const body = init?.body ? JSON.parse(String(init.body)) : null;
+        if (url.includes('/api/notes/create')) {
+          postedRequests.push({ url, body });
+          return new Response(
+            JSON.stringify({
+              createdNote: {
+                id: `note_${postedRequests.length}`,
+                createdAt: new Date().toISOString(),
+                text: body.text,
+                cw: null,
+                userId: 'u1',
+                user: { id: 'u1', name: 'User', username: 'user', avatarUrl: '' },
+                visibility: body.visibility,
+                localOnly: body.localOnly,
+              },
+            }),
+            { status: 200 }
+          );
+        }
+        return new Response('{}', { status: 200 });
+      });
+
+      render(() => (
+        <AppProvider>
+          <NoteView />
+        </AppProvider>
+      ));
+
+      // アカウントの読み込み完了を待つ
+      await screen.findByText('User One');
+
+      // アカウントピッカーを開く
+      const authorChip = document.querySelector('.mizuna-author-chip') as HTMLButtonElement;
+      fireEvent.click(authorChip);
+      flush();
+
+      // 「すべて選択」をクリック
+      const selectAllBtn = await screen.findByRole('button', { name: /すべて選択|Select all/i });
+      fireEvent.click(selectAllBtn);
+      flush();
+
+      // 「確定」をクリック
+      const confirmBtn = await screen.findByRole('button', { name: /2件で確定|Confirm \(2\)/i });
+      fireEvent.click(confirmBtn);
+      flush();
+
+      // 複数アカウント選択状態になっていること
+      expect(document.querySelector('.mizuna-author-chip.is-multi')).toBeInTheDocument();
+
+      // 連合トグルをOFFにする
+      const localOnlyBtn = document.getElementById('local_only_toggle') as HTMLButtonElement;
+      expect(localOnlyBtn).toHaveAttribute('aria-pressed', 'true');
+      fireEvent.click(localOnlyBtn);
+      flush();
+      expect(localOnlyBtn).toHaveAttribute('aria-pressed', 'false');
+
+      // ノートを入力して送信
+      const textarea = screen.getByPlaceholderText(/(いまどうしてる？|What's happening)/i) as HTMLTextAreaElement;
+      fireEvent.input(textarea, { target: { value: '同時投稿テスト' } });
+      flush();
+
+      const submitBtn = document.querySelector('.note_submit') as HTMLButtonElement;
+      fireEvent.click(submitBtn);
+
+      await vi.waitFor(() => {
+        expect(postedRequests).toHaveLength(2);
+      });
+
+      expect(postedRequests.map((r) => r.url).sort()).toEqual([
+        'https://misskey.test1/api/notes/create',
+        'https://misskey.test2/api/notes/create',
+      ]);
+      expect(postedRequests[0].body.localOnly).toBe(true);
+      expect(postedRequests[1].body.localOnly).toBe(true);
+      expect(postedRequests[0].body.text).toBe('同時投稿テスト');
+
+      // 送信成功後に単一選択状態へ戻ること
+      await vi.waitFor(() => {
+        expect(document.querySelector('.mizuna-author-chip.is-multi')).not.toBeInTheDocument();
+      });
+
+      fetchSpy.mockRestore();
+    });
   });
 });

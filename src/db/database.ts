@@ -57,6 +57,8 @@ export interface DraftRecord {
   cwEnabled: boolean;
   /** 公開範囲 (public | home | followers) */
   visibility: 'public' | 'home' | 'followers';
+  /** ローカル限定 (連合なし) フラグ */
+  localOnly?: boolean;
   /** 末尾に (from Mizuna) を付与するか */
   endMizuna: boolean;
   /** 添付画像リスト */
@@ -77,6 +79,8 @@ export interface SettingRecord {
   select_user: number;
   /** デフォルトの投稿範囲 (1: public, 2: home, 3: followers) */
   default_visibility: 1 | 2 | 3;
+  /** デフォルトで連合なし (ローカルのみ) にするか */
+  default_local_only?: boolean;
   /** ノートの最後に "from Mizuna" をデフォルトで付けるか */
   is_note_end_mizuna: boolean;
   /** 自分のアイコンを表示するか */
@@ -118,6 +122,7 @@ export interface SettingRecord {
 export const DEFAULT_USER_SETTINGS: Omit<SettingRecord, 'id'> = {
   select_user: 1,
   default_visibility: 1,
+  default_local_only: false,
   is_note_end_mizuna: false,
   is_visible_icon: true,
   ui_mode: 1,

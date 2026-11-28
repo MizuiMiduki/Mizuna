@@ -169,6 +169,28 @@ describe('misskeyApi service', () => {
       expect(requestBody.visibility).toBe('home');
       expect(requestBody.fileIds).toEqual(['file_id_1', 'file_id_2']);
     });
+
+    it('extra.localOnly が指定された場合ペイロードに localOnly を含めること', async () => {
+      let requestBody: any = null;
+      vi.spyOn(globalThis, 'fetch').mockImplementationOnce(async (_url, init) => {
+        requestBody = JSON.parse(init?.body as string);
+        return new Response('{}', { status: 200 });
+      });
+
+      const created = await createMisskeyNote(
+        mockAccount,
+        'ローカル限定ノート',
+        null,
+        'public',
+        false,
+        undefined,
+        undefined,
+        { localOnly: true }
+      );
+
+      expect(requestBody.localOnly).toBe(true);
+      expect(created.localOnly).toBe(true);
+    });
   });
 
   describe('fetchLatestReleaseNote', () => {
