@@ -17,7 +17,7 @@ export interface MizunaShare {
 declare const __APP_VERSION__: string | undefined;
 
 export const MIZUNA_VERSION =
-  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '4.2.0';
+  typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '4.3.0';
 
 /**
  * Canary / 本番の手動強制切り替えフラグ
